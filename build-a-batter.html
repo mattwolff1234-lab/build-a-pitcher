@@ -278,17 +278,22 @@
   .season-row.big { border-color:rgba(255,206,58,.45); background:rgba(255,206,58,.06); }
   .season-row .s-main { display:flex; align-items:center; gap:8px; }
   .season-row .age { font-family:'Oswald',sans-serif; color:var(--accent2); width:26px; flex:0 0 auto; }
+  .team-logo { display:inline-grid; place-items:center; width:28px; height:28px; border-radius:50%;
+    background:rgba(255,255,255,.92); border:1px solid rgba(255,255,255,.65); box-shadow:0 0 10px rgba(0,0,0,.25); flex:0 0 auto; }
+  .team-logo img { width:22px; height:22px; object-fit:contain; display:block; }
+  .team-logo.sm { width:24px; height:24px; }
+  .team-logo.sm img { width:19px; height:19px; }
+  .team-logo.lg { width:76px; height:76px; margin:0 auto 12px; box-shadow:0 0 24px rgba(255,255,255,.16); }
+  .team-logo.lg img { width:60px; height:60px; }
   .season-row .s-line { flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--ink); }
   .season-row .s-war { font-family:'Oswald',sans-serif; font-weight:700; width:36px; text-align:right; flex:0 0 auto; color:var(--ink); }
-  .season-row .s-badges { font-family:'Oswald',sans-serif; font-size:10px; letter-spacing:.5px; color:var(--gold); padding-left:34px; }
+  .season-row .s-badges { font-family:'Oswald',sans-serif; font-size:10px; letter-spacing:.5px; color:var(--gold); padding-left:66px; }
 
-  /* pre-sim: name + team + go */
+  /* pre-sim: name + go */
   .pre-sim { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; max-width:420px; margin:12px auto 0; }
-  .pre-sim input, .team-select { font:inherit; font-size:14px; color:var(--ink); padding:11px 13px; border-radius:9px;
+  .pre-sim input { flex:1; min-width:140px; font:inherit; font-size:14px; color:var(--ink); padding:11px 13px; border-radius:9px;
     border:1px solid var(--line); background:rgba(255,255,255,.04); outline:none; }
-  .pre-sim input { flex:1; min-width:140px; }
-  .team-select { flex:1; min-width:140px; }
-  .pre-sim input:focus, .team-select:focus { border-color:var(--accent2); box-shadow:0 0 12px rgba(25,198,255,.3); }
+  .pre-sim input:focus { border-color:var(--accent2); box-shadow:0 0 12px rgba(25,198,255,.3); }
   .pre-sim .primary { flex-basis:100%; }
 
   /* live ticker */
@@ -323,6 +328,9 @@
   .cc-top .cc-role { font-size:11px; opacity:.85; margin-top:2px; }
   .cc-top .cc-ovr { position:absolute; top:12px; right:14px; font-family:'Oswald',sans-serif; font-size:34px; font-weight:700;
     background:rgba(0,0,0,.25); border-radius:10px; padding:2px 12px; }
+  .cc-logo { position:absolute; right:16px; bottom:14px; width:54px; height:54px; border-radius:50%;
+    background:rgba(255,255,255,.92); display:grid; place-items:center; box-shadow:0 0 18px rgba(0,0,0,.25); }
+  .cc-logo img { width:43px; height:43px; object-fit:contain; }
   .cc-verdict { font-family:'Oswald',sans-serif; font-size:14px; font-weight:700; text-transform:uppercase; letter-spacing:1px;
     padding:9px 16px; text-align:center; background:#0a111c; }
   .cc-vote { font-size:11px; color:var(--muted); text-transform:none; letter-spacing:0; margin-top:2px; font-weight:400; }
@@ -333,6 +341,34 @@
   .cc-trophies { padding:11px 14px; text-align:center; font-size:15px; background:#0c131e; border-top:1px solid rgba(120,160,210,.12); min-height:20px; }
   .cc-trophies .none { font-size:11px; color:var(--dim); letter-spacing:1px; text-transform:uppercase; }
   .cc-hint { text-align:center; font-size:10.5px; color:var(--dim); padding:8px; letter-spacing:.5px; }
+
+  /* ---------- draft overlay ---------- */
+  .draft-overlay { position:fixed; inset:0; z-index:200; display:none; align-items:center; justify-content:center;
+    background:rgba(2,5,10,.97); backdrop-filter:blur(14px); cursor:pointer; }
+  .draft-overlay.show { display:flex; }
+  .draft-inner { width:100%; max-width:520px; padding:36px 28px; text-align:center; pointer-events:none; }
+  .draft-league { font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:5px; color:var(--muted);
+    text-transform:uppercase; margin-bottom:8px; }
+  .draft-headline { font-family:'Oswald',sans-serif; font-size:44px; font-weight:700; letter-spacing:5px;
+    text-transform:uppercase; background:linear-gradient(180deg,#fff 20%,#7e9ab4); -webkit-background-clip:text;
+    background-clip:text; color:transparent; line-height:1; margin-bottom:10px; }
+  .draft-round-tag { font-family:'Oswald',sans-serif; font-size:13px; color:var(--accent2); letter-spacing:3px;
+    text-transform:uppercase; margin-bottom:28px; }
+  .draft-divider { height:1px; background:linear-gradient(90deg,transparent,rgba(120,160,210,.4),transparent); margin:0 50px 26px; }
+  .draft-call { font-size:16px; color:var(--muted); line-height:1.65; margin-bottom:20px; min-height:52px; }
+  .draft-call b { color:var(--ink); font-size:18px; }
+  .draft-selecting { font-family:'Oswald',sans-serif; font-size:20px; letter-spacing:.5px; min-height:28px; }
+  .draft-reveal { margin-top:22px; }
+  .dr-team { font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:4px; text-transform:uppercase;
+    color:var(--muted); margin-bottom:10px; }
+  .dr-name { font-family:'Oswald',sans-serif; font-size:48px; font-weight:700; line-height:1.05;
+    margin-bottom:8px; word-break:break-word; color:#fff; }
+  .dr-ovr { font-family:'Oswald',sans-serif; font-size:20px; font-weight:700; margin-bottom:12px; }
+  .dr-arch { display:inline-block; font-family:'Oswald',sans-serif; font-size:12px; letter-spacing:2px;
+    text-transform:uppercase; padding:5px 16px; border-radius:20px; }
+  .draft-skip { margin-top:28px; font-size:11px; color:var(--dim); letter-spacing:2px; text-transform:uppercase;
+    pointer-events:none; opacity:0; transition:opacity .4s; }
+  .draft-skip.show { opacity:.55; }
 
   @media (max-width: 560px) {
     .done { padding:16px 12px; }
@@ -504,7 +540,6 @@
 
       <div id="preSim" class="pre-sim">
         <input id="nameInput" maxlength="20" placeholder="Name your hitter" autocomplete="off">
-        <select id="teamSelect" class="team-select"></select>
         <button id="simBtn" class="primary">▶ Simulate Career</button>
       </div>
 
@@ -598,6 +633,25 @@
   </div>
 </div>
 
+<div id="draftOverlay" class="draft-overlay">
+  <div class="draft-inner">
+    <div class="draft-league">MLB Amateur Draft</div>
+    <div class="draft-headline">Draft Day</div>
+    <div class="draft-round-tag" id="draftRoundTag">Round 1 - Pick 1</div>
+    <div class="draft-divider"></div>
+    <div class="draft-call" id="draftCall">With the <b id="draftPickOrd">1st</b> pick in Round <b id="draftRoundNum">1</b> of the MLB Draft...</div>
+    <div class="draft-selecting" id="draftSelecting"></div>
+    <div class="draft-reveal" id="draftReveal">
+      <span class="team-logo lg" id="drLogo"><img src="" alt=""></span>
+      <div class="dr-team" id="drTeam"></div>
+      <div class="dr-name" id="drName"></div>
+      <div class="dr-ovr" id="drOvr"></div>
+      <div class="dr-arch" id="drArch"></div>
+    </div>
+    <div class="draft-skip" id="draftSkip">Tap anywhere to continue -></div>
+  </div>
+</div>
+
 <div id="toast" class="toast"></div>
 
 <div class="footer-note">Ratings from MLB The Show — Live series only. Not affiliated with MLB or Sony.</div>
@@ -634,16 +688,41 @@ const TEAM_NAMES = {
   NYY:'Yankees', OAK:'Athletics', PHI:'Phillies', PIT:'Pirates', SD:'Padres', SEA:'Mariners',
   SF:'Giants', STL:'Cardinals', TB:'Rays', TEX:'Rangers', TOR:'Blue Jays', WAS:'Nationals',
 };
-function buildTeamSelect() {
-  const sel = $('teamSelect');
-  const ents = Object.keys(TEAM_NAMES).map(ab => ({ ab, nm: TEAM_NAMES[ab] })).sort((a, b) => a.nm.localeCompare(b.nm));
-  sel.innerHTML = ents.map(e => `<option value="${e.ab}">${e.nm}</option>`).join('');
-  sel.value = ents[Math.floor(Math.random() * ents.length)].ab;
+const TEAM_IDS = {
+  ARI:109, ATL:144, BAL:110, BOS:111, CHC:112, CIN:113, CLE:114, COL:115, CWS:145, DET:116,
+  HOU:117, KC:118, LAA:108, LAD:119, MIA:146, MIL:158, MIN:142, NYM:121, NYY:147, OAK:133,
+  PHI:143, PIT:134, SD:135, SEA:136, SF:137, STL:138, TB:139, TEX:140, TOR:141, WAS:120,
+};
+function randTeamAb(rng = Math.random, exclude = null) {
+  const abbrs = Object.keys(TEAM_NAMES).filter(ab => ab !== exclude);
+  return abbrs[Math.floor(rng() * abbrs.length)];
+}
+function teamLogoUrl(abbr) {
+  return TEAM_IDS[abbr] ? `https://www.mlbstatic.com/team-logos/${TEAM_IDS[abbr]}.svg` : '';
+}
+function teamLogoHTML(abbr, cls = '') {
+  const url = teamLogoUrl(abbr);
+  if (!url) return '';
+  const label = TEAM_NAMES[abbr] || abbr || 'Team';
+  return `<span class="team-logo ${cls}"><img src="${url}" alt="${escapeHTML(label)} logo" onerror="this.parentElement.style.display='none'"></span>`;
+}
+function teamInfo(abbr) {
+  return { abbr, name: TEAM_NAMES[abbr] || 'club', color: teamColor(abbr), logo: teamLogoUrl(abbr) };
 }
 // darken/lighten a hex color
 function shade(hex, amt) {
   const n = parseInt(hex.slice(1), 16);
   const r = clamp((n >> 16) + amt, 0, 255), g = clamp(((n >> 8) & 255) + amt, 0, 255), b = clamp((n & 255) + amt, 0, 255);
+  return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+}
+// Brighten a hex color toward white so it's readable on a near-black backdrop.
+function brightColor(hex, minLuma = 110) {
+  const n = parseInt(hex.slice(1), 16);
+  let r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+  if (luma >= minLuma) return hex;
+  const t = Math.min(0.88, (minLuma - luma) / (255 - luma + 1));
+  r = Math.round(r + t * (255 - r)); g = Math.round(g + t * (255 - g)); b = Math.round(b + t * (255 - b));
   return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
 }
 function verdictColor(cls) { return cls === 'goat' ? '#ffd23f' : cls === 'yes' ? '#ffce3a' : cls === 'no' ? '#c8d0da' : cls === 'mid' ? '#d08a3e' : '#7e8da3'; }
@@ -684,7 +763,7 @@ const state = {
   filled: {}, used: new Set(), landed: null,
   respinUsed: false, boostUsed: false, snagUsed: false,
   boostedThisLand: false, spinning: false, strip: null, targetIndex: 0,
-  career: null,
+  career: null, draftTeamAb: null,
 };
 
 const $ = id => document.getElementById(id);
@@ -735,6 +814,7 @@ const Sound = (() => {
     legend()  { arp([523, 659, 784, 1046, 1319], 0.1, { vol: 0.22, dur: 0.4 }); arp([262, 330, 392, 523], 0.1, { type: 'sine', vol: 0.12, dur: 0.5 }); },
     assign()  { note(520, 0, 0.06, { type: 'square', vol: 0.14 }); note(780, 0.05, 0.1, { vol: 0.16 }); },
     prime()   { note(300, 0, 0.35, { type: 'sawtooth', vol: 0.16, glide: 1200 }); note(900, 0.18, 0.25, { vol: 0.14 }); note(1350, 0.3, 0.3, { type: 'sine', vol: 0.12 }); },
+    swap()    { note(740, 0, 0.16, { type: 'square', vol: 0.1, glide: 360 }); note(360, 0.02, 0.18, { type: 'triangle', vol: 0.12, glide: 880 }); note(1180, 0.18, 0.12, { type: 'sine', vol: 0.08 }); },
     whoosh()  { note(900, 0, 0.18, { type: 'sine', vol: 0.1, glide: 300 }); },
     complete(){ arp([523, 659, 784, 1046], 0.12, { vol: 0.2, dur: 0.5 }); note(1568, 0.36, 0.6, { type: 'sine', vol: 0.12 }); },
   };
@@ -751,7 +831,6 @@ async function init() {
   buildWeights();
   buildSegments();
   buildPips();
-  buildTeamSelect();
   $('loading').style.display = 'none';
   $('game').style.display = 'block';
   renderNodes();
@@ -1225,21 +1304,38 @@ function seededRandom(seedText) {
 function randRange(rng, lo, hi) { return lo + (hi - lo) * rng(); }
 function bell(rng, spread = 1) { return (rng() + rng() + rng() - 1.5) * spread; }
 
-function simulateCareer(filled, finalOvr) {
+function batterRole(vals) {
+  return vals.power >= 80 ? 'Slugger' : vals.speed >= 80 ? 'Speedster' : vals.contact >= 82 ? 'Contact Hitter' : 'Everyday Bat';
+}
+
+function simulateCareer(filled, finalOvr, draftTeamAb) {
   const vals = {};
   for (const s of SLOTS) vals[s.key] = filled[s.key].value;
   const seed = SLOTS.map(s => `${s.key}:${vals[s.key]}:${filled[s.key].player || filled[s.key].name}`).join('|');
   const rng = seededRandom(seed + '|bat-career-v1');
-  const role = vals.power >= 80 ? 'Slugger' : vals.speed >= 80 ? 'Speedster' : vals.contact >= 82 ? 'Contact Hitter' : 'Everyday Bat';
+  const role = batterRole(vals);
   const seasons = [];
   const totals = { pa:0, ab:0, h:0, hr:0, rbi:0, r:0, sb:0, bb:0, k:0, tb:0, war:0,
     mvp:0, allStar:0, battingTitles:0, hrTitles:0, silverSluggers:0, goldGloves:0, rings:0, playoffTrips:0, hr40:0 };
-  const teamQuality = randRange(rng, -0.08, 0.1);
+  let currentTeam = draftTeamAb || randTeamAb(rng);
+  let currentTeamQuality = randRange(rng, -0.08, 0.1);
+  let tradeCount = 0;
   const startAge = 22;
   const maxAge = Math.round(clamp(30 + vals.frame * 0.13 + randRange(rng, -2, 3), 29, 42));
   let declineDebt = 0, badStreak = 0, peakWar = 0;
 
   for (let age = startAge; age <= maxAge; age++) {
+    let trade = null;
+    if (age > startAge && tradeCount < 4) {
+      const tradeChance = clamp(0.045 + badStreak * 0.035 + (age > 31 ? 0.018 : 0) + (peakWar > 5.5 ? 0.015 : 0), 0.025, 0.22);
+      if (rng() < tradeChance) {
+        const from = currentTeam;
+        currentTeam = randTeamAb(rng, from);
+        currentTeamQuality = randRange(rng, -0.08, 0.1);
+        trade = { from, to: currentTeam };
+        tradeCount++;
+      }
+    }
     const growth = age < 28 ? 1 + (age - startAge) * 0.013 : 1;
     const decline = age > 31 ? 1 - Math.pow(age - 31, 1.35) * 0.022 : 1;
     const ageFactor = clamp(growth * decline - declineDebt, 0.62, 1.08);
@@ -1276,7 +1372,7 @@ function simulateCareer(filled, finalOvr) {
     const ops = obp + slg;
     const tb = Math.round(slg * ab);
     const rbi = Math.round(clamp(hr * 1.7 + (power - 40) * 0.55 + (clutch - 50) * 0.3 + 42 + bell(rng, 8), 18, 155) * (pa / 620));
-    const runs = Math.round(clamp(56 + (obp - 0.32) * 240 + (speed - 50) * 0.32 + bell(rng, 7), 22, 145) * (pa / 620) + teamQuality * 20);
+    const runs = Math.round(clamp(56 + (obp - 0.32) * 240 + (speed - 50) * 0.32 + bell(rng, 7), 22, 145) * (pa / 620) + currentTeamQuality * 20);
     const defRuns = (defense - 50) * 0.12 + (speed - 50) * 0.035;
     const war = clamp((ops - 0.690) * pa * 0.020 + defRuns * 0.1 + (sb - 8) * 0.015 + (seasonOvr - 70) * 0.006 + bell(rng, 0.5), -1.6, 10.5);
 
@@ -1288,13 +1384,13 @@ function simulateCareer(filled, finalOvr) {
     const hrTitle = hr >= 34 && rng() < clamp((hr - 34) * 0.022, 0, 0.42);
     const silverSlugger = ops >= 0.83 && rng() < clamp((ops - 0.83) * 1.4, 0, 0.5);
     const goldGlove = defense >= 82 && rng() < clamp((defense - 82) * 0.022 + (speed - 70) * 0.004, 0, 0.38);
-    const playoff = rng() < clamp(0.3 + teamQuality + (clutch - 50) * 0.003, 0.1, 0.72);
-    const ring = playoff && rng() < clamp(0.08 + teamQuality * 0.4 + (clutch - 50) * 0.0035 + Math.max(0, war - 4) * 0.018, 0.03, 0.42);
+    const playoff = rng() < clamp(0.3 + currentTeamQuality + (clutch - 50) * 0.003, 0.1, 0.72);
+    const ring = playoff && rng() < clamp(0.08 + currentTeamQuality * 0.4 + (clutch - 50) * 0.0035 + Math.max(0, war - 4) * 0.018, 0.03, 0.42);
     const hr40 = hr >= 40;
 
     const season = { age, role, pa, ab, h, hr, rbi, r: runs, sb, bb, k, avg: round(avg, 3), obp: round(obp, 3),
       slg: round(slg, 3), ops: round(ops, 3), war: round(war, 1), mvp, allStar, battingTitle, hrTitle,
-      silverSlugger, goldGlove, playoff, ring, hr40, hurt, exit: null, struggling: false };
+      silverSlugger, goldGlove, playoff, ring, hr40, hurt, exit: null, struggling: false, team: currentTeam, trade };
     seasons.push(season);
     totals.pa+=pa; totals.ab+=ab; totals.h+=h; totals.hr+=hr; totals.rbi+=rbi; totals.r+=runs; totals.sb+=sb;
     totals.bb+=bb; totals.k+=k; totals.tb+=tb; totals.war+=war;
@@ -1331,8 +1427,12 @@ function simulateCareer(filled, finalOvr) {
   const slamDunk = totals.war >= 64 || totals.mvp >= 3 || (totals.hr >= 500 && totals.war >= 46) || (totals.h >= 3000 && totals.war >= 50);
   const hallOfFame = hofScore >= 112 || slamDunk;
   const highlight = bestCareerHighlight(totals, peak);
+  const teams = [...new Set(seasons.map(s => s.team).filter(Boolean))];
 
   return { version: 1, seed, role, seasons, peakSeason: peak,
+    draftTeam: draftTeamAb || teams[0],
+    finalTeam: seasons[seasons.length - 1] && seasons[seasons.length - 1].team,
+    teams,
     totals: { pa: totals.pa, ab: totals.ab, h: totals.h, hr: totals.hr, rbi: totals.rbi, r: totals.r, sb: totals.sb,
       bb: totals.bb, k: totals.k, avg: round(careerAvg, 3), obp: round(careerObp, 3), slg: round(careerSlg, 3),
       ops: round(careerOps, 3), war: round(totals.war, 1), mvp: totals.mvp, allStar: totals.allStar, rings: totals.rings,
@@ -1347,6 +1447,101 @@ function bestCareerHighlight(totals, peak) {
   if (totals.rings) return `${totals.rings} championship ring${totals.rings === 1 ? '' : 's'}`;
   if (totals.battingTitles) return `${totals.battingTitles} batting title${totals.battingTitles === 1 ? '' : 's'}`;
   return `peak: age ${peak.age}, ${peak.war.toFixed(1)} WAR, ${peak.ops.toFixed(3)} OPS`;
+}
+
+function ordinal(n) {
+  const mod100 = n % 100;
+  if (mod100 >= 11 && mod100 <= 13) return n + 'th';
+  const mod10 = n % 10;
+  if (mod10 === 1) return n + 'st';
+  if (mod10 === 2) return n + 'nd';
+  if (mod10 === 3) return n + 'rd';
+  return n + 'th';
+}
+
+function getDraftSlot(ovr, rng) {
+  let round, pick;
+  if (ovr >= 95) { round = 1; pick = Math.max(1, Math.ceil(rng() * 5)); }
+  else if (ovr >= 90) { round = 1; pick = 6 + Math.floor(rng() * 10); }
+  else if (ovr >= 85) { round = 1; pick = 16 + Math.floor(rng() * 15); }
+  else if (ovr >= 80) { round = 2; pick = 1 + Math.floor(rng() * 30); }
+  else if (ovr >= 75) { round = 3 + Math.floor(rng() * 2); pick = 1 + Math.floor(rng() * 30); }
+  else if (ovr >= 70) { round = 5 + Math.floor(rng() * 3); pick = 1 + Math.floor(rng() * 30); }
+  else if (ovr >= 65) { round = 8 + Math.floor(rng() * 8); pick = 1 + Math.floor(rng() * 30); }
+  else { round = 16 + Math.floor(rng() * 15); pick = 1 + Math.floor(rng() * 30); }
+  return { round, pick };
+}
+
+function runDraftAnimation({ round, pick, teamAbbr, teamName, tColor, hitter, ovr, role }, onDone) {
+  const overlay = $('draftOverlay');
+  const pickOrd = ordinal(pick);
+  const bColor = brightColor(tColor);
+  $('draftRoundTag').textContent = `Round ${round} - Pick ${pick}`;
+  $('draftPickOrd').textContent = pickOrd;
+  $('draftRoundNum').textContent = round;
+  $('draftSelecting').textContent = '';
+  $('draftSelecting').style.color = bColor;
+  const reveal = $('draftReveal');
+  const logo = $('drLogo');
+  const logoImg = logo && logo.querySelector('img');
+  if (logo && logoImg) {
+    const logoUrl = teamLogoUrl(teamAbbr);
+    logo.style.display = logoUrl ? 'inline-grid' : 'none';
+    logoImg.src = logoUrl || '';
+    logoImg.alt = `${teamName} logo`;
+    logoImg.onerror = () => { logo.style.display = 'none'; };
+  }
+  $('drTeam').textContent = 'The ' + teamName.toUpperCase();
+  $('drName').textContent = hitter;
+  $('drName').style.textShadow = `0 0 36px ${bColor}80`;
+  $('drOvr').textContent = `${ovr} OVR`;
+  $('drOvr').style.color = bColor;
+  $('drArch').textContent = role || '';
+  $('drArch').style.background = bColor + '1a';
+  $('drArch').style.border = `1px solid ${bColor}55`;
+  $('drArch').style.color = bColor;
+  $('draftSkip').classList.remove('show');
+
+  const league = overlay.querySelector('.draft-league');
+  const headline = overlay.querySelector('.draft-headline');
+  const roundTag = overlay.querySelector('.draft-round-tag');
+  const divider = overlay.querySelector('.draft-divider');
+  const call = $('draftCall');
+  const selecting = $('draftSelecting');
+  gsap.set([league, headline, roundTag, divider, call, selecting, reveal], { opacity: 0, y: 0 });
+
+  overlay.classList.add('show');
+  gsap.fromTo(overlay, { opacity: 0 }, { opacity: 1, duration: .35 });
+
+  const tl = gsap.timeline();
+  tl.to(league,   { opacity: 1, y: 0, duration: .4, ease: 'power2.out' }, 0.2)
+    .fromTo(headline, { y: 14, opacity: 0 }, { y: 0, opacity: 1, duration: .55, ease: 'power3.out' }, 0.38)
+    .to(roundTag,  { opacity: 1, duration: .4 }, 0.7)
+    .to(divider,   { opacity: 1, duration: .5 }, 0.9)
+    .to(call,      { opacity: 1, duration: .45 }, 1.2)
+    .add(() => { selecting.textContent = `The ${teamName} select...`; }, 2.0)
+    .to(selecting, { opacity: 1, duration: .35 }, 2.0)
+    .fromTo(reveal, { y: 18, opacity: 0 }, { y: 0, opacity: 1, duration: .55, ease: 'back.out(1.6)' }, 2.7)
+    .add(() => {
+      if (ovr >= 90) Sound.legend(); else if (ovr >= 85) Sound.diamond(); else Sound.gold();
+      gsap.fromTo(reveal, { scale: .92 }, { scale: 1, duration: .5, ease: 'back.out(2)' });
+    }, 2.7)
+    .add(() => { $('draftSkip').classList.add('show'); }, 3.4);
+
+  let done = false;
+  function complete() {
+    if (done) return;
+    done = true;
+    tl.kill();
+    $('draftSkip').classList.remove('show');
+    gsap.to(overlay, { opacity: 0, duration: .38, onComplete: () => {
+      overlay.classList.remove('show');
+      gsap.set(overlay, { opacity: '' });
+      onDone();
+    }});
+  }
+  const autoTimer = setTimeout(complete, 5200);
+  overlay.onclick = () => { clearTimeout(autoTimer); complete(); };
 }
 
 function countUp(el, to, places, comma) {
@@ -1368,9 +1563,15 @@ function addNews(news, h) {
 function flashTk(id) { const el = $(id); el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); }
 
 // Headlines generated from a season's events.
-function seasonHeadlines(s, idx, total, P, T) {
-  const team = 'the ' + T;
+function seasonHeadlines(s, idx, total, P, fallbackTeam) {
+  const teamName = TEAM_NAMES[s.team] || fallbackTeam;
+  const team = 'the ' + teamName;
   const h = [];
+  if (s.trade) {
+    const from = TEAM_NAMES[s.trade.from] || s.trade.from;
+    const to = TEAM_NAMES[s.trade.to] || s.trade.to;
+    h.push({ text: `${P} is <b>traded</b> from the ${from} to the ${to}.`, big: true });
+  }
   if (idx === 0) h.push({ text: `${P} makes his MLB debut with <b>${team}</b>.`, big: true });
   if (s.mvp) h.push({ text: `🏆 ${P} is named <b>MVP</b>!`, big: true });
   if (s.ring) h.push({ text: `💍 ${P} and ${team} win the <b>World Series</b>!`, big: true });
@@ -1392,10 +1593,34 @@ function seasonHeadlines(s, idx, total, P, T) {
 // Play the career out season by season — log, headlines, live ticker — then the verdict + card.
 function runCareerPlaythrough() {
   if (state.career) return;
-  state.career = simulateCareer(state.filled, state.finalOvr);
+  $('simBtn').disabled = true;
+
+  const vals = {};
+  for (const s of SLOTS) vals[s.key] = state.filled[s.key].value;
+  const role = batterRole(vals);
+  const draftSeed = SLOTS.map(s => `${s.key}:${state.filled[s.key].value}:${state.filled[s.key].name}`).join('|');
+  const draftRng = seededRandom(draftSeed + '|bat-draft-v1');
+  const { round, pick } = getDraftSlot(state.finalOvr, draftRng);
+
+  state.draftTeamAb = randTeamAb(draftRng);
+  const hitter = $('nameInput').value.trim() || 'Your Hitter';
+
+  runDraftAnimation({
+    round, pick,
+    teamAbbr: state.draftTeamAb,
+    teamName: TEAM_NAMES[state.draftTeamAb] || 'club',
+    tColor: teamColor(state.draftTeamAb),
+    hitter,
+    ovr: state.finalOvr,
+    role,
+  }, _doCareerSim);
+}
+
+function _doCareerSim() {
+  state.career = simulateCareer(state.filled, state.finalOvr, state.draftTeamAb);
   const career = state.career, seasons = career.seasons;
-  const ab = $('teamSelect').value;
-  state.simTeam = { abbr: ab, name: TEAM_NAMES[ab] || 'club', color: teamColor(ab) };
+  const ab = state.draftTeamAb;
+  state.simTeam = teamInfo(ab);
   state.simName = $('nameInput').value.trim() || 'Your hitter';
   const P = state.simName, T = state.simTeam.name, accent = state.simTeam.color;
 
@@ -1417,20 +1642,22 @@ function runCareerPlaythrough() {
     if (i >= seasons.length) return finishPlaythrough(career);
     const yr = String(2026 + i).slice(-2);
     const s = seasons[i]; i++;
+    const rowTeam = teamInfo(s.team || state.simTeam.abbr);
     const badges = [s.mvp ? 'MVP' : '', s.allStar ? '★' : '', s.battingTitle ? 'BAT Title' : '', s.hrTitle ? 'HR Title' : '',
       s.silverSlugger ? 'SS' : '', s.goldGlove ? 'GG' : '', s.hr40 ? '40+ HR' : '', s.ring ? '💍' : ''].filter(Boolean).join(' · ');
     const row = document.createElement('div');
     row.className = 'season-row' + (s.mvp || s.ring || s.hr40 ? ' big' : '');
-    row.style.borderLeft = `3px solid ${accent}`;
+    row.style.borderLeft = `3px solid ${rowTeam.color}`;
     row.innerHTML = `<div class="s-main">
         <span class="age">'${yr}</span>
+        ${teamLogoHTML(rowTeam.abbr, 'sm')}
         <span class="s-line">${s.avg.toFixed(3).replace(/^0\./, '.')} · ${s.hr} HR · ${s.rbi} RBI · ${s.sb} SB</span>
         <span class="s-war">${s.war.toFixed(1)}</span>
       </div>${badges ? `<div class="s-badges">${badges}</div>` : ''}`;
     log.appendChild(row);
     log.scrollTop = log.scrollHeight;
     gsap.fromTo(row, { x: -14, opacity: 0 }, { x: 0, opacity: 1, duration: .22 });
-    $('careerSpan').textContent = `${T} · Age ${seasons[0].age}–${s.age}`;
+    $('careerSpan').textContent = `${rowTeam.name} · Age ${seasons[0].age}–${s.age}`;
 
     // live ticker + milestone headlines
     const beforeH = runH, beforeHR = runHR;
@@ -1442,7 +1669,9 @@ function runCareerPlaythrough() {
     for (const m of hrMiles) if (beforeHR < m && runHR >= m) { heads.push({ text: `${P} launches career home run <b>#${m}</b>.`, big: true }); flashTk('tkW'); milestone = true; }
     heads.forEach(h => addNews(news, h));
 
-    if (s.mvp || s.hr40 || s.ring || milestone) Sound.gold(); else Sound.tick(0.35);
+    if (s.trade) Sound.swap();
+    else if (s.mvp || s.hr40 || s.ring || milestone) Sound.gold();
+    else Sound.tick(0.35);
     setTimeout(step, delay);
   }
   step();
@@ -1487,7 +1716,7 @@ function finishPlaythrough(career) {
 
 // Shareable career card + trophy case.
 function buildCard(career, verdict, voteLine) {
-  const t = career.totals, team = state.simTeam, name = state.simName;
+  const t = career.totals, team = teamInfo(career.finalTeam || (state.simTeam && state.simTeam.abbr) || state.draftTeamAb), name = state.simName;
   const trophies = [];
   for (let i = 0; i < t.mvp; i++) trophies.push('🏆');
   for (let i = 0; i < t.rings; i++) trophies.push('💍');
@@ -1500,6 +1729,7 @@ function buildCard(career, verdict, voteLine) {
   $('careerCard').innerHTML = `
     <div class="cc-top" style="background:linear-gradient(135deg, ${team.color}, ${shade(team.color, -34)});">
       <div class="cc-ovr">${state.finalOvr}</div>
+      <div class="cc-logo"><img src="${team.logo}" alt="${escapeHTML(team.name)} logo" onerror="this.parentElement.style.display='none'"></div>
       <div class="cc-team">${escapeHTML(team.name)}</div>
       <div class="cc-name">${escapeHTML(name)}</div>
       <div class="cc-role">${career.role} · age ${yrs} · ${career.seasons.length} seasons</div>
@@ -1526,6 +1756,7 @@ function finish() {
     return { slot: s.label, value: f.value, display: String(f.display), player: f.name, team: f.team, legend: !!f.legend };
   });
   state.career = null;
+  state.draftTeamAb = null;
   myEntryId = null;
   $('doneOvr').className = 'total c-' + tier(avg);
   $('preSim').style.display = 'flex';
@@ -1628,6 +1859,7 @@ function reset() {
   state.spinning = false;
   state.strip = null;
   state.career = null;
+  state.draftTeamAb = null;
   $('done').classList.remove('show');
   $('career').style.display = 'none';
   $('landed').classList.remove('show');
