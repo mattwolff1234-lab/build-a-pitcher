@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 823 711">
   <defs>
-    <filter id="soft" x="-30%" y="-30%" width="160%" height="160%">
-      <feGaussianBlur stdDeviation="18"/>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="7"/>
     </filter>
   </defs>
-  <ellipse cx="480" cy="465" rx="82" ry="116" fill="white" filter="url(#soft)"/>
+  <ellipse cx="500" cy="455" rx="34" ry="72" transform="rotate(-14 500 455)" fill="white" filter="url(#soft)"/>
 </svg>
