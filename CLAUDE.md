@@ -175,3 +175,23 @@ under Node):
 - Leaderboard still ranks by **draft OVR**, not career → could add a career-score board (and a
   server-side re-sim would also close the anti-cheat hole). Optional **re-sim** toggle. Trades / free
   agency across teams. Player comp ("most similar to …"). Auto nickname from the build.
+
+---
+
+## Batting Lab (sibling game — LOCAL ONLY, not deployed)
+Same game as Pitching Lab, translated to **hitters**. Single file `build-a-batter.html` (clone of
+`index.html`). NOT deployed — localhost only until approved.
+
+- **Data:** `node fetch-batters.js` (clone of `fetch-data.js`, `is_hitter===true`) → `batters.json`
+  (`{pool, prime, legends}`). `contact`/`power` = L/R averages; API can exceed 99 (Judge 108/114) so
+  clamp 99 in-game.
+- **7 slots** (down from 9 — no Fielding/Arm/Durability): Vision=`plate_vision` (Eyes),
+  Power=`power` (Bat), Contact=`contact` (Hands), Speed=`speed` (Feet), Clutch=`batting_clutch`
+  (Helmet), Discipline=`plate_discipline` (Head), Frame=**height** (Body, `heightToRating`).
+- **Figure:** `batter-figure.png` + 7 `bat-seg-<key>.png` masks (PIL softmax, anchors in `SLOTS` ax/ay).
+- **WEIGHTS:** 1.2× Contact/Power, 1.1× Discipline/Vision/Clutch, 1.0× Speed/Frame.
+- **Sim** (`simulateCareer`, seed `|bat-career-v1`): OPS/FIP-style hitting model. Career length & PA
+  ← **Frame** (replaced durability); defense (`defRuns`)/Gold Glove ← **Speed** (replaced Fielding/Arm).
+  HOF via `hofScore` or `slamDunk`. Tuned: 99≈GOAT, 90≈100%, 85≈72%, 80≈23%, ≤77≈0%.
+- **Leaderboard:** shared `api/score.js`, separated by `game` column (`pitcher`|`batter`, default
+  `pitcher`, backward-compatible). NOT yet deployed.

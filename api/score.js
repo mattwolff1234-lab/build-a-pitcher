@@ -1,14 +1,10 @@
 // Leaderboard API (Vercel serverless function, talks to Neon Postgres).
-//   GET  /api/score?scope=global|daily&limit=50  -> ranked rows
-//   POST /api/score  { name, ovr, build }         -> inserts, returns id + global rank
-//
-// DB URL is injected by the Vercel<>Neon integration (DATABASE_URL / POSTGRES_URL).
+//   GET  /api/score?scope=global|daily&limit=200&game=pitcher|batter&me=<id>
+//   POST /api/score  { name, ovr, build, game }
+// One table, separated by `game` so Pitching Lab and Build-a-Batter have their own boards.
 
 const { neon } = require('@neondatabase/serverless');
 
-// Find the Postgres connection string regardless of the env-var prefix Vercel/Neon
-// chose (DATABASE_URL, POSTGRES_URL, STORAGE_DATABASE_URL, etc.). Falls back to
-// scanning for any value that looks like a postgres:// URL.
 function findConn() {
   const e = process.env;
   const named = e.DATABASE_URL || e.POSTGRES_URL || e.POSTGRES_PRISMA_URL
@@ -22,6 +18,7 @@ function findConn() {
 }
 const CONN = findConn();
 const sql = CONN ? neon(CONN) : null;
+const gameOf = g => (g === 'batter' ? 'batter' : 'pitcher');
 
 let ready;
 function ensure() {
@@ -34,7 +31,8 @@ function ensure() {
         build jsonb,
         created_at timestamptz NOT NULL DEFAULT now()
       )`;
-      await sql`CREATE INDEX IF NOT EXISTS idx_scores_ovr ON scores (ovr DESC, created_at ASC)`;
+      await sql`ALTER TABLE scores ADD COLUMN IF NOT EXISTS game text NOT NULL DEFAULT 'pitcher'`;
+      await sql`CREATE INDEX IF NOT EXISTS idx_scores_game_ovr ON scores (game, ovr DESC, created_at ASC)`;
       await sql`CREATE INDEX IF NOT EXISTS idx_scores_created ON scores (created_at)`;
     })();
   }
@@ -52,38 +50,40 @@ module.exports = async (req, res) => {
       if (!name) name = 'Anonymous';
       const ovr = Math.max(1, Math.min(99, Math.round(Number(body.ovr) || 0)));
       const build = body.build && typeof body.build === 'object' ? JSON.stringify(body.build) : null;
+      const game = gameOf(body.game);
 
       const [row] = await sql`
-        INSERT INTO scores (name, ovr, build) VALUES (${name}, ${ovr}, ${build}::jsonb)
+        INSERT INTO scores (name, ovr, build, game) VALUES (${name}, ${ovr}, ${build}::jsonb, ${game})
         RETURNING id, name, ovr, created_at`;
       const [{ ahead }] = await sql`
         SELECT count(*)::int AS ahead FROM scores
-        WHERE ovr > ${ovr} OR (ovr = ${ovr} AND created_at < ${row.created_at})`;
+        WHERE game = ${game} AND (ovr > ${ovr} OR (ovr = ${ovr} AND created_at < ${row.created_at}))`;
       return res.status(200).json({ ok: true, id: Number(row.id), globalRank: ahead + 1 });
     }
 
     const scope = (req.query && req.query.scope) || 'global';
     const limit = Math.min(200, Math.max(1, parseInt(req.query && req.query.limit, 10) || 50));
     const daily = scope === 'daily';
+    const game = gameOf(req.query && req.query.game);
     const rows = daily
       ? await sql`SELECT id, name, ovr, created_at FROM scores
-            WHERE created_at >= date_trunc('day', now())
+            WHERE game = ${game} AND created_at >= date_trunc('day', now())
             ORDER BY ovr DESC, created_at ASC LIMIT ${limit}`
       : await sql`SELECT id, name, ovr, created_at FROM scores
+            WHERE game = ${game}
             ORDER BY ovr DESC, created_at ASC LIMIT ${limit}`;
 
-    // Rank of a specific entry within this scope (so a submitter sees their place even if not top-N).
     let me = null;
     const meId = req.query && req.query.me ? parseInt(req.query.me, 10) : null;
     if (meId) {
-      const [row] = await sql`SELECT id, name, ovr, created_at FROM scores WHERE id = ${meId}`;
+      const [row] = await sql`SELECT id, name, ovr, created_at, game FROM scores WHERE id = ${meId}`;
       if (row) {
         const aheadRows = daily
           ? await sql`SELECT count(*)::int AS ahead FROM scores
-                WHERE created_at >= date_trunc('day', now())
+                WHERE game = ${row.game} AND created_at >= date_trunc('day', now())
                   AND (ovr > ${row.ovr} OR (ovr = ${row.ovr} AND created_at < ${row.created_at}))`
           : await sql`SELECT count(*)::int AS ahead FROM scores
-                WHERE ovr > ${row.ovr} OR (ovr = ${row.ovr} AND created_at < ${row.created_at})`;
+                WHERE game = ${row.game} AND (ovr > ${row.ovr} OR (ovr = ${row.ovr} AND created_at < ${row.created_at}))`;
         const inScope = daily
           ? (await sql`SELECT 1 FROM scores WHERE id = ${meId} AND created_at >= date_trunc('day', now())`).length > 0
           : true;
