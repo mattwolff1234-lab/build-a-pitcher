@@ -84,6 +84,8 @@
   /* ---------- reel ---------- */
   .reel-frame { position:relative; overflow:hidden; border-radius:14px; height:226px; margin-top:6px; }
   .reel-track { display:flex; gap:12px; padding:16px 14px; will-change:transform; }
+  .reel-track.idle { opacity:.34; }
+  .reel-track.idle .reel-card { box-shadow:none; border-color:rgba(120,150,190,.22); }
   .reel-card { flex:0 0 150px; height:194px; border-radius:10px; border:2px solid var(--grey);
     background:linear-gradient(180deg,#0c1420,#070b12); overflow:hidden; display:flex; flex-direction:column;
     align-items:center; box-shadow:0 6px 16px rgba(0,0,0,.4); }
@@ -736,6 +738,7 @@ async function init() {
   $('game').style.display = 'block';
   renderNodes();
   initTilt();
+  startIdleReel();
   $('spinBtn').onclick = spin;
   $('respinBtn').onclick = respin;
   $('boostBtn').onclick = boost;
@@ -822,12 +825,32 @@ function cardHTML(p) {
 
 const CARD_W = 162;
 
+// Idle "attract" reel: a faint, slowly scrolling roll of headshots before/between spins.
+let idleTween = null;
+function startIdleReel() {
+  stopIdleReel();
+  if (!DATA || !DATA.pool.length) return;
+  const track = $('track');
+  const N = 24;
+  const cards = [];
+  for (let i = 0; i < N; i++) cards.push(DATA.pool[Math.floor(Math.random() * DATA.pool.length)]);
+  track.innerHTML = cards.concat(cards).map(cardHTML).join('');   // two sets → seamless loop
+  track.classList.add('idle');
+  gsap.set(track, { x: 0, filter: 'none' });
+  idleTween = gsap.to(track, { x: -(N * CARD_W), duration: N * 0.95, ease: 'none', repeat: -1 });
+}
+function stopIdleReel() {
+  if (idleTween) { idleTween.kill(); idleTween = null; }
+  $('track').classList.remove('idle');
+}
+
 function spin() {
   if (state.spinning) return;
   if (openSlots().length === 0) return;
   state.spinning = true;
   state.boostedThisLand = false;
   Sound.click();
+  stopIdleReel();
   $('spinBtn').disabled = true;
   $('landed').classList.remove('show');
 
@@ -1027,7 +1050,7 @@ function assign(slotKey) {
   if (node) gsap.fromTo(node, { scale: .85 }, { scale: 1, duration: .4, ease: 'back.out(1.8)', delay: .12 });
 
   if (openSlots().length === 0) finish();
-  else $('spinBtn').disabled = false;
+  else { $('spinBtn').disabled = false; startIdleReel(); }
 }
 
 function flyHeadshot(fromRect, targetEl, img) {
@@ -1631,6 +1654,7 @@ function reset() {
   $('spinBtn').disabled = false;
   updatePowerups();
   renderNodes();
+  startIdleReel();
 }
 
 init();
