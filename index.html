@@ -988,20 +988,21 @@ function simulateCareer(filled, finalOvr) {
     const injuryPenalty = hurt ? randRange(rng, 0.55, 0.86) : 1;
     if (hurt && age > 30) declineDebt += randRange(rng, 0.006, 0.018);
 
-    const k9 = clamp(4.65 + strikeout * 0.064 + (velocity - 50) * 0.011 + (breakVal - 50) * 0.012, 4.2, 14.2);
-    const bb9 = clamp(6.2 - command * 0.0495 + bell(rng, 0.15), 1.05, 5.8);
-    const hr9 = clamp(2.05 - groundBall * 0.0148 + bell(rng, 0.08), 0.45, 2.1);
-    const babip = clamp(0.306 - (defense - 50) * 0.00065 - (breakVal - 50) * 0.00055 - (groundBall - 50) * 0.00045 + bell(rng, 0.01), 0.245, 0.345);
-    const ipPerStart = clamp(3.9 + stamina * 0.024 + frame * 0.006, 4.1, 7.1);
+    // attribute linkages — cranked so the extremes really pop
+    const k9 = clamp(2.8 + strikeout * 0.085 + (velocity - 50) * 0.013 + (breakVal - 50) * 0.013, 3.4, 15.5);
+    const bb9 = clamp(7.4 - command * 0.062 + bell(rng, 0.18), 0.9, 7.0);
+    const hr9 = clamp(2.5 - groundBall * 0.019 + bell(rng, 0.09), 0.4, 2.45);
+    const babip = clamp(0.308 - (defense - 50) * 0.0009 - (breakVal - 50) * 0.0006 - (groundBall - 50) * 0.0005 + bell(rng, 0.01), 0.24, 0.35);
+    const ipPerStart = clamp(3.4 + stamina * 0.032 + frame * 0.008, 3.9, 7.4);
     const starts = role === 'Starter'
-      ? Math.round(clamp(29 + (stamina - 60) * 0.06 + bell(rng, 2.2), 18, 34) * injuryPenalty)
+      ? Math.round(clamp(28 + (stamina - 60) * 0.085 + bell(rng, 2.2), 16, 35) * injuryPenalty)
       : 0;
     const appearances = role === 'Starter'
       ? starts
-      : Math.round(clamp(58 + (stamina - 50) * 0.25 + bell(rng, 5), 35, 76) * injuryPenalty);
+      : Math.round(clamp(56 + (stamina - 50) * 0.32 + bell(rng, 5), 30, 80) * injuryPenalty);
     const ip = role === 'Starter'
-      ? clamp(starts * ipPerStart + bell(rng, 11), 70, 225)
-      : clamp(appearances * randRange(rng, 0.9, 1.25), 35, 95);
+      ? clamp(starts * ipPerStart + bell(rng, 11), 60, 250)
+      : clamp(appearances * randRange(rng, 0.9, 1.25), 30, 100);
     const k = Math.round(ip * k9 / 9);
     const bb = Math.round(ip * bb9 / 9);
     const hr = Math.round(ip * hr9 / 9);
@@ -1009,27 +1010,30 @@ function simulateCareer(filled, finalOvr) {
     const bip = Math.max(0, bf - k - bb - hr);
     const h = Math.round(bip * babip + hr);
     const fip = (13 * hr + 3 * bb - 2 * k) / ip + 3.12;
-    const era = clamp(fip + 0.18 + (babip - 0.295) * 7.2 - (clutch - 50) * 0.011 + bell(rng, 0.24), 1.55, 6.6);
+    const era = clamp(fip + 0.18 + (babip - 0.295) * 7.2 - (clutch - 50) * 0.014 + bell(rng, 0.24), 1.5, 6.9);
     const er = Math.round(era * ip / 9);
     const whip = (bb + h) / ip;
     const warBase = role === 'Starter' ? (4.10 - era) * (ip / 200) * 2.4 : (3.95 - era) * (ip / 68) * 1.0;
     const war = clamp(warBase + (k9 - 8) * 0.10 + (seasonOvr - 70) * 0.014 + bell(rng, 0.3), -1.5, 9.2);
     const decisions = role === 'Starter' ? clamp(starts * randRange(rng, 0.7, 0.88), 10, 31) : clamp(appearances * randRange(rng, 0.14, 0.22), 5, 16);
-    const winPct = clamp(0.5 + (4.15 - era) * 0.085 + teamQuality + (clutch - 50) * 0.0009 + bell(rng, 0.04), 0.22, 0.82);
+    const winPct = clamp(0.5 + (4.15 - era) * 0.085 + teamQuality + (clutch - 50) * 0.0013 + bell(rng, 0.04), 0.22, 0.82);
     const wins = Math.round(decisions * winPct);
     const losses = Math.max(0, Math.round(decisions - wins));
 
     // Cy Young: you have to beat the whole league — even ace seasons usually lose.
-    const cyDom = role === 'Starter'
-      ? (war - 5.8) * 0.85 + (2.75 - era) * 2.6 + (k - 215) * 0.012
-      : (war - 3.0) * 0.7 + (2.2 - era) * 2.0;
-    const cyYoung = rng() < clamp(cyDom * 0.030, 0, role === 'Starter' ? 0.28 : 0.10);
+    // Elite builds (93+ OVR) get a real shot at MULTIPLE Cy Youngs (but not absurd).
+    const cyElite = Math.max(0, finalOvr - 92) * 0.55;
+    const cyDom = (role === 'Starter'
+      ? (war - 5.8) * 0.85 + (2.75 - era) * 2.6 + (k - 215) * 0.012 + cyElite
+      : (war - 3.0) * 0.7 + (2.2 - era) * 2.0);
+    const cyYoung = rng() < clamp(cyDom * 0.030, 0, role === 'Starter' ? 0.36 : 0.10);
     const allStar = war >= 3.6 || era <= 2.95 || (role === 'Bullpen Ace' && era <= 2.4);
     // league-leading titles are also competitive (only one winner/year)
     const eraTitle = role === 'Starter' && ip >= 150 && era <= 3.0 && rng() < clamp((3.0 - era) * 0.5, 0, 0.42);
     const strikeoutTitle = role === 'Starter' && k >= 210 && rng() < clamp((k - 210) * 0.0042, 0, 0.42);
-    const playoff = rng() < clamp(0.32 + teamQuality + (clutch - 50) * 0.002, 0.12, 0.68);
-    const ring = playoff && rng() < clamp(0.1 + teamQuality * 0.35 + (clutch - 50) * 0.0022 + Math.max(0, war - 4) * 0.018, 0.04, 0.34);
+    // Clutch swings both playoff odds and rings hard now
+    const playoff = rng() < clamp(0.3 + teamQuality + (clutch - 50) * 0.004, 0.1, 0.74);
+    const ring = playoff && rng() < clamp(0.08 + teamQuality * 0.4 + (clutch - 50) * 0.0045 + Math.max(0, war - 4) * 0.02, 0.03, 0.45);
     const noHitterChance = role === 'Starter' ? clamp((k9 - 7) * 0.006 + (0.305 - babip) * 0.9 + (hr9 < 0.9 ? 0.012 : 0), 0, 0.12) : 0;
     const noHitters = rng() < noHitterChance ? 1 : 0;
     const perfectGames = noHitters && rng() < clamp((command - 60) * 0.004 + (clutch - 60) * 0.002, 0.01, 0.18) ? 1 : 0;
@@ -1117,7 +1121,7 @@ function runCareerPlaythrough() {
   function step() {
     if (i >= seasons.length) return finishPlaythrough(career);
     const s = seasons[i++];
-    const badges = [s.cyYoung ? '★CY' : '', s.eraTitle ? 'ERA' : '', s.strikeoutTitle ? 'K' : '',
+    const badges = [s.cyYoung ? 'CY' : '', s.allStar ? '★' : '', s.eraTitle ? 'ERA' : '', s.strikeoutTitle ? 'SO' : '',
       s.noHitters ? 'NO-NO' : '', s.perfectGames ? 'PG' : '', s.ring ? '💍' : ''].filter(Boolean).join(' ');
     const row = document.createElement('div');
     row.className = 'season-row' + (s.cyYoung || s.ring || s.noHitters ? ' big' : '');
