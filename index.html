@@ -1142,6 +1142,8 @@ function simulateCareer(filled, finalOvr) {
   // break down / lose their role early, so they never rack up big counting totals.
   const maxAge = Math.round(clamp(27 + vals.stamina * 0.14 + (vals.frame - 55) * 0.04 + randRange(rng, -2, 3), 28, 41));
   let declineDebt = 0;
+  let badStreak = 0;
+  let peakWar = 0;
 
   for (let age = startAge; age <= maxAge; age++) {
     const growth = age < 28 ? 1 + (age - startAge) * 0.012 : 1;
@@ -1220,7 +1222,7 @@ function simulateCareer(filled, finalOvr) {
     const season = {
       age, role, ip: round(ip, 1), k, bb, hr, h, era: round(era, 2), whip: round(whip, 2),
       wins, losses, war: round(war, 1), cyYoung, allStar, eraTitle, strikeoutTitle,
-      playoff, ring, noHitters, perfectGames, doubleDigitK, hurt,
+      playoff, ring, noHitters, perfectGames, doubleDigitK, hurt, exit: null, struggling: false,
     };
     seasons.push(season);
 
@@ -1231,7 +1233,21 @@ function simulateCareer(filled, finalOvr) {
     totals.playoffTrips += playoff ? 1 : 0; totals.rings += ring ? 1 : 0;
     totals.noHitters += noHitters; totals.perfectGames += perfectGames;
 
-    if (age >= 34 && seasonOvr < 60 && rng() < 0.4) break;
+    // ---- career attrition ----
+    peakWar = Math.max(peakWar, war);
+    const everStar = peakWar >= 4.5;             // was a real front-line arm at some point
+    const badYear = war < 0.8 || era > 4.6;
+    badStreak = badYear ? badStreak + 1 : 0;
+    const disaster = war < -1.0 || era > 5.6;
+    if (badStreak >= 2 && !disaster) season.struggling = true;
+    // a journeyman who never broke through gets pushed out of the league
+    if (!everStar && age >= 28 && (badStreak >= 2 || disaster)
+        && rng() < clamp(0.42 + (badStreak - 1) * 0.32 + (disaster ? 0.3 : 0), 0, 0.95)) {
+      season.exit = (war < 0.2 || era > 5.2) ? 'released' : 'pushed-out';
+      break;
+    }
+    // anyone old and clearly past it gracefully retires
+    if (age >= 34 && (seasonOvr < 60 || badStreak >= 2) && rng() < 0.45) { season.exit = 'faded'; break; }
   }
 
   const careerEra = totals.er * 9 / totals.ip;
@@ -1309,7 +1325,12 @@ function seasonHeadlines(s, idx, total, P, T) {
   if (s.eraTitle) h.push({ text: `${P} leads the league in <b>ERA</b> (${s.era.toFixed(2)}).` });
   if (s.strikeoutTitle) h.push({ text: `${P} leads the league in <b>strikeouts</b> (${s.k}).` });
   if (s.hurt && !s.cyYoung) h.push({ text: `${P} fights through injury, limited to ${Math.round(s.ip)} innings.` });
-  if (idx === total - 1) h.push({ text: `${P} announces his <b>retirement</b> after ${total} seasons.`, big: true });
+  if (s.struggling && !s.exit) h.push({ text: `${P} struggles to a ${s.era.toFixed(2)} ERA and is fighting to keep his roster spot.` });
+  if (idx === total - 1) {
+    if (s.exit === 'released') h.push({ text: `${P} is <b>released</b> after a ${s.era.toFixed(2)}-ERA season and can't catch on elsewhere — career over.`, big: true });
+    else if (s.exit === 'pushed-out') h.push({ text: `${P} loses his job to a younger arm and <b>walks away</b> after ${total} seasons.`, big: true });
+    else h.push({ text: `${P} announces his <b>retirement</b> after ${total} seasons.`, big: true });
+  }
   return h;
 }
 
