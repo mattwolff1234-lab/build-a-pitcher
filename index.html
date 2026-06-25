@@ -196,6 +196,20 @@
   .node.assignable { border-color:var(--accent); cursor:pointer; box-shadow:0 0 14px rgba(255,122,24,.45); }
   .node.assignable .accent { background:var(--accent); }
   .node.assignable:hover { background:linear-gradient(180deg,#1d2a3d,#101824); }
+  /* shrink the body-part boxes on phones so the figure stays readable */
+  @media (max-width: 560px) {
+    .node { width:80px; padding:0 0 5px; border-radius:8px; }
+    .node .accent { height:3px; }
+    .node .body { padding:4px 5px 0; }
+    .node .label { font-size:8.5px; letter-spacing:.4px; }
+    .node .part { font-size:7.5px; margin-top:1px; }
+    .node .row { gap:4px; margin-top:2px; }
+    .node .face { width:20px; height:20px; border-width:1px; }
+    .node .val { font-size:17px; }
+    .node .who { font-size:8px; margin-top:2px; }
+    .node .preview { font-size:15px; margin-top:2px; }
+    .anchor { width:7px; height:7px; }
+  }
 
   .fly { position:fixed; border-radius:50%; background:#0c131e center/cover no-repeat; border:2px solid #fff;
     z-index:50; pointer-events:none; box-shadow:0 8px 24px rgba(0,0,0,.6); }
