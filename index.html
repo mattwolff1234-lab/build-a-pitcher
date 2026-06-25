@@ -229,6 +229,8 @@
   .career-verdict { font-family:'Oswald',sans-serif; font-size:24px; font-weight:700; line-height:1; text-transform:uppercase; }
   .career-verdict.yes { color:var(--gold); text-shadow:0 0 14px rgba(255,206,58,.35); }
   .career-verdict.no { color:var(--silver); }
+  .career-verdict.mid { color:var(--bronze); }
+  .career-verdict.low { color:var(--dim); }
   .career-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:rgba(120,160,210,.12); }
   .career-stat { padding:10px 8px; background:rgba(5,9,15,.54); text-align:center; min-width:0; }
   .career-stat b { display:block; font-family:'Oswald',sans-serif; font-size:22px; line-height:1; color:var(--ink); }
@@ -629,7 +631,7 @@ function openOverlay(id) { const el = $(id); el.classList.add('show'); gsap.from
 function closeOverlay(id) { $(id).classList.remove('show'); }
 function openLeaderboard(scope) { openOverlay('lbModal'); loadLeaderboard(scope); }
 
-const TIER_ODDS = { diamond: 0.08, gold: 0.17, silver: 0.22, bronze: 0.30, grey: 0.23 };
+const TIER_ODDS = { diamond: 0.10, gold: 0.20, silver: 0.24, bronze: 0.28, grey: 0.18 };
 let cumWeights = [], totalWeight = 0;
 function buildWeights() {
   const counts = {};
@@ -647,7 +649,7 @@ function pickWeighted() {
   while (lo < hi) { const mid = (lo + hi) >> 1; if (cumWeights[mid] < r) lo = mid + 1; else hi = mid; }
   return DATA.pool[lo];
 }
-const LEGEND_ODDS = 0.01;
+const LEGEND_ODDS = 0.03;
 function randPitcher() {
   const legs = DATA.legends || [];
   if (legs.length && Math.random() < LEGEND_ODDS) {
@@ -1043,7 +1045,9 @@ function simulateCareer(filled, finalOvr) {
   };
   const teamQuality = randRange(rng, -0.08, 0.1);
   const startAge = 23;
-  const maxAge = Math.round(clamp(34 + (vals.frame + vals.stamina - 100) / 9 + randRange(rng, -2, 4), 31, 43));
+  // Career length is driven mostly by Stamina (with a little Frame): low-stamina arms
+  // break down / lose their role early, so they never rack up big counting totals.
+  const maxAge = Math.round(clamp(27 + vals.stamina * 0.14 + (vals.frame - 55) * 0.04 + randRange(rng, -2, 3), 28, 41));
   let declineDebt = 0;
 
   for (let age = startAge; age <= maxAge; age++) {
@@ -1068,13 +1072,15 @@ function simulateCareer(filled, finalOvr) {
     if (hurt && age > 30) declineDebt += randRange(rng, 0.006, 0.018);
 
     // attribute linkages — cranked so the extremes really pop
-    const k9 = clamp(2.8 + strikeout * 0.085 + (velocity - 50) * 0.013 + (breakVal - 50) * 0.013, 3.4, 15.5);
+    // Strikeout rate is tightly tied to the Strikeout rating: ~97 => ~13.5 K/9 (1.5 K per inning).
+    const k9 = clamp(-0.5 + strikeout * 0.145 + (velocity - 50) * 0.008 + (breakVal - 50) * 0.008, 2.5, 16.5);
     const bb9 = clamp(7.4 - command * 0.062 + bell(rng, 0.18), 0.9, 7.0);
     const hr9 = clamp(2.5 - groundBall * 0.019 + bell(rng, 0.09), 0.4, 2.45);
     const babip = clamp(0.308 - (defense - 50) * 0.0009 - (breakVal - 50) * 0.0006 - (groundBall - 50) * 0.0005 + bell(rng, 0.01), 0.24, 0.35);
-    const ipPerStart = clamp(3.4 + stamina * 0.032 + frame * 0.008, 3.9, 7.4);
+    // Innings per year scale hard with Stamina (how deep you go + how many starts).
+    const ipPerStart = clamp(3.1 + stamina * 0.038 + frame * 0.008, 3.6, 7.6);
     const starts = role === 'Starter'
-      ? Math.round(clamp(28 + (stamina - 60) * 0.085 + bell(rng, 2.2), 16, 35) * injuryPenalty)
+      ? Math.round(clamp(26 + (stamina - 55) * 0.11 + bell(rng, 2.2), 12, 35) * injuryPenalty)
       : 0;
     const appearances = role === 'Starter'
       ? starts
@@ -1088,12 +1094,12 @@ function simulateCareer(filled, finalOvr) {
     const bf = Math.round(ip * (role === 'Starter' ? 4.27 : 4.18));
     const bip = Math.max(0, bf - k - bb - hr);
     const h = Math.round(bip * babip + hr);
-    const fip = (13 * hr + 3 * bb - 2 * k) / ip + 3.12;
+    const fip = (13 * hr + 3 * bb - 2 * k) / ip + 3.22;
     const era = clamp(fip + 0.18 + (babip - 0.295) * 7.2 - (clutch - 50) * 0.014 + bell(rng, 0.24), 1.5, 6.9);
     const er = Math.round(era * ip / 9);
     const whip = (bb + h) / ip;
     const warBase = role === 'Starter' ? (4.10 - era) * (ip / 200) * 2.4 : (3.95 - era) * (ip / 68) * 1.0;
-    const war = clamp(warBase + (k9 - 8) * 0.10 + (seasonOvr - 70) * 0.014 + bell(rng, 0.3), -1.5, 9.2);
+    const war = clamp(warBase + (k9 - 9) * 0.06 + (seasonOvr - 70) * 0.014 + bell(rng, 0.3), -1.5, 9.2);
     const decisions = role === 'Starter' ? clamp(starts * randRange(rng, 0.7, 0.88), 10, 31) : clamp(appearances * randRange(rng, 0.14, 0.22), 5, 16);
     const winPct = clamp(0.5 + (4.15 - era) * 0.085 + teamQuality + (clutch - 50) * 0.0013 + bell(rng, 0.04), 0.22, 0.82);
     const wins = Math.round(decisions * winPct);
@@ -1103,7 +1109,7 @@ function simulateCareer(filled, finalOvr) {
     // Elite builds (93+ OVR) get a real shot at MULTIPLE Cy Youngs (but not absurd).
     const cyElite = Math.max(0, finalOvr - 92) * 0.55;
     const cyDom = (role === 'Starter'
-      ? (war - 5.8) * 0.85 + (2.75 - era) * 2.6 + (k - 215) * 0.012 + cyElite
+      ? (war - 5.8) * 0.85 + (2.75 - era) * 2.6 + (k - 270) * 0.008 + cyElite
       : (war - 3.0) * 0.7 + (2.2 - era) * 2.0);
     const cyYoung = rng() < clamp(cyDom * 0.030, 0, role === 'Starter' ? 0.36 : 0.10);
     const allStar = war >= 3.6 || era <= 2.95 || (role === 'Bullpen Ace' && era <= 2.4);
@@ -1139,9 +1145,9 @@ function simulateCareer(filled, finalOvr) {
   const careerWhip = (totals.bb + totals.h) / totals.ip;
   const peak = seasons.reduce((best, s) => s.war > best.war ? s : best, seasons[0]);
   const hardwareScore = totals.cyYoung * 14 + totals.allStar * 0.6 + (totals.eraTitles + totals.strikeoutTitles) * 1.8 + totals.rings * 2;
-  const milestoneScore = (totals.noHitters * 3) + (totals.perfectGames * 7) + (totals.k >= 3500 ? 9 : totals.k >= 3000 ? 4 : 0) + (totals.wins >= 300 ? 10 : totals.wins >= 250 ? 6 : totals.wins >= 200 ? 3 : 0);
+  const milestoneScore = (totals.noHitters * 3) + (totals.perfectGames * 7) + (totals.k >= 5000 ? 9 : totals.k >= 4000 ? 4 : 0) + (totals.wins >= 300 ? 10 : totals.wins >= 250 ? 6 : totals.wins >= 200 ? 3 : 0);
   const hofScore = Math.max(0, round(totals.war * 0.72 + hardwareScore + milestoneScore, 1));
-  const hallOfFame = hofScore >= 75 || totals.war >= 75;
+  const hallOfFame = hofScore >= 80 || totals.war >= 80;
   const highlight = bestCareerHighlight(totals, peak);
 
   return {
@@ -1199,12 +1205,13 @@ function runCareerPlaythrough() {
   let i = 0;
   function step() {
     if (i >= seasons.length) return finishPlaythrough(career);
+    const yr = String(2026 + i).slice(-2);   // career seasons start in '26
     const s = seasons[i++];
-    const badges = [s.cyYoung ? 'CY' : '', s.allStar ? '★' : '', s.eraTitle ? 'ERA' : '', s.strikeoutTitle ? 'SO' : '',
-      s.noHitters ? 'NO-NO' : '', s.perfectGames ? 'PG' : '', s.ring ? '💍' : ''].filter(Boolean).join(' ');
+    const badges = [s.cyYoung ? 'CY' : '', s.allStar ? '★' : '', s.eraTitle ? 'ERA Leader' : '', s.strikeoutTitle ? 'K Title' : '',
+      s.noHitters ? 'NO-NO' : '', s.perfectGames ? 'PG' : '', s.ring ? '💍' : ''].filter(Boolean).join(' · ');
     const row = document.createElement('div');
     row.className = 'season-row' + (s.cyYoung || s.ring || s.noHitters ? ' big' : '');
-    row.innerHTML = `<span class="age">'${String(s.age).padStart(2, '0')}</span>
+    row.innerHTML = `<span class="age">'${yr}</span>
       <span class="s-line">${s.wins}-${s.losses} · ${s.era.toFixed(2)} · ${s.k} K · ${round(s.ip, 0)} IP</span>
       <span class="s-badges">${badges}</span>
       <span class="s-war">${s.war.toFixed(1)}</span>`;
@@ -1216,6 +1223,14 @@ function runCareerPlaythrough() {
     setTimeout(step, delay);
   }
   step();
+}
+
+// Career verdict: Hall of Fame is earned in the sim; the rest are labeled by OVR.
+function careerTier(t, ovr) {
+  if (t.hallOfFame) return { txt: '🏆 Hall of Fame', cls: 'yes' };
+  if (ovr >= 80) return { txt: 'Hall of Pretty Good', cls: 'no' };
+  if (ovr >= 72) return { txt: 'Hall of Mid', cls: 'mid' };
+  return { txt: 'Hall of Not Good', cls: 'low' };
 }
 
 function finishPlaythrough(career) {
@@ -1231,9 +1246,10 @@ function finishPlaythrough(career) {
   ].filter(Boolean).join(' · ') || 'No major hardware';
   $('careerNote').innerHTML = `<strong>${escapeHTML(career.highlight)}</strong> · ${escapeHTML(awards)} · HOF score ${t.hofScore}`;
 
+  const verdict = careerTier(t, state.finalOvr);
   const v = $('careerVerdict');
-  v.textContent = t.hallOfFame ? '🏆 Hall of Fame' : 'Hall of Very Good';
-  v.className = 'career-verdict ' + (t.hallOfFame ? 'yes' : 'no');
+  v.textContent = verdict.txt;
+  v.className = 'career-verdict ' + verdict.cls;
   gsap.fromTo(v, { scale: 1.9, opacity: 0, rotation: -7 }, { scale: 1, opacity: 1, rotation: 0, duration: .65, ease: 'back.out(2)' });
   if (t.hallOfFame) Sound.legend(); else Sound.complete();
 
