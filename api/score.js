@@ -63,14 +63,34 @@ module.exports = async (req, res) => {
     }
 
     const scope = (req.query && req.query.scope) || 'global';
-    const limit = Math.min(100, Math.max(1, parseInt(req.query && req.query.limit, 10) || 50));
-    const rows = scope === 'daily'
+    const limit = Math.min(200, Math.max(1, parseInt(req.query && req.query.limit, 10) || 50));
+    const daily = scope === 'daily';
+    const rows = daily
       ? await sql`SELECT id, name, ovr, created_at FROM scores
             WHERE created_at >= date_trunc('day', now())
             ORDER BY ovr DESC, created_at ASC LIMIT ${limit}`
       : await sql`SELECT id, name, ovr, created_at FROM scores
             ORDER BY ovr DESC, created_at ASC LIMIT ${limit}`;
-    return res.status(200).json({ ok: true, rows: rows.map(r => ({ ...r, id: Number(r.id) })) });
+
+    // Rank of a specific entry within this scope (so a submitter sees their place even if not top-N).
+    let me = null;
+    const meId = req.query && req.query.me ? parseInt(req.query.me, 10) : null;
+    if (meId) {
+      const [row] = await sql`SELECT id, name, ovr, created_at FROM scores WHERE id = ${meId}`;
+      if (row) {
+        const aheadRows = daily
+          ? await sql`SELECT count(*)::int AS ahead FROM scores
+                WHERE created_at >= date_trunc('day', now())
+                  AND (ovr > ${row.ovr} OR (ovr = ${row.ovr} AND created_at < ${row.created_at}))`
+          : await sql`SELECT count(*)::int AS ahead FROM scores
+                WHERE ovr > ${row.ovr} OR (ovr = ${row.ovr} AND created_at < ${row.created_at})`;
+        const inScope = daily
+          ? (await sql`SELECT 1 FROM scores WHERE id = ${meId} AND created_at >= date_trunc('day', now())`).length > 0
+          : true;
+        if (inScope) me = { rank: aheadRows[0].ahead + 1, name: row.name, ovr: row.ovr };
+      }
+    }
+    return res.status(200).json({ ok: true, rows: rows.map(r => ({ ...r, id: Number(r.id) })), me });
   } catch (e) {
     return res.status(500).json({ ok: false, error: String((e && e.message) || e) });
   }
