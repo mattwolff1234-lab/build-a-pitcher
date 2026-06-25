@@ -360,14 +360,15 @@
 // Each slot maps an attribute to a body part. ax/ay = anchor point on the figure (%),
 // lx/ly = where the label node floats (%). A wire connects the two.
 const SLOTS = [
-  { key: 'hr_per_bf',           label: 'Ground Ball', part: 'Ball',    ax: 30, ay: 5,  lx: 13, ly: 9 },
-  { key: 'pitch_movement',      label: 'Break',       part: 'Wrist',   ax: 29, ay: 11, lx: 10, ly: 27 },
-  { key: 'k_per_bf',            label: 'Strikeout',   part: 'Forearm', ax: 28, ay: 18, lx: 10, ly: 45 },
-  { key: 'pitch_velocity',      label: 'Velocity',    part: 'Bicep',   ax: 38, ay: 23, lx: 13, ly: 63 },
-  { key: 'pitching_clutch',     label: 'Clutch',      part: 'Head',    ax: 53, ay: 11, lx: 88, ly: 9 },
-  { key: 'fielding_ability',    label: 'Defense',     part: 'Glove',   ax: 77, ay: 33, lx: 90, ly: 32 },
-  { key: 'frame',               label: 'Frame',       part: 'Body',    ax: 50, ay: 37, lx: 90, ly: 53, type: 'height' },
-  { key: 'stamina',             label: 'Stamina',     part: 'Legs',    ax: 47, ay: 67, lx: 85, ly: 77 },
+  { key: 'hr_per_bf',           label: 'Ground Ball', part: 'Ball',     ax: 30, ay: 5,  lx: 13, ly: 9 },
+  { key: 'pitch_movement',      label: 'Break',       part: 'Wrist',    ax: 29, ay: 11, lx: 10, ly: 27 },
+  { key: 'k_per_bf',            label: 'Strikeout',   part: 'Forearm',  ax: 28, ay: 18, lx: 10, ly: 45 },
+  { key: 'pitch_velocity',      label: 'Velocity',    part: 'Bicep',    ax: 38, ay: 23, lx: 13, ly: 63 },
+  { key: 'pitch_control',       label: 'Command',     part: 'Shoulder', ax: 48, ay: 19, lx: 90, ly: 24 },
+  { key: 'pitching_clutch',     label: 'Clutch',      part: 'Head',     ax: 53, ay: 11, lx: 90, ly: 7 },
+  { key: 'fielding_ability',    label: 'Defense',     part: 'Glove',    ax: 77, ay: 33, lx: 92, ly: 41 },
+  { key: 'frame',               label: 'Frame',       part: 'Body',     ax: 50, ay: 37, lx: 92, ly: 58, type: 'height' },
+  { key: 'stamina',             label: 'Stamina',     part: 'Legs',     ax: 47, ay: 67, lx: 86, ly: 80 },
 ];
 
 // MLB team primary colors (jersey tint). FA / unknown -> neutral steel.
@@ -393,7 +394,7 @@ function tier(ovr) {
 
 // OVR weighting: run-prevention slots count a little more, Defense/Frame a little less.
 const WEIGHTS = {
-  k_per_bf: 1.2, hr_per_bf: 1.2,
+  k_per_bf: 1.2, hr_per_bf: 1.2, pitch_control: 1.2,   // the three true outcomes (K, HR, BB)
   pitch_velocity: 1.1, pitch_movement: 1.1, stamina: 1.1, pitching_clutch: 1.1,
   fielding_ability: 1.0, frame: 1.0,
 };
