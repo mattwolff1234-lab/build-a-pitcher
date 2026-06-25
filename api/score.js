@@ -6,8 +6,22 @@
 
 const { neon } = require('@neondatabase/serverless');
 
-const CONN = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRES_PRISMA_URL;
-const sql = neon(CONN);
+// Find the Postgres connection string regardless of the env-var prefix Vercel/Neon
+// chose (DATABASE_URL, POSTGRES_URL, STORAGE_DATABASE_URL, etc.). Falls back to
+// scanning for any value that looks like a postgres:// URL.
+function findConn() {
+  const e = process.env;
+  const named = e.DATABASE_URL || e.POSTGRES_URL || e.POSTGRES_PRISMA_URL
+    || e.STORAGE_URL || e.STORAGE_DATABASE_URL || e.STORAGE_POSTGRES_URL;
+  if (named) return named;
+  for (const k of Object.keys(e)) {
+    const v = e[k];
+    if (typeof v === 'string' && /^postgres(ql)?:\/\//.test(v)) return v;
+  }
+  return null;
+}
+const CONN = findConn();
+const sql = CONN ? neon(CONN) : null;
 
 let ready;
 function ensure() {
