@@ -1245,9 +1245,11 @@ function simulateCareer(filled, finalOvr) {
   const hardware = totals.cyYoung * 14 + totals.rings * 2.5 + totals.allStar * 0.8
     + (totals.eraTitles + totals.strikeoutTitles) * 1.6 + totals.noHitters * 2 + totals.perfectGames * 5;
   const hofScore = Math.max(0, round(totals.war * 0.82 + kPts + wPts + eraPts + hardware, 1));
-  // A clearly Cooperstown résumé is ALWAYS in, regardless of OVR.
-  const slamDunk = totals.war >= 64 || totals.k >= 4200 || totals.cyYoung >= 3
-    || (totals.k >= 3200 && totals.rings >= 2);
+  // A clearly Cooperstown résumé is ALWAYS in — but counting stats need real VALUE
+  // behind them (WAR), so a high-K / high-inning compiler with a bad ERA doesn't sneak in.
+  const slamDunk = totals.war >= 64 || totals.cyYoung >= 3
+    || (totals.k >= 4000 && totals.war >= 50)
+    || (totals.k >= 3000 && totals.rings >= 2 && totals.war >= 46);
   const hallOfFame = hofScore >= 112 || slamDunk;
   const highlight = bestCareerHighlight(totals, peak);
 
