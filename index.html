@@ -282,11 +282,9 @@
 
   /* pre-sim: name + team + go */
   .pre-sim { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; max-width:420px; margin:12px auto 0; }
-  .pre-sim input, .team-select { font:inherit; font-size:14px; color:var(--ink); padding:11px 13px; border-radius:9px;
+  .pre-sim input { flex:1; min-width:140px; font:inherit; font-size:14px; color:var(--ink); padding:11px 13px; border-radius:9px;
     border:1px solid var(--line); background:rgba(255,255,255,.04); outline:none; }
-  .pre-sim input { flex:1; min-width:140px; }
-  .team-select { flex:1; min-width:140px; }
-  .pre-sim input:focus, .team-select:focus { border-color:var(--accent2); box-shadow:0 0 12px rgba(25,198,255,.3); }
+  .pre-sim input:focus { border-color:var(--accent2); box-shadow:0 0 12px rgba(25,198,255,.3); }
   .pre-sim .primary { flex-basis:100%; }
 
   /* live ticker */
@@ -538,7 +536,6 @@
 
       <div id="preSim" class="pre-sim">
         <input id="nameInput" maxlength="20" placeholder="Name your pitcher" autocomplete="off">
-        <select id="teamSelect" class="team-select"></select>
         <button id="simBtn" class="primary">▶ Simulate Career</button>
       </div>
 
@@ -688,11 +685,9 @@ const TEAM_NAMES = {
   NYY:'Yankees', OAK:'Athletics', PHI:'Phillies', PIT:'Pirates', SD:'Padres', SEA:'Mariners',
   SF:'Giants', STL:'Cardinals', TB:'Rays', TEX:'Rangers', TOR:'Blue Jays', WAS:'Nationals',
 };
-function buildTeamSelect() {
-  const sel = $('teamSelect');
-  const ents = Object.keys(TEAM_NAMES).map(ab => ({ ab, nm: TEAM_NAMES[ab] })).sort((a, b) => a.nm.localeCompare(b.nm));
-  sel.innerHTML = ents.map(e => `<option value="${e.ab}">${e.nm}</option>`).join('');
-  sel.value = ents[Math.floor(Math.random() * ents.length)].ab;
+function randTeamAb() {
+  const abbrs = Object.keys(TEAM_NAMES);
+  return abbrs[Math.floor(Math.random() * abbrs.length)];
 }
 // darken/lighten a hex color
 function shade(hex, amt) {
@@ -749,7 +744,7 @@ const state = {
   filled: {}, used: new Set(), landed: null,
   respinUsed: false, boostUsed: false, snagUsed: false,
   boostedThisLand: false, spinning: false, strip: null, targetIndex: 0,
-  career: null, archetype: null,
+  career: null, archetype: null, draftTeamAb: null,
 };
 
 const $ = id => document.getElementById(id);
@@ -816,7 +811,6 @@ async function init() {
   buildWeights();
   buildSegments();
   buildPips();
-  buildTeamSelect();
   $('loading').style.display = 'none';
   $('game').style.display = 'block';
   renderNodes();
@@ -1632,13 +1626,13 @@ function runCareerPlaythrough() {
   const draftRng = seededRandom(draftSeed + '|draft-v1');
   const { round, pick } = getDraftSlot(state.finalOvr, draftRng);
 
-  const ab = $('teamSelect').value;
+  state.draftTeamAb = randTeamAb();
   const pitcher = $('nameInput').value.trim() || 'Your Pitcher';
 
   runDraftAnimation({
     round, pick,
-    teamName: TEAM_NAMES[ab] || 'club',
-    tColor: teamColor(ab),
+    teamName: TEAM_NAMES[state.draftTeamAb] || 'club',
+    tColor: teamColor(state.draftTeamAb),
     pitcher,
     ovr: state.finalOvr,
     archetype: state.archetype,
@@ -1648,7 +1642,7 @@ function runCareerPlaythrough() {
 function _doCareerSim() {
   state.career = simulateCareer(state.filled, state.finalOvr);
   const career = state.career, seasons = career.seasons;
-  const ab = $('teamSelect').value;
+  const ab = state.draftTeamAb;
   state.simTeam = { abbr: ab, name: TEAM_NAMES[ab] || 'club', color: teamColor(ab) };
   state.simName = $('nameInput').value.trim() || 'Your pitcher';
   const P = state.simName, T = state.simTeam.name, accent = state.simTeam.color;
@@ -1892,6 +1886,7 @@ function reset() {
   state.strip = null;
   state.career = null;
   state.archetype = null;
+  state.draftTeamAb = null;
   $('done').classList.remove('show');
   $('doneArch').textContent = '';
   $('career').style.display = 'none';
