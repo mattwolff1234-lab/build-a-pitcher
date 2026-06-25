@@ -1,0 +1,9 @@
+{
+  "name": "build-a-pitcher",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Spin-draft attribute game with a Neon-backed leaderboard.",
+  "dependencies": {
+    "@neondatabase/serverless": "^0.10.4"
+  }
+}

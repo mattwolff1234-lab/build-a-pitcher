@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Build-a-Pitcher</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg0:#04070d; --bg1:#0a1320;
+    --panel-a: rgba(20,31,48,.72); --panel-b: rgba(9,15,25,.86);
+    --ink:#eaf2fb; --muted:#7e8da3; --dim:#56627a;
+    --line: rgba(120,160,210,.16);
+    --accent:#ff7a18; --accent2:#19c6ff;
+    --grey:#9aa6b6; --bronze:#d08a3e; --silver:#c8d0da; --gold:#ffce3a; --diamond:#54c7ff; --legend:#a366ff;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html,body { height:100%; }
+  body {
+    margin:0; background:var(--bg0); color:var(--ink); overflow-x:hidden;
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+    min-height:100vh; display:flex; flex-direction:column; align-items:center;
+  }
+  .disp { font-family:'Oswald',sans-serif; }
+
+  /* ---------- animated stadium background ---------- */
+  .bg { position:fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden; background:
+     radial-gradient(120% 90% at 50% -10%, #14253c 0%, var(--bg1) 38%, var(--bg0) 80%); }
+  .bg .glow { position:absolute; width:60vw; height:60vw; border-radius:50%; filter:blur(90px); opacity:.5; }
+  .bg .g1 { background:radial-gradient(circle,#ff7a1855,transparent 60%); top:-12%; left:-10%; animation:drift1 26s ease-in-out infinite; }
+  .bg .g2 { background:radial-gradient(circle,#19c6ff44,transparent 60%); bottom:-18%; right:-12%; animation:drift2 32s ease-in-out infinite; }
+  .bg .grid { position:absolute; inset:-50% 0 -10% 0; transform:perspective(520px) rotateX(62deg);
+    background-image:linear-gradient(rgba(120,170,220,.10) 1px,transparent 1px),linear-gradient(90deg,rgba(120,170,220,.10) 1px,transparent 1px);
+    background-size:46px 46px; mask-image:linear-gradient(transparent, #000 35%, #000 70%, transparent);
+    animation:gridmove 4.5s linear infinite; opacity:.5; }
+  .bg .scan { position:absolute; inset:0; opacity:.05;
+    background:repeating-linear-gradient(0deg, #fff 0 1px, transparent 1px 3px); }
+  @keyframes drift1 { 0%,100%{ transform:translate(-6%,-4%) scale(1);} 50%{ transform:translate(8%,6%) scale(1.1);} }
+  @keyframes drift2 { 0%,100%{ transform:translate(6%,4%) scale(1.05);} 50%{ transform:translate(-8%,-6%) scale(1);} }
+  @keyframes gridmove { from{ background-position:0 0;} to{ background-position:0 46px;} }
+
+  .wrap { width:100%; max-width:780px; padding:14px; position:relative; z-index:1; }
+
+  /* ---------- header ---------- */
+  header { width:100%; max-width:780px; padding:20px 16px 2px; position:relative; z-index:1; }
+  .brand { display:flex; align-items:center; gap:12px; }
+  .brand .mark { font-family:'Oswald',sans-serif; font-weight:700; font-size:30px; letter-spacing:3px;
+    text-transform:uppercase; line-height:1; background:linear-gradient(180deg,#fff,#b9c6da);
+    -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .brand .mark i { color:var(--accent); font-style:normal; }
+  .brand .tag { font-family:'Oswald',sans-serif; font-size:11px; font-weight:600; letter-spacing:2px;
+    color:var(--accent2); border:1px solid rgba(25,198,255,.4); padding:3px 8px 2px; border-radius:4px;
+    text-transform:uppercase; background:rgba(25,198,255,.07); }
+  .brand-rule { flex:1; height:2px; border-radius:2px;
+    background:linear-gradient(90deg,var(--accent),transparent); opacity:.5; }
+  .mute { padding:6px 10px; font-size:15px; line-height:1; border-radius:8px;
+    background:rgba(255,255,255,.04); border:1px solid var(--line); }
+
+  /* ---------- HUD panel base ---------- */
+  .panel { position:relative; border:1px solid var(--line); border-radius:14px;
+    background:linear-gradient(180deg,var(--panel-a),var(--panel-b)); backdrop-filter:blur(6px);
+    box-shadow:0 10px 40px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.05); }
+  .panel::before, .panel::after { content:''; position:absolute; width:14px; height:14px; pointer-events:none; opacity:.65; }
+  .panel::before { top:7px; left:7px; border-top:2px solid var(--accent2); border-left:2px solid var(--accent2); }
+  .panel::after { bottom:7px; right:7px; border-bottom:2px solid var(--accent2); border-right:2px solid var(--accent2); }
+
+  /* ---------- reel ---------- */
+  .reel-frame { position:relative; overflow:hidden; border-radius:14px; height:226px; margin-top:6px; }
+  .reel-track { display:flex; gap:12px; padding:16px 14px; will-change:transform; }
+  .reel-card { flex:0 0 150px; height:194px; border-radius:10px; border:2px solid var(--grey);
+    background:linear-gradient(180deg,#0c1420,#070b12); overflow:hidden; display:flex; flex-direction:column;
+    align-items:center; box-shadow:0 6px 16px rgba(0,0,0,.4); }
+  .reel-card img { width:100%; height:108px; object-fit:cover; object-position:top center; background:#0c131e; }
+  .reel-card .nm { font-size:12px; font-weight:600; margin-top:6px; text-align:center; padding:0 6px; line-height:1.15;
+    max-width:100%; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .reel-card .ov { font-family:'Oswald',sans-serif; font-size:24px; font-weight:700; margin-top:2px; line-height:1; }
+  .reel-card .pos { font-size:10px; color:var(--muted); margin-top:2px; letter-spacing:.5px; }
+  .reel-card .yr { font-family:'Oswald',sans-serif; font-size:11px; color:var(--accent); font-weight:600; }
+  .reel-card.win { border-color:#fff; box-shadow:0 0 0 2px rgba(255,255,255,.5),0 0 26px rgba(25,198,255,.55); }
+  .pointer { position:absolute; top:0; left:50%; transform:translateX(-50%); width:0; height:0;
+    border-left:9px solid transparent; border-right:9px solid transparent; border-top:13px solid var(--accent); z-index:5;
+    filter:drop-shadow(0 0 6px rgba(255,122,24,.8)); }
+  .pointer.bottom { top:auto; bottom:0; border-top:none; border-bottom:13px solid var(--accent); }
+  .reel-fade { position:absolute; top:0; bottom:0; width:80px; z-index:3; pointer-events:none; }
+  .reel-fade.l { left:0; background:linear-gradient(90deg,#0a121e,transparent); }
+  .reel-fade.r { right:0; background:linear-gradient(270deg,#0a121e,transparent); }
+  .sweep { position:absolute; top:0; bottom:0; left:30%; width:42%; z-index:4; pointer-events:none; opacity:0;
+    background:linear-gradient(100deg,transparent,rgba(255,255,255,.4),transparent); mix-blend-mode:screen; }
+
+  /* tier colors */
+  .t-grey{border-color:var(--grey);} .t-bronze{border-color:var(--bronze);box-shadow:0 0 12px rgba(208,138,62,.4);}
+  .t-silver{border-color:var(--silver);box-shadow:0 0 12px rgba(200,208,218,.4);}
+  .t-gold{border-color:var(--gold);box-shadow:0 0 14px rgba(255,206,58,.5);}
+  .t-diamond{border-color:var(--diamond);box-shadow:0 0 16px rgba(84,199,255,.6);}
+  .c-grey{color:var(--grey);} .c-bronze{color:var(--bronze);} .c-silver{color:var(--silver);}
+  .c-gold{color:var(--gold);} .c-diamond{color:var(--diamond);} .c-legend{color:var(--legend);}
+  .t-legend{border-color:var(--legend); box-shadow:0 0 18px rgba(163,102,255,.8), inset 0 0 14px rgba(163,102,255,.28);
+    animation:legendPulse 1.8s ease-in-out infinite;}
+  @keyframes legendPulse{0%,100%{box-shadow:0 0 12px rgba(163,102,255,.65),inset 0 0 10px rgba(163,102,255,.22);}
+    50%{box-shadow:0 0 24px rgba(163,102,255,1),inset 0 0 16px rgba(163,102,255,.4);}}
+  .legend-tag{font-family:'Oswald',sans-serif; font-size:11px; font-weight:600; color:var(--legend); letter-spacing:1px;}
+
+  /* ---------- controls ---------- */
+  .controls { display:flex; gap:10px; justify-content:center; margin:14px 0; flex-wrap:wrap; }
+  button { font-family:'Oswald',sans-serif; font-size:14px; font-weight:600; letter-spacing:1px; text-transform:uppercase;
+    cursor:pointer; border-radius:9px; padding:12px 22px; color:var(--ink); transition:.14s;
+    border:1px solid var(--line); background:linear-gradient(180deg,#1b2535,#121a27); }
+  button:hover:not(:disabled){ border-color:var(--accent2); box-shadow:0 0 14px rgba(25,198,255,.35); transform:translateY(-1px); }
+  button:disabled{ opacity:.35; cursor:not-allowed; }
+  button.primary { background:linear-gradient(180deg,#ff9038,#f06a0c); color:#1a1004; border-color:#ffae6a;
+    box-shadow:0 6px 20px rgba(240,106,12,.45); padding:13px 40px; font-size:16px; }
+  button.primary:hover:not(:disabled){ box-shadow:0 8px 26px rgba(240,106,12,.6); border-color:#ffd0a0; }
+  .spin-wrap { display:flex; justify-content:center; margin:16px 0 8px; }
+  .powerups { display:flex; gap:10px; justify-content:center; font-family:'Oswald',sans-serif; font-size:12px;
+    letter-spacing:1px; color:var(--muted); text-transform:uppercase; }
+  .powerups span { padding:3px 9px; border:1px solid var(--line); border-radius:20px; background:rgba(255,255,255,.03); }
+  .powerups span.used { text-decoration:line-through; opacity:.4; }
+
+  /* ---------- landed panel ---------- */
+  .landed { display:none; margin-top:14px; padding:16px; }
+  .landed.show { display:block; }
+  .landed-top { display:flex; gap:16px; align-items:center; }
+  .landed-top img { width:92px; height:92px; object-fit:cover; object-position:top center;
+    border-radius:10px; border:2px solid var(--grey); background:#0c131e; }
+  .landed-info h2 { font-family:'Oswald',sans-serif; margin:0; font-size:22px; font-weight:600; letter-spacing:.5px; }
+  .landed-info .sub { color:var(--muted); font-size:12px; margin-top:3px; letter-spacing:.8px; text-transform:uppercase; }
+  .landed-info .big-ov { font-family:'Oswald',sans-serif; font-size:34px; font-weight:700; margin-top:4px; line-height:1; }
+  .prime-badge { font-family:'Oswald',sans-serif; display:inline-block; font-size:11px; font-weight:700; color:#1a1205;
+    background:linear-gradient(90deg,var(--gold),var(--accent)); padding:2px 9px; border-radius:20px; margin-left:8px;
+    vertical-align:middle; letter-spacing:1px; }
+  .hint { color:var(--muted); font-size:12.5px; margin:12px 0 0; text-align:center; letter-spacing:.4px; }
+
+  /* ---------- build header / OVR gauge / pips ---------- */
+  .stage-head { display:flex; align-items:center; justify-content:space-between; margin:18px 4px 0; }
+  .sh-left { display:flex; align-items:center; gap:14px; }
+  .lbl { font-family:'Oswald',sans-serif; font-size:13px; letter-spacing:3px; color:var(--muted); text-transform:uppercase; }
+  .pips { display:flex; gap:5px; }
+  .pips i { width:18px; height:6px; border-radius:2px; background:rgba(255,255,255,.10); transition:.35s; }
+  .pips i.on { background:linear-gradient(90deg,var(--accent),var(--accent2)); box-shadow:0 0 9px rgba(255,122,24,.6); }
+  .ovr-badge { display:flex; align-items:center; gap:12px; }
+  .ovr-badge .meta { text-align:right; }
+  .ovr-badge .meta .t { font-family:'Oswald',sans-serif; font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:2px; }
+  .ovr-badge .meta .n { font-size:13px; font-weight:700; color:var(--ink); }
+  .ring { position:relative; width:68px; height:68px; border-radius:50%; display:grid; place-items:center;
+    background:conic-gradient(var(--g, rgba(255,255,255,.12)) calc(var(--p,0)*1%), rgba(255,255,255,.06) 0); }
+  .ring::before { content:''; position:absolute; inset:5px; border-radius:50%; background:#0a111c;
+    box-shadow:inset 0 0 14px rgba(0,0,0,.7); }
+  .ring span { position:relative; z-index:1; font-family:'Oswald',sans-serif; font-size:27px; font-weight:700; }
+
+  /* ---------- figure stage ---------- */
+  .stage3d { perspective:1100px; margin:8px auto 0; max-width:600px; }
+  .stage { position:relative; width:100%; aspect-ratio:823/711; border-radius:16px; overflow:hidden;
+    border:1px solid var(--line); transform-style:preserve-3d; will-change:transform;
+    background:radial-gradient(120% 100% at 50% 30%, #122236 0%, #060a12 76%);
+    box-shadow:inset 0 0 70px rgba(0,0,0,.6), 0 14px 50px rgba(0,0,0,.5); }
+  .stage::before, .stage::after { content:''; position:absolute; width:26px; height:26px; z-index:6; pointer-events:none; opacity:.7; }
+  .stage::before { top:10px; left:10px; border-top:2px solid var(--accent2); border-left:2px solid var(--accent2); }
+  .stage::after { bottom:10px; right:10px; border-bottom:2px solid var(--accent2); border-right:2px solid var(--accent2); }
+  .stage .figure { position:absolute; inset:0; background:#39414c;
+    -webkit-mask:url(pitcher-figure.png) center/contain no-repeat; mask:url(pitcher-figure.png) center/contain no-repeat;
+    pointer-events:none; }
+  .seg { position:absolute; inset:0; background:transparent; transition:background .25s;
+    -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat; -webkit-mask-position:center; mask-position:center;
+    -webkit-mask-size:contain; mask-size:contain; pointer-events:none; }
+  .stage .shade { position:absolute; inset:0; pointer-events:none; mix-blend-mode:soft-light;
+    background:linear-gradient(158deg,rgba(255,255,255,.30),rgba(255,255,255,0) 42%,rgba(0,0,0,.40));
+    -webkit-mask:url(pitcher-figure.png) center/contain no-repeat; mask:url(pitcher-figure.png) center/contain no-repeat; }
+  .burst { position:absolute; inset:0; pointer-events:none; z-index:4; opacity:0;
+    background:radial-gradient(circle at 50% 40%,rgba(163,102,255,.85),rgba(163,102,255,0) 60%); }
+  .wires { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:3; }
+  .wires line { stroke:rgba(120,160,210,.4); stroke-width:1; }
+  .wires line.hot { stroke:var(--accent2); stroke-width:1.6; filter:drop-shadow(0 0 3px rgba(25,198,255,.7)); }
+  .wires line.set { stroke:rgba(255,255,255,.4); }
+  #nodes { position:absolute; inset:0; z-index:4; }
+  .anchor { position:absolute; width:9px; height:9px; border-radius:50%; transform:translate(-50%,-50%);
+    background:var(--muted); border:2px solid #0a0f15; }
+  .anchor.hot { background:var(--accent2); box-shadow:0 0 9px var(--accent2); }
+  .anchor.set { background:#fff; }
+
+  .node { position:absolute; transform:translate(-50%,-50%); width:118px; padding:0 0 7px; border-radius:11px; overflow:hidden;
+    background:linear-gradient(180deg,rgba(18,27,41,.96),rgba(8,13,21,.96)); border:1px solid var(--line);
+    text-align:center; box-shadow:0 8px 20px rgba(0,0,0,.5); backdrop-filter:blur(3px); }
+  .node .accent { height:4px; background:var(--muted); }
+  .node .body { padding:6px 7px 0; }
+  .node .label { font-family:'Oswald',sans-serif; font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; line-height:1.1; }
+  .node .part { font-size:9px; color:var(--dim); margin-top:2px; }
+  .node .row { display:flex; align-items:center; justify-content:center; gap:7px; margin-top:4px; }
+  .node .face { width:32px; height:32px; border-radius:50%; flex:0 0 auto;
+    background:#0c131e center/cover no-repeat; border:1.5px solid var(--line); }
+  .node .val { font-family:'Oswald',sans-serif; font-size:25px; font-weight:700; line-height:1; }
+  .node .who { font-size:9.5px; color:var(--muted); line-height:1.15; word-break:break-word; margin-top:3px; }
+  .node .preview { font-family:'Oswald',sans-serif; font-size:21px; font-weight:700; color:var(--accent); line-height:1; margin-top:3px; }
+  .node.assignable { border-color:var(--accent); cursor:pointer; box-shadow:0 0 14px rgba(255,122,24,.45); }
+  .node.assignable .accent { background:var(--accent); }
+  .node.assignable:hover { background:linear-gradient(180deg,#1d2a3d,#101824); }
+
+  .fly { position:fixed; border-radius:50%; background:#0c131e center/cover no-repeat; border:2px solid #fff;
+    z-index:50; pointer-events:none; box-shadow:0 8px 24px rgba(0,0,0,.6); }
+
+  /* ---------- done ---------- */
+  .done { display:none; text-align:center; margin-top:16px; padding:20px; border-color:rgba(255,206,58,.4); }
+  .done.show { display:block; }
+  .done h2 { font-family:'Oswald',sans-serif; margin:0 0 6px; font-size:24px; letter-spacing:1px; text-transform:uppercase; }
+  .done .total { font-family:'Oswald',sans-serif; font-size:52px; font-weight:700; color:var(--gold); line-height:1; }
+  .done-sub { color:var(--muted); font-size:12px; margin:4px 0 16px; letter-spacing:1px; text-transform:uppercase; }
+  .submit-row { display:flex; gap:8px; justify-content:center; max-width:380px; margin:0 auto; }
+  .submit-row input { flex:1; min-width:0; font:inherit; font-size:15px; color:var(--ink); padding:11px 14px;
+    border-radius:9px; border:1px solid var(--line); background:rgba(255,255,255,.04); outline:none; }
+  .submit-row input:focus { border-color:var(--accent2); box-shadow:0 0 12px rgba(25,198,255,.3); }
+  .submit-row button { padding:11px 22px; }
+  .submit-msg { font-size:12px; color:var(--muted); margin-top:8px; min-height:16px; letter-spacing:.4px; }
+
+  .lb { max-width:420px; margin:6px auto 0; }
+  .lb-tabs { display:flex; gap:6px; justify-content:center; margin-bottom:10px; }
+  .lb-tab { font-family:'Oswald',sans-serif; font-size:12px; letter-spacing:1.5px; padding:8px 18px; border-radius:8px;
+    text-transform:uppercase; background:rgba(255,255,255,.03); border:1px solid var(--line); color:var(--muted); }
+  .lb-tab.active { color:#1a1004; background:linear-gradient(180deg,#ff9038,#f06a0c); border-color:#ffae6a; }
+  .lb-list { display:flex; flex-direction:column; gap:4px; max-height:300px; overflow-y:auto; }
+  .lb-row { display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:8px;
+    background:rgba(255,255,255,.03); border:1px solid var(--line); }
+  .lb-row .rank { font-family:'Oswald',sans-serif; font-size:15px; font-weight:600; color:var(--muted); width:30px; text-align:right; }
+  .lb-row .nm { flex:1; text-align:left; font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .lb-row .ov { font-family:'Oswald',sans-serif; font-size:20px; font-weight:700; }
+  .lb-row.mine { border-color:var(--accent2); box-shadow:0 0 12px rgba(25,198,255,.3); background:rgba(25,198,255,.07); }
+  .lb-row.top1 .rank { color:var(--gold); } .lb-row.top2 .rank { color:var(--silver); } .lb-row.top3 .rank { color:var(--bronze); }
+  .lb-empty { color:var(--muted); font-size:13px; padding:18px; }
+  .ghost-btn { font-family:'Oswald',sans-serif; font-size:13px; letter-spacing:1px; text-transform:uppercase; margin-top:16px;
+    padding:10px 22px; border-radius:9px; color:var(--muted); border:1px solid var(--line); background:rgba(255,255,255,.03); }
+  .ghost-btn:hover { color:var(--ink); border-color:var(--accent2); }
+  .footer-note { color:var(--dim); font-size:11.5px; text-align:center; padding:22px 12px 36px; position:relative; z-index:1; letter-spacing:.4px; }
+  .loading { text-align:center; color:var(--muted); padding:50px; font-family:'Oswald',sans-serif; letter-spacing:2px; text-transform:uppercase; }
+</style>
+</head>
+<body>
+<div class="bg">
+  <div class="glow g1"></div>
+  <div class="glow g2"></div>
+  <div class="grid"></div>
+  <div class="scan"></div>
+</div>
+
+<header>
+  <div class="brand">
+    <span class="mark">Build<i>·</i>A<i>·</i>Pitcher</span>
+    <span class="tag">Draft Mode</span>
+    <span class="brand-rule"></span>
+    <button id="muteBtn" class="mute" title="Toggle sound">🔊</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <div id="loading" class="loading">Loading pitchers…</div>
+
+  <div id="game" style="display:none">
+    <div class="reel-frame panel">
+      <div class="pointer"></div>
+      <div class="pointer bottom"></div>
+      <div class="reel-fade l"></div>
+      <div class="reel-fade r"></div>
+      <div class="sweep" id="sweep"></div>
+      <div id="track" class="reel-track"></div>
+    </div>
+
+    <div class="spin-wrap">
+      <button id="spinBtn" class="primary">Spin</button>
+    </div>
+    <div class="powerups">
+      <span id="pu-respin">Re-spin 1</span>
+      <span id="pu-boost">Boost 1</span>
+      <span id="pu-snag">Snag 1</span>
+    </div>
+
+    <div id="landed" class="landed panel">
+      <div class="landed-top">
+        <img id="landedImg" src="" alt="">
+        <div class="landed-info">
+          <h2 id="landedName">—<span id="primeBadge" class="prime-badge" style="display:none">PRIME</span></h2>
+          <div class="sub" id="landedSub">—</div>
+          <div class="big-ov" id="landedOvr">—</div>
+        </div>
+      </div>
+      <div class="hint">Tap a glowing body part to lock this pitcher's rating into that slot.</div>
+      <div class="controls">
+        <button id="snagLeftBtn">⟵ Snag</button>
+        <button id="respinBtn">Re-spin</button>
+        <button id="boostBtn">⚡ Boost</button>
+        <button id="snagRightBtn">Snag ⟶</button>
+      </div>
+    </div>
+
+    <div class="stage-head">
+      <div class="sh-left">
+        <span class="lbl">Build</span>
+        <div id="pips" class="pips"></div>
+      </div>
+      <div class="ovr-badge">
+        <div class="meta">
+          <div class="t">Overall</div>
+          <div class="n" id="slotsLeft">8 slots left</div>
+        </div>
+        <div class="ring" id="ovrRing"><span id="ovrNum">—</span></div>
+      </div>
+    </div>
+
+    <div class="stage3d">
+      <div class="stage" id="stage">
+        <div class="figure" id="figure"></div>
+        <div id="segments"></div>
+        <div class="shade"></div>
+        <div class="burst" id="burst"></div>
+        <svg class="wires" id="wires" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+        <div id="nodes"></div>
+      </div>
+    </div>
+
+    <div id="done" class="done panel">
+      <h2>Pitcher Complete</h2>
+      <div class="total" id="doneOvr">—</div>
+      <div class="done-sub">Weighted overall rating</div>
+
+      <div id="submitRow" class="submit-row">
+        <input id="nameInput" maxlength="20" placeholder="Name your pitcher" autocomplete="off">
+        <button id="submitBtn" class="primary">Submit</button>
+      </div>
+      <div id="submitMsg" class="submit-msg"></div>
+
+      <div id="lb" class="lb" style="display:none">
+        <div class="lb-tabs">
+          <button class="lb-tab active" data-scope="global">All-Time</button>
+          <button class="lb-tab" data-scope="daily">Today</button>
+        </div>
+        <div id="lbList" class="lb-list"></div>
+      </div>
+
+      <button id="resetBtn" class="ghost-btn">Build Another</button>
+    </div>
+  </div>
+</div>
+
+<div class="footer-note">Ratings from MLB The Show — Live series only. Not affiliated with MLB or Sony.</div>
+
+<script>
+// Each slot maps an attribute to a body part. ax/ay = anchor point on the figure (%),
+// lx/ly = where the label node floats (%). A wire connects the two.
+const SLOTS = [
+  { key: 'hr_per_bf',           label: 'Ground Ball', part: 'Ball',    ax: 30, ay: 5,  lx: 13, ly: 9 },
+  { key: 'pitch_movement',      label: 'Break',       part: 'Wrist',   ax: 29, ay: 11, lx: 10, ly: 27 },
+  { key: 'k_per_bf',            label: 'Strikeout',   part: 'Forearm', ax: 28, ay: 18, lx: 10, ly: 45 },
+  { key: 'pitch_velocity',      label: 'Velocity',    part: 'Bicep',   ax: 38, ay: 23, lx: 13, ly: 63 },
+  { key: 'pitching_clutch',     label: 'Clutch',      part: 'Head',    ax: 53, ay: 11, lx: 88, ly: 9 },
+  { key: 'fielding_ability',    label: 'Defense',     part: 'Glove',   ax: 77, ay: 33, lx: 90, ly: 32 },
+  { key: 'frame',               label: 'Frame',       part: 'Body',    ax: 50, ay: 37, lx: 90, ly: 53, type: 'height' },
+  { key: 'stamina',             label: 'Stamina',     part: 'Legs',    ax: 47, ay: 67, lx: 85, ly: 77 },
+];
+
+// MLB team primary colors (jersey tint). FA / unknown -> neutral steel.
+const TEAM_COLORS = {
+  ARI:'#A71930', ATL:'#CE1141', BAL:'#DF4601', BOS:'#BD3039', CHC:'#0E3386',
+  CIN:'#C6011F', CLE:'#00385D', COL:'#33006F', CWS:'#27251F', DET:'#0C2340',
+  HOU:'#EB6E1F', KC:'#004687', LAA:'#BA0021', LAD:'#005A9C', MIA:'#00A3E0',
+  MIL:'#12284B', MIN:'#002B5C', NYM:'#002D72', NYY:'#0C2340', OAK:'#003831',
+  PHI:'#E81828', PIT:'#FDB827', SD:'#2F241D', SEA:'#005C5C', SF:'#FD5A1E',
+  STL:'#C41E3A', TB:'#092C5C', TEX:'#003278', TOR:'#134A8E', WAS:'#AB0003',
+  FA:'#5b636e',
+};
+const IDLE_JERSEY = '#aeb6c2';
+function teamColor(team) { return TEAM_COLORS[team] || IDLE_JERSEY; }
+
+function tier(ovr) {
+  if (ovr >= 85) return 'diamond';
+  if (ovr >= 80) return 'gold';
+  if (ovr >= 75) return 'silver';
+  if (ovr >= 65) return 'bronze';
+  return 'grey';
+}
+
+// OVR weighting: run-prevention slots count a little more, Defense/Frame a little less.
+const WEIGHTS = {
+  k_per_bf: 1.2, hr_per_bf: 1.2,
+  pitch_velocity: 1.1, pitch_movement: 1.1, stamina: 1.1, pitching_clutch: 1.1,
+  fielding_ability: 1.0, frame: 1.0,
+};
+
+// Frame is driven by height (taller = better).
+function heightToRating(inches) {
+  if (!inches) return 69;
+  return Math.max(1, Math.min(99, Math.round(3 * inches - 147)));
+}
+function slotNumeric(p, s) { return s.type === 'height' ? heightToRating(p.heightIn) : p[s.key]; }
+function slotDisplay(p, s) { return s.type === 'height' ? (p.height || '—') : p[s.key]; }
+
+const SILHOUETTE = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="%2311161d"/><circle cx="50" cy="38" r="20" fill="%23394150"/><path d="M50 62c-20 0-34 14-34 34h68c0-20-14-34-34-34z" fill="%23394150"/></svg>'
+);
+function headshot(p) {
+  if (p.img) return p.img;
+  return p.mlbamId ? `https://midfield.mlbstatic.com/v1/people/${p.mlbamId}/spots/180` : SILHOUETTE;
+}
+
+let DATA = null;
+const state = {
+  filled: {}, used: new Set(), landed: null,
+  respinUsed: false, boostUsed: false, snagUsed: false,
+  boostedThisLand: false, spinning: false, strip: null, targetIndex: 0,
+};
+
+const $ = id => document.getElementById(id);
+
+// ---------- sound (synthesized via Web Audio — no asset files) ----------
+const Sound = (() => {
+  let ac, master, muted = false;
+  function ctx() {
+    if (!ac) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      ac = new AC();
+      master = ac.createGain();
+      master.gain.value = 0.5;
+      master.connect(ac.destination);
+    }
+    if (ac.state === 'suspended') ac.resume();
+    return ac;
+  }
+  function note(freq, when, dur, o = {}) {
+    const c = ctx(); if (!c) return;
+    const { type = 'triangle', vol = 0.2, glide = null, attack = 0.005 } = o;
+    const t = c.currentTime + when;
+    const osc = c.createOscillator(), g = c.createGain();
+    osc.type = type; osc.frequency.setValueAtTime(freq, t);
+    if (glide) osc.frequency.exponentialRampToValueAtTime(glide, t + dur);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(vol, t + attack);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    osc.connect(g).connect(master);
+    osc.start(t); osc.stop(t + dur + 0.03);
+  }
+  const arp = (freqs, step, o = {}) => freqs.forEach((f, i) => note(f, i * step, o.dur || step * 1.6, o));
+  return {
+    setMuted(m) { muted = m; if (master) master.gain.value = m ? 0 : 0.5; },
+    isMuted() { return muted; },
+    // retro slot "tok": warm low pluck + sub-octave body; pitch drops as the reel slows
+    tick(speed = 0.5) {
+      const f = 210 + Math.min(1, speed) * 280;   // ~210 (slow) .. 490 (fast)
+      note(f, 0, 0.055, { type: 'square', vol: 0.06, glide: f * 0.55 });
+      note(f / 2, 0, 0.06, { type: 'triangle', vol: 0.05, glide: f * 0.28 });
+    },
+    click()   { note(620, 0, 0.06, { type: 'square', vol: 0.12, glide: 470 }); },
+    land()    { note(440, 0, 0.1, { vol: 0.12 }); note(660, 0.04, 0.12, { vol: 0.1 }); },
+    gold()    { arp([660, 880], 0.09, { vol: 0.2, dur: 0.18 }); },
+    diamond() { arp([660, 990, 1320], 0.08, { vol: 0.2, dur: 0.2 }); note(1980, 0.24, 0.25, { type: 'sine', vol: 0.12 }); },
+    legend()  { arp([523, 659, 784, 1046, 1319], 0.1, { vol: 0.22, dur: 0.4 }); arp([262, 330, 392, 523], 0.1, { type: 'sine', vol: 0.12, dur: 0.5 }); },
+    assign()  { note(520, 0, 0.06, { type: 'square', vol: 0.14 }); note(780, 0.05, 0.1, { vol: 0.16 }); },
+    prime()   { note(300, 0, 0.35, { type: 'sawtooth', vol: 0.16, glide: 1200 }); note(900, 0.18, 0.25, { vol: 0.14 }); note(1350, 0.3, 0.3, { type: 'sine', vol: 0.12 }); },
+    whoosh()  { note(900, 0, 0.18, { type: 'sine', vol: 0.1, glide: 300 }); },
+    complete(){ arp([523, 659, 784, 1046], 0.12, { vol: 0.2, dur: 0.5 }); note(1568, 0.36, 0.6, { type: 'sine', vol: 0.12 }); },
+  };
+})();
+
+async function init() {
+  try {
+    const res = await fetch('pitchers.json');
+    DATA = await res.json();
+  } catch (e) {
+    $('loading').textContent = 'Could not load pitchers.json. Run "node fetch-data.js" first and serve over http.';
+    return;
+  }
+  buildWeights();
+  buildSegments();
+  buildPips();
+  $('loading').style.display = 'none';
+  $('game').style.display = 'block';
+  renderNodes();
+  initTilt();
+  $('spinBtn').onclick = spin;
+  $('respinBtn').onclick = respin;
+  $('boostBtn').onclick = boost;
+  $('snagLeftBtn').onclick = () => snag(-1);
+  $('snagRightBtn').onclick = () => snag(1);
+  $('resetBtn').onclick = reset;
+  $('muteBtn').onclick = () => { const m = !Sound.isMuted(); Sound.setMuted(m); $('muteBtn').textContent = m ? '🔇' : '🔊'; };
+  $('submitBtn').onclick = submitScore;
+  $('nameInput').addEventListener('keydown', e => { if (e.key === 'Enter') submitScore(); });
+  document.querySelectorAll('.lb-tab').forEach(t => t.onclick = () => loadLeaderboard(t.dataset.scope));
+}
+
+const TIER_ODDS = { diamond: 0.08, gold: 0.17, silver: 0.22, bronze: 0.30, grey: 0.23 };
+let cumWeights = [], totalWeight = 0;
+function buildWeights() {
+  const counts = {};
+  for (const p of DATA.pool) { const t = tier(p.ovr); counts[t] = (counts[t] || 0) + 1; }
+  cumWeights = []; totalWeight = 0;
+  for (const p of DATA.pool) {
+    const t = tier(p.ovr);
+    totalWeight += (TIER_ODDS[t] || 0) / counts[t];
+    cumWeights.push(totalWeight);
+  }
+}
+function pickWeighted() {
+  const r = Math.random() * totalWeight;
+  let lo = 0, hi = cumWeights.length - 1;
+  while (lo < hi) { const mid = (lo + hi) >> 1; if (cumWeights[mid] < r) lo = mid + 1; else hi = mid; }
+  return DATA.pool[lo];
+}
+const LEGEND_ODDS = 0.01;
+function randPitcher() {
+  const legs = DATA.legends || [];
+  if (legs.length && Math.random() < LEGEND_ODDS) {
+    const avail = legs.filter(p => !state.used.has(p.name));
+    if (avail.length) return avail[Math.floor(Math.random() * avail.length)];
+  }
+  let p, tries = 0;
+  do { p = pickWeighted(); } while (state.used.has(p.name) && ++tries < 50);
+  return p;
+}
+
+function borderTier(p) { return p.legend ? 'legend' : tier(p.ovr); }
+
+function cardHTML(p) {
+  const t = borderTier(p);
+  const meta = p.legend ? `<div class="legend-tag">★ LEGEND</div>` : `<div class="yr">${p.year || ''}</div>`;
+  return `<div class="reel-card t-${t}">
+    <img src="${headshot(p)}" alt="" loading="lazy" onerror="this.onerror=null;this.src='${SILHOUETTE}'">
+    <div class="nm">${p.name}</div>
+    <div class="ov c-${t}">${p.ovr}</div>
+    ${meta}
+    <div class="pos">${p.pos || ''} · ${p.team || ''}</div>
+  </div>`;
+}
+
+const CARD_W = 162;
+
+function spin() {
+  if (state.spinning) return;
+  if (openSlots().length === 0) return;
+  state.spinning = true;
+  state.boostedThisLand = false;
+  Sound.click();
+  $('spinBtn').disabled = true;
+  $('landed').classList.remove('show');
+
+  const target = randPitcher();
+  const strip = [];
+  const STRIP_LEN = 45;
+  const targetIndex = STRIP_LEN - 6;
+  for (let i = 0; i < STRIP_LEN; i++) strip.push(i === targetIndex ? target : randPitcher());
+
+  const track = $('track');
+  gsap.set(track, { x: 0, filter: 'none' });
+  track.innerHTML = strip.map(cardHTML).join('');
+  state.strip = strip;
+  state.targetIndex = targetIndex;
+
+  const frameW = track.parentElement.clientWidth;
+  const offset = centerOffset(targetIndex, frameW);
+  animateReelTo(offset, 3.2, 'power4.out', () => land(target));
+}
+
+function centerOffset(index, frameW) { return index * CARD_W - (frameW / 2) + 75 + 14; }
+
+function animateReelTo(offset, duration, ease, onDone) {
+  const track = $('track');
+  let prevX = gsap.getProperty(track, 'x'), prevT = performance.now(), lastTickX = prevX;
+  gsap.to(track, {
+    x: -offset, duration, ease,
+    onUpdate: () => {
+      const x = gsap.getProperty(track, 'x'), t = performance.now();
+      const dt = Math.max(8, t - prevT);
+      const speed = Math.abs(x - prevX) / dt;
+      prevX = x; prevT = t;
+      const b = Math.min(6, speed * 0.7);
+      track.style.filter = b > 0.4 ? `blur(${b.toFixed(1)}px)` : 'none';
+      if (Math.abs(x - lastTickX) >= CARD_W) { Sound.tick(speed / 7); lastTickX = x; }  // ticker (pitch by speed)
+    },
+    onComplete: () => { track.style.filter = 'none'; state.spinning = false; onDone(); },
+  });
+}
+
+// Cinematic reveal: light sweep + the winning card pops; legend pulls shake the board.
+function revealWin(p) {
+  const track = $('track');
+  const card = track.children[state.targetIndex];
+  const sweep = $('sweep');
+  gsap.fromTo(sweep, { xPercent: -160, opacity: .9 },
+    { xPercent: 160, opacity: 0, duration: .55, ease: 'power2.inOut' });
+  if (card) {
+    card.classList.add('win');
+    gsap.fromTo(card, { scale: 1 }, { scale: 1.14, duration: .5, ease: 'back.out(2.2)' });
+  }
+  gsap.fromTo('.pointer', { scale: 1 }, { scale: 1.35, duration: .25, yoyo: true, repeat: 1, ease: 'power2.out', transformOrigin: 'center' });
+  if (p.legend) {
+    gsap.fromTo($('game'), { x: -7 }, { x: 0, duration: .6, ease: 'elastic.out(1,0.3)' });
+  }
+}
+
+function land(p) {
+  state.landed = p;
+  const t = borderTier(p);
+  $('landedImg').src = headshot(p);
+  $('landedImg').onerror = function () { this.onerror = null; this.src = SILHOUETTE; };
+  $('landedImg').className = 't-' + t;
+  $('landedName').childNodes[0].nodeValue = p.name + ' ';
+  $('landedSub').textContent = p.legend
+    ? `★ LEGEND · ${p.pos || ''} · ${p.team || ''}`
+    : `${p.year || ''} · ${p.pos || ''} · ${p.team || ''}`;
+  $('landedOvr').textContent = p.ovr;
+  $('landedOvr').className = 'big-ov c-' + t;
+
+  const hasPrime = !p.legend && !!DATA.prime[p.name] && !state.boostedThisLand;
+  $('primeBadge').style.display = state.boostedThisLand ? 'inline-block' : 'none';
+  $('respinBtn').disabled = state.respinUsed;
+  $('respinBtn').textContent = state.respinUsed ? 'Re-spin ✕' : 'Re-spin';
+  $('boostBtn').disabled = state.boostUsed || !hasPrime;
+  $('boostBtn').textContent = state.boostUsed ? 'Boost ✕' : (!hasPrime ? 'No Prime' : '⚡ Boost');
+
+  const canSnag = !state.snagUsed && state.strip;
+  $('snagLeftBtn').disabled = !canSnag || !state.strip[state.targetIndex - 1];
+  $('snagRightBtn').disabled = !canSnag || !state.strip[state.targetIndex + 1];
+
+  $('landed').classList.add('show');
+  $('spinBtn').disabled = true;
+  renderNodes();
+  revealWin(p);
+
+  // landing sound by rarity
+  if (p.legend) Sound.legend();
+  else { const tt = tier(p.ovr); if (tt === 'diamond') Sound.diamond(); else if (tt === 'gold') Sound.gold(); else Sound.land(); }
+
+  gsap.fromTo($('landed'), { y: 10, opacity: 0 }, { y: 0, opacity: 1, duration: .4, ease: 'power3.out', delay: .15 });
+  gsap.fromTo('#landedImg', { scale: .8 }, { scale: 1, duration: .45, ease: 'back.out(2)', delay: .15 });
+  if (p.legend) {
+    gsap.fromTo($('burst'), { opacity: 0 }, { opacity: 1, duration: .22, yoyo: true, repeat: 1, ease: 'power2.out' });
+  }
+}
+
+let segEls = {};
+function buildSegments() {
+  const wrap = $('segments');
+  wrap.innerHTML = '';
+  segEls = {};
+  for (const s of SLOTS) {
+    const d = document.createElement('div');
+    d.className = 'seg';
+    d.style.webkitMaskImage = `url(seg-${s.key}.png)`;
+    d.style.maskImage = `url(seg-${s.key}.png)`;
+    wrap.appendChild(d);
+    segEls[s.key] = d;
+  }
+}
+function updateFigure() {
+  for (const s of SLOTS) {
+    const f = state.filled[s.key];
+    const el = segEls[s.key];
+    if (!el) continue;
+    if (f) {
+      el.style.background = `url(jersey-fabric.png), ${teamColor(f.team)}`;
+      el.style.backgroundSize = '150px, auto';
+      el.style.backgroundBlendMode = 'overlay';
+    } else {
+      el.style.background = 'transparent';
+    }
+  }
+}
+
+function buildPips() {
+  const w = $('pips');
+  w.innerHTML = '';
+  for (let i = 0; i < SLOTS.length; i++) w.appendChild(document.createElement('i'));
+}
+function updateProgress(n) {
+  const pips = $('pips').children;
+  for (let i = 0; i < pips.length; i++) pips[i].classList.toggle('on', i < n);
+}
+
+function respin() {
+  if (state.respinUsed || state.spinning) return;
+  state.respinUsed = true;
+  Sound.whoosh();
+  updatePowerups();
+  spin();
+}
+
+function boost() {
+  if (state.boostUsed || !state.landed) return;
+  const primeCard = DATA.prime[state.landed.name];
+  if (!primeCard) return;
+  state.boostUsed = true;
+  state.boostedThisLand = true;
+  Sound.prime();
+  updatePowerups();
+  land(primeCard);
+}
+
+function snag(dir) {
+  if (state.snagUsed || state.spinning || !state.strip) return;
+  const idx = state.targetIndex + dir;
+  const neighbor = state.strip[idx];
+  if (!neighbor) return;
+  state.snagUsed = true;
+  state.targetIndex = idx;
+  state.boostedThisLand = false;
+  state.spinning = true;
+  Sound.whoosh();
+  $('landed').classList.remove('show');
+  updatePowerups();
+  const frameW = $('track').parentElement.clientWidth;
+  animateReelTo(centerOffset(idx, frameW), 0.5, 'power3.out', () => land(neighbor));
+}
+
+function openSlots() { return SLOTS.filter(s => !state.filled[s.key]); }
+
+function assign(slotKey) {
+  if (!state.landed || state.filled[slotKey]) return;
+  const p = state.landed;
+  const s = SLOTS.find(x => x.key === slotKey);
+  const originRect = $('landedImg').getBoundingClientRect();
+
+  state.filled[slotKey] = {
+    name: p.name, value: slotNumeric(p, s), display: slotDisplay(p, s),
+    ovr: p.ovr, legend: !!p.legend, team: p.team, img: headshot(p),
+  };
+  state.used.add(p.name);
+  state.landed = null;
+  state.boostedThisLand = false;
+  Sound.assign();
+  $('landed').classList.remove('show');
+  updatePowerups();
+  renderNodes();
+
+  const node = document.querySelector(`.node[data-key="${slotKey}"]`);
+  const faceEl = node && node.querySelector('.face');
+  if (faceEl) flyHeadshot(originRect, faceEl, headshot(p));
+  const seg = segEls[slotKey];
+  if (seg) gsap.fromTo(seg, { opacity: 0 }, { opacity: 1, duration: .55, ease: 'power2.out' });
+  if (node) gsap.fromTo(node, { scale: .85 }, { scale: 1, duration: .4, ease: 'back.out(1.8)', delay: .12 });
+
+  if (openSlots().length === 0) finish();
+  else $('spinBtn').disabled = false;
+}
+
+function flyHeadshot(fromRect, targetEl, img) {
+  const to = targetEl.getBoundingClientRect();
+  const fly = document.createElement('div');
+  fly.className = 'fly';
+  fly.style.backgroundImage = `url("${img}")`;
+  Object.assign(fly.style, {
+    left: fromRect.left + 'px', top: fromRect.top + 'px',
+    width: fromRect.width + 'px', height: fromRect.height + 'px',
+  });
+  document.body.appendChild(fly);
+  targetEl.style.visibility = 'hidden';
+  gsap.to(fly, {
+    left: to.left + 'px', top: to.top + 'px', width: to.width + 'px', height: to.height + 'px',
+    duration: .55, ease: 'power3.inOut',
+    onComplete: () => { targetEl.style.visibility = 'visible'; fly.remove(); },
+  });
+}
+
+function renderNodes() {
+  const nodes = $('nodes');
+  const wires = $('wires');
+  nodes.innerHTML = '';
+  wires.innerHTML = '';
+  const landing = state.landed;
+
+  for (const s of SLOTS) {
+    const f = state.filled[s.key];
+    const mode = f ? 'set' : (landing ? 'hot' : 'open');
+
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', s.lx); line.setAttribute('y1', s.ly);
+    line.setAttribute('x2', s.ax); line.setAttribute('y2', s.ay);
+    line.setAttribute('vector-effect', 'non-scaling-stroke');
+    if (mode === 'hot') line.classList.add('hot');
+    if (mode === 'set') line.classList.add('set');
+    wires.appendChild(line);
+
+    const dot = document.createElement('div');
+    dot.className = 'anchor' + (mode === 'hot' ? ' hot' : mode === 'set' ? ' set' : '');
+    dot.style.left = s.ax + '%'; dot.style.top = s.ay + '%';
+    nodes.appendChild(dot);
+
+    const div = document.createElement('div');
+    div.className = 'node' + (mode === 'hot' ? ' assignable' : '');
+    div.dataset.key = s.key;
+    div.style.left = s.lx + '%'; div.style.top = s.ly + '%';
+    if (f) {
+      const t = f.legend ? 'legend' : tier(f.ovr);
+      const accent = f.legend ? 'var(--legend)' : teamColor(f.team);
+      div.innerHTML = `<div class="accent" style="background:${accent}"></div>
+        <div class="body">
+          <div class="label">${s.label}</div>
+          <div class="row">
+            <div class="face" style="background-image:url('${f.img}')"></div>
+            <div class="val c-${t}">${f.display}</div>
+          </div>
+          <div class="who">${f.legend ? '★ ' : ''}${f.name}</div>
+        </div>`;
+    } else if (landing) {
+      const prev = s.type === 'height' ? slotDisplay(landing, s) : '+' + slotNumeric(landing, s);
+      div.innerHTML = `<div class="accent"></div>
+        <div class="body">
+          <div class="label">${s.label}</div>
+          <div class="preview">${prev}</div>
+          <div class="who">tap to set</div>
+        </div>`;
+      div.onclick = () => assign(s.key);
+    } else {
+      div.innerHTML = `<div class="accent"></div>
+        <div class="body">
+          <div class="label">${s.label}</div>
+          <div class="part">${s.part}</div>
+        </div>`;
+    }
+    nodes.appendChild(div);
+  }
+  updateFigure();
+  updateOvr();
+}
+
+function weightedOvr(keys) {
+  let vsum = 0, wsum = 0;
+  for (const k of keys) {
+    const w = WEIGHTS[k] || 1;
+    vsum += state.filled[k].value * w; wsum += w;
+  }
+  return Math.round(vsum / wsum);
+}
+
+let ovrShown = 0;
+function updateOvr() {
+  const filledKeys = SLOTS.filter(s => state.filled[s.key]).map(s => s.key);
+  const left = SLOTS.length - filledKeys.length;
+  $('slotsLeft').textContent = left === 0 ? 'Complete' : `${left} slot${left > 1 ? 's' : ''} left`;
+  updateProgress(filledKeys.length);
+  const ring = $('ovrRing'), num = $('ovrNum');
+  if (!filledKeys.length) {
+    num.textContent = '—'; num.className = ''; ovrShown = 0;
+    ring.style.setProperty('--p', 0); ring.style.setProperty('--g', 'rgba(255,255,255,.12)');
+    return;
+  }
+  const avg = weightedOvr(filledKeys);
+  num.className = 'c-' + tier(avg);
+  ring.style.setProperty('--g', getComputedStyle(num).color);
+  const o = { v: ovrShown };
+  gsap.to(o, { v: avg, duration: .6, ease: 'power2.out', onUpdate: () => {
+    num.textContent = Math.round(o.v);
+    ring.style.setProperty('--p', o.v.toFixed(1));
+  } });
+  gsap.fromTo(ring, { scale: 1.14 }, { scale: 1, duration: .5, ease: 'back.out(2)' });
+  ovrShown = avg;
+}
+
+function updatePowerups() {
+  const r = $('pu-respin'), b = $('pu-boost'), s = $('pu-snag');
+  r.textContent = 'Re-spin ' + (state.respinUsed ? 0 : 1);
+  b.textContent = 'Boost ' + (state.boostUsed ? 0 : 1);
+  s.textContent = 'Snag ' + (state.snagUsed ? 0 : 1);
+  r.classList.toggle('used', state.respinUsed);
+  b.classList.toggle('used', state.boostUsed);
+  s.classList.toggle('used', state.snagUsed);
+}
+
+let myEntryId = null;
+function finish() {
+  const avg = weightedOvr(SLOTS.map(s => s.key));
+  state.finalOvr = avg;
+  state.build = SLOTS.map(s => {
+    const f = state.filled[s.key];
+    return { slot: s.label, value: f.value, display: String(f.display), player: f.name, team: f.team, legend: !!f.legend };
+  });
+  myEntryId = null;
+  $('doneOvr').className = 'total c-' + tier(avg);
+  $('submitRow').style.display = 'flex';
+  $('submitBtn').disabled = false;
+  $('nameInput').value = '';
+  $('submitMsg').textContent = '';
+  $('lb').style.display = 'none';
+  $('done').classList.add('show');
+  $('spinBtn').disabled = true;
+  Sound.complete();
+  gsap.fromTo($('done'), { y: 16, opacity: 0, scale: .96 }, { y: 0, opacity: 1, scale: 1, duration: .5, ease: 'back.out(1.5)' });
+  const o = { v: 0 };
+  gsap.to(o, { v: avg, duration: 1.0, ease: 'power2.out', onUpdate: () => { $('doneOvr').textContent = Math.round(o.v); } });
+}
+
+function escapeHTML(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+async function submitScore() {
+  $('submitBtn').disabled = true;
+  $('submitMsg').textContent = 'Submitting…';
+  Sound.click();
+  const name = $('nameInput').value.trim() || 'Anonymous';
+  try {
+    const res = await fetch('/api/score', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, ovr: state.finalOvr, build: state.build }),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'failed');
+    myEntryId = data.id;
+    $('submitRow').style.display = 'none';
+    $('submitMsg').textContent = `You're #${data.globalRank} all-time.`;
+    $('lb').style.display = 'block';
+    loadLeaderboard('global');
+  } catch (e) {
+    $('submitBtn').disabled = false;
+    $('submitMsg').textContent = 'Leaderboard not reachable yet (goes live once deployed with the database).';
+  }
+}
+
+async function loadLeaderboard(scope) {
+  document.querySelectorAll('.lb-tab').forEach(t => t.classList.toggle('active', t.dataset.scope === scope));
+  const list = $('lbList');
+  list.innerHTML = '<div class="lb-empty">Loading…</div>';
+  try {
+    const res = await fetch(`/api/score?scope=${scope}&limit=50`);
+    const data = await res.json();
+    if (!data.ok) throw new Error();
+    if (!data.rows.length) { list.innerHTML = '<div class="lb-empty">No entries yet — be the first!</div>'; return; }
+    list.innerHTML = data.rows.map((r, i) => {
+      const rank = i + 1;
+      const cls = ['lb-row', rank <= 3 ? 'top' + rank : '', r.id === myEntryId ? 'mine' : ''].filter(Boolean).join(' ');
+      return `<div class="${cls}"><div class="rank">${rank}</div>
+        <div class="nm">${escapeHTML(r.name)}</div>
+        <div class="ov c-${tier(r.ovr)}">${r.ovr}</div></div>`;
+    }).join('');
+  } catch (e) {
+    list.innerHTML = '<div class="lb-empty">Couldn\'t load leaderboard.</div>';
+  }
+}
+
+function initTilt() {
+  const stage = $('stage');
+  const wrap = stage.parentElement;
+  const rotX = gsap.quickTo(stage, 'rotationX', { duration: .6, ease: 'power2.out' });
+  const rotY = gsap.quickTo(stage, 'rotationY', { duration: .6, ease: 'power2.out' });
+  wrap.addEventListener('mousemove', e => {
+    const r = wrap.getBoundingClientRect();
+    rotY(((e.clientX - r.left) / r.width - .5) * 11);
+    rotX(-((e.clientY - r.top) / r.height - .5) * 8);
+  });
+  wrap.addEventListener('mouseleave', () => { rotX(0); rotY(0); });
+}
+
+function reset() {
+  state.filled = {};
+  state.used = new Set();
+  state.landed = null;
+  state.respinUsed = false;
+  state.boostUsed = false;
+  state.snagUsed = false;
+  state.boostedThisLand = false;
+  state.spinning = false;
+  state.strip = null;
+  $('done').classList.remove('show');
+  $('landed').classList.remove('show');
+  $('spinBtn').disabled = false;
+  updatePowerups();
+  renderNodes();
+}
+
+init();
+</script>
+</body>
+</html>
