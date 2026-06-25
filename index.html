@@ -4,6 +4,19 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>Pitching Lab</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#0a1320">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Pitching Lab">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="icon" href="/icon-192.png">
+<meta property="og:title" content="Pitching Lab">
+<meta property="og:description" content="Spin, draft, and build the ultimate MLB pitcher, then simulate their career.">
+<meta property="og:image" content="/icon-512.png">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="/icon-512.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script defer src="/_vercel/insights/script.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -358,6 +371,18 @@
     border-radius:10px; color:var(--ink); background:linear-gradient(180deg,#1b2535,#121a27); border:1px solid var(--line); }
   .menu-item:last-child { margin-bottom:0; }
   .menu-item:hover { border-color:var(--accent2); box-shadow:0 0 14px rgba(25,198,255,.25); }
+  .mi-chev { margin-left:auto; font-size:14px; color:var(--muted); }
+  .install-steps { margin:-2px 0 9px; padding:13px; border-radius:10px; background:rgba(0,0,0,.28); border:1px solid var(--line); }
+  .install-steps .inst-label { font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:1.5px; text-transform:uppercase;
+    color:var(--accent2); margin:10px 0 9px; }
+  .install-steps .inst-label:first-of-type { margin-top:0; }
+  .install-steps .step { display:flex; gap:10px; margin-bottom:10px; }
+  .install-steps .step:last-child { margin-bottom:0; }
+  .install-steps .step-n { flex:0 0 auto; width:22px; height:22px; border-radius:50%; background:rgba(255,122,24,.15);
+    border:1px solid var(--accent); color:var(--accent); font-family:'Oswald',sans-serif; font-size:12px; font-weight:700;
+    display:flex; align-items:center; justify-content:center; }
+  .install-steps .step b { font-size:13px; color:var(--ink); }
+  .install-steps .step p { margin:2px 0 0; font-size:12px; color:var(--muted); line-height:1.45; }
   .how-body { text-align:left; color:var(--muted); font-size:13.5px; line-height:1.6; }
   .how-body p { margin:0 0 12px; }
   .how-body ol, .how-body ul { margin:0 0 14px; padding-left:20px; }
@@ -500,6 +525,17 @@
     <div class="overlay-body">
       <button class="menu-item" id="miLb">🏆 Leaderboard</button>
       <button class="menu-item" id="miHow">📖 How to Play</button>
+      <button class="menu-item" id="miInstall">📲 Install App<span class="mi-chev" id="installChev">⌄</span></button>
+      <div id="installSteps" class="install-steps" style="display:none">
+        <button id="installNowBtn" class="primary" style="display:none;width:100%;margin-bottom:12px">⬇ Install Pitching Lab</button>
+        <div class="inst-label">On Desktop / Android (Chrome · Edge)</div>
+        <div class="step"><span class="step-n">1</span><div><b>Look for the install icon</b><p>Click the install icon (a screen with a ⊕) on the right side of the address bar.</p></div></div>
+        <div class="step"><span class="step-n">2</span><div><b>Click Install</b><p>Confirm in the prompt — the app opens in its own window with a home-screen icon.</p></div></div>
+        <div class="inst-label">On iPhone / iPad (Safari)</div>
+        <div class="step"><span class="step-n">1</span><div><b>Open in Safari</b><p>Make sure you're in Safari — not Chrome or another browser.</p></div></div>
+        <div class="step"><span class="step-n">2</span><div><b>Tap Share</b><p>Tap the Share button at the bottom of the screen (the box with an arrow pointing up).</p></div></div>
+        <div class="step"><span class="step-n">3</span><div><b>Add to Home Screen</b><p>Scroll down, tap "Add to Home Screen," then tap "Add."</p></div></div>
+      </div>
       <a class="menu-item" href="https://pitchergami.com" target="_blank" rel="noopener">⚾ PitcherGami ↗</a>
     </div>
   </div>
@@ -632,6 +668,7 @@ const state = {
 };
 
 const $ = id => document.getElementById(id);
+let deferredInstall = null;
 
 // ---------- sound (synthesized via Web Audio — no asset files) ----------
 const Sound = (() => {
@@ -715,6 +752,21 @@ async function init() {
   $('menuBtn').onclick = () => { Sound.click(); openOverlay('menu'); };
   $('miLb').onclick = () => { closeOverlay('menu'); openLeaderboard('global'); };
   $('miHow').onclick = () => { closeOverlay('menu'); openOverlay('howModal'); };
+  $('miInstall').onclick = () => {
+    const el = $('installSteps'), open = el.style.display === 'block';
+    el.style.display = open ? 'none' : 'block';
+    $('installChev').textContent = open ? '⌄' : '⌃';
+    if (!open) gsap.fromTo(el, { y: -6, opacity: 0 }, { y: 0, opacity: 1, duration: .25 });
+  };
+  // Real one-click install on browsers that support it (Chrome/Edge/Android).
+  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredInstall = e; $('installNowBtn').style.display = 'block'; });
+  $('installNowBtn').onclick = async () => {
+    if (!deferredInstall) return;
+    deferredInstall.prompt();
+    await deferredInstall.userChoice;
+    deferredInstall = null;
+    $('installNowBtn').style.display = 'none';
+  };
   document.querySelectorAll('.overlay-close').forEach(b => b.onclick = () => closeOverlay(b.dataset.close));
   document.querySelectorAll('.overlay').forEach(o => o.addEventListener('click', e => { if (e.target === o) closeOverlay(o.id); }));
   document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.overlay.show').forEach(o => closeOverlay(o.id)); });
