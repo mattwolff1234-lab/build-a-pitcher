@@ -271,6 +271,31 @@
   .ghost-btn { font-family:'Oswald',sans-serif; font-size:13px; letter-spacing:1px; text-transform:uppercase; margin-top:16px;
     padding:10px 22px; border-radius:9px; color:var(--muted); border:1px solid var(--line); background:rgba(255,255,255,.03); }
   .ghost-btn:hover { color:var(--ink); border-color:var(--accent2); }
+
+  /* ---- overlays (menu / leaderboard / how-to-play) ---- */
+  .overlay { position:fixed; inset:0; z-index:100; display:none; align-items:center; justify-content:center; padding:18px;
+    background:rgba(3,6,11,.74); backdrop-filter:blur(5px); }
+  .overlay.show { display:flex; }
+  .overlay-card { width:100%; max-width:440px; max-height:86vh; display:flex; flex-direction:column; overflow:hidden; }
+  .overlay-head { display:flex; align-items:center; justify-content:space-between; padding:14px 16px;
+    border-bottom:1px solid var(--line); }
+  .overlay-title { font-family:'Oswald',sans-serif; font-size:16px; letter-spacing:2px; text-transform:uppercase; }
+  .overlay-close { font-size:16px; line-height:1; padding:6px 11px; border-radius:8px; color:var(--ink);
+    background:rgba(255,255,255,.05); border:1px solid var(--line); }
+  .overlay-close:hover { border-color:var(--accent); }
+  .overlay-body { padding:16px; overflow-y:auto; }
+  .menu-item { display:flex; align-items:center; gap:10px; width:100%; text-align:left; padding:15px 16px; margin-bottom:9px;
+    font-family:'Oswald',sans-serif; font-size:15px; letter-spacing:1px; text-transform:uppercase; text-decoration:none;
+    border-radius:10px; color:var(--ink); background:linear-gradient(180deg,#1b2535,#121a27); border:1px solid var(--line); }
+  .menu-item:last-child { margin-bottom:0; }
+  .menu-item:hover { border-color:var(--accent2); box-shadow:0 0 14px rgba(25,198,255,.25); }
+  .how-body { text-align:left; color:var(--muted); font-size:13.5px; line-height:1.6; }
+  .how-body p { margin:0 0 12px; }
+  .how-body ol, .how-body ul { margin:0 0 14px; padding-left:20px; }
+  .how-body li { margin-bottom:7px; }
+  .how-body b { color:var(--ink); }
+  .how-body h4 { font-family:'Oswald',sans-serif; color:var(--accent); font-size:13px; letter-spacing:2px;
+    text-transform:uppercase; margin:4px 0 8px; }
   .footer-note { color:var(--dim); font-size:11.5px; text-align:center; padding:22px 12px 36px; position:relative; z-index:1; letter-spacing:.4px; }
   .loading { text-align:center; color:var(--muted); padding:50px; font-family:'Oswald',sans-serif; letter-spacing:2px; text-transform:uppercase; }
 </style>
@@ -289,6 +314,7 @@
     <span class="tag">Draft Mode</span>
     <span class="brand-rule"></span>
     <button id="muteBtn" class="mute" title="Toggle sound">🔊</button>
+    <button id="menuBtn" class="mute" title="Menu">☰</button>
   </div>
 </header>
 
@@ -388,15 +414,55 @@
       </div>
       <div id="submitMsg" class="submit-msg"></div>
 
-      <div id="lb" class="lb" style="display:none">
-        <div class="lb-tabs">
-          <button class="lb-tab active" data-scope="global">All-Time</button>
-          <button class="lb-tab" data-scope="daily">Today</button>
-        </div>
-        <div id="lbList" class="lb-list"></div>
-      </div>
-
       <button id="resetBtn" class="ghost-btn">Build Another</button>
+    </div>
+  </div>
+</div>
+
+<div id="menu" class="overlay">
+  <div class="overlay-card panel">
+    <div class="overlay-head"><span class="overlay-title">Menu</span><button class="overlay-close" data-close="menu">✕</button></div>
+    <div class="overlay-body">
+      <button class="menu-item" id="miLb">🏆 Leaderboard</button>
+      <button class="menu-item" id="miHow">📖 How to Play</button>
+      <a class="menu-item" href="https://pitchergami.com" target="_blank" rel="noopener">⚾ PitcherGami ↗</a>
+    </div>
+  </div>
+</div>
+
+<div id="lbModal" class="overlay">
+  <div class="overlay-card panel">
+    <div class="overlay-head"><span class="overlay-title">Leaderboard</span><button class="overlay-close" data-close="lbModal">✕</button></div>
+    <div class="overlay-body">
+      <div class="lb-tabs">
+        <button class="lb-tab active" data-scope="global">All-Time</button>
+        <button class="lb-tab" data-scope="daily">Today</button>
+      </div>
+      <div id="lbList" class="lb-list"></div>
+    </div>
+  </div>
+</div>
+
+<div id="howModal" class="overlay">
+  <div class="overlay-card panel">
+    <div class="overlay-head"><span class="overlay-title">How to Play</span><button class="overlay-close" data-close="howModal">✕</button></div>
+    <div class="overlay-body how-body">
+      <p>Build the ultimate pitcher, one body part at a time.</p>
+      <ol>
+        <li><b>Spin</b> the reel. It stops on a random pitcher.</li>
+        <li><b>Assign</b> that pitcher to one of the 9 body parts. Each part is an attribute like Velocity, Command, or Strikeout, and the slot takes that pitcher's rating for it.</li>
+        <li>Fill all 9 parts to finish your pitcher and reveal their Overall rating. Card colors show how strong a pitcher is, from grey up to diamond, with purple for legends.</li>
+        <li><b>Simulate Career</b> to play out their seasons and see if they reach the Hall of Fame.</li>
+        <li>Name your pitcher and post them to the leaderboard.</li>
+      </ol>
+      <h4>Power-ups</h4>
+      <p>You get one of each per run, so spend them wisely.</p>
+      <ul>
+        <li><b>Re-spin:</b> toss the current pitcher and spin for a new one.</li>
+        <li><b>Boost:</b> upgrade the current pitcher to their Prime version with stronger ratings, then assign them.</li>
+        <li><b>Snag:</b> grab the pitcher one spot to the left or right of where you landed.</li>
+      </ul>
+      <p>Tip: your strongest pitchers do the most good on Strikeout, Command, and Ground Ball.</p>
     </div>
   </div>
 </div>
@@ -548,7 +614,19 @@ async function init() {
   $('submitBtn').onclick = submitScore;
   $('nameInput').addEventListener('keydown', e => { if (e.key === 'Enter') submitScore(); });
   document.querySelectorAll('.lb-tab').forEach(t => t.onclick = () => loadLeaderboard(t.dataset.scope));
+
+  // menu + overlays
+  $('menuBtn').onclick = () => { Sound.click(); openOverlay('menu'); };
+  $('miLb').onclick = () => { closeOverlay('menu'); openLeaderboard('global'); };
+  $('miHow').onclick = () => { closeOverlay('menu'); openOverlay('howModal'); };
+  document.querySelectorAll('.overlay-close').forEach(b => b.onclick = () => closeOverlay(b.dataset.close));
+  document.querySelectorAll('.overlay').forEach(o => o.addEventListener('click', e => { if (e.target === o) closeOverlay(o.id); }));
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.overlay.show').forEach(o => closeOverlay(o.id)); });
 }
+
+function openOverlay(id) { const el = $(id); el.classList.add('show'); gsap.fromTo(el.firstElementChild, { y: 14, opacity: 0 }, { y: 0, opacity: 1, duration: .3, ease: 'power3.out' }); }
+function closeOverlay(id) { $(id).classList.remove('show'); }
+function openLeaderboard(scope) { openOverlay('lbModal'); loadLeaderboard(scope); }
 
 const TIER_ODDS = { diamond: 0.08, gold: 0.17, silver: 0.22, bronze: 0.30, grey: 0.23 };
 let cumWeights = [], totalWeight = 0;
@@ -1182,7 +1260,6 @@ function finish() {
   $('submitBtn').disabled = false;
   $('nameInput').value = '';
   $('submitMsg').textContent = '';
-  $('lb').style.display = 'none';
   $('done').classList.add('show');
   $('spinBtn').disabled = true;
   Sound.complete();
@@ -1209,9 +1286,8 @@ async function submitScore() {
     if (!data.ok) throw new Error(data.error || 'failed');
     myEntryId = data.id;
     $('submitRow').style.display = 'none';
-    $('submitMsg').textContent = `You're #${data.globalRank} all-time.`;
-    $('lb').style.display = 'block';
-    loadLeaderboard('global');
+    $('submitMsg').textContent = `You're #${data.globalRank} all-time. Open the menu anytime to see the board.`;
+    openLeaderboard('global');
   } catch (e) {
     $('submitBtn').disabled = false;
     $('submitMsg').textContent = 'Leaderboard not reachable yet (goes live once deployed with the database).';
