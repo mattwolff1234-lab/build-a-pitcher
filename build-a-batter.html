@@ -13,7 +13,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="icon" href="/icon-192.png">
 <meta property="og:title" content="Batting Lab">
-<meta property="og:description" content="Spin, draft, and build the ultimate MLB pitcher, then simulate their career.">
+<meta property="og:description" content="Spin, draft, and build the ultimate MLB hitter, then simulate their career.">
 <meta property="og:image" content="/icon-512.png">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:image" content="/icon-512.png">
@@ -433,7 +433,7 @@
 </header>
 
 <div class="wrap">
-  <div id="loading" class="loading">Loading pitchers…</div>
+  <div id="loading" class="loading">Loading hitters…</div>
 
   <div id="game" style="display:none">
     <div class="reel-frame panel">
@@ -581,17 +581,17 @@
       <p>Build the ultimate hitter, one body part at a time.</p>
       <ol>
         <li><b>Spin</b> the reel. It stops on a random hitter.</li>
-        <li><b>Assign</b> that hitter to one of the 9 body parts. Each part is an attribute like Contact, Power, or Speed, and the slot takes that hitter's rating for it.</li>
-        <li>Fill all 9 parts to finish your hitter and reveal their Overall rating. Card colors show how strong a pitcher is, from grey up to diamond, with purple for legends.</li>
+        <li><b>Assign</b> that hitter to one of the 8 body parts. Each part is an attribute like Contact, Power, Defense, or Speed, and the slot takes that hitter's rating for it.</li>
+        <li>Fill every part to finish your hitter and reveal their Overall rating. Card colors show how strong a hitter is, from grey up to diamond, with purple for legends.</li>
         <li><b>Simulate Career</b> to play out their seasons and see if they reach the Hall of Fame.</li>
         <li>Name your hitter and post them to the leaderboard.</li>
       </ol>
       <h4>Power-ups</h4>
       <p>You get one of each per run, so spend them wisely.</p>
       <ul>
-        <li><b>Re-spin:</b> toss the current pitcher and spin for a new one.</li>
-        <li><b>Boost:</b> upgrade the current pitcher to their Prime version with stronger ratings, then assign them.</li>
-        <li><b>Snag:</b> grab the pitcher one spot to the left or right of where you landed.</li>
+        <li><b>Re-spin:</b> toss the current hitter and spin for a new one.</li>
+        <li><b>Boost:</b> upgrade the current hitter to their Prime version with stronger ratings, then assign them.</li>
+        <li><b>Snag:</b> grab the hitter one spot to the left or right of where you landed.</li>
       </ul>
       <p>Tip: your strongest hitters do the most good on Contact, Power, and Discipline.</p>
     </div>
@@ -606,13 +606,14 @@
 // Each slot maps an attribute to a body part. ax/ay = anchor point on the figure (%),
 // lx/ly = where the label node floats (%). A wire connects the two.
 const SLOTS = [
-  { key: 'plate_vision',     label: 'Vision',     part: 'Eyes',   mask: 'bat-seg-plate_vision.png',     ax: 50, ay: 21, lx: 12, ly: 13 },
-  { key: 'power',            label: 'Power',      part: 'Bat',    mask: 'bat-seg-power.png',            ax: 30, ay: 16, lx: 10, ly: 35 },
-  { key: 'contact',          label: 'Contact',    part: 'Hands',  mask: 'bat-seg-contact.png',          ax: 42, ay: 30, lx: 10, ly: 57 },
-  { key: 'speed',            label: 'Speed',      part: 'Feet',   mask: 'bat-seg-speed.png',            ax: 48, ay: 85, lx: 14, ly: 80 },
-  { key: 'batting_clutch',   label: 'Clutch',     part: 'Helmet', mask: 'bat-seg-batting_clutch.png',   ax: 58, ay: 17, lx: 90, ly: 12 },
-  { key: 'plate_discipline', label: 'Discipline', part: 'Head',   mask: 'bat-seg-plate_discipline.png', ax: 58, ay: 26, lx: 90, ly: 37 },
-  { key: 'frame',            label: 'Frame',      part: 'Body',   mask: 'bat-seg-frame.png',            ax: 52, ay: 48, lx: 90, ly: 62, type: 'height' },
+  { key: 'plate_vision',     label: 'Vision',     part: 'Eyes',   mask: 'bat-seg-plate_vision.png',     ax: 52, ay: 20, lx: 12, ly: 13 },
+  { key: 'power',            label: 'Power',      part: 'Bat',    mask: 'bat-seg-power.png',            ax: 39, ay: 30, lx: 10, ly: 35 },
+  { key: 'contact',          label: 'Contact',    part: 'Hands',  mask: 'bat-seg-contact.png',          ax: 44, ay: 31, lx: 10, ly: 57 },
+  { key: 'speed',            label: 'Speed',      part: 'Feet',   mask: 'bat-seg-speed.png',            ax: 35, ay: 88, lx: 14, ly: 80 },
+  { key: 'batting_clutch',   label: 'Clutch',     part: 'Helmet', mask: 'bat-seg-batting_clutch.png',   ax: 53, ay: 21, lx: 90, ly: 12 },
+  { key: 'plate_discipline', label: 'Discipline', part: 'Head',   mask: 'bat-seg-plate_discipline.png', ax: 58, ay: 30, lx: 90, ly: 37 },
+  { key: 'frame',            label: 'Frame',      part: 'Body',   mask: 'bat-seg-frame.png',            ax: 54, ay: 49, lx: 90, ly: 58, type: 'height' },
+  { key: 'fielding_ability', label: 'Defense',    part: 'Thigh',  mask: 'bat-seg-fielding_ability.svg', ax: 58, ay: 66, lx: 90, ly: 78 },
 ];
 
 // MLB team primary colors (jersey tint). FA / unknown -> neutral steel.
@@ -659,7 +660,7 @@ function tier(ovr) {
 // OVR weighting: run-prevention slots count a little more, Defense/Frame a little less.
 const WEIGHTS = {
   contact: 1.2, power: 1.2, plate_discipline: 1.1, plate_vision: 1.1,
-  batting_clutch: 1.1, speed: 1.0, frame: 1.0,
+  batting_clutch: 1.1, speed: 1.0, fielding_ability: 1.0, frame: 1.0,
 };
 
 // Frame is driven by height (taller = better).
@@ -744,7 +745,7 @@ async function init() {
     const res = await fetch('batters.json');
     DATA = await res.json();
   } catch (e) {
-    $('loading').textContent = 'Could not load pitchers.json. Run "node fetch-data.js" first and serve over http.';
+    $('loading').textContent = 'Could not load batters.json. Run "node fetch-batters.js" first and serve over http.';
     return;
   }
   buildWeights();
@@ -824,7 +825,7 @@ function pickWeighted() {
   return DATA.pool[lo];
 }
 const LEGEND_ODDS = 0.03;
-function randPitcher() {
+function randHitter() {
   const legs = DATA.legends || [];
   if (legs.length && Math.random() < LEGEND_ODDS) {
     const avail = legs.filter(p => !state.used.has(p.name));
@@ -880,11 +881,11 @@ function spin() {
   $('spinBtn').disabled = true;
   $('landed').classList.remove('show');
 
-  const target = randPitcher();
+  const target = randHitter();
   const strip = [];
   const STRIP_LEN = 45;
   const targetIndex = STRIP_LEN - 6;
-  for (let i = 0; i < STRIP_LEN; i++) strip.push(i === targetIndex ? target : randPitcher());
+  for (let i = 0; i < STRIP_LEN; i++) strip.push(i === targetIndex ? target : randHitter());
 
   const track = $('track');
   gsap.set(track, { x: 0, filter: 'none' });
@@ -1250,6 +1251,7 @@ function simulateCareer(filled, finalOvr) {
     const disc = clamp(vals.plate_discipline * ageFactor + bell(rng, 3), 20, 99);
     const clutch = clamp(vals.batting_clutch * ageFactor + bell(rng, 4), 20, 99);
     const speed = clamp(vals.speed * ageFactor + bell(rng, 2.5), 20, 99);
+    const defense = clamp(vals.fielding_ability * ageFactor + bell(rng, 2.8), 20, 99);
     const durab = vals.frame;
 
     const injuryRisk = clamp(0.12 - (durab - 50) * 0.0022 + Math.max(0, age - 32) * 0.016, 0.03, 0.34);
@@ -1275,7 +1277,7 @@ function simulateCareer(filled, finalOvr) {
     const tb = Math.round(slg * ab);
     const rbi = Math.round(clamp(hr * 1.7 + (power - 40) * 0.55 + (clutch - 50) * 0.3 + 42 + bell(rng, 8), 18, 155) * (pa / 620));
     const runs = Math.round(clamp(56 + (obp - 0.32) * 240 + (speed - 50) * 0.32 + bell(rng, 7), 22, 145) * (pa / 620) + teamQuality * 20);
-    const defRuns = (speed - 50) * 0.05;
+    const defRuns = (defense - 50) * 0.12 + (speed - 50) * 0.035;
     const war = clamp((ops - 0.690) * pa * 0.020 + defRuns * 0.1 + (sb - 8) * 0.015 + (seasonOvr - 70) * 0.006 + bell(rng, 0.5), -1.6, 10.5);
 
     const mvpElite = Math.max(0, finalOvr - 92) * 0.55;
@@ -1285,7 +1287,7 @@ function simulateCareer(filled, finalOvr) {
     const battingTitle = ab >= 450 && avg >= 0.305 && rng() < clamp((avg - 0.305) * 8, 0, 0.4);
     const hrTitle = hr >= 34 && rng() < clamp((hr - 34) * 0.022, 0, 0.42);
     const silverSlugger = ops >= 0.83 && rng() < clamp((ops - 0.83) * 1.4, 0, 0.5);
-    const goldGlove = speed >= 82 && rng() < clamp((speed - 82) * 0.02, 0, 0.32);
+    const goldGlove = defense >= 82 && rng() < clamp((defense - 82) * 0.022 + (speed - 70) * 0.004, 0, 0.38);
     const playoff = rng() < clamp(0.3 + teamQuality + (clutch - 50) * 0.003, 0.1, 0.72);
     const ring = playoff && rng() < clamp(0.08 + teamQuality * 0.4 + (clutch - 50) * 0.0035 + Math.max(0, war - 4) * 0.018, 0.03, 0.42);
     const hr40 = hr >= 40;
@@ -1394,7 +1396,7 @@ function runCareerPlaythrough() {
   const career = state.career, seasons = career.seasons;
   const ab = $('teamSelect').value;
   state.simTeam = { abbr: ab, name: TEAM_NAMES[ab] || 'club', color: teamColor(ab) };
-  state.simName = $('nameInput').value.trim() || 'Your pitcher';
+  state.simName = $('nameInput').value.trim() || 'Your hitter';
   const P = state.simName, T = state.simTeam.name, accent = state.simTeam.color;
 
   $('preSim').style.display = 'none';
