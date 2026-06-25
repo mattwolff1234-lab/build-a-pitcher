@@ -77,7 +77,7 @@ module.exports = async (req, res) => {
     const meId = req.query && req.query.me ? parseInt(req.query.me, 10) : null;
     if (meId) {
       const [row] = await sql`SELECT id, name, ovr, created_at, game FROM scores WHERE id = ${meId}`;
-      if (row) {
+      if (row && row.game === game) {
         const aheadRows = daily
           ? await sql`SELECT count(*)::int AS ahead FROM scores
                 WHERE game = ${row.game} AND created_at >= date_trunc('day', now())

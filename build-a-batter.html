@@ -601,8 +601,12 @@
     <div class="overlay-head"><span class="overlay-title">Leaderboard</span><button class="overlay-close" data-close="lbModal">✕</button></div>
     <div class="overlay-body">
       <div class="lb-tabs">
-        <button class="lb-tab active" data-scope="global">All-Time</button>
-        <button class="lb-tab" data-scope="daily">Today</button>
+        <button class="lb-tab lb-game-tab" data-game="pitcher">Pitchers</button>
+        <button class="lb-tab lb-game-tab active" data-game="batter">Batters</button>
+      </div>
+      <div class="lb-tabs">
+        <button class="lb-tab lb-scope-tab active" data-scope="global">All-Time</button>
+        <button class="lb-tab lb-scope-tab" data-scope="daily">Today</button>
       </div>
       <div id="lbList" class="lb-list"></div>
     </div>
@@ -768,6 +772,9 @@ const state = {
 
 const $ = id => document.getElementById(id);
 let deferredInstall = null;
+const LEADERBOARD_GAME = 'batter';
+let lbScope = 'global';
+let lbGame = LEADERBOARD_GAME;
 
 // ---------- sound (synthesized via Web Audio — no asset files) ----------
 const Sound = (() => {
@@ -847,7 +854,8 @@ async function init() {
   $('simBtn').onclick = runCareerPlaythrough;
   $('submitBtn').onclick = submitScore;
   $('nameInput').addEventListener('keydown', e => { if (e.key === 'Enter') runCareerPlaythrough(); });
-  document.querySelectorAll('.lb-tab').forEach(t => t.onclick = () => loadLeaderboard(t.dataset.scope));
+  document.querySelectorAll('.lb-scope-tab').forEach(t => t.onclick = () => loadLeaderboard(t.dataset.scope, lbGame));
+  document.querySelectorAll('.lb-game-tab').forEach(t => t.onclick = () => loadLeaderboard(lbScope, t.dataset.game));
 
   // menu + overlays
   $('menuBtn').onclick = () => { Sound.click(); openOverlay('menu'); };
@@ -883,7 +891,7 @@ function toast(msg) {
 }
 function openOverlay(id) { const el = $(id); el.classList.add('show'); gsap.fromTo(el.firstElementChild, { y: 14, opacity: 0 }, { y: 0, opacity: 1, duration: .3, ease: 'power3.out' }); }
 function closeOverlay(id) { $(id).classList.remove('show'); }
-function openLeaderboard(scope) { openOverlay('lbModal'); loadLeaderboard(scope); }
+function openLeaderboard(scope, game = LEADERBOARD_GAME) { openOverlay('lbModal'); loadLeaderboard(scope, game); }
 
 const TIER_ODDS = { diamond: 0.10, gold: 0.20, silver: 0.24, bronze: 0.28, grey: 0.18 };
 let cumWeights = [], totalWeight = 0;
@@ -1787,14 +1795,14 @@ async function submitScore() {
   try {
     const res = await fetch('/api/score', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, ovr: state.finalOvr, game: 'batter', build: { slots: state.build, career: state.career } }),
+      body: JSON.stringify({ name, ovr: state.finalOvr, game: LEADERBOARD_GAME, build: { slots: state.build, career: state.career } }),
     });
     const data = await res.json();
     if (!data.ok) throw new Error(data.error || 'failed');
     myEntryId = data.id;
     $('submitRow').style.display = 'none';
     $('submitMsg').textContent = `You're #${data.globalRank} all-time. Open the menu anytime to see the board.`;
-    openLeaderboard('global');
+    openLeaderboard('global', LEADERBOARD_GAME);
   } catch (e) {
     $('submitBtn').disabled = false;
     $('submitMsg').textContent = 'Leaderboard not reachable yet (goes live once deployed with the database).';
@@ -1806,13 +1814,16 @@ function lbRow(rank, name, ovr, cls) {
     <div class="nm">${escapeHTML(name)}</div>
     <div class="ov c-${tier(ovr)}">${ovr}</div></div>`;
 }
-async function loadLeaderboard(scope) {
-  document.querySelectorAll('.lb-tab').forEach(t => t.classList.toggle('active', t.dataset.scope === scope));
+async function loadLeaderboard(scope = lbScope, game = lbGame) {
+  lbScope = scope === 'daily' ? 'daily' : 'global';
+  lbGame = game === 'batter' ? 'batter' : 'pitcher';
+  document.querySelectorAll('.lb-scope-tab').forEach(t => t.classList.toggle('active', t.dataset.scope === lbScope));
+  document.querySelectorAll('.lb-game-tab').forEach(t => t.classList.toggle('active', t.dataset.game === lbGame));
   const list = $('lbList');
   list.innerHTML = '<div class="lb-empty">Loading…</div>';
   try {
     const meParam = myEntryId ? `&me=${myEntryId}` : '';
-    const res = await fetch(`/api/score?scope=${scope}&limit=200&game=batter${meParam}`);
+    const res = await fetch(`/api/score?scope=${lbScope}&limit=200&game=${lbGame}${meParam}`);
     const data = await res.json();
     if (!data.ok) throw new Error();
     let html = '';
