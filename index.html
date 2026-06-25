@@ -60,7 +60,14 @@
 
   /* ---------- header ---------- */
   header { width:100%; max-width:780px; padding:20px 16px 2px; position:relative; z-index:1; }
-  .brand { display:flex; align-items:center; gap:12px; }
+  .brand { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  @media (max-width: 560px) {
+    .brand { gap:8px; }
+    .brand .mark { font-size:22px; letter-spacing:2px; }
+    .brand .tag { display:none; }
+    .coming-tab { font-size:10px; padding:5px 8px; gap:5px; }
+    .coming-tab .soon { font-size:8px; padding:1px 4px; }
+  }
   .brand .mark { font-family:'Oswald',sans-serif; font-weight:700; font-size:30px; letter-spacing:3px;
     text-transform:uppercase; line-height:1; background:linear-gradient(180deg,#fff,#b9c6da);
     -webkit-background-clip:text; background-clip:text; color:transparent; }
@@ -72,6 +79,14 @@
     background:linear-gradient(90deg,var(--accent),transparent); opacity:.5; }
   .mute { padding:6px 10px; font-size:15px; line-height:1; border-radius:8px;
     background:rgba(255,255,255,.04); border:1px solid var(--line); }
+  .coming-tab { display:inline-flex; align-items:center; gap:7px; padding:6px 11px; border-radius:8px;
+    font-family:'Oswald',sans-serif; font-size:12px; letter-spacing:.5px; text-transform:uppercase; white-space:nowrap;
+    color:var(--dim); background:rgba(255,255,255,.03); border:1px solid var(--line); cursor:not-allowed; opacity:.75; }
+  .coming-tab .soon { font-size:8.5px; font-weight:700; padding:1px 6px; border-radius:10px; letter-spacing:1px;
+    color:var(--accent); background:rgba(255,122,24,.14); border:1px solid rgba(255,122,24,.32); }
+  .toast { position:fixed; bottom:26px; left:50%; transform:translateX(-50%); z-index:200; display:none;
+    background:#10202e; border:1px solid var(--line); color:var(--ink); padding:11px 18px; border-radius:10px;
+    font-size:13px; box-shadow:0 10px 30px rgba(0,0,0,.55); }
 
   /* ---------- HUD panel base ---------- */
   .panel { position:relative; border:1px solid var(--line); border-radius:14px;
@@ -410,6 +425,7 @@
     <span class="tag">Draft Mode</span>
     <span class="brand-rule"></span>
     <button id="muteBtn" class="mute" title="Toggle sound">🔊</button>
+    <button id="buildTab" class="coming-tab" title="Build a Pitcher — coming soon">🛠️ Build a Pitcher<span class="soon">Soon</span></button>
     <button id="menuBtn" class="mute" title="Menu">☰</button>
   </div>
 </header>
@@ -580,6 +596,8 @@
   </div>
 </div>
 
+<div id="toast" class="toast"></div>
+
 <div class="footer-note">Ratings from MLB The Show — Live series only. Not affiliated with MLB or Sony.</div>
 
 <script>
@@ -746,6 +764,7 @@ async function init() {
   $('snagRightBtn').onclick = () => snag(1);
   $('resetBtn').onclick = reset;
   $('muteBtn').onclick = () => { const m = !Sound.isMuted(); Sound.setMuted(m); $('muteBtn').textContent = m ? '🔇' : '🔊'; };
+  $('buildTab').onclick = () => { Sound.click(); gsap.fromTo('#buildTab', { x: -4 }, { x: 0, duration: .4, ease: 'elastic.out(1,0.3)' }); toast('🛠️ Build a Pitcher mode — coming soon!'); };
   $('simBtn').onclick = runCareerPlaythrough;
   $('submitBtn').onclick = submitScore;
   $('nameInput').addEventListener('keydown', e => { if (e.key === 'Enter') runCareerPlaythrough(); });
@@ -775,6 +794,14 @@ async function init() {
   document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.overlay.show').forEach(o => closeOverlay(o.id)); });
 }
 
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  gsap.fromTo(t, { opacity: 0 }, { opacity: 1, duration: .25 });
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => gsap.to(t, { opacity: 0, duration: .4, onComplete: () => { t.style.display = 'none'; } }), 1900);
+}
 function openOverlay(id) { const el = $(id); el.classList.add('show'); gsap.fromTo(el.firstElementChild, { y: 14, opacity: 0 }, { y: 0, opacity: 1, duration: .3, ease: 'power3.out' }); }
 function closeOverlay(id) { $(id).classList.remove('show'); }
 function openLeaderboard(scope) { openOverlay('lbModal'); loadLeaderboard(scope); }
