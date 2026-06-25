@@ -4,6 +4,7 @@
   "private": true,
   "description": "Spin-draft attribute game with a Neon-backed leaderboard.",
   "dependencies": {
-    "@neondatabase/serverless": "^0.10.4"
+    "@neondatabase/serverless": "^0.10.4",
+    "@vercel/analytics": "^2.0.1"
   }
 }
