@@ -425,7 +425,7 @@
     <span class="tag">Draft Mode</span>
     <span class="brand-rule"></span>
     <button id="muteBtn" class="mute" title="Toggle sound">🔊</button>
-    <button id="buildTab" class="coming-tab" title="Build a Pitcher — coming soon">🛠️ Build a Pitcher<span class="soon">Soon</span></button>
+    <button id="buildTab" class="coming-tab" title="Build a Batter — coming soon">🛠️ Build a Batter<span class="soon">Soon</span></button>
     <button id="menuBtn" class="mute" title="Menu">☰</button>
   </div>
 </header>
@@ -764,7 +764,7 @@ async function init() {
   $('snagRightBtn').onclick = () => snag(1);
   $('resetBtn').onclick = reset;
   $('muteBtn').onclick = () => { const m = !Sound.isMuted(); Sound.setMuted(m); $('muteBtn').textContent = m ? '🔇' : '🔊'; };
-  $('buildTab').onclick = () => { Sound.click(); gsap.fromTo('#buildTab', { x: -4 }, { x: 0, duration: .4, ease: 'elastic.out(1,0.3)' }); toast('🛠️ Build a Pitcher mode — coming soon!'); };
+  $('buildTab').onclick = () => { Sound.click(); gsap.fromTo('#buildTab', { x: -4 }, { x: 0, duration: .4, ease: 'elastic.out(1,0.3)' }); toast('🛠️ Build a Batter mode — coming soon!'); };
   $('simBtn').onclick = runCareerPlaythrough;
   $('submitBtn').onclick = submitScore;
   $('nameInput').addEventListener('keydown', e => { if (e.key === 'Enter') runCareerPlaythrough(); });
