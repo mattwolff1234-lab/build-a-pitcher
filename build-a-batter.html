@@ -297,7 +297,7 @@
   .pre-sim .primary { flex-basis:100%; }
 
   /* live ticker */
-  .career-ticker { display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:rgba(120,160,210,.12);
+  .career-ticker { display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:rgba(120,160,210,.12);
     border-bottom:1px solid rgba(120,160,210,.14); }
   .career-ticker > div { background:rgba(5,9,15,.5); padding:8px 6px; text-align:center; }
   .career-ticker b { display:block; font-family:'Oswald',sans-serif; font-size:20px; line-height:1; color:var(--accent2); }
@@ -571,6 +571,7 @@
           <div><b id="tkK">0</b><span>Hits</span></div>
           <div><b id="tkW">0</b><span>Home Runs</span></div>
           <div><b id="tkWar">0.0</b><span>WAR</span></div>
+          <div><b id="tkMoney">$0</b><span>Earned</span></div>
         </div>
         <div class="career-cols">
           <div id="careerLog" class="career-log"></div>
@@ -1370,7 +1371,7 @@ function simulateCareer(filled, finalOvr, draftTeamAb) {
   const role = batterRole(vals);
   const seasons = [];
   const totals = { pa:0, ab:0, h:0, hr:0, rbi:0, r:0, sb:0, bb:0, k:0, tb:0, war:0,
-    mvp:0, allStar:0, battingTitles:0, hrTitles:0, silverSluggers:0, goldGloves:0, rings:0, playoffTrips:0, hr40:0 };
+    mvp:0, allStar:0, battingTitles:0, hrTitles:0, silverSluggers:0, goldGloves:0, rings:0, playoffTrips:0, hr40:0, earnings:0 };
   let currentTeam = draftTeamAb || randTeamAb(rng);
   let currentTeamQuality = randRange(rng, -0.08, 0.1);
   let tradeCount = 0;
@@ -1442,15 +1443,29 @@ function simulateCareer(filled, finalOvr, draftTeamAb) {
     const ring = playoff && rng() < clamp(0.08 + currentTeamQuality * 0.4 + (clutch - 50) * 0.0035 + Math.max(0, war - 4) * 0.018, 0.03, 0.42);
     const hr40 = hr >= 40;
 
+    // --- salary: league-min → arbitration → free-agency arc, with yearly salary inflation.
+    // Driven by that year's overall + WAR (market value) and accolades; rings add playoff shares.
+    const yearIdx = age - startAge;               // 0-based season (calendar year 2026 + yearIdx)
+    const inflation = Math.pow(1.035, yearIdx);    // salary standards rise ~3.5%/yr
+    const leagueMin = 0.78e6 * inflation;
+    const marketBase = clamp((seasonOvr - 68) * 1.0e6 + Math.max(0, war) * 2.0e6, 0, 40e6);
+    const phase = yearIdx <= 2 ? 0                  // first 3 yrs: pre-arbitration (league min)
+      : yearIdx <= 5 ? 0.15 + (yearIdx - 3) * 0.14 // arbitration ramp (0.15 / 0.29 / 0.43)
+      : 1;                                          // free agency: full market value
+    let salary = Math.max(leagueMin, marketBase * phase * inflation);
+    salary += ((mvp ? 6e6 : 0) + (allStar ? 1.4e6 : 0) + (silverSlugger ? 1e6 : 0) + (battingTitle ? 1e6 : 0)
+      + (hrTitle ? 1e6 : 0) + (goldGlove ? 0.5e6 : 0) + (ring ? 0.4e6 : 0)) * inflation;
+    salary = Math.round(salary);
+
     const season = { age, role, pa, ab, h, hr, rbi, r: runs, sb, bb, k, avg: round(avg, 3), obp: round(obp, 3),
       slg: round(slg, 3), ops: round(ops, 3), war: round(war, 1), mvp, allStar, battingTitle, hrTitle,
-      silverSlugger, goldGlove, playoff, ring, hr40, hurt, exit: null, struggling: false, team: currentTeam, trade };
+      silverSlugger, goldGlove, playoff, ring, hr40, salary, hurt, exit: null, struggling: false, team: currentTeam, trade };
     seasons.push(season);
     totals.pa+=pa; totals.ab+=ab; totals.h+=h; totals.hr+=hr; totals.rbi+=rbi; totals.r+=runs; totals.sb+=sb;
     totals.bb+=bb; totals.k+=k; totals.tb+=tb; totals.war+=war;
     totals.mvp+=mvp?1:0; totals.allStar+=allStar?1:0; totals.battingTitles+=battingTitle?1:0; totals.hrTitles+=hrTitle?1:0;
     totals.silverSluggers+=silverSlugger?1:0; totals.goldGloves+=goldGlove?1:0; totals.playoffTrips+=playoff?1:0;
-    totals.rings+=ring?1:0; totals.hr40+=hr40?1:0;
+    totals.rings+=ring?1:0; totals.hr40+=hr40?1:0; totals.earnings+=salary;
 
     peakWar = Math.max(peakWar, war);
     const everStar = peakWar >= 4.0;
@@ -1480,6 +1495,9 @@ function simulateCareer(filled, finalOvr, draftTeamAb) {
   const hofScore = Math.max(0, round(warPts + hPts + hrPts + avgPts + hardware, 1));
   const slamDunk = totals.war >= 64 || totals.mvp >= 3 || (totals.hr >= 500 && totals.war >= 46) || (totals.h >= 3000 && totals.war >= 50);
   const hallOfFame = hofScore >= 112 || slamDunk;
+  // Hall of Fame status pays out beyond the field — endorsements, legacy deals, appearances.
+  const hofBonus = hallOfFame ? Math.round(totals.earnings * 0.15) : 0;
+  const careerEarnings = totals.earnings + hofBonus;
   const highlight = bestCareerHighlight(totals, peak);
   const teams = [...new Set(seasons.map(s => s.team).filter(Boolean))];
 
@@ -1491,7 +1509,8 @@ function simulateCareer(filled, finalOvr, draftTeamAb) {
       bb: totals.bb, k: totals.k, avg: round(careerAvg, 3), obp: round(careerObp, 3), slg: round(careerSlg, 3),
       ops: round(careerOps, 3), war: round(totals.war, 1), mvp: totals.mvp, allStar: totals.allStar, rings: totals.rings,
       battingTitles: totals.battingTitles, hrTitles: totals.hrTitles, silverSluggers: totals.silverSluggers,
-      goldGloves: totals.goldGloves, hr40: totals.hr40, hofScore, hallOfFame },
+      goldGloves: totals.goldGloves, hr40: totals.hr40, hofScore, hallOfFame,
+      earnings: careerEarnings, earningsOnField: totals.earnings, hofBonus },
     highlight };
 }
 
@@ -1686,9 +1705,9 @@ function _doCareerSim() {
   const log = $('careerLog'), news = $('careerNews');
   log.innerHTML = ''; news.innerHTML = '';
   $('careerVerdict').textContent = '…'; $('careerVerdict').className = 'career-verdict';
-  $('tkK').textContent = '0'; $('tkW').textContent = '0'; $('tkWar').textContent = '0.0';
+  $('tkK').textContent = '0'; $('tkW').textContent = '0'; $('tkWar').textContent = '0.0'; $('tkMoney').textContent = '$0';
 
-  let runH = 0, runHR = 0, runWar = 0;
+  let runH = 0, runHR = 0, runWar = 0, runMoney = 0;
   const hMiles = [1000, 2000, 3000], hrMiles = [100, 200, 300, 400, 500];
   const delay = clamp(3400 / seasons.length, 130, 320);
   let i = 0;
@@ -1715,8 +1734,9 @@ function _doCareerSim() {
 
     // live ticker + milestone headlines
     const beforeH = runH, beforeHR = runHR;
-    runH += s.h; runHR += s.hr; runWar += s.war;
+    runH += s.h; runHR += s.hr; runWar += s.war; runMoney += s.salary;
     $('tkK').textContent = runH.toLocaleString(); $('tkW').textContent = runHR; $('tkWar').textContent = runWar.toFixed(1);
+    $('tkMoney').textContent = fmtMoney(runMoney);
     const heads = seasonHeadlines(s, i - 1, seasons.length, P, T);
     let milestone = false;
     for (const m of hMiles) if (beforeH < m && runH >= m) { heads.push({ text: `${P} collects his <b>${m.toLocaleString()}th career hit</b>.`, big: true }); flashTk('tkK'); milestone = true; }
@@ -1789,6 +1809,12 @@ function finishPlaythrough(career) {
   gsap.fromTo(v, { scale: 1.9, opacity: 0, rotation: -7 }, { scale: 1, opacity: 1, rotation: 0, duration: .65, ease: 'back.out(2)' });
   if (t.hallOfFame) Sound.legend(); else Sound.complete();
 
+  $('tkMoney').textContent = fmtMoney(t.earnings);
+  if (t.hofBonus > 0) {
+    flashTk('tkMoney');
+    addNews($('careerNews'), { text: `Cooperstown pays: <b>${fmtMoney(t.hofBonus)}</b> more in endorsements & legacy deals.`, big: true });
+  }
+
   buildCard(career, verdict, voteLine);
   setTimeout(() => {
     $('careerCard').style.display = 'block';
@@ -1796,6 +1822,12 @@ function finishPlaythrough(career) {
     $('submitRow').style.display = 'flex';
     gsap.fromTo($('submitRow'), { y: 8, opacity: 0 }, { y: 0, opacity: 1, duration: .4, delay: .2 });
   }, 550);
+}
+
+function fmtMoney(v) {
+  if (v >= 1e9) return '$' + (v / 1e9).toFixed(2) + 'B';
+  if (v >= 1e6) return '$' + (v / 1e6).toFixed(v >= 100e6 ? 0 : 1) + 'M';
+  return '$' + Math.round(v / 1e3) + 'K';
 }
 
 // Shareable career card + trophy case.
@@ -1828,6 +1860,7 @@ function buildCard(career, verdict, voteLine) {
       <div><b>${t.ops.toFixed(3).replace(/^0\./, '.')}</b><span>OPS</span></div>
     </div>
     <div class="cc-trophies">${trophyHtml}</div>
+    <div class="cc-money" style="text-align:center; padding:6px 0 2px; font-family:'Oswald',sans-serif; font-size:20px; font-weight:700; color:var(--gold); letter-spacing:.5px;">💰 ${fmtMoney(t.earnings)} <span style="font-size:11px; color:var(--muted); font-weight:600; letter-spacing:1px;">CAREER EARNINGS</span></div>
     <div class="cc-hint">📸 Screenshot to share your hitter</div>`;
 }
 
