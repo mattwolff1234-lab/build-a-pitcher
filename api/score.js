@@ -66,17 +66,23 @@ module.exports = async (req, res) => {
     const daily = scope === 'daily';
     const game = gameOf(req.query && req.query.game);
     const rows = daily
-      ? await sql`SELECT id, name, ovr, created_at FROM scores
+      ? await sql`SELECT id, name, ovr,
+            CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots') ELSE build END AS build,
+            game, created_at FROM scores
             WHERE game = ${game} AND created_at >= date_trunc('day', now())
             ORDER BY ovr DESC, created_at ASC LIMIT ${limit}`
-      : await sql`SELECT id, name, ovr, created_at FROM scores
+      : await sql`SELECT id, name, ovr,
+            CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots') ELSE build END AS build,
+            game, created_at FROM scores
             WHERE game = ${game}
             ORDER BY ovr DESC, created_at ASC LIMIT ${limit}`;
 
     let me = null;
     const meId = req.query && req.query.me ? parseInt(req.query.me, 10) : null;
     if (meId) {
-      const [row] = await sql`SELECT id, name, ovr, created_at, game FROM scores WHERE id = ${meId}`;
+      const [row] = await sql`SELECT id, name, ovr,
+        CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots') ELSE build END AS build,
+        created_at, game FROM scores WHERE id = ${meId}`;
       if (row && row.game === game) {
         const aheadRows = daily
           ? await sql`SELECT count(*)::int AS ahead FROM scores
@@ -87,7 +93,7 @@ module.exports = async (req, res) => {
         const inScope = daily
           ? (await sql`SELECT 1 FROM scores WHERE id = ${meId} AND created_at >= date_trunc('day', now())`).length > 0
           : true;
-        if (inScope) me = { rank: aheadRows[0].ahead + 1, name: row.name, ovr: row.ovr };
+        if (inScope) me = { id: Number(row.id), rank: aheadRows[0].ahead + 1, name: row.name, ovr: row.ovr, build: row.build, game: row.game };
       }
     }
     return res.status(200).json({ ok: true, rows: rows.map(r => ({ ...r, id: Number(r.id) })), me });
