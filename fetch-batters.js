@@ -5,9 +5,13 @@
 const fs = require('fs');
 
 const CONCURRENCY = 4;
+// 2025 is the primary season (full card set, mature ratings, all tiers).
+// 2026 is fetched as a supplement: a player's 2026 card replaces their 2025 card
+// only if the 2026 OVR is strictly higher (dedup step in main()).
+// Older seasons contribute gold-and-above (OVR >= 80) historical cards only.
 const SOURCES = [
-  { base: 'https://mlb26.theshow.com/apis/items.json', year: 2026, minOvr: 0,  prime: true }, // current season
-  { base: 'https://mlb25.theshow.com/apis/items.json', year: 2025, minOvr: 80 },
+  { base: 'https://mlb25.theshow.com/apis/items.json', year: 2025, minOvr: 0,  prime: true }, // primary season
+  { base: 'https://mlb26.theshow.com/apis/items.json', year: 2026, minOvr: 0 },               // upgrade if higher OVR
   { base: 'https://mlb24.theshow.com/apis/items.json', year: 2024, minOvr: 80 },
   { base: 'https://mlb23.theshow.com/apis/items.json', year: 2023, minOvr: 80 },
   { base: 'https://mlb22.theshow.com/apis/items.json', year: 2022, minOvr: 80 },
@@ -162,6 +166,13 @@ async function main() {
     }
   }
 
+  // Per player name, keep the highest-OVR card; ties keep the first source (2025).
+  const byName = new Map();
+  for (const p of pool) {
+    if (!byName.has(p.name) || p.ovr > byName.get(p.name).ovr) byName.set(p.name, p);
+  }
+  const dedupedPool = [...byName.values()];
+
   // Guarantee a Prime for every MVP / Silver Slugger / Hank Aaron winner in the pool.
   // If they have no special-edition card, synthesize one by boosting their best Live card.
   console.log('\nFetching MVP / Silver Slugger / Hank Aaron winners...');
@@ -169,7 +180,7 @@ async function main() {
   console.log(`  award-winner names: ${awardNames.size}`);
   const RATING_KEYS = ['contact', 'power', 'plate_vision', 'plate_discipline', 'batting_clutch', 'speed', 'fielding_ability', 'arm_strength', 'hitting_durability'];
   const bestLive = {};
-  for (const p of pool) { const n = norm(p.name); if (!bestLive[n] || p.ovr > bestLive[n].ovr) bestLive[n] = p; }
+  for (const p of dedupedPool) { const n = norm(p.name); if (!bestLive[n] || p.ovr > bestLive[n].ovr) bestLive[n] = p; }
   let synth = 0;
   for (const n of awardNames) {
     const live = bestLive[n];
@@ -184,16 +195,16 @@ async function main() {
   console.log(`  synthesized ${synth} Primes for award winners without one (total Primes: ${Object.keys(prime).length})`);
 
   const missing = {};
-  for (const p of [...pool, ...Object.values(prime)]) if (!p.mlbamId && !(p.name in missing)) missing[p.name] = null;
+  for (const p of [...dedupedPool, ...Object.values(prime)]) if (!p.mlbamId && !(p.name in missing)) missing[p.name] = null;
   const missNames = Object.keys(missing);
   console.log(`\nResolving ${missNames.length} missing headshots via search...`);
   let found = 0;
   for (const name of missNames) { const id = await resolveActiveId(name); if (id) { missing[name] = id; found++; } await new Promise(r => setTimeout(r, 110)); }
-  for (const p of [...pool, ...Object.values(prime)]) if (!p.mlbamId && missing[p.name]) p.mlbamId = missing[p.name];
+  for (const p of [...dedupedPool, ...Object.values(prime)]) if (!p.mlbamId && missing[p.name]) p.mlbamId = missing[p.name];
   console.log(`  recovered ${found}/${missNames.length} ids`);
 
-  console.log(`\nSpin pool: ${pool.length} cards | with headshot id: ${pool.filter(p => p.mlbamId).length}`);
-  fs.writeFileSync('batters.json', JSON.stringify({ pool, prime, legends }));
+  console.log(`\nSpin pool: ${dedupedPool.length} cards | with headshot id: ${dedupedPool.filter(p => p.mlbamId).length}`);
+  fs.writeFileSync('batters.json', JSON.stringify({ pool: dedupedPool, prime, legends }));
   console.log(`Wrote batters.json (${(fs.statSync('batters.json').size / 1024).toFixed(0)} KB)`);
 }
 main().catch(e => { console.error(e); process.exit(1); });
