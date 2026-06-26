@@ -121,6 +121,25 @@ so run it **after** `fetch-data.js`).
 - **Deploy:** Vercel (static + functions). Push to `main` auto-deploys. Neon env vars are
   **Sensitive** (can't be pulled to CLI). Domain `pitchinglab.pitchergami.com` (Vercel-managed DNS).
 
+### Accounts + personal Hall of Fame (shipped)
+**Sign in with Google** → save your created players to a personal, sortable **Hall of Fame**.
+- **`api/account.js`** (Vercel serverless + same Neon DB). Tables `users(google_sub PK, email, name,
+  picture, session_token)` and `saves(id, google_sub, game, name, ovr, build jsonb, created_at)`,
+  auto-created. Browser gets a Google ID token (GSI), server verifies it via Google's `tokeninfo`
+  endpoint (checks `aud === GOOGLE_CLIENT_ID`), then issues our own `session_token` stored on the
+  device. Actions: `login` / `save` / `delete` (POST) and `?action=list` (GET). One account spans
+  both games; saves tagged by `game`.
+- **Frontend** (both `index.html` + `build-a-batter.html`, near-identical): GSI script in head,
+  account chip + "Sign in with Google" in the ☰ menu, "💾 Save to my Hall of Fame" button on the
+  career-card screen, and a **🏛️ My Hall of Fame** menu tab — a GSAP-staggered, scrollable gallery
+  of saved career cards with sort tabs (Overall/WAR/Earnings/HOF/Newest). Per-game constant:
+  `HOF_GAME` (`'pitcher'` vs `'batter'`).
+- **Setup:** `GOOGLE_CLIENT_ID` is a placeholder (`REPLACE_WITH_…`) in 3 spots — both HTML files and
+  `api/account.js` (or set env `GOOGLE_CLIENT_ID` for the server). Until it's a real OAuth Web client
+  id (from console.cloud.google.com, with our domains as Authorized JS origins), `googleConfigured()`
+  is false and the UI shows a "sign-in coming soon" hint instead of a broken button. The client id is
+  public; the only secret-ish piece is the per-device session token.
+
 ### Known caveat — anti-cheat
 Scores are submitted from the browser; the server only clamps `ovr` 1–99 and name length, so the OVR
 is currently trust-the-client. Harden later by recomputing OVR server-side from the submitted `build`

@@ -18,6 +18,7 @@
 <meta name="twitter:card" content="summary">
 <meta name="twitter:image" content="/icon-512.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <script defer src="/_vercel/insights/script.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -469,6 +470,33 @@
     text-transform:uppercase; margin:4px 0 8px; }
   .footer-note { color:var(--dim); font-size:11.5px; text-align:center; padding:22px 12px 36px; position:relative; z-index:1; letter-spacing:.4px; }
   .loading { text-align:center; color:var(--muted); padding:50px; font-family:'Oswald',sans-serif; letter-spacing:2px; text-transform:uppercase; }
+  /* ---- Accounts + Hall of Fame ---- */
+  .acct { display:flex; align-items:center; gap:10px; padding:11px 13px; margin-bottom:9px; border:1px solid rgba(120,160,210,.18); border-radius:12px; background:rgba(8,14,22,.5); }
+  .acct img { width:34px; height:34px; border-radius:50%; flex:0 0 auto; }
+  .acct .who { flex:1; min-width:0; }
+  .acct .who b { display:block; font-size:13px; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .acct .who span { font-size:11px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; }
+  .acct .signout { font-size:11px; padding:6px 10px; flex:0 0 auto; }
+  #acctSlot { margin-bottom:9px; }
+  #gsiWrap { display:flex; justify-content:center; }
+  .acct-hint { font-size:11px; color:var(--muted); text-align:center; padding:8px 6px 4px; line-height:1.4; }
+  .save-hof-btn { background:linear-gradient(135deg,#ffce3a,#e0a020); color:#1a1205; }
+  .save-hof-btn:disabled { opacity:.6; cursor:default; }
+  .hof-empty { text-align:center; color:var(--muted); padding:28px 16px; font-size:13px; line-height:1.6; }
+  .hof-list { display:flex; flex-direction:column; gap:12px; max-height:60vh; overflow-y:auto; padding:4px 2px 8px; }
+  .hof-card { position:relative; border:1px solid rgba(120,160,210,.18); border-radius:14px; overflow:hidden; background:#0c131e; }
+  .hof-card .hc-top { display:flex; align-items:center; gap:12px; padding:11px 13px; }
+  .hof-card .hc-logo img { width:32px; height:32px; object-fit:contain; }
+  .hof-card .hc-id { flex:1; min-width:0; }
+  .hof-card .hc-name { font-family:'Oswald',sans-serif; font-size:17px; font-weight:700; color:#fff; line-height:1.05; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .hof-card .hc-sub { font-size:10px; color:rgba(255,255,255,.82); text-transform:uppercase; letter-spacing:.6px; margin-top:2px; }
+  .hof-card .hc-ovr { font-family:'Oswald',sans-serif; font-size:30px; font-weight:700; color:#fff; line-height:1; flex:0 0 auto; }
+  .hof-card .hc-body { padding:9px 13px 12px; }
+  .hof-card .hc-verdict { font-family:'Oswald',sans-serif; font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; }
+  .hof-card .hc-stats { font-size:12px; color:var(--ink); margin-top:4px; }
+  .hof-card .hc-money { font-family:'Oswald',sans-serif; font-size:14px; font-weight:700; color:var(--gold); margin-top:3px; }
+  .hof-card .hc-del { position:absolute; top:8px; right:10px; background:rgba(0,0,0,.32); border:none; color:rgba(255,255,255,.7); font-size:13px; cursor:pointer; width:24px; height:24px; border-radius:50%; line-height:22px; padding:0; }
+  .hof-card .hc-del:hover { background:rgba(220,60,60,.75); color:#fff; }
 </style>
 </head>
 <body>
@@ -590,6 +618,7 @@
       <div id="careerCard" class="career-card" style="display:none"></div>
 
       <div id="submitRow" class="submit-row" style="display:none">
+        <button id="saveHofBtn" class="save-hof-btn">💾 Save to my Hall of Fame</button>
         <button id="submitBtn" class="primary">Submit to Leaderboard</button>
       </div>
       <div id="submitMsg" class="submit-msg"></div>
@@ -603,6 +632,8 @@
   <div class="overlay-card panel">
     <div class="overlay-head"><span class="overlay-title">Menu</span><button class="overlay-close" data-close="menu">✕</button></div>
     <div class="overlay-body">
+      <div id="acctSlot"></div>
+      <button class="menu-item" id="miHof">🏛️ My Hall of Fame</button>
       <button class="menu-item" id="miLb">🏆 Leaderboard</button>
       <button class="menu-item" id="miHow">📖 How to Play</button>
       <button class="menu-item" id="miInstall">📲 Install App<span class="mi-chev" id="installChev">⌄</span></button>
@@ -635,6 +666,16 @@
       </div>
       <div class="lb-tabs lb-sort-tabs" id="lbSortTabs"></div>
       <div id="lbList" class="lb-list"></div>
+    </div>
+  </div>
+</div>
+
+<div id="hofModal" class="overlay">
+  <div class="overlay-card panel">
+    <div class="overlay-head"><span class="overlay-title">🏛️ My Hall of Fame</span><button class="overlay-close" data-close="hofModal">✕</button></div>
+    <div class="overlay-body">
+      <div class="lb-tabs lb-sort-tabs" id="hofSortTabs"></div>
+      <div id="hofList" class="hof-list"></div>
     </div>
   </div>
 </div>
@@ -918,6 +959,8 @@ async function init() {
 
   // menu + overlays
   $('menuBtn').onclick = () => { Sound.click(); openOverlay('menu'); };
+  $('miHof').onclick = () => { closeOverlay('menu'); openHof(); };
+  $('saveHofBtn').onclick = () => saveToHof($('saveHofBtn'));
   $('miLb').onclick = () => { closeOverlay('menu'); openLeaderboard('global'); };
   $('miHow').onclick = () => { closeOverlay('menu'); openOverlay('howModal'); };
   $('miInstall').onclick = () => {
@@ -938,6 +981,8 @@ async function init() {
   document.querySelectorAll('.overlay-close').forEach(b => b.onclick = () => closeOverlay(b.dataset.close));
   document.querySelectorAll('.overlay').forEach(o => o.addEventListener('click', e => { if (e.target === o) closeOverlay(o.id); }));
   document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.overlay.show').forEach(o => closeOverlay(o.id)); });
+  renderAcct();
+  initGoogle();
 }
 
 function toast(msg) {
@@ -951,6 +996,147 @@ function toast(msg) {
 function openOverlay(id) { const el = $(id); el.classList.add('show'); gsap.fromTo(el.firstElementChild, { y: 14, opacity: 0 }, { y: 0, opacity: 1, duration: .3, ease: 'power3.out' }); }
 function closeOverlay(id) { $(id).classList.remove('show'); }
 function openLeaderboard(scope, game = LEADERBOARD_GAME) { openOverlay('lbModal'); loadLeaderboard(scope, game); }
+
+/* ===== Accounts ("Sign in with Google") + My Hall of Fame ===== */
+const GOOGLE_CLIENT_ID = 'REPLACE_WITH_YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com';
+const HOF_GAME = 'pitcher';
+let account = null;
+try { account = JSON.parse(localStorage.getItem('pl_account') || 'null'); } catch (e) {}
+
+function saveAccount(a) { account = a; try { localStorage.setItem('pl_account', JSON.stringify(a)); } catch (e) {} renderAcct(); }
+function clearAccount() { account = null; try { localStorage.removeItem('pl_account'); } catch (e) {} try { google.accounts.id.disableAutoSelect(); } catch (e) {} renderAcct(); }
+
+function googleConfigured() { return GOOGLE_CLIENT_ID && GOOGLE_CLIENT_ID.indexOf('REPLACE_WITH') !== 0; }
+function initGoogle(tries) {
+  tries = tries || 0;
+  if (!googleConfigured()) { renderAcct(); return; }
+  if (!window.google || !google.accounts || !google.accounts.id) { if (tries < 40) setTimeout(() => initGoogle(tries + 1), 250); return; }
+  try { google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleCredential, auto_select: true }); } catch (e) {}
+  renderAcct();
+}
+
+async function onGoogleCredential(resp) {
+  try {
+    const r = await fetch('/api/account', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'login', idToken: resp.credential }) });
+    const j = await r.json();
+    if (j.ok) { saveAccount({ sub: j.sub, email: j.email, name: j.name, picture: j.picture, sessionToken: j.sessionToken }); toast('Signed in as ' + (j.name || j.email)); }
+    else toast('Sign-in failed');
+  } catch (e) { toast('Sign-in failed'); }
+}
+
+function renderAcct() {
+  const slot = $('acctSlot'); if (!slot) return;
+  if (account) {
+    slot.innerHTML = `<div class="acct">
+      ${account.picture ? `<img src="${account.picture}" alt="" referrerpolicy="no-referrer">` : ''}
+      <div class="who"><b>${escapeHTML(account.name || 'Player')}</b><span>${escapeHTML(account.email || '')}</span></div>
+      <button class="signout" id="signOutBtn">Sign out</button></div>`;
+    const so = $('signOutBtn'); if (so) so.onclick = () => { clearAccount(); toast('Signed out'); };
+  } else if (!googleConfigured()) {
+    slot.innerHTML = `<div class="acct-hint">🔒 Sign-in is coming soon — you'll be able to save your players to a personal Hall of Fame.</div>`;
+  } else {
+    slot.innerHTML = `<div id="gsiWrap"></div><div class="acct-hint">Sign in with Google to save your players to a personal Hall of Fame.</div>`;
+    try { google.accounts.id.renderButton($('gsiWrap'), { theme: 'filled_black', size: 'large', shape: 'pill', text: 'signin_with' }); }
+    catch (e) { $('gsiWrap').innerHTML = '<div class="acct-hint">Google sign-in is loading…</div>'; }
+  }
+}
+
+async function saveToHof(btn) {
+  if (!account) { toast('Sign in first (☰ menu)'); openOverlay('menu'); return; }
+  if (!state.career) { toast('Simulate a career first'); return; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  const teamAb = (state.simTeam && state.simTeam.abbr) || state.draftTeamAb || (state.career && state.career.finalTeam);
+  const reset = () => { if (btn) { btn.disabled = false; btn.textContent = '💾 Save to my Hall of Fame'; } };
+  try {
+    const r = await fetch('/api/account', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'save', sub: account.sub, sessionToken: account.sessionToken, game: HOF_GAME,
+        name: state.simName || 'My Player', ovr: state.finalOvr,
+        build: { slots: state.build, career: state.career, team: teamAb } }) });
+    const j = await r.json();
+    if (j.ok) { if (btn) btn.textContent = '✓ Saved'; toast('Saved to your Hall of Fame'); if (Sound.complete) Sound.complete(); }
+    else if (r.status === 401) { clearAccount(); toast('Please sign in again'); reset(); }
+    else { toast('Save failed'); reset(); }
+  } catch (e) { toast('Save failed'); reset(); }
+}
+
+const HOF_SORTS = [
+  { key: 'ovr', label: 'Overall' }, { key: 'war', label: 'WAR' }, { key: 'earnings', label: 'Earnings' },
+  { key: 'hof', label: 'Hall of Fame' }, { key: 'date', label: 'Newest' },
+];
+let hofSort = 'ovr', hofSaves = [];
+
+function statOf(s, key) {
+  const t = (s.build && s.build.career && s.build.career.totals) || {};
+  if (key === 'ovr') return s.ovr || 0;
+  if (key === 'war') return Number(t.war) || 0;
+  if (key === 'earnings') return Number(t.earnings) || 0;
+  if (key === 'hof') return (t.hallOfFame ? 1e6 : 0) + (Number(t.hofScore) || 0);
+  if (key === 'date') return new Date(s.created_at).getTime() || 0;
+  return 0;
+}
+
+async function openHof() {
+  if (!account) { toast('Sign in first (☰ menu)'); openOverlay('menu'); return; }
+  openOverlay('hofModal');
+  renderHofSortTabs();
+  $('hofList').innerHTML = '<div class="hof-empty">Loading…</div>';
+  try {
+    const r = await fetch(`/api/account?action=list&game=${HOF_GAME}&sub=${encodeURIComponent(account.sub)}&sessionToken=${encodeURIComponent(account.sessionToken)}`);
+    const j = await r.json();
+    if (!j.ok) { if (r.status === 401) clearAccount(); $('hofList').innerHTML = '<div class="hof-empty">Could not load your players. Try signing in again.</div>'; return; }
+    hofSaves = j.rows || [];
+    renderHof();
+  } catch (e) { $('hofList').innerHTML = '<div class="hof-empty">Could not load your players.</div>'; }
+}
+
+function renderHofSortTabs() {
+  const wrap = $('hofSortTabs');
+  wrap.innerHTML = HOF_SORTS.map(s => `<button class="lb-tab${s.key === hofSort ? ' active' : ''}" data-hsort="${s.key}">${s.label}</button>`).join('');
+  wrap.querySelectorAll('[data-hsort]').forEach(b => b.onclick = () => { hofSort = b.dataset.hsort; renderHofSortTabs(); renderHof(); });
+}
+
+function renderHof() {
+  const list = $('hofList');
+  if (!hofSaves.length) { list.innerHTML = '<div class="hof-empty">No saved players yet.<br>Simulate a career, then tap <b>💾 Save to my Hall of Fame</b>.</div>'; return; }
+  const sorted = [...hofSaves].sort((a, b) => statOf(b, hofSort) - statOf(a, hofSort));
+  list.innerHTML = sorted.map(hofCardHTML).join('');
+  list.querySelectorAll('[data-del]').forEach(b => b.onclick = () => deleteSave(b.dataset.del));
+  gsap.from(list.querySelectorAll('.hof-card'), { y: 18, opacity: 0, duration: .4, stagger: .05, ease: 'power2.out' });
+}
+
+function hofCardHTML(s) {
+  const t = (s.build && s.build.career && s.build.career.totals) || {};
+  const team = teamInfo((s.build && s.build.team) || '');
+  const verdict = careerTier(t, s.ovr);
+  const isBat = s.game === 'batter';
+  const stats = isBat
+    ? `${(Number(t.avg) || 0).toFixed(3).replace(/^0\./, '.')} AVG · ${t.hr || 0} HR · ${(Number(t.war) || 0).toFixed(1)} WAR`
+    : `${t.wins || 0}-${t.losses || 0} · ${(Number(t.era) || 0).toFixed(2)} ERA · ${(t.k || 0).toLocaleString()} K · ${(Number(t.war) || 0).toFixed(1)} WAR`;
+  const money = t.earnings ? `<div class="hc-money">💰 ${fmtMoney(t.earnings)}</div>` : '';
+  return `<div class="hof-card">
+    <button class="hc-del" data-del="${s.id}" title="Delete">✕</button>
+    <div class="hc-top" style="background:linear-gradient(135deg, ${team.color}, ${shade(team.color, -34)});">
+      ${team.logo ? `<div class="hc-logo"><img src="${team.logo}" alt="" onerror="this.parentElement.style.display='none'"></div>` : ''}
+      <div class="hc-id"><div class="hc-name">${escapeHTML(s.name)}</div><div class="hc-sub">${escapeHTML(team.name || '')} · ${isBat ? 'Batter' : 'Pitcher'}</div></div>
+      <div class="hc-ovr">${s.ovr}</div>
+    </div>
+    <div class="hc-body">
+      <div class="hc-verdict" style="color:${verdictColor(verdict.cls)}">${verdict.txt}</div>
+      <div class="hc-stats">${stats}</div>
+      ${money}
+    </div></div>`;
+}
+
+async function deleteSave(id) {
+  if (!account) return;
+  try {
+    await fetch('/api/account', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'delete', sub: account.sub, sessionToken: account.sessionToken, id: Number(id) }) });
+  } catch (e) {}
+  hofSaves = hofSaves.filter(s => String(s.id) !== String(id));
+  renderHof();
+}
 
 const TIER_ODDS = { diamond: 0.10, gold: 0.20, silver: 0.24, bronze: 0.28, grey: 0.18 };
 let cumWeights = [], totalWeight = 0;
@@ -1898,6 +2084,7 @@ function finishPlaythrough(career) {
     $('careerCard').style.display = 'block';
     gsap.fromTo($('careerCard'), { y: 14, opacity: 0, scale: .97 }, { y: 0, opacity: 1, scale: 1, duration: .55, ease: 'back.out(1.5)' });
     $('submitRow').style.display = 'flex';
+    const shb = $('saveHofBtn'); shb.disabled = false; shb.textContent = '💾 Save to my Hall of Fame';
     gsap.fromTo($('submitRow'), { y: 8, opacity: 0 }, { y: 0, opacity: 1, duration: .4, delay: .2 });
   }, 550);
 }
