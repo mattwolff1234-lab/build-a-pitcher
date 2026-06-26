@@ -85,9 +85,10 @@ top with your exact rank even if you're outside the top 200**.
 ---
 
 ## Data source & pipeline
-Attribute ratings (1–99) from the MLB The Show API: `mlb26.theshow.com/apis/items.json`
-(+ mlb25/24/23/22/21 for historical). Free, no auth, JSON. **Bump the current-season source to the
-new `mlbNN` host each spring** when the next game ships (both `fetch-data.js` and `fetch-batters.js`).
+Attribute ratings (1–99) from the MLB The Show API: `mlb25.theshow.com/apis/items.json`
+(primary) + `mlb26.theshow.com` (supplement: 2026 card replaces 2025 only if OVR is strictly
+higher) + mlb24/23/22/21 gold+ historical. **When 2026 ratings mature mid-season and surpass 2025,
+flip the primary to `mlb26` in both `fetch-data.js` and `fetch-batters.js`.**
 
 - **`node fetch-data.js`** bakes `pitchers.json`:
   - Pool = **`series === "Live"` only** (real-world-accurate; special editions are inflated).

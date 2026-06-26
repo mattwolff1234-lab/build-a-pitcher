@@ -1,5 +1,4 @@
-// One-time build script: pulls all MLB The Show 25 cards, keeps pitchers,
-// and writes a slim pitchers.json the static game loads.
+// One-time build script: pulls MLB The Show pitcher cards and writes pitchers.json.
 //
 //   node fetch-data.js
 //
@@ -13,13 +12,13 @@ const fs = require('fs');
 
 const CONCURRENCY = 4;
 
-// Each MLB The Show game holds that season's Live (real-world) ratings.
-// (series_year in the API is a junk constant, so we set the season per source.)
-// minOvr: current game (2025) contributes all tiers; older games only sprinkle
-// in gold-and-above (OVR >= 80) historical versions.
+// 2025 is the primary season (full card set, mature ratings, all tiers).
+// 2026 is fetched as a supplement: a player's 2026 card replaces their 2025 card
+// only if the 2026 OVR is strictly higher (dedup step in main()).
+// Older seasons contribute gold-and-above (OVR >= 80) historical cards only.
 const SOURCES = [
-  { base: 'https://mlb26.theshow.com/apis/items.json', year: 2026, minOvr: 0,  prime: true }, // current season
-  { base: 'https://mlb25.theshow.com/apis/items.json', year: 2025, minOvr: 80 },
+  { base: 'https://mlb25.theshow.com/apis/items.json', year: 2025, minOvr: 0,  prime: true }, // primary season
+  { base: 'https://mlb26.theshow.com/apis/items.json', year: 2026, minOvr: 0 },               // upgrade if higher OVR
   { base: 'https://mlb24.theshow.com/apis/items.json', year: 2024, minOvr: 80 },
   { base: 'https://mlb23.theshow.com/apis/items.json', year: 2023, minOvr: 80 },
   { base: 'https://mlb22.theshow.com/apis/items.json', year: 2022, minOvr: 80 },
@@ -236,7 +235,12 @@ async function main() {
   }
   console.log(`  recovered ${found}/${missNames.length} ids`);
 
-  const debutedPool = await dropUndebuted(pool);
+  // Per player name, keep the highest-OVR card; ties keep the first source (2025).
+  const byName = new Map();
+  for (const p of pool) {
+    if (!byName.has(p.name) || p.ovr > byName.get(p.name).ovr) byName.set(p.name, p);
+  }
+  const debutedPool = await dropUndebuted([...byName.values()]);
   console.log(`\nSpin pool: ${debutedPool.length} cards | with headshot id: ${debutedPool.filter(p => p.mlbamId).length}`);
 
   fs.writeFileSync('pitchers.json', JSON.stringify({ pool: debutedPool, prime, legends }));
