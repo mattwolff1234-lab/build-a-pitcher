@@ -18,7 +18,8 @@ const CONCURRENCY = 4;
 // minOvr: current game (2025) contributes all tiers; older games only sprinkle
 // in gold-and-above (OVR >= 80) historical versions.
 const SOURCES = [
-  { base: 'https://mlb25.theshow.com/apis/items.json', year: 2025, minOvr: 0,  prime: true },
+  { base: 'https://mlb26.theshow.com/apis/items.json', year: 2026, minOvr: 0,  prime: true }, // current season
+  { base: 'https://mlb25.theshow.com/apis/items.json', year: 2025, minOvr: 80 },
   { base: 'https://mlb24.theshow.com/apis/items.json', year: 2024, minOvr: 80 },
   { base: 'https://mlb23.theshow.com/apis/items.json', year: 2023, minOvr: 80 },
   { base: 'https://mlb22.theshow.com/apis/items.json', year: 2022, minOvr: 80 },
@@ -40,7 +41,7 @@ const norm = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '')
 
 async function buildIdMap() {
   const map = {};
-  for (const yr of [2021, 2022, 2023, 2024, 2025]) {
+  for (const yr of [2021, 2022, 2023, 2024, 2025, 2026]) {
     try {
       const r = await fetch(`https://statsapi.mlb.com/api/v1/sports/1/players?season=${yr}`);
       const people = (await r.json()).people || [];
@@ -51,7 +52,7 @@ async function buildIdMap() {
 }
 
 // Card series that are current prospects, not retired greats — never legends.
-const PROSPECT_SERIES = new Set(['2025 Draft', 'Pipeline', 'Pipeline Past']);
+const PROSPECT_SERIES = new Set(['2025 Draft', '2026 Draft', 'Pipeline', 'Pipeline Past', 'Spring Breakout']);
 
 // Resolve a retired pitcher's MLBAM id via name search, choosing the earliest
 // MLB debut among matches so a recent namesake never wins over the legend.
@@ -155,6 +156,9 @@ async function main() {
     if (src.prime) {
       // Names with a current Live card = active players.
       const activeNames = new Set(pitchers.filter(it => it.series === 'Live').map(it => it.name));
+      // Any player with a prospect/showcase card is a current prospect, NOT a retired legend —
+      // exclude by NAME (their highest card may be a non-prospect special like "Neon"/"Spotlight").
+      const prospectNames = new Set(pitchers.filter(it => PROSPECT_SERIES.has(it.series)).map(it => it.name));
 
       // Prime = highest-OVR special card per player name (used by the Boost power-up).
       const primeRaw = {};
@@ -163,7 +167,7 @@ async function main() {
       for (const it of pitchers) {
         if (it.series === 'Live') continue;
         if (!primeRaw[it.name] || it.ovr > primeRaw[it.name].ovr) primeRaw[it.name] = it;
-        if (activeNames.has(it.name) || PROSPECT_SERIES.has(it.series)) continue;
+        if (activeNames.has(it.name) || prospectNames.has(it.name)) continue; // active or prospect → not a legend
         if (!legRaw[it.name] || it.ovr > legRaw[it.name].ovr) legRaw[it.name] = it;
       }
       for (const name in primeRaw) prime[name] = slim(primeRaw[name], src.year);

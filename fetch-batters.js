@@ -6,7 +6,8 @@ const fs = require('fs');
 
 const CONCURRENCY = 4;
 const SOURCES = [
-  { base: 'https://mlb25.theshow.com/apis/items.json', year: 2025, minOvr: 0,  prime: true },
+  { base: 'https://mlb26.theshow.com/apis/items.json', year: 2026, minOvr: 0,  prime: true }, // current season
+  { base: 'https://mlb25.theshow.com/apis/items.json', year: 2025, minOvr: 80 },
   { base: 'https://mlb24.theshow.com/apis/items.json', year: 2024, minOvr: 80 },
   { base: 'https://mlb23.theshow.com/apis/items.json', year: 2023, minOvr: 80 },
   { base: 'https://mlb22.theshow.com/apis/items.json', year: 2022, minOvr: 80 },
@@ -19,7 +20,7 @@ const norm = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '')
 
 async function buildIdMap() {
   const map = {};
-  for (const yr of [2021, 2022, 2023, 2024, 2025]) {
+  for (const yr of [2021, 2022, 2023, 2024, 2025, 2026]) {
     try {
       const r = await fetch(`https://statsapi.mlb.com/api/v1/sports/1/players?season=${yr}`);
       const people = (await r.json()).people || [];
@@ -29,7 +30,7 @@ async function buildIdMap() {
   return map;
 }
 
-const PROSPECT_SERIES = new Set(['2025 Draft', 'Pipeline', 'Pipeline Past']);
+const PROSPECT_SERIES = new Set(['2025 Draft', '2026 Draft', 'Pipeline', 'Pipeline Past', 'Spring Breakout']);
 async function resolveLegendId(name) {
   try {
     const r = await fetch(`https://statsapi.mlb.com/api/v1/people/search?names=${encodeURIComponent(name)}`);
@@ -142,11 +143,14 @@ async function main() {
 
     if (src.prime) {
       const activeNames = new Set(hitters.filter(it => it.series === 'Live').map(it => it.name));
+      // Any player who has a prospect/showcase card is a current prospect, NOT a retired legend —
+      // exclude them by NAME (their highest card may be a non-prospect special like "Neon"/"Spotlight").
+      const prospectNames = new Set(hitters.filter(it => PROSPECT_SERIES.has(it.series)).map(it => it.name));
       const primeRaw = {}, legRaw = {};
       for (const it of hitters) {
         if (it.series === 'Live') continue;
         if (!primeRaw[it.name] || it.ovr > primeRaw[it.name].ovr) primeRaw[it.name] = it;
-        if (activeNames.has(it.name) || PROSPECT_SERIES.has(it.series)) continue;
+        if (activeNames.has(it.name) || prospectNames.has(it.name)) continue; // active or prospect → not a legend
         if (!legRaw[it.name] || it.ovr > legRaw[it.name].ovr) legRaw[it.name] = it;
       }
       for (const name in primeRaw) prime[name] = slim(primeRaw[name], src.year);

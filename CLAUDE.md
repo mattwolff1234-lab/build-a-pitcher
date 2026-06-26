@@ -85,17 +85,19 @@ top with your exact rank even if you're outside the top 200**.
 ---
 
 ## Data source & pipeline
-Attribute ratings (1–99) from the MLB The Show API: `mlb25.theshow.com/apis/items.json`
-(+ mlb24/23/22/21 for historical). Free, no auth, JSON.
+Attribute ratings (1–99) from the MLB The Show API: `mlb26.theshow.com/apis/items.json`
+(+ mlb25/24/23/22/21 for historical). Free, no auth, JSON. **Bump the current-season source to the
+new `mlbNN` host each spring** when the next game ships (both `fetch-data.js` and `fetch-batters.js`).
 
 - **`node fetch-data.js`** bakes `pitchers.json`:
   - Pool = **`series === "Live"` only** (real-world-accurate; special editions are inflated).
   - **SP + CP only** (relief pitchers `display_position === 'RP'` are dropped; legends exempt).
-  - 2025 = all tiers; 2024–2021 = **gold+ (OVR ≥ 80) historical** versions, tagged with their year.
+  - 2026 (current) = all tiers; 2025–2021 = **gold+ (OVR ≥ 80) historical** versions, tagged with year.
   - **Prime** map = highest-OVR special-edition card per player (Boost power-up). Don't say "MLB The
     Show" in the UI — call them "Prime."
-  - **Legends** = retired greats (special card, no current Live card, OVR ≥ 85; prospect series
-    excluded). 1% spin odds, shown purple.
+  - **Legends** = retired greats (special card, no current Live card, OVR ≥ 85). Excluded by NAME if
+    they have any prospect/showcase card (`PROSPECT_SERIES`, incl. Spring Breakout) — so hyped
+    prospects like Konnor Griffin land in the Live pool (boostable), not as purple legends.
   - **Headshots** = MLB official (`midfield.mlbstatic.com/.../spots/180`) via name→MLBAM-id mapping
     (accent-stripped + people-search fallback). `node fetch-wiki-headshots.js` fills remaining ones
     from Wikipedia **with identity verification** (last name + first/nickname + "is a pitcher").
