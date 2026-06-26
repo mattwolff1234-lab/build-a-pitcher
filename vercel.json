@@ -1,0 +1,5 @@
+{
+  "rewrites": [
+    { "source": "/batting", "destination": "/build-a-batter.html" }
+  ]
+}
