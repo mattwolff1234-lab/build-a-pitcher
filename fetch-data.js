@@ -97,9 +97,18 @@ function slim(item, year) {
     height: item.height || '',                  // display string for the Frame slot
     heightIn: hm ? (+hm[1] * 12 + +hm[2]) : null, // inches, drives Frame rating
   };
-  for (const a of ATTRS) out[a] = item[a];
+  // The Show 26 split some ratings into left/right (e.g. k_per_bf -> k_per_bf_left/right).
+  // Use the single value when present, otherwise collapse the L/R split to one number.
+  for (const a of ATTRS) {
+    out[a] = item[a];
+    if (out[a] == null) out[a] = avgLR(item[a + '_left'], item[a + '_right']);
+  }
   return out;
 }
+const avgLR = (a, b) => {
+  const xs = [a, b].map(Number).filter(v => !Number.isNaN(v));
+  return xs.length ? Math.round(xs.reduce((s, v) => s + v, 0) / xs.length) : undefined;
+};
 
 async function getPage(base, page) {
   const url = `${base}?type=mlb_card&page=${page}`;
