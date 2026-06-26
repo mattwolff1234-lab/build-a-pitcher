@@ -998,7 +998,7 @@ function closeOverlay(id) { $(id).classList.remove('show'); }
 function openLeaderboard(scope, game = LEADERBOARD_GAME) { openOverlay('lbModal'); loadLeaderboard(scope, game); }
 
 /* ===== Accounts ("Sign in with Google") + My Hall of Fame ===== */
-const GOOGLE_CLIENT_ID = 'REPLACE_WITH_YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = '349698720898-t9bpb8fp7ks6scf8ci8mmoeec1lpm3d3.apps.googleusercontent.com';
 const HOF_GAME = 'pitcher';
 let account = null;
 try { account = JSON.parse(localStorage.getItem('pl_account') || 'null'); } catch (e) {}

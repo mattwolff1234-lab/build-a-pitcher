@@ -13,7 +13,7 @@ const crypto = require('crypto');
 // Public OAuth client id (safe to embed). Replace the placeholder with your real id from
 // Google Cloud Console, or set GOOGLE_CLIENT_ID in the Vercel project env.
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID
-  || 'REPLACE_WITH_YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com';
+  || '349698720898-t9bpb8fp7ks6scf8ci8mmoeec1lpm3d3.apps.googleusercontent.com';
 
 function findConn() {
   const e = process.env;
