@@ -65,38 +65,74 @@ module.exports = async (req, res) => {
     const limit = Math.min(200, Math.max(1, parseInt(req.query && req.query.limit, 10) || 50));
     const daily = scope === 'daily';
     const game = gameOf(req.query && req.query.game);
-    const rows = daily
-      ? await sql`SELECT id, name, ovr,
-            CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots') ELSE build END AS build,
-            game, created_at FROM scores
-            WHERE game = ${game} AND created_at >= date_trunc('day', now())
-            ORDER BY ovr DESC, created_at ASC LIMIT ${limit}`
-      : await sql`SELECT id, name, ovr,
-            CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots') ELSE build END AS build,
-            game, created_at FROM scores
-            WHERE game = ${game}
-            ORDER BY ovr DESC, created_at ASC LIMIT ${limit}`;
+    // Optional sort by a career-total stat (trust-the-client, same as ovr). Whitelisted keys map to build.career.totals fields.
+    const SORT_FIELDS = { k: 'k', war: 'war', wins: 'wins', rings: 'rings', cyYoung: 'cyYoung', hr: 'hr', hits: 'h', mvp: 'mvp' };
+    const sortField = SORT_FIELDS[req.query && req.query.sort] || null;
+    const NULL_SENTINEL = -1e30; // ranks missing-career entries last under a stat sort
+
+    let rows;
+    if (sortField) {
+      rows = daily
+        ? await sql`SELECT id, name, ovr,
+              CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots') ELSE build END AS build,
+              game, created_at, (build->'career'->'totals'->>${sortField})::numeric AS stat FROM scores
+              WHERE game = ${game} AND created_at >= date_trunc('day', now())
+              ORDER BY (build->'career'->'totals'->>${sortField})::numeric DESC NULLS LAST, ovr DESC, created_at ASC LIMIT ${limit}`
+        : await sql`SELECT id, name, ovr,
+              CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots') ELSE build END AS build,
+              game, created_at, (build->'career'->'totals'->>${sortField})::numeric AS stat FROM scores
+              WHERE game = ${game}
+              ORDER BY (build->'career'->'totals'->>${sortField})::numeric DESC NULLS LAST, ovr DESC, created_at ASC LIMIT ${limit}`;
+    } else {
+      rows = daily
+        ? await sql`SELECT id, name, ovr,
+              CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots') ELSE build END AS build,
+              game, created_at FROM scores
+              WHERE game = ${game} AND created_at >= date_trunc('day', now())
+              ORDER BY ovr DESC, created_at ASC LIMIT ${limit}`
+        : await sql`SELECT id, name, ovr,
+              CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots') ELSE build END AS build,
+              game, created_at FROM scores
+              WHERE game = ${game}
+              ORDER BY ovr DESC, created_at ASC LIMIT ${limit}`;
+    }
 
     let me = null;
     const meId = req.query && req.query.me ? parseInt(req.query.me, 10) : null;
     if (meId) {
+      const statField = sortField || 'war'; // value only used when sortField is set
       const [row] = await sql`SELECT id, name, ovr,
         CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots') ELSE build END AS build,
-        created_at, game FROM scores WHERE id = ${meId}`;
+        created_at, game, (build->'career'->'totals'->>${statField})::numeric AS stat FROM scores WHERE id = ${meId}`;
       if (row && row.game === game) {
-        const aheadRows = daily
-          ? await sql`SELECT count(*)::int AS ahead FROM scores
-                WHERE game = ${row.game} AND created_at >= date_trunc('day', now())
-                  AND (ovr > ${row.ovr} OR (ovr = ${row.ovr} AND created_at < ${row.created_at}))`
-          : await sql`SELECT count(*)::int AS ahead FROM scores
-                WHERE game = ${row.game} AND (ovr > ${row.ovr} OR (ovr = ${row.ovr} AND created_at < ${row.created_at}))`;
+        let ahead;
+        if (sortField) {
+          const meVal = row.stat == null ? NULL_SENTINEL : Number(row.stat);
+          ahead = daily
+            ? (await sql`SELECT count(*)::int AS ahead FROM scores
+                  WHERE game = ${game} AND created_at >= date_trunc('day', now())
+                    AND (COALESCE((build->'career'->'totals'->>${sortField})::numeric, ${NULL_SENTINEL}) > ${meVal}
+                      OR (COALESCE((build->'career'->'totals'->>${sortField})::numeric, ${NULL_SENTINEL}) = ${meVal} AND created_at < ${row.created_at}))`)[0].ahead
+            : (await sql`SELECT count(*)::int AS ahead FROM scores
+                  WHERE game = ${game}
+                    AND (COALESCE((build->'career'->'totals'->>${sortField})::numeric, ${NULL_SENTINEL}) > ${meVal}
+                      OR (COALESCE((build->'career'->'totals'->>${sortField})::numeric, ${NULL_SENTINEL}) = ${meVal} AND created_at < ${row.created_at}))`)[0].ahead;
+        } else {
+          ahead = daily
+            ? (await sql`SELECT count(*)::int AS ahead FROM scores
+                  WHERE game = ${row.game} AND created_at >= date_trunc('day', now())
+                    AND (ovr > ${row.ovr} OR (ovr = ${row.ovr} AND created_at < ${row.created_at}))`)[0].ahead
+            : (await sql`SELECT count(*)::int AS ahead FROM scores
+                  WHERE game = ${row.game} AND (ovr > ${row.ovr} OR (ovr = ${row.ovr} AND created_at < ${row.created_at}))`)[0].ahead;
+        }
         const inScope = daily
           ? (await sql`SELECT 1 FROM scores WHERE id = ${meId} AND created_at >= date_trunc('day', now())`).length > 0
           : true;
-        if (inScope) me = { id: Number(row.id), rank: aheadRows[0].ahead + 1, name: row.name, ovr: row.ovr, build: row.build, game: row.game };
+        if (inScope) me = { id: Number(row.id), rank: ahead + 1, name: row.name, ovr: row.ovr, build: row.build, game: row.game,
+          stat: sortField && row.stat != null ? Number(row.stat) : null };
       }
     }
-    return res.status(200).json({ ok: true, rows: rows.map(r => ({ ...r, id: Number(r.id) })), me });
+    return res.status(200).json({ ok: true, sort: sortField, rows: rows.map(r => ({ ...r, id: Number(r.id), stat: r.stat == null ? null : Number(r.stat) })), me });
   } catch (e) {
     return res.status(500).json({ ok: false, error: String((e && e.message) || e) });
   }
