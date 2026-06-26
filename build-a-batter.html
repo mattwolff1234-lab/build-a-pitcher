@@ -1213,7 +1213,15 @@ function assign(slotKey) {
   if (node) gsap.fromTo(node, { scale: .85 }, { scale: 1, duration: .4, ease: 'back.out(1.8)', delay: .12 });
 
   if (openSlots().length === 0) finish();
-  else { $('spinBtn').disabled = false; startIdleReel(); }
+  else {
+    $('spinBtn').disabled = false;
+    startIdleReel();
+    // Mobile: glide back up to the Spin button so you can spin again without scrolling all the
+    // way up. Wait for the headshot fly-in (~0.55s) to land in its slot first.
+    if (window.matchMedia('(max-width: 720px)').matches) {
+      setTimeout(() => $('spinBtn').scrollIntoView({ behavior: 'smooth', block: 'center' }), 680);
+    }
+  }
 }
 
 function flyHeadshot(fromRect, targetEl, img) {
