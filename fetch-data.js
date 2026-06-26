@@ -134,6 +134,35 @@ async function fetchAll(base) {
   return items;
 }
 
+// Drop pool players who have never appeared in an MLB game (prospects with Live cards but no debut).
+// Uses the MLB people API mlbDebutDate (absent = never debuted). Conservative: a player we can't
+// look up at all is KEPT, so a name-match miss never silently removes a real big-leaguer.
+async function dropUndebuted(pool) {
+  const ids = [...new Set(pool.map(p => p.mlbamId).filter(Boolean))];
+  const debut = {};
+  for (let i = 0; i < ids.length; i += 100) {
+    try {
+      const r = await fetch(`https://statsapi.mlb.com/api/v1/people?personIds=${ids.slice(i, i + 100).join(',')}`);
+      for (const p of ((await r.json()).people || [])) debut[p.id] = p.mlbDebutDate || null;
+    } catch (e) { /* leave undefined -> kept */ }
+  }
+  // For any pool player still without an id, search by name to learn debut status.
+  const nameDebut = {};
+  for (const name of [...new Set(pool.filter(p => !p.mlbamId).map(p => p.name))]) {
+    try {
+      const people = (await (await fetch(`https://statsapi.mlb.com/api/v1/people/search?names=${encodeURIComponent(name)}`)).json()).people || [];
+      const exact = people.filter(pp => norm(pp.fullName) === norm(name));
+      const cand = exact[0] || people[0];
+      nameDebut[name] = cand ? (cand.mlbDebutDate || null) : undefined;
+    } catch (e) { nameDebut[name] = undefined; }
+    await new Promise(r => setTimeout(r, 90));
+  }
+  const before = pool.length;
+  const kept = pool.filter(p => p.mlbamId ? debut[p.mlbamId] !== null : nameDebut[p.name] !== null);
+  console.log(`Debut filter: dropped ${before - kept.length} undebuted prospects (kept ${kept.length})`);
+  return kept;
+}
+
 async function main() {
   console.log('Building MLBAM id map (for headshots)...');
   ID_MAP = await buildIdMap();
@@ -205,9 +234,10 @@ async function main() {
   }
   console.log(`  recovered ${found}/${missNames.length} ids`);
 
-  console.log(`\nSpin pool: ${pool.length} cards | with headshot id: ${pool.filter(p => p.mlbamId).length}`);
+  const debutedPool = await dropUndebuted(pool);
+  console.log(`\nSpin pool: ${debutedPool.length} cards | with headshot id: ${debutedPool.filter(p => p.mlbamId).length}`);
 
-  fs.writeFileSync('pitchers.json', JSON.stringify({ pool, prime, legends }));
+  fs.writeFileSync('pitchers.json', JSON.stringify({ pool: debutedPool, prime, legends }));
   const kb = (fs.statSync('pitchers.json').size / 1024).toFixed(0);
   console.log(`Wrote pitchers.json (${kb} KB)`);
 }
