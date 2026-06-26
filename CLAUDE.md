@@ -178,13 +178,21 @@ under Node):
 
 ---
 
-## Batting Lab (sibling game — LOCAL ONLY, not deployed)
+## Batting Lab (sibling game — LIVE)
 Same game as Pitching Lab, translated to **hitters**. Single file `build-a-batter.html` (clone of
-`index.html`). NOT deployed — localhost only until approved.
+`index.html`). **Deployed** alongside the pitcher game (same Vercel project): live at
+`pitchinglab.pitchergami.com/build-a-batter.html`, linked from the pitcher header via the
+`#buildTab` "🛠️ Build a Batter" button (`index.html`).
 
 - **Data:** `node fetch-batters.js` (clone of `fetch-data.js`, `is_hitter===true`) → `batters.json`
-  (`{pool, prime, legends}`). `contact`/`power` = L/R averages; API can exceed 99 (Judge 108/114) so
-  clamp 99 in-game.
+  (`{pool, prime, legends}`). `contact`/`power` = L/R averages and **can exceed 99** (Judge 108/114);
+  this is intentional — ratings are NOT clamped (slotNumeric/slotDisplay pass raw values, like the
+  pitcher game), so over-99 cards get the full OVR + slower-aging benefit.
+- **Prime/Boost:** highest-OVR special card per player, **plus** synthesized Primes (+6) for MVP /
+  Silver Slugger / Hank Aaron winners who lacked one (`fetch-batters.js` pulls the MLB awards API).
+  Boost keeps the higher of Live-vs-Prime per stat, so it can never downgrade a rating.
+- **Verdict:** Compiler bonus — counting-stat milestones (HR/H/RBI clubs) nudge the OVR-based verdict
+  tier up, with a "🧮 Hall of Compilers" tier for absurd counting lines (`careerTier`/`milestoneBonus`).
 - **7 slots** (down from 9 — no Fielding/Arm/Durability): Vision=`plate_vision` (Eyes),
   Power=`power` (Bat), Contact=`contact` (Hands), Speed=`speed` (Feet), Clutch=`batting_clutch`
   (Helmet), Discipline=`plate_discipline` (Head), Frame=**height** (Body, `heightToRating`).
@@ -194,4 +202,5 @@ Same game as Pitching Lab, translated to **hitters**. Single file `build-a-batte
   ← **Frame** (replaced durability); defense (`defRuns`)/Gold Glove ← **Speed** (replaced Fielding/Arm).
   HOF via `hofScore` or `slamDunk`. Tuned: 99≈GOAT, 90≈100%, 85≈72%, 80≈23%, ≤77≈0%.
 - **Leaderboard:** shared `api/score.js`, separated by `game` column (`pitcher`|`batter`, default
-  `pitcher`, backward-compatible). NOT yet deployed.
+  `pitcher`, backward-compatible). **Live** — batter scores post to the same Neon DB / serverless
+  function as the pitcher board.
