@@ -105,6 +105,24 @@ async function fetchAll(base) {
   return items;
 }
 
+// MVP + Silver Slugger + Hank Aaron winners — our "MVP / top year" set that's guaranteed a Prime.
+const AWARD_IDS = ['ALMVP', 'NLMVP', 'ALSS', 'NLSS', 'ALHAA', 'NLHAA'];
+async function fetchAwardWinners() {
+  const names = new Set();
+  for (const id of AWARD_IDS) {
+    for (let y = 2010; y <= 2025; y++) {
+      try {
+        const r = await fetch(`https://statsapi.mlb.com/api/v1/awards/${id}/recipients?sportId=1&season=${y}`);
+        for (const a of ((await r.json()).awards || [])) {
+          if (a.player && a.player.nameFirstLast) names.add(norm(a.player.nameFirstLast));
+        }
+      } catch (e) { /* skip a year/award that errors */ }
+      await new Promise(r => setTimeout(r, 50));
+    }
+  }
+  return names;
+}
+
 async function main() {
   console.log('Building MLBAM id map...');
   ID_MAP = await buildIdMap();
@@ -139,6 +157,27 @@ async function main() {
       console.log(`  Prime cards: ${Object.keys(prime).length}`);
     }
   }
+
+  // Guarantee a Prime for every MVP / Silver Slugger / Hank Aaron winner in the pool.
+  // If they have no special-edition card, synthesize one by boosting their best Live card.
+  console.log('\nFetching MVP / Silver Slugger / Hank Aaron winners...');
+  const awardNames = await fetchAwardWinners();
+  console.log(`  award-winner names: ${awardNames.size}`);
+  const RATING_KEYS = ['contact', 'power', 'plate_vision', 'plate_discipline', 'batting_clutch', 'speed', 'fielding_ability', 'arm_strength', 'hitting_durability'];
+  const bestLive = {};
+  for (const p of pool) { const n = norm(p.name); if (!bestLive[n] || p.ovr > bestLive[n].ovr) bestLive[n] = p; }
+  let synth = 0;
+  for (const n of awardNames) {
+    const live = bestLive[n];
+    if (!live || prime[live.name]) continue; // not in pool, or already has a real Prime
+    const sp = { ...live };
+    for (const k of RATING_KEYS) if (typeof sp[k] === 'number') sp[k] = sp[k] + 6;
+    sp.ovr = (live.ovr || 0) + 6;
+    sp.synthPrime = true;
+    prime[live.name] = sp;
+    synth++;
+  }
+  console.log(`  synthesized ${synth} Primes for award winners without one (total Primes: ${Object.keys(prime).length})`);
 
   const missing = {};
   for (const p of [...pool, ...Object.values(prime)]) if (!p.mlbamId && !(p.name in missing)) missing[p.name] = null;

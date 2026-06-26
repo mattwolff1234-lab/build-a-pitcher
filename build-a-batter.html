@@ -565,6 +565,7 @@
             <div id="careerSpan" class="done-sub" style="margin:3px 0 0">—</div>
           </div>
           <div id="careerVerdict" class="career-verdict">…</div>
+          <div id="careerNote" class="career-note" style="display:none"></div>
         </div>
         <div class="career-ticker">
           <div><b id="tkK">0</b><span>Hits</span></div>
@@ -777,8 +778,8 @@ function heightToRating(inches) {
   if (!inches) return 69;
   return Math.max(1, Math.min(99, Math.round(3 * inches - 147)));
 }
-function slotNumeric(p, s) { return s.type === 'height' ? heightToRating(p.heightIn) : Math.min(99, p[s.key] || 0); }
-function slotDisplay(p, s) { return s.type === 'height' ? (p.height || '—') : Math.min(99, p[s.key] || 0); }
+function slotNumeric(p, s) { return s.type === 'height' ? heightToRating(p.heightIn) : (p[s.key] || 0); }
+function slotDisplay(p, s) { return s.type === 'height' ? (p.height || '—') : (p[s.key] || 0); }
 
 const SILHOUETTE = 'data:image/svg+xml;utf8,' + encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="%2311161d"/><circle cx="50" cy="38" r="20" fill="%23394150"/><path d="M50 62c-20 0-34 14-34 34h68c0-20-14-34-34-34z" fill="%23394150"/></svg>'
@@ -1151,7 +1152,18 @@ function boost() {
   state.boostedThisLand = true;
   Sound.prime();
   updatePowerups();
-  land(primeCard);
+  // Guard: a Boost should never lower a rating — keep the better of Live vs Prime per stat.
+  const merged = { ...primeCard };
+  for (const s of SLOTS) {
+    if (s.type === 'height') {
+      if ((state.landed.heightIn || 0) > (primeCard.heightIn || 0)) {
+        merged.heightIn = state.landed.heightIn; merged.height = state.landed.height;
+      }
+    } else {
+      merged[s.key] = Math.max(primeCard[s.key] || 0, state.landed[s.key] || 0);
+    }
+  }
+  land(merged);
 }
 
 function snag(dir) {
@@ -1719,13 +1731,40 @@ function _doCareerSim() {
   step();
 }
 
-// Career verdict: Hall of Fame is earned in the sim; the rest are labeled by OVR.
+// "The Compiler": milestone clubs (like real HOF voters) reward gaudy counting totals
+// even when the rate stats / WAR are mediocre. Named clubs (the famous thresholds) also
+// act as the trigger for the special "Hall of Compilers" tier.
+function milestoneBonus(t) {
+  let pts = 0; const clubs = [];
+  if (t.hr >= 600)      { pts += 8; clubs.push('600 HR'); }
+  else if (t.hr >= 500) { pts += 6; clubs.push('500 HR'); }
+  else if (t.hr >= 400) { pts += 4; clubs.push('400 HR'); }
+  else if (t.hr >= 300) { pts += 2; }
+  if (t.h >= 3000)      { pts += 8; clubs.push('3,000 H'); }
+  else if (t.h >= 2500) { pts += 4; clubs.push('2,500 H'); }
+  else if (t.h >= 2000) { pts += 2; }
+  if (t.rbi >= 1500)    { pts += 3; clubs.push('1,500 RBI'); }
+  else if (t.rbi >= 1200) { pts += 1; }
+  return { pts: Math.min(pts, 9), clubs };
+}
+
+// Career verdict: Hall of Fame is earned in the sim; the rest are labeled by OVR,
+// nudged up by the Compiler bonus from counting-stat milestones.
 function careerTier(t, ovr) {
   if (t.hallOfFame && ovr >= 99) return { txt: '🐐 G.O.A.T.', cls: 'goat' };
   if (t.hallOfFame) return { txt: '🏆 Hall of Fame', cls: 'yes' };
-  if (ovr >= 80) return { txt: 'Hall of Pretty Good', cls: 'no' };
-  if (ovr >= 72) return { txt: 'Hall of Mid', cls: 'mid' };
-  return { txt: 'Hall of Not Good', cls: 'low' };
+  const mb = milestoneBonus(t);
+  // True compiler: an absurd counting line forces its way onto the ballot.
+  if (mb.clubs.length >= 2 && (t.hr >= 500 || t.h >= 3000))
+    return { txt: '🧮 Hall of Compilers', cls: 'no',
+      note: `The advanced stats shrug, but the back of the card doesn't lie: <strong>${mb.clubs.join(' · ')}</strong>. The voters let the numbers do the talking.` };
+  const eff = ovr + mb.pts;
+  const note = mb.pts
+    ? `Counting stats carried this one: <strong>Compiler bonus +${mb.pts}</strong>${mb.clubs.length ? ` (${mb.clubs.join(', ')})` : ''} → played like a <strong>${eff}</strong> when the milestones are counted.`
+    : '';
+  if (eff >= 80) return { txt: 'Hall of Pretty Good', cls: 'no', note };
+  if (eff >= 72) return { txt: 'Hall of Mid', cls: 'mid', note };
+  return { txt: 'Hall of Not Good', cls: 'low', note };
 }
 
 function finishPlaythrough(career) {
@@ -1744,6 +1783,9 @@ function finishPlaythrough(career) {
   const v = $('careerVerdict');
   v.textContent = verdict.txt;
   v.className = 'career-verdict ' + verdict.cls;
+  const note = $('careerNote');
+  if (verdict.note) { note.innerHTML = verdict.note; note.style.display = 'block'; }
+  else { note.style.display = 'none'; }
   gsap.fromTo(v, { scale: 1.9, opacity: 0, rotation: -7 }, { scale: 1, opacity: 1, rotation: 0, duration: .65, ease: 'back.out(2)' });
   if (t.hallOfFame) Sound.legend(); else Sound.complete();
 
