@@ -135,9 +135,12 @@ async function fetchAll(base) {
 }
 
 // Drop pool players who have never appeared in an MLB game (prospects with Live cards but no debut).
-// Uses the MLB people API mlbDebutDate (absent = never debuted). Conservative: a player we can't
-// look up at all is KEPT, so a name-match miss never silently removes a real big-leaguer.
+// Primary signal: the MLB people API mlbDebutDate (absent = never debuted), keyed by MLBAM id.
+// For players the roster map never matched (no id), the people-search is unreliable for prospect
+// names, so fall back to a proxy: a real big-leaguer with a name variant still carries a gold+
+// HISTORICAL card, whereas an undebuted prospect only exists as a single current-season card.
 async function dropUndebuted(pool) {
+  const CURRENT_SEASON = SOURCES[0].year;
   const ids = [...new Set(pool.map(p => p.mlbamId).filter(Boolean))];
   const debut = {};
   for (let i = 0; i < ids.length; i += 100) {
@@ -146,19 +149,9 @@ async function dropUndebuted(pool) {
       for (const p of ((await r.json()).people || [])) debut[p.id] = p.mlbDebutDate || null;
     } catch (e) { /* leave undefined -> kept */ }
   }
-  // For any pool player still without an id, search by name to learn debut status.
-  const nameDebut = {};
-  for (const name of [...new Set(pool.filter(p => !p.mlbamId).map(p => p.name))]) {
-    try {
-      const people = (await (await fetch(`https://statsapi.mlb.com/api/v1/people/search?names=${encodeURIComponent(name)}`)).json()).people || [];
-      const exact = people.filter(pp => norm(pp.fullName) === norm(name));
-      const cand = exact[0] || people[0];
-      nameDebut[name] = cand ? (cand.mlbDebutDate || null) : undefined;
-    } catch (e) { nameDebut[name] = undefined; }
-    await new Promise(r => setTimeout(r, 90));
-  }
+  const hasHistorical = new Set(pool.filter(p => p.year && p.year < CURRENT_SEASON).map(p => p.name));
   const before = pool.length;
-  const kept = pool.filter(p => p.mlbamId ? debut[p.mlbamId] !== null : nameDebut[p.name] !== null);
+  const kept = pool.filter(p => p.mlbamId ? debut[p.mlbamId] !== null : hasHistorical.has(p.name));
   console.log(`Debut filter: dropped ${before - kept.length} undebuted prospects (kept ${kept.length})`);
   return kept;
 }
