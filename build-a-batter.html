@@ -893,7 +893,7 @@ function openOverlay(id) { const el = $(id); el.classList.add('show'); gsap.from
 function closeOverlay(id) { $(id).classList.remove('show'); }
 function openLeaderboard(scope, game = LEADERBOARD_GAME) { openOverlay('lbModal'); loadLeaderboard(scope, game); }
 
-const TIER_ODDS = { diamond: 0.10, gold: 0.20, silver: 0.24, bronze: 0.28, grey: 0.18 };
+const TIER_ODDS = { diamond: 0.21, gold: 0.29, silver: 0.29, bronze: 0.15, grey: 0.03 };
 let cumWeights = [], totalWeight = 0;
 function buildWeights() {
   const counts = {};
