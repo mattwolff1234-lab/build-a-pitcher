@@ -774,10 +774,12 @@ const WEIGHTS = {
   batting_clutch: 1.1, speed: 1.0, fielding_ability: 1.0, frame: 1.0,
 };
 
-// Frame is driven by height (taller = better).
+// Frame is driven by height, but it's mostly neutral: a normal-sized hitter sits around 82 so
+// assigning anyone to Frame won't tank the build. Being tall is a real bonus; being short is only
+// a mild ding (floored), never a big penalty.
 function heightToRating(inches) {
-  if (!inches) return 69;
-  return Math.max(1, Math.min(99, Math.round(3 * inches - 147)));
+  if (!inches) return 82;
+  return clamp(Math.round(82 + (inches - 72) * 1.5), 76, 93);
 }
 function slotNumeric(p, s) { return s.type === 'height' ? heightToRating(p.heightIn) : (p[s.key] || 0); }
 function slotDisplay(p, s) { return s.type === 'height' ? (p.height || '—') : (p[s.key] || 0); }
