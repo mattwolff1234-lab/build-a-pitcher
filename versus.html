@@ -787,7 +787,7 @@ async function cancelSearch(){
   stopSearch();
   setOnlineStatus('idle');
   if (clientId) { try { await fetch('/api/match',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'leave',id:clientId})}); } catch(e){} }
-  if (inviteCh) { inviteCh.unsubscribe(); inviteCh=null; }
+  if (inviteCh) { inviteCh.unsubscribe(); try{ inviteCh.detach(); }catch(e){} inviteCh=null; }
   failBack(); setStatus('');
 }
 
@@ -798,13 +798,13 @@ function resetMatch(){
   if (clockTimer){ clearInterval(clockTimer); clockTimer=null; }
   if (claimTimeout){ clearTimeout(claimTimeout); claimTimeout=null; }
   if (waitTimeout){ clearTimeout(waitTimeout); waitTimeout=null; }
-  if (matchCh){ try{ matchCh.presence.leave(); }catch(e){} matchCh.unsubscribe(); matchCh.presence.unsubscribe(); matchCh=null; }
+  if (matchCh){ try{ matchCh.presence.leave(); }catch(e){} matchCh.unsubscribe(); matchCh.presence.unsubscribe(); try{ matchCh.detach(); }catch(e){} matchCh=null; }
 }
 
 let oppPresent=false;
 async function startMatch(mId, role, sd, opp, claimer){
   setOnlineStatus('playing');
-  if (inviteCh){ inviteCh.unsubscribe(); inviteCh=null; }
+  if (inviteCh){ inviteCh.unsubscribe(); try{ inviteCh.detach(); }catch(e){} inviteCh=null; }
   matchId=mId; myRole=role; oppRole=role==='pitcher'?'batter':'pitcher'; seed=(sd>>>0); oppId=opp; wasClaimer=!!claimer;
   rng = mulberry32(seed || 1);
 
@@ -1492,6 +1492,7 @@ goOnline();  // join the global presence channel so the live ticker shows real c
 // leave the queue if the tab closes while waiting
 window.addEventListener('pagehide', () => {
   if (clientId) { try { navigator.sendBeacon('/api/match', JSON.stringify({ action:'leave', id: clientId })); } catch(e){} }
+  if (ably) { try { ably.close(); } catch(e){} }
 });
 </script>
 </body>
