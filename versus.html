@@ -659,6 +659,7 @@ async function cancelSearch(){
 function resetMatch(){
   stopSearch();
   myBuild=null; oppBuild=null; atBatStarted=false; oppPresent=false;
+  if (clockTimer){ clearInterval(clockTimer); clockTimer=null; }
   if (claimTimeout){ clearTimeout(claimTimeout); claimTimeout=null; }
   if (matchCh){ try{ matchCh.presence.leave(); }catch(e){} matchCh.unsubscribe(); matchCh.presence.unsubscribe(); matchCh=null; }
 }
@@ -722,7 +723,11 @@ function rcardHTML(p){ const t=borderTier(p); return `<div class="rcard t-${t}">
 
 function beginBuild(){
   showScreen('buildScreen');
-  buildState.filled={}; buildState.used=new Set(); buildState.landed=null; buildState.finished=false;
+  // hard reset any leftover timer/animation from a previous match so clocks can't stack up
+  if(clockTimer){ clearInterval(clockTimer); clockTimer=null; }
+  if(idleTween){ idleTween.kill(); idleTween=null; }
+  gsap.killTweensOf($('track'));
+  buildState.filled={}; buildState.used=new Set(); buildState.landed=null; buildState.finished=false; buildState.spinning=false;
   buildState.respinUsed=false; buildState.boostUsed=false; buildState.snagUsed=false; buildState.boostedThisLand=false; buildState.strip=null;
   $('powerups').classList.remove('show');
   $('respinBtn').onclick = respin; $('boostBtn').onclick = boost;
