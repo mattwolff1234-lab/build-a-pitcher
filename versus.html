@@ -133,7 +133,7 @@
   .pill { font-size:12px; color:var(--muted); border:1px solid var(--line); border-radius:20px; padding:6px 12px; letter-spacing:.4px; }
   .ovr-badge { font-family:'Oswald',sans-serif; font-size:14px; color:var(--muted); }
   .ovr-badge b { font-size:26px; color:var(--ink); margin-left:6px; }
-  .build-grid { width:100%; max-width:760px; display:grid; grid-template-columns:230px 1fr; gap:20px; align-items:start; }
+  .build-grid { width:100%; max-width:760px; display:grid; grid-template-columns:1fr 240px; gap:20px; align-items:start; margin-top:16px; }
   .figwrap { position:relative; width:230px; height:300px; margin:0 auto; }
   .figwrap .base { position:absolute; inset:0; background-position:center; background-size:contain; background-repeat:no-repeat; opacity:.32; }
   .figwrap .seg { position:absolute; inset:0; mask-position:center; mask-size:contain; mask-repeat:no-repeat;
@@ -323,10 +323,6 @@
       <div class="ovr-badge">OVR<b id="ovrNum">—</b></div>
       <div class="pill" id="oppPill">Opponent: connecting…</div>
     </div>
-    <div class="build-grid">
-      <div class="figwrap" id="figwrap"><div class="base"></div></div>
-      <div class="slots" id="slots"></div>
-    </div>
     <div class="reel-wrap">
       <div class="reel"><div class="pointer"></div><div class="track" id="track"></div></div>
       <div class="landed-bar">
@@ -340,6 +336,10 @@
         <button class="pu" id="snagRightBtn" title="Take the card to the right">Snag ►</button>
       </div>
       <div class="hint" id="buildHint">Spin the reel, then tap a glowing slot to assign the player.</div>
+    </div>
+    <div class="build-grid">
+      <div class="slots" id="slots"></div>
+      <div class="figwrap" id="figwrap"><div class="base"></div></div>
     </div>
   </div>
 
