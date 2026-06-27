@@ -18,6 +18,7 @@
 <meta name="twitter:card" content="summary">
 <meta name="twitter:image" content="/icon-512.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async></script>
 <script defer src="/_vercel/insights/script.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -140,6 +141,34 @@
   .sw.on { background:rgba(163,102,255,.3); border-color:var(--legend); }
   .sw.on .knob { transform:translateX(26px); background:var(--legend); }
 
+  /* ---------- top bar + hamburger menu ---------- */
+  .topbar { position:fixed; top:0; left:0; right:0; z-index:20; display:flex; align-items:center; justify-content:flex-end;
+    padding:14px 16px; pointer-events:none; }
+  .menu-btn { pointer-events:auto; width:44px; height:44px; border-radius:11px; border:1px solid var(--line);
+    background:linear-gradient(180deg,var(--panel-a),var(--panel-b)); backdrop-filter:blur(6px); color:var(--ink);
+    font-size:20px; cursor:pointer; display:grid; place-items:center; box-shadow:0 8px 22px rgba(0,0,0,.4); }
+  .menu-btn:hover { border-color:var(--accent2); }
+  .overlay { position:fixed; inset:0; z-index:40; background:rgba(4,7,13,.66); backdrop-filter:blur(3px);
+    display:none; align-items:flex-start; justify-content:center; padding:64px 16px; }
+  .overlay.show { display:flex; }
+  .menu-card { width:100%; max-width:380px; border:1px solid var(--line); border-radius:18px; overflow:hidden;
+    background:linear-gradient(180deg,var(--panel-a),var(--panel-b)); backdrop-filter:blur(10px); box-shadow:0 24px 70px rgba(0,0,0,.6); }
+  .menu-head { display:flex; align-items:center; justify-content:space-between; padding:16px 18px; border-bottom:1px solid var(--line); }
+  .menu-head .mt { font-family:'Oswald',sans-serif; font-weight:600; letter-spacing:2px; text-transform:uppercase; font-size:15px; }
+  .menu-head .x { background:none; border:0; color:var(--muted); font-size:20px; cursor:pointer; }
+  .menu-body { padding:14px; display:flex; flex-direction:column; gap:8px; }
+  .menu-item { display:flex; align-items:center; gap:10px; text-decoration:none; color:var(--ink); font-size:15px;
+    border:1px solid var(--line); border-radius:11px; padding:13px 15px; background:rgba(255,255,255,.02); cursor:pointer; }
+  .menu-item:hover { border-color:var(--accent2); background:rgba(25,198,255,.07); }
+  #acctSlot { padding:4px 2px 8px; display:flex; flex-direction:column; align-items:center; gap:8px; }
+  #acctSlot .acct { display:flex; align-items:center; gap:11px; width:100%; border:1px solid var(--line); border-radius:12px; padding:11px 13px; background:rgba(255,255,255,.03); }
+  #acctSlot .acct img { width:38px; height:38px; border-radius:50%; }
+  #acctSlot .acct .who { flex:1; min-width:0; } #acctSlot .acct .who b { display:block; font-size:14px; }
+  #acctSlot .acct .who span { display:block; font-size:11px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  #acctSlot .signout { background:none; border:1px solid var(--line); color:var(--muted); border-radius:8px; padding:6px 10px; font-size:12px; cursor:pointer; }
+  #acctSlot .signout:hover { color:var(--ink); border-color:var(--accent2); }
+  #acctSlot .acct-hint { color:var(--muted); font-size:12px; text-align:center; line-height:1.45; }
+
   /* ---------- Face Off 1v1 banner ---------- */
   .versus { position:relative; margin-top:18px; width:100%; display:flex; align-items:center; gap:16px;
     border:1px solid rgba(255,122,24,.4); border-radius:16px; padding:17px 20px; text-decoration:none; color:var(--ink);
@@ -187,6 +216,20 @@
   <div class="scan"></div>
 </div>
 <div id="careers"></div>
+
+<div class="topbar"><button class="menu-btn" id="menuBtn" aria-label="Menu">☰</button></div>
+<div class="overlay" id="menu">
+  <div class="menu-card">
+    <div class="menu-head"><span class="mt">Menu</span><button class="x" data-close>✕</button></div>
+    <div class="menu-body">
+      <div id="acctSlot"></div>
+      <a class="menu-item" href="/pitching">⚾ Build a Pitcher</a>
+      <a class="menu-item" href="/batting">🛠️ Build a Batter</a>
+      <a class="menu-item" href="/versus">⚔️ 1v1 Live · Face Off</a>
+      <a class="menu-item" href="https://pitchergami.com" target="_blank" rel="noopener">⚾ PitcherGami ↗</a>
+    </div>
+  </div>
+</div>
 
 <div class="stage">
   <div class="hero">
@@ -316,6 +359,47 @@ function spawnCard() {
 // seed a few immediately (pre-aged so the screen isn't empty), then a steady drip
 for (let i = 0; i < 4; i++) setTimeout(spawnCard, i * 400);
 setInterval(spawnCard, 4200);
+
+/* ---------- hamburger menu + Sign in with Google (shared with the games via 'pl_account') ---------- */
+const GOOGLE_CLIENT_ID = '349698720898-t9bpb8fp7ks6scf8ci8mmoeec1lpm3d3.apps.googleusercontent.com';
+let account = null;
+try { account = JSON.parse(localStorage.getItem('pl_account') || 'null'); } catch (e) {}
+function saveAccount(a) { account = a; try { localStorage.setItem('pl_account', JSON.stringify(a)); } catch (e) {} renderAcct(); }
+function clearAccount() { account = null; try { localStorage.removeItem('pl_account'); } catch (e) {} try { google.accounts.id.disableAutoSelect(); } catch (e) {} renderAcct(); }
+function escapeHTML(s) { return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+
+let gsiReady = false;
+function initGoogle(tries) {
+  tries = tries || 0;
+  if (!window.google || !google.accounts || !google.accounts.id) { if (tries < 40) setTimeout(() => initGoogle(tries + 1), 250); return; }
+  try { google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleCredential, auto_select: true }); } catch (e) {}
+  gsiReady = true; renderAcct();
+}
+async function onGoogleCredential(resp) {
+  try {
+    const j = await fetch('/api/account', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'login', idToken: resp.credential }) }).then(r => r.json());
+    if (j.ok) saveAccount({ sub: j.sub, email: j.email, name: j.name, picture: j.picture, sessionToken: j.sessionToken });
+  } catch (e) {}
+}
+function renderAcct() {
+  const slot = $('acctSlot'); if (!slot) return;
+  if (account) {
+    slot.innerHTML = `<div class="acct">
+      ${account.picture ? `<img src="${account.picture}" alt="" referrerpolicy="no-referrer">` : ''}
+      <div class="who"><b>${escapeHTML(account.name || 'Player')}</b><span>${escapeHTML(account.email || '')}</span></div>
+      <button class="signout" id="signOutBtn">Sign out</button></div>`;
+    const so = $('signOutBtn'); if (so) so.onclick = () => clearAccount();
+  } else {
+    slot.innerHTML = `<div id="gsiWrap"></div><div class="acct-hint">Sign in with Google to save your players &amp; your 1v1 rating.</div>`;
+    if (gsiReady) { try { google.accounts.id.renderButton($('gsiWrap'), { theme: 'filled_black', size: 'large', shape: 'pill', text: 'signin_with' }); } catch (e) {} }
+  }
+}
+initGoogle();
+
+const menu = $('menu');
+$('menuBtn').onclick = () => { menu.classList.add('show'); renderAcct(); gsap.fromTo(menu.firstElementChild, { y: 14, opacity: 0 }, { y: 0, opacity: 1, duration: .3, ease: 'power3.out' }); };
+menu.addEventListener('click', e => { if (e.target === menu || e.target.hasAttribute('data-close')) menu.classList.remove('show'); });
 </script>
 </body>
 </html>

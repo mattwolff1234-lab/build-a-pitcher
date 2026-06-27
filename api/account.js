@@ -127,12 +127,17 @@ module.exports = async (req, res) => {
       if (action === 'login') {
         const profile = await verifyGoogle(body.idToken);
         if (!profile) return res.status(401).json({ ok: false, error: 'Google sign-in failed' });
-        const sessionToken = crypto.randomBytes(24).toString('hex');
-        await sql`INSERT INTO users (google_sub, email, name, picture, session_token)
-          VALUES (${profile.sub}, ${profile.email}, ${profile.name}, ${profile.picture}, ${sessionToken})
+        const newToken = crypto.randomBytes(24).toString('hex');
+        // KEEP an existing session token instead of rotating it on every login — otherwise the
+        // Google One Tap auto-sign-in that fires on each page load would invalidate the token
+        // other tabs/pages are holding (which made you "get signed out" moving between pages).
+        const [row] = await sql`INSERT INTO users (google_sub, email, name, picture, session_token)
+          VALUES (${profile.sub}, ${profile.email}, ${profile.name}, ${profile.picture}, ${newToken})
           ON CONFLICT (google_sub) DO UPDATE SET
-            email = EXCLUDED.email, name = EXCLUDED.name, picture = EXCLUDED.picture, session_token = ${sessionToken}`;
-        return res.status(200).json({ ok: true, sub: profile.sub, email: profile.email, name: profile.name, picture: profile.picture, sessionToken });
+            email = EXCLUDED.email, name = EXCLUDED.name, picture = EXCLUDED.picture,
+            session_token = COALESCE(users.session_token, EXCLUDED.session_token)
+          RETURNING session_token`;
+        return res.status(200).json({ ok: true, sub: profile.sub, email: profile.email, name: profile.name, picture: profile.picture, sessionToken: row.session_token });
       }
 
       if (action === 'save') {
