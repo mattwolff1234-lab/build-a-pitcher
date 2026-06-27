@@ -3,16 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>Pitching Lab · Draft a player, build their career</title>
+<title>GoatLab · Draft a player, build their career</title>
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#0a1320">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Pitching Lab">
+<meta name="apple-mobile-web-app-title" content="GoatLab">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="icon" href="/icon-192.png">
-<meta property="og:title" content="Pitching Lab">
+<meta property="og:title" content="GoatLab">
 <meta property="og:description" content="Spin, draft, and build the ultimate MLB player, then simulate their career.">
 <meta property="og:image" content="/icon-512.png">
 <meta name="twitter:card" content="summary">
@@ -249,7 +249,7 @@
       <a class="menu-item" href="/pitching#how">📖 How to Play</a>
       <button class="menu-item" id="miInstall">📲 Install App<span class="mi-chev" id="installChev" style="margin-left:auto;color:var(--muted)">⌄</span></button>
       <div id="installSteps" class="install-steps" style="display:none">
-        <button id="installNowBtn" style="display:none;width:100%;margin-bottom:12px">⬇ Install Pitching Lab</button>
+        <button id="installNowBtn" style="display:none;width:100%;margin-bottom:12px">⬇ Install GoatLab</button>
         <div class="inst-label">On Desktop / Android (Chrome · Edge)</div>
         <div class="step"><span class="step-n">1</span><div><b>Look for the install icon</b><p>Click the install icon (a screen with a ⊕) on the right side of the address bar.</p></div></div>
         <div class="step"><span class="step-n">2</span><div><b>Click Install</b><p>Confirm in the prompt — the app opens in its own window with a home-screen icon.</p></div></div>
@@ -266,7 +266,7 @@
 <div class="stage">
   <div class="hero">
     <div class="kick">A Pitchergami Game</div>
-    <h1>Pitching <i>Lab</i></h1>
+    <h1>Goat<i>Lab</i></h1>
     <p>Spin the reel, draft a real MLB player into nine attribute slots, then simulate their entire career.</p>
   </div>
 
@@ -449,6 +449,24 @@ $('installNowBtn').onclick = async () => {
   deferredInstall = null;
   $('installNowBtn').style.display = 'none';
 };
+</script>
+<script>
+(function(){
+  if (localStorage.getItem('gl_rebrand_seen')) return;
+  localStorage.setItem('gl_rebrand_seen', '1');
+  const ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.85);padding:24px';
+  ov.innerHTML = `
+    <div style="background:#111820;border:1px solid rgba(0,200,255,.25);border-radius:14px;padding:32px 28px;max-width:380px;text-align:center;font-family:Inter,sans-serif;color:#e8edf3">
+      <div style="font-family:Oswald,sans-serif;font-size:28px;font-weight:700;letter-spacing:1px;margin-bottom:6px">Welcome to GoatLab</div>
+      <div style="font-size:14px;color:#8fa4b8;margin-bottom:18px">Formerly Pitching Lab</div>
+      <div style="font-size:15px;line-height:1.6;margin-bottom:24px">
+        Same games you know, brand new name. More games are coming soon. Stay tuned!
+      </div>
+      <button onclick="this.closest('div[style*=fixed]').remove()" style="background:linear-gradient(135deg,#00c8ff,#0080ff);color:#fff;border:none;border-radius:8px;padding:10px 32px;font-size:15px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif">Got it</button>
+    </div>`;
+  document.body.appendChild(ov);
+})();
 </script>
 </body>
 </html>

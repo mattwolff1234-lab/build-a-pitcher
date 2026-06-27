@@ -1,6 +1,6 @@
 {
-  "name": "Pitching Lab",
-  "short_name": "Pitching Lab",
+  "name": "GoatLab",
+  "short_name": "GoatLab",
   "description": "Spin, draft, and build the ultimate MLB pitcher, then simulate their career.",
   "start_url": "/",
   "scope": "/",

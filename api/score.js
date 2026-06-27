@@ -1,7 +1,7 @@
 // Leaderboard API (Vercel serverless function, talks to Neon Postgres).
 //   GET  /api/score?scope=global|daily&limit=200&game=pitcher|batter&me=<id>
 //   POST /api/score  { name, ovr, build, game }
-// One table, separated by `game` so Pitching Lab and Build-a-Batter have their own boards.
+// One table, separated by `game` so pitching and batting have their own boards.
 
 const { neon } = require('@neondatabase/serverless');
 

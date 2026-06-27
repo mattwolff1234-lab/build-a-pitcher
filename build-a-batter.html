@@ -3,16 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>Batting Lab</title>
+<title>GoatLab · Batting</title>
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#0a1320">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Batting Lab">
+<meta name="apple-mobile-web-app-title" content="GoatLab">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="icon" href="/icon-192.png">
-<meta property="og:title" content="Batting Lab">
+<meta property="og:title" content="GoatLab · Batting">
 <meta property="og:description" content="Spin, draft, and build the ultimate MLB hitter, then simulate their career.">
 <meta property="og:image" content="/icon-512.png">
 <meta name="twitter:card" content="summary">
@@ -665,7 +665,7 @@
       <button class="menu-item" id="miHow">📖 How to Play</button>
       <button class="menu-item" id="miInstall">📲 Install App<span class="mi-chev" id="installChev">⌄</span></button>
       <div id="installSteps" class="install-steps" style="display:none">
-        <button id="installNowBtn" class="primary" style="display:none;width:100%;margin-bottom:12px">⬇ Install Pitching Lab</button>
+        <button id="installNowBtn" class="primary" style="display:none;width:100%;margin-bottom:12px">⬇ Install GoatLab</button>
         <div class="inst-label">On Desktop / Android (Chrome · Edge)</div>
         <div class="step"><span class="step-n">1</span><div><b>Look for the install icon</b><p>Click the install icon (a screen with a ⊕) on the right side of the address bar.</p></div></div>
         <div class="step"><span class="step-n">2</span><div><b>Click Install</b><p>Confirm in the prompt — the app opens in its own window with a home-screen icon.</p></div></div>
@@ -2218,8 +2218,8 @@ function miniFigureHTML(entry, slots) {
 }
 function shareBuild(entry) {
   const kind = (entry.game === 'batter') ? 'batter' : 'pitcher';
-  const url = 'https://pitchinglab.pitchergami.com';
-  const txt = `I built a ${entry.ovr} OVR ${kind}${entry.name ? ` — "${entry.name}"` : ''} in Pitching Lab. Think you can do better?`;
+  const url = 'https://goat-lab.app';
+  const txt = `I built a ${entry.ovr} OVR ${kind}${entry.name ? ` — "${entry.name}"` : ''} on GoatLab. Think you can do better?`;
   window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(txt)}&url=${encodeURIComponent(url)}`, '_blank', 'noopener');
 }
 function openBuildDetails(entryId) {
