@@ -372,6 +372,7 @@
       <div id="ratingResult" class="rating-result"></div>
       <div class="result-actions">
         <button class="btn" id="rematchBtn" style="font-size:14px;">⚔️ New Match</button>
+        <button class="btn ghost" id="resultStatsBtn" style="font-size:13px; padding:14px 20px;">📊 Stats</button>
         <a class="btn ghost" href="/" style="font-size:13px; padding:14px 22px; text-decoration:none; display:inline-block;">Home</a>
       </div>
     </div>
@@ -791,7 +792,7 @@ function renderSlots(){
     d.className='slot ' + (f?'filled':'open') + (armed?' armed':'');
     // when a player is landed, preview the exact rating they'd give each open slot (so you can strategize)
     const preview = armed ? slotNumeric(myRole, buildState.landed, s) : null;
-    d.innerHTML = `<div style="flex:1"><div class="sname">${s.label}</div><div class="spart">${s.part}</div></div>` +
+    d.innerHTML = `<div style="flex:1"><div class="sname">${s.label}</div></div>` +
       (f ? `<img class="shot" src="${f.img}" onerror="this.style.visibility='hidden'"><div class="sval">${f.value}</div>`
          : (armed ? `<div class="sval" style="color:var(--accent2)">+${preview}</div>`
                   : `<div class="sval" style="color:#3a445a">·</div>`));
@@ -1124,7 +1125,10 @@ async function loadStats(){
 $('findBtn').onclick = () => { Sound.click(); findMatch(); };
 $('cancelBtn').onclick = () => cancelSearch();
 $('statsBtn').onclick = () => { Sound.click(); openStats(); };
+$('resultStatsBtn').onclick = () => { Sound.click(); openStats(); };
 $('statsBack').onclick = () => { showScreen('mmScreen'); updateRatingChip(); };
+// deep-link: /versus#stats opens the stats page straight away (from the hamburger menus)
+if (location.hash === '#stats') openStats();
 $('rematchBtn').onclick = () => { Sound.click(); findMatch(); };
 // sign-in + rating on load
 initGoogle();
