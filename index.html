@@ -32,6 +32,13 @@
     --gold:#ffce3a; --diamond:#54c7ff; --legend:#a366ff;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  /* sleek thin scrollbars (replaces the chunky OS default) */
+  * { scrollbar-width: thin; scrollbar-color: rgba(120,160,210,.32) transparent; }
+  ::-webkit-scrollbar { width: 7px; height: 7px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(120,160,210,.28); border-radius: 8px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(120,160,210,.5); }
+  ::-webkit-scrollbar-corner { background: transparent; }
   html,body { height:100%; }
   body {
     margin:0; background:var(--bg0); color:var(--ink); overflow-x:hidden;
