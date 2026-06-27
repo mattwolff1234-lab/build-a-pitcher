@@ -216,6 +216,16 @@
     opacity:0; text-shadow:0 6px 24px rgba(0,0,0,.6); text-align:center; }
   .pitch-info { position:absolute; left:0; right:0; top:14px; text-align:center; font-family:'Oswald',sans-serif;
     letter-spacing:2px; font-size:13px; color:#cbd6e6; opacity:0; text-transform:uppercase; }
+  .pitch-seq { position:absolute; left:14px; right:14px; bottom:14px; z-index:7; display:flex; justify-content:center; gap:7px; flex-wrap:wrap; opacity:0; }
+  .pitch-pill { min-width:72px; border:1px solid var(--line); border-radius:9px; padding:7px 9px; text-align:center;
+    background:rgba(4,7,13,.68); box-shadow:0 8px 18px rgba(0,0,0,.28); }
+  .pitch-pill .pn { font-family:'Oswald',sans-serif; font-size:10px; letter-spacing:1.4px; text-transform:uppercase; color:var(--dim); }
+  .pitch-pill .pc { font-family:'Oswald',sans-serif; font-size:16px; line-height:1.05; letter-spacing:.7px; text-transform:uppercase; color:var(--muted); margin-top:3px; }
+  .pitch-pill.active { border-color:var(--accent2); box-shadow:0 0 18px rgba(25,198,255,.26); }
+  .pitch-pill.strike .pc, .pitch-pill.k .pc { color:var(--pitch); }
+  .pitch-pill.ball .pc { color:var(--gold); }
+  .pitch-pill.inplay .pc { color:var(--pitch); }
+  .pitch-pill.hit .pc { color:var(--bat); }
   /* waiting-for-opponent overlay (shown on the arena before the at-bat) */
   .wait-arena { position:absolute; left:0; right:0; bottom:18px; display:none; flex-direction:column; align-items:center; gap:9px; z-index:6; }
   .wait-arena.show { display:flex; }
@@ -362,6 +372,7 @@
     <div class="diamond" id="diamond">
       <div class="crowd"></div>
       <div class="pitch-info" id="pitchInfo"></div>
+      <div class="pitch-seq" id="pitchSeq"></div>
       <div class="mound"></div><div class="plate"></div>
       <div class="silho p" id="silhoP"></div>
       <div class="silho b" id="silhoB"></div>
@@ -997,6 +1008,7 @@ function showWaitArena(){
   $('silhoP').classList.toggle('dim', !minePitcher);
   $('silhoB').classList.toggle('dim', minePitcher);
   gsap.set('#ball', { opacity:0 }); $('callout').textContent=''; $('pitchInfo').style.opacity=0;
+  $('pitchSeq').innerHTML=''; gsap.set('#pitchSeq', { opacity:0 });
   $('waTitle').textContent = 'Waiting for the ' + (minePitcher ? 'Batter' : 'Pitcher') + '…';
   $('waitArena').classList.add('show');
   updateWaitArena();
@@ -1049,12 +1061,14 @@ function playAtBat(){
   $('silhoP').classList.remove('dim'); $('silhoB').classList.remove('dim');
   const pitcher = myRole==='pitcher' ? myBuild : oppBuild;
   const batter  = myRole==='pitcher' ? oppBuild : myBuild;
+  const abRng = atBatRng(pitcher, batter);
   // winner: higher OVR; tie -> seeded coin (identical on both phones)
   let winnerRole;
   if(batter.ovr>pitcher.ovr)winnerRole='batter';
   else if(pitcher.ovr>batter.ovr)winnerRole='pitcher';
-  else winnerRole = rng()<0.5?'pitcher':'batter';
+  else winnerRole = abRng()<0.5?'pitcher':'batter';
   const iWon = winnerRole===myRole;
+  const script = makePitchSequence(pitcher, batter, winnerRole, abRng);
 
   // matchup header (with each player's name)
   const pName = escapeHTML(pitcher.name || 'Pitcher') + (myRole==='pitcher'?' (You)':'');
@@ -1066,38 +1080,139 @@ function playAtBat(){
   $('silhoP').style.background = brightTeam(pitcher.team);
   $('silhoB').style.background = brightTeam(batter.team);
 
-  // seeded flavor (same on both phones)
-  const pitches=['Four-Seam','Slider','Curveball','Changeup','Sinker','Cutter'];
-  const ptype = pitches[Math.floor(rng()*pitches.length)];
-  const velo = 90 + Math.floor(rng()*funcVel(pitcher.ovr));
-  $('pitchInfo').textContent = `${ptype} · ${velo} MPH`;
-
   const ball=$('ball'), call=$('callout'); call.style.opacity=0; call.textContent='';
   gsap.set(ball,{ opacity:0, left:'18%', bottom:'42%', scale:1 });
   gsap.set('#silhoP',{ x:0, rotation:0 }); gsap.set('#silhoB',{ x:0, rotation:0 });
+  renderPitchSeq(script);
+  gsap.set('#pitchSeq', { opacity:1 });
 
   const tl = gsap.timeline();
-  tl.to('#pitchInfo',{ opacity:1, duration:.4 })
-    .fromTo('#silhoP',{ rotation:-6 },{ rotation:6, duration:.45, ease:'power2.in' },0.3) // windup
-    .to('#silhoP',{ rotation:0, duration:.15 })
-    .set(ball,{ opacity:1 })
-    .to(ball,{ left:'72%', bottom:'34%', duration:.5, ease:'power1.in' }) // pitch travels
-    .to('#silhoB',{ rotation:-22, duration:.12, ease:'power3.out' }) // swing
-    .add(()=> Sound.crack());
+  script.pitches.forEach((pitch, idx) => appendPitch(tl, pitch, idx));
+  tl.add(()=> setTimeout(()=>showResult(iWon, pitcher, batter, winnerRole, script), 1300));
+}
+function atBatRng(pitcher, batter){
+  const n = ((seed || 1) ^ Math.imul(pitcher.ovr || 0, 2654435761) ^ Math.imul(batter.ovr || 0, 1597334677)) >>> 0;
+  return mulberry32(n || 1);
+}
+function funcVel(ovr){ return Math.max(4, Math.round((ovr-70)*0.7)+8); }
+function makePitchSequence(pitcher, batter, winnerRole, rr){
+  const types=['Four-Seam','Slider','Curveball','Changeup','Sinker','Cutter'];
+  const nextType = () => types[Math.floor(rr()*types.length)];
+  const nextVelo = () => 90 + Math.floor(rr()*funcVel(pitcher.ovr));
+  const pitch = (call, klass, result, opts={}) => Object.assign({
+    call, klass, result, type:nextType(), velo:nextVelo(), swing:false, final:false
+  }, opts);
+  const disparity = (pitcher.ovr || 0) - (batter.ovr || 0);
 
-  if(winnerRole==='batter'){
-    tl.to(ball,{ left:'108%', bottom:'92%', scale:1.3, duration:.85, ease:'power2.out' })
-      .add(()=>{ showCall(iWon?'HOME RUN!':'HE GOT ALL OF IT', iWon?'var(--gold)':'var(--bat)'); })
+  if(winnerRole === 'pitcher'){
+    if(disparity >= 8){
+      return {
+        outcome:'strikeout',
+        summary:'Pitcher wins on a 3-pitch strikeout',
+        finalCall:'STRIKEOUT!',
+        pitches:[
+          pitch('Strike 1','strike','strike', { swing:false }),
+          pitch('Strike 2','strike','strike', { swing:true }),
+          pitch('Strike 3','k','strikeout', { swing:true, final:true })
+        ]
+      };
+    }
+    if(rr() < 0.55){
+      const earlyBall = rr() < 0.5;
+      return {
+        outcome:'strikeout',
+        summary:'Pitcher wins by strikeout',
+        finalCall:'STRIKEOUT!',
+        pitches: earlyBall
+          ? [
+              pitch('Ball 1','ball','ball'),
+              pitch('Strike 1','strike','strike', { swing:false }),
+              pitch('Foul','strike','foul', { swing:true }),
+              pitch('Strike 3','k','strikeout', { swing:true, final:true })
+            ]
+          : [
+              pitch('Strike 1','strike','strike', { swing:true }),
+              pitch('Ball 1','ball','ball'),
+              pitch('Strike 2','strike','strike', { swing:false }),
+              pitch('Strike 3','k','strikeout', { swing:true, final:true })
+            ]
+      };
+    }
+    return {
+      outcome:'groundout',
+      summary:'Pitcher wins on a groundout',
+      finalCall:'GROUND OUT!',
+      pitches:[
+        pitch('Strike 1','strike','strike', { swing:false }),
+        pitch('Ball 1','ball','ball'),
+        pitch('Grounder','inplay','groundout', { swing:true, contact:true, final:true })
+      ]
+    };
+  }
+
+  return {
+    outcome:'hit',
+    summary:'Batter wins by barreling the at-bat',
+    finalCall:'BARRELED!',
+    pitches:[
+      pitch('Ball 1','ball','ball'),
+      pitch('Strike 1','strike','strike', { swing:false }),
+      pitch('Barrel','hit','hit', { swing:true, contact:true, final:true })
+    ]
+  };
+}
+function renderPitchSeq(script){
+  $('pitchSeq').innerHTML = script.pitches.map((p,i) =>
+    `<div class="pitch-pill" id="pitchPill${i}"><div class="pn">Pitch ${i+1}</div><div class="pc">...</div></div>`
+  ).join('');
+}
+function markPitch(idx, pitch){
+  const pill = $('pitchPill' + idx);
+  if(!pill) return;
+  pill.className = 'pitch-pill active ' + pitch.klass;
+  pill.querySelector('.pc').textContent = pitch.call;
+  gsap.fromTo(pill, { y:8, opacity:.6, scale:.92 }, { y:0, opacity:1, scale:1, duration:.28, ease:'back.out(1.8)' });
+}
+function appendPitch(tl, pitch, idx){
+  const ball = $('ball');
+  tl.add(() => {
+      $('pitchInfo').textContent = `${pitch.type} · ${pitch.velo} MPH`;
+      markPitch(idx, pitch);
+      if(!pitch.final) { $('callout').textContent=''; $('callout').style.opacity=0; }
+    }, idx ? '+=.34' : 0)
+    .to('#pitchInfo',{ opacity:1, duration:.18 })
+    .set(ball,{ opacity:0, left:'18%', bottom:'42%', scale:1 })
+    .set('#silhoB',{ rotation:0, x:0 })
+    .fromTo('#silhoP',{ rotation:-6 },{ rotation:7, duration:.28, ease:'power2.in' })
+    .to('#silhoP',{ rotation:0, duration:.12 })
+    .set(ball,{ opacity:1 })
+    .to(ball,{ left:'72%', bottom:pitch.contact?'28%':'34%', duration:.38, ease:'power1.in' });
+
+  if(pitch.swing){
+    tl.to('#silhoB',{ rotation:-22, duration:.1, ease:'power3.out' },'<.26');
+  }
+
+  if(pitch.result === 'groundout'){
+    tl.add(()=> Sound.crack())
+      .to(ball,{ left:'46%', bottom:'8%', scale:.75, duration:.55, ease:'power2.out' })
+      .add(()=> showCall('GROUND OUT!', 'var(--pitch)'))
+      .to('#silhoB',{ rotation:12, x:5, duration:.32, ease:'power1.in' },'<');
+  } else if(pitch.result === 'strikeout'){
+    tl.add(()=> Sound.catch())
+      .to(ball,{ left:'82%', bottom:'30%', scale:.8, duration:.16, ease:'power2.in' })
+      .add(()=> showCall('STRIKEOUT!', 'var(--pitch)'))
+      .to('#silhoB',{ rotation:14, x:6, duration:.35, ease:'power1.in' },'<');
+  } else if(pitch.result === 'hit'){
+    tl.add(()=> Sound.crack())
+      .to(ball,{ left:'108%', bottom:'92%', scale:1.3, duration:.85, ease:'power2.out' })
+      .add(()=> showCall('BARRELED!', 'var(--bat)'))
       .to('#silhoB',{ rotation:8, duration:.3 },'<');
   } else {
     tl.add(()=> Sound.catch())
-      .to(ball,{ left:'80%', bottom:'30%', scale:.8, duration:.18, ease:'power2.in' })
-      .add(()=>{ showCall(iWon?'STRIKEOUT!':'SAT HIM DOWN', iWon?'var(--gold)':'var(--pitch)'); })
-      .to('#silhoB',{ rotation:14, x:6, duration:.35, ease:'power1.in' },'<'); // batter slumps
+      .to(ball,{ left:'82%', bottom:'30%', scale:.8, duration:.14, ease:'power2.in' })
+      .to(ball,{ opacity:0, duration:.12 });
   }
-  tl.add(()=> setTimeout(()=>showResult(iWon, pitcher, batter, winnerRole), 1500));
 }
-function funcVel(ovr){ return Math.max(4, Math.round((ovr-70)*0.7)+8); }
 function showCall(text, color){
   const el=$('callout'); el.textContent=text; el.style.color=color;
   gsap.fromTo(el,{ opacity:0, scale:.5 },{ opacity:1, scale:1, duration:.45, ease:'back.out(2)' });
@@ -1105,13 +1220,14 @@ function showCall(text, color){
 }
 
 /* ---------- result ---------- */
-function showResult(iWon, pitcher, batter, winnerRole){
+function showResult(iWon, pitcher, batter, winnerRole, script){
   showScreen('resultScreen');
   setOnlineStatus('idle');
   const card=$('resultCard'); card.className='result-card '+(iWon?'win':'lose');
   $('resultHead').textContent = iWon ? 'YOU WIN' : 'YOU LOSE';
   const winSide = winnerRole==='pitcher'?'Pitcher':'Batter';
-  $('resultLine').textContent = `${winSide} wins · ${pitcher.ovr} OVR pitcher vs ${batter.ovr} OVR batter`;
+  const sequenceLine = script && script.summary ? script.summary : `${winSide} wins`;
+  $('resultLine').textContent = `${sequenceLine} · ${pitcher.ovr} OVR pitcher vs ${batter.ovr} OVR batter`;
   const oppName = (oppBuild && oppBuild.name) ? oppBuild.name : 'your opponent';
   $('resultSub').textContent = iWon ? `You beat ${oppName}. Run it back?` : `${oppName} got you. Build a better one.`;
   iWon ? Sound.win() : Sound.lose();
