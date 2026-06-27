@@ -106,7 +106,12 @@ async function pvpKey(body) {
       ON CONFLICT (google_sub) DO UPDATE SET name = EXCLUDED.name`;
     return key;
   }
-  if (await authed(body.sub, body.sessionToken)) return body.sub;
+  if (await authed(body.sub, body.sessionToken)) {
+    // let the player set a public 1v1 handle (shown on the leaderboard) instead of their Google name
+    const nm = String(body.name || '').trim().slice(0, 40);
+    if (nm) await sql`UPDATE users SET name = ${nm} WHERE google_sub = ${body.sub}`;
+    return body.sub;
+  }
   return null;
 }
 
@@ -189,6 +194,27 @@ module.exports = async (req, res) => {
           }
         }
         return res.status(200).json({ ok: true, claimed: false, elo: acct ? acct.elo : 1000, wins: acct ? acct.wins : 0, losses: acct ? acct.losses : 0 });
+      }
+
+      if (action === 'pvpLeaderboard') {
+        const limit = Math.max(1, Math.min(100, parseInt(body.limit, 10) || 50));
+        const rows = await sql`SELECT name, pvp_elo AS elo, pvp_wins AS wins, pvp_losses AS losses
+          FROM users WHERE (pvp_wins + pvp_losses) > 0
+          ORDER BY pvp_elo DESC, (pvp_wins + pvp_losses) DESC LIMIT ${limit}`;
+        // where the requester ranks (works for guests + signed-in), even if outside the top N
+        let me = null;
+        const key = await pvpKey(body);
+        if (key) {
+          const [u] = await sql`SELECT name, pvp_elo AS elo, pvp_wins AS wins, pvp_losses AS losses FROM users WHERE google_sub = ${key}`;
+          if (u && (u.wins + u.losses) > 0) {
+            const [{ ahead }] = await sql`SELECT count(*)::int AS ahead FROM users
+              WHERE (pvp_wins + pvp_losses) > 0 AND pvp_elo > ${u.elo}`;
+            me = { rank: ahead + 1, name: u.name, elo: u.elo, wins: u.wins, losses: u.losses };
+          } else if (u) {
+            me = { rank: null, name: u.name, elo: u.elo, wins: u.wins, losses: u.losses };
+          }
+        }
+        return res.status(200).json({ ok: true, rows, me });
       }
 
       return res.status(400).json({ ok: false, error: 'Unknown action' });

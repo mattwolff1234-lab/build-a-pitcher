@@ -30,6 +30,9 @@ function ensure() {
         id text PRIMARY KEY,
         created_at timestamptz NOT NULL DEFAULT now()
       )`;
+      // pid = a stable per-person id (account sub or device guest id) so we never pair someone
+      // with themselves on a second tab/device.
+      await sql`ALTER TABLE pvp_queue ADD COLUMN IF NOT EXISTS pid text`;
     })();
   }
   return ready;
@@ -41,6 +44,7 @@ module.exports = async (req, res) => {
     await ensure();
     const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
     const id = String(body.id || '').slice(0, 64);
+    const pid = String(body.pid || '').slice(0, 80) || id; // person id (falls back to connection id)
     const action = body.action || 'find';
     if (!id) return res.status(400).json({ ok: false, error: 'missing id' });
 
@@ -49,13 +53,13 @@ module.exports = async (req, res) => {
       return res.status(200).json({ ok: true });
     }
 
-    // action === 'find': atomically claim the oldest waiting opponent (ignoring stale >60s rows),
-    // or, if none, enqueue myself and wait for a claimer to push me an invite over Ably.
+    // action === 'find': atomically claim the oldest waiting opponent who ISN'T me (different
+    // connection AND different person), ignoring stale >60s rows; else enqueue and wait.
     const claimed = await sql`
       DELETE FROM pvp_queue
       WHERE id = (
         SELECT id FROM pvp_queue
-        WHERE id <> ${id} AND created_at > now() - interval '60 seconds'
+        WHERE id <> ${id} AND (pid IS NULL OR pid <> ${pid}) AND created_at > now() - interval '60 seconds'
         ORDER BY created_at ASC
         LIMIT 1
         FOR UPDATE SKIP LOCKED
@@ -74,8 +78,8 @@ module.exports = async (req, res) => {
 
     // Sweep stale rows, then enqueue myself (upsert refreshes my timestamp).
     await sql`DELETE FROM pvp_queue WHERE created_at < now() - interval '60 seconds'`;
-    await sql`INSERT INTO pvp_queue (id, created_at) VALUES (${id}, now())
-      ON CONFLICT (id) DO UPDATE SET created_at = now()`;
+    await sql`INSERT INTO pvp_queue (id, pid, created_at) VALUES (${id}, ${pid}, now())
+      ON CONFLICT (id) DO UPDATE SET created_at = now(), pid = ${pid}`;
     return res.status(200).json({ ok: true, matched: false, waiting: true });
   } catch (e) {
     return res.status(500).json({ ok: false, error: String((e && e.message) || e) });
