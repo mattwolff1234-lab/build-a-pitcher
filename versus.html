@@ -562,7 +562,7 @@ let ably=null, clientId=null;
 let myRole=null, oppRole=null, matchId=null, seed=0, oppId=null, wasClaimer=false;
 let inviteCh=null, matchCh=null;
 let DATA={};               // role -> data json
-let myBuild=null, oppBuild=null, atBatStarted=false;
+let myBuild=null, oppBuild=null, atBatStarted=false, matchResolved=false;
 let claimTimeout=null, waitTimeout=null;
 
 /* ---------- account + Elo rating ----------
@@ -793,7 +793,7 @@ async function cancelSearch(){
 
 function resetMatch(){
   stopSearch();
-  myBuild=null; oppBuild=null; atBatStarted=false; oppPresent=false; waitingArena=false;
+  myBuild=null; oppBuild=null; atBatStarted=false; matchResolved=false; oppPresent=false; waitingArena=false;
   if ($('waitArena')) $('waitArena').classList.remove('show');
   if (clockTimer){ clearInterval(clockTimer); clockTimer=null; }
   if (claimTimeout){ clearTimeout(claimTimeout); claimTimeout=null; }
@@ -812,6 +812,7 @@ async function startMatch(mId, role, sd, opp, claimer){
   // ignore our own messages (belt-and-suspenders alongside echoMessages:false)
   matchCh.subscribe('build', m => { if (m.clientId === clientId) return; oppBuild = m.data; updateOppPill(); maybeStartAtBat(); });
   matchCh.subscribe('progress', m => { if (m.clientId === clientId) return; updateOppProgress(m.data); });
+  matchCh.subscribe('forfeit', m => { if (m.clientId === clientId) return; handleOpponentForfeit(m.data || {}); });
   matchCh.presence.subscribe('enter', () => { oppPresent=true; updateOppPill(); });
   matchCh.presence.subscribe('present', () => { oppPresent=true; updateOppPill(); });
   await matchCh.presence.enter({ role: myRole });
@@ -1102,6 +1103,8 @@ function tickClock(){
   if(clockLeft<=0){ clearInterval(clockTimer); clockTimer=null; autoFill(); }
 }
 function autoFill(){
+  const filledCount = ROLE[myRole].slots.filter(s=>buildState.filled[s.key]).length;
+  if(filledCount <= 3){ forfeitMatch(filledCount); return; }
   // time's up: fill remaining slots with quick random spins
   const empties=openSlots();
   for(const s of empties){ const p=randPlayer(); buildState.used.add(p.name);
@@ -1111,7 +1114,7 @@ function autoFill(){
   finishBuild();
 }
 function finishBuild(){
-  if(buildState.finished) return; buildState.finished=true;
+  if(buildState.finished || matchResolved) return; buildState.finished=true;
   if(clockTimer){ clearInterval(clockTimer); clockTimer=null; }
   if(idleTween)idleTween.kill();
   $('powerups').classList.remove('show'); $('landedLi').classList.remove('show'); $('spinBtn').disabled=true;
@@ -1123,7 +1126,13 @@ function finishBuild(){
   updateOppPill();
   // safety net: if the opponent never finishes (left/closed), don't hang forever
   if (waitTimeout) clearTimeout(waitTimeout);
-  waitTimeout = setTimeout(() => { if (!oppBuild && !atBatStarted) showNoContest(); }, 75000);
+  waitTimeout = setTimeout(() => {
+    if (!oppBuild && !atBatStarted && !matchResolved) {
+      const filled = Math.min(oppProg.filled || 0, oppProg.total || 9);
+      if(filled <= 3) showForfeitResult(true, filled);
+      else showNoContest();
+    }
+  }, 75000);
   if (oppBuild) maybeStartAtBat();   // opponent already finished → straight to the at-bat
   else showWaitArena();              // otherwise wait IN the arena, watching their progress
 }
@@ -1165,7 +1174,8 @@ function updateWaitArena(){
 function showNoContest(){
   waitingArena=false; $('waitArena').classList.remove('show');
   setOnlineStatus('idle');
-  if (atBatStarted || oppBuild) return;
+  if (atBatStarted || oppBuild || matchResolved) return;
+  matchResolved=true;
   showScreen('resultScreen');
   $('resultCard').className = 'result-card';
   $('resultHead').textContent = 'NO CONTEST';
@@ -1173,10 +1183,48 @@ function showNoContest(){
   $('resultSub').textContent = 'No rating change — try another match.';
   $('ratingResult').innerHTML = '';
 }
+function forfeitMatch(filled){
+  if(matchResolved) return;
+  matchResolved=true; buildState.finished=true;
+  if(clockTimer){ clearInterval(clockTimer); clockTimer=null; }
+  if(idleTween)idleTween.kill();
+  $('powerups').classList.remove('show'); $('landedLi').classList.remove('show'); $('spinBtn').disabled=true;
+  publishForfeit(filled);
+  showForfeitResult(false, filled);
+}
+function handleOpponentForfeit(data){
+  if(matchResolved || atBatStarted) return;
+  if(waitTimeout){ clearTimeout(waitTimeout); waitTimeout=null; }
+  showForfeitResult(true, data.filled || 0, data);
+}
+function showForfeitResult(iWon, filled, data={}){
+  matchResolved=true; waitingArena=false;
+  if(clockTimer){ clearInterval(clockTimer); clockTimer=null; }
+  if(idleTween)idleTween.kill();
+  if(waitTimeout){ clearTimeout(waitTimeout); waitTimeout=null; }
+  $('waitArena').classList.remove('show');
+  setOnlineStatus('idle');
+  showScreen('resultScreen');
+  const card=$('resultCard'); card.className='result-card '+(iWon?'win':'lose');
+  $('resultHead').textContent = iWon ? 'YOU WIN' : 'YOU LOSE';
+  const oppName = data.name || ((oppBuild && oppBuild.name) ? oppBuild.name : 'your opponent');
+  $('resultLine').textContent = iWon
+    ? `${oppName} forfeited after ${filled} slot${filled===1?'':'s'} filled.`
+    : `You forfeited after ${filled} slot${filled===1?'':'s'} filled.`;
+  $('resultSub').textContent = iWon ? 'Timeout win. Run it back?' : 'Fill at least 4 slots before time expires.';
+  iWon ? Sound.win() : Sound.lose();
+  gsap.fromTo(card,{ y:24, opacity:0, scale:.92 },{ y:0, opacity:1, scale:1, duration:.5, ease:'back.out(1.5)' });
+
+  const oppElo = typeof data.elo === 'number' ? data.elo : ((oppBuild && typeof oppBuild.elo === 'number') ? oppBuild.elo : 1000);
+  pendingResult = { matchId, won:iWon, oppElo, role:myRole, ovr:(myBuild ? myBuild.ovr : 0), oppOvr:(oppBuild ? oppBuild.ovr : 0) };
+  $('ratingResult').innerHTML = '';
+  applyResult();
+}
 
 /* ---------- opponent status + messaging ---------- */
 function publishProgress(){ if(matchCh){ const n=ROLE[myRole].slots.filter(s=>buildState.filled[s.key]).length; try{ matchCh.publish('progress',{ filled:n, total:ROLE[myRole].slots.length }); }catch(e){} } }
 function publishBuild(){ if(matchCh){ try{ matchCh.publish('build', myBuild); }catch(e){} } }
+function publishForfeit(filled){ if(matchCh){ try{ matchCh.publish('forfeit',{ role:myRole, filled, total:ROLE[myRole].slots.length, elo:myElo(), name:displayName() }); }catch(e){} } }
 let oppProg={filled:0,total:9};
 function updateOppProgress(d){ oppProg=d; updateOppPill(); updateWaitArena(); }
 function updateOppPill(){
@@ -1189,12 +1237,13 @@ function updateOppPill(){
 
 /* ---------- at-bat ---------- */
 function maybeStartAtBat(){
-  if(atBatStarted || !myBuild || !oppBuild) return;
+  if(matchResolved || atBatStarted || !myBuild || !oppBuild) return;
   atBatStarted=true;
   if (waitTimeout){ clearTimeout(waitTimeout); waitTimeout=null; }
   setTimeout(playAtBat, 700);
 }
 function playAtBat(){
+  if(matchResolved) return;
   showScreen('atbatScreen');
   waitingArena=false; $('waitArena').classList.remove('show');
   $('silhoP').classList.remove('dim'); $('silhoB').classList.remove('dim');
@@ -1360,6 +1409,8 @@ function showCall(text, color){
 
 /* ---------- result ---------- */
 function showResult(iWon, pitcher, batter, winnerRole, script){
+  if(matchResolved) return;
+  matchResolved=true;
   showScreen('resultScreen');
   setOnlineStatus('idle');
   const card=$('resultCard'); card.className='result-card '+(iWon?'win':'lose');
