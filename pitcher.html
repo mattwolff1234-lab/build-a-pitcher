@@ -2334,7 +2334,7 @@ function openBuildDetails(entryId) {
     const st = tier(Number(s.value) || 0);
     const val = s.display != null ? s.display : (s.value != null ? s.value : '—');
     return `<div class="build-slot">
-      <img class="c-${st}" src="${s.img || headshotByName(s.player) || SILHOUETTE}" alt="" loading="lazy" onerror="this.onerror=null;this.src='${SILHOUETTE}'">
+      <img class="c-${st}" src="${s.img || headshotByName(s.player) || SILHOUETTE}" alt="" onerror="this.onerror=null;this.src='${SILHOUETTE}'">
       <div>
         <div class="slot-name c-${st}">${escapeHTML(s.slot || '')}</div>
         <div class="slot-player">${escapeHTML(s.player || 'Unknown')}${s.legend ? ' ★' : ''}</div>
