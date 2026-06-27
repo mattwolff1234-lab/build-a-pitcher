@@ -226,3 +226,106 @@ Same game as Pitching Lab, translated to **hitters**. Single file `build-a-batte
 - **Leaderboard:** shared `api/score.js`, separated by `game` column (`pitcher`|`batter`, default
   `pitcher`, backward-compatible). **Live** — batter scores post to the same Neon DB / serverless
   function as the pitcher board.
+
+---
+
+## ⚠️ File structure (updated — older notes above are stale)
+The repo is **NOT** a single `index.html` anymore. Current layout (routes in `vercel.json` rewrites):
+- **`index.html`** = the **landing/router page** (hero, "Build a Pitcher/Batter" cards, Hard-Mode
+  toggle, drifting "careers" bg, and a **top-right ☰ hamburger** with Google sign-in + nav). It is
+  NOT the game.
+- **`pitcher.html`** = the pitcher game, served at **`/pitching`**.
+- **`build-a-batter.html`** = the batter game, served at **`/batting`**.
+- **`versus.html`** = the **1v1 Face Off** mode, served at **`/versus`** (see below).
+- Hamburger items that are game-specific deep-link into the pitcher game via hash:
+  `/pitching#hof`, `/pitching#leaderboard`, `/pitching#how` → `pitcher.html` opens that panel on load.
+
+---
+
+## 1v1 "Face Off" mode (LIVE) — `versus.html` + `api/match.js` + `api/ably-token.js`
+Live online PvP. Two real players match; one is randomly assigned **Pitcher**, the other **Batter**;
+each **quick-builds** their guy under a shot clock; a seeded GSAP **at-bat** plays on both screens;
+**higher Overall always wins** (tie → seeded coin). Entry points: a banner + ☰ item on `index.html`,
+a `⚔️ 1v1 Live` ☰ item in both games, and the `/versus` route.
+
+> **Real balance (88 matches, 2026-06-27): pitcher ~54% / batter ~46%; avg build OVR 89.5 vs 88.6.**
+> Considered healthy — left as-is. (Earlier sims overestimated the pitcher edge; real builds land
+> near-identical OVRs at the top.)
+
+### ⚙️ Setup REQUIRED for a fresh deploy
+- **`ABLY_API_KEY`** env var in Vercel (format `appId.keyId:keySecret`, mark **Sensitive**). Without
+  it `/versus` matchmaking errors. `GOOGLE_CLIENT_ID`, `DATABASE_URL`/Neon are already set.
+- **No `npm i ably`** — `api/ably-token.js` signs Ably TokenRequests with Node `crypto`; the browser
+  loads Ably from CDN (`ably.min-2.js`) with `authUrl: '/api/ably-token'`.
+
+### Realtime (Ably)
+- One shared connection (`connectAbly` guarded by `ablyPromise`), reused by matchmaking AND the live
+  ticker. **`echoMessages:false`** so your own published build doesn't come back as the opponent's
+  (that caused an early "you vs you" bug; handlers also ignore `msg.clientId === clientId`).
+- Channels: `versus:invite:<id>` (matchmaking hand-off), `versus:match:<matchId>` (in-match
+  presence + `build`/`progress` messages), `versus:online` (global presence for the ticker).
+
+### Matchmaking (`api/match.js`, table `pvp_queue`)
+- Atomic claim: `DELETE … WHERE id = (SELECT … WHERE id<>me AND (pid IS NULL OR pid<>mypid) AND
+  fresh ORDER BY created_at LIMIT 1 FOR UPDATE SKIP LOCKED)`. **`pid`** = `acct:<sub>` or
+  `guest:<guestId>` → you can't match **yourself** on a 2nd tab/device. (To self-test, use one
+  normal + one **incognito** window = different guestId.)
+- Waiting is **push-based**: the claimer publishes the match to the waiter's `versus:invite:<id>`
+  (waiter subscribed to its own channel) + a **3s retry** net so two simultaneous searchers still
+  pair. Stale rows >60s swept; `leave` action + `navigator.sendBeacon` on `pagehide`; claimer
+  re-queues after 8s if the opponent never shows.
+
+### Quick-build (in `versus.html`)
+- Per-role trimmed draft. **2-minute (120s) shot clock**; auto-fills remaining slots on timeout.
+  Each open slot **previews the landed player's `+rating`**. Power-ups (one each): **Re-spin, Snag
+  (L/R), Boost (Prime)**. **Grey tier excluded: `MIN_VERSUS_OVR = 65`** (`pool()` filters
+  `DATA[role].pool` to `ovr >= 65`).
+- Layout mirrors the normal game: **reel + Spin button on top**, then slots (tap to assign), then
+  the figure (mobile-friendly; `build-grid` reordered).
+- `ROLE` config object holds per-role `slots`/`weights`/`figure`/`h2r`(heightToRating)/`slotWeight`;
+  `computeOvr` uses the same weights as each game. Role reveal shows a glowing team-colored
+  **silhouette** (mask of the figure PNG) instead of an emoji.
+- At-bat seed (`mulberry32`) drives identical flavor on both phones. **Wait-arena**: finishing first
+  takes you to the arena — your glowing fighter ready, opponent's side greyed out + a **live
+  progress bar** of their slots; 75s no-show → **"No Contest"** (no rating change).
+
+### Elo + accounts (`api/account.js`)
+- On `users` table: **`pvp_elo`** (start 1000), `pvp_wins`, `pvp_losses`, `pvp_streak`. Dedup table
+  `pvp_results(match_id, google_sub)`.
+- Each player updates **only their own** rating vs the opponent's reported `elo` (sent in the `build`
+  message). **K=32**. **Win-streak bonus**: `+2` Elo per consecutive win, caps at a **5-win streak**
+  (max +10); any loss resets. `nextElo()` + `STREAK_BONUS/STREAK_CAP`.
+- **Guests are rated (no password):** device `guestId` + chosen `guestName` (localStorage
+  `pl_guestId`/`pl_guestName`) stored in `users` under a **`guest:<id>`** key. **`pvpKey(body)`**
+  resolves a request to a signed-in user OR a guest. The chosen **handle** (`guestName`) is the
+  public display name everywhere (NOT the Google full name) — sent via `principal()` and saved as
+  `users.name`.
+- Actions: **`pvpStats`** (rating/record), **`pvpResult`** (apply result + Elo + streak + logs the
+  match), **`pvpClaim`** (carry a guest rating onto a Google account on first sign-in, only if the
+  account has 0 games), **`pvpLeaderboard`** (top by `pvp_elo` + the caller's rank).
+- Sign-in is shared with the games via **`pl_account`** localStorage. **`login` now KEEPS the
+  existing `session_token`** (`COALESCE(users.session_token, EXCLUDED…)`) instead of rotating it —
+  fixes the "signed out moving between pages" bug (Google One-Tap auto-sign-in fired per page load
+  and used to invalidate other tabs' tokens).
+
+### Stats page + live ticker
+- **Stats screen** (in `versus.html`): rating, worldwide rank, W/L/win-rate/games + **Top Players**
+  leaderboard. Reachable from: 📊 button on matchmaking, 📊 on the result screen, and **`/versus#stats`**
+  deep-link from all three hamburger menus.
+- **Live ticker** on the matchmaking screen: `"X playing · Y waiting for a match"` driven by the
+  `versus:online` Ably presence channel (every `/versus` visit joins on load; status =
+  `idle`/`searching`/`playing`).
+
+### Match logging + how to read win rates (table `pvp_matches`)
+- Every finished match logs `(match_id, role, won, ovr, opp_ovr)` (anonymous). Read via the
+  **token-gated `pvpMatchStats`** action: token = `STATS_TOKEN` env var, fallback hardcoded
+  `'pl-balance-7f3a9c21'` in `api/account.js` (server-side only, safe).
+- Check anytime:
+  `curl -s -X POST https://pitchinglab.pitchergami.com/api/account -H "content-type: application/json"
+  -d '{"action":"pvpMatchStats","token":"pl-balance-7f3a9c21"}'`
+
+### Known caveats (1v1)
+- **Trust-the-client**: OVR, Elo, and win/loss are reported from the browser (cheatable) — same class
+  as the leaderboard caveat. Harden later by validating server-side.
+- **Empty-lobby**: live-only matchmaking, no "ghost"/bot fallback — a lone player waits.
+- All `pvp_*` tables + columns auto-create/`ALTER … IF NOT EXISTS` on first request (no migrations).
