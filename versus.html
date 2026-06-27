@@ -738,7 +738,9 @@ function beginBuild(){
   segEls={};
   for (const s of ROLE[myRole].slots){ const d=document.createElement('div'); d.className='seg'; d.style.webkitMaskImage=`url(${s.mask})`; d.style.maskImage=`url(${s.mask})`; fw.appendChild(d); segEls[s.key]=d; }
   renderSlots(); updateOvr(); idleReel();
-  $('spinBtn').onclick = spin;
+  $('spinBtn').onclick = spin; $('spinBtn').disabled = false;  // re-enable after a previous match left it disabled
+  $('landedLi').classList.remove('show'); $('powerups').classList.remove('show');
+  $('buildHint').textContent = 'Spin the reel, then tap a glowing slot to assign the player.';
   clockLeft=120; $('clock').textContent=fmtClock(clockLeft); $('clock').classList.remove('warn');
   clockTimer = setInterval(tickClock, 1000);
   updateOppPill();
