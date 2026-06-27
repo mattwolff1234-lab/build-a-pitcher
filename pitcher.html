@@ -930,6 +930,7 @@ async function init() {
     $('loading').textContent = 'Could not load pitchers.json. Run "node fetch-data.js" first and serve over http.';
     return;
   }
+  applyAttributeOveralls();
   buildWeights();
   buildSegments();
   buildPips();
@@ -1523,6 +1524,27 @@ function weightedOvr(keys) {
     vsum += state.filled[k].value * w; wsum += w;
   }
   return Math.round(vsum / wsum);
+}
+
+// A player's overall, computed only from the 9 attributes this game actually uses
+// (same weights as a finished build). The Show's card OVR factors in stuff we ignore.
+function aggregateOvr(p) {
+  let vsum = 0, wsum = 0;
+  for (const s of SLOTS) {
+    const v = slotNumeric(p, s);
+    const w = slotWeight(s.key, v);
+    vsum += v * w; wsum += w;
+  }
+  return Math.round(vsum / wsum);
+}
+
+// Bump any pitcher the Show under-rates relative to those 9 slots; never lower a card
+// (max of the two), so tier colors and reel weighting stay stable.
+function applyAttributeOveralls() {
+  const bump = p => { if (p && typeof p.ovr === 'number') p.ovr = Math.max(p.ovr, aggregateOvr(p)); };
+  DATA.pool.forEach(bump);
+  Object.values(DATA.prime).forEach(bump);
+  DATA.legends.forEach(bump);
 }
 
 let ovrShown = 0;
