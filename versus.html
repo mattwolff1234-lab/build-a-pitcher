@@ -730,7 +730,16 @@ const buildState = { filled:{}, used:new Set(), landed:null, spinning:false, fin
   respinUsed:false, boostUsed:false, snagUsed:false, boostedThisLand:false, strip:null, targetIndex:0 };
 let clockLeft = 120, clockTimer = null;
 
-function pool(){ return DATA[myRole].pool; }
+// In 1v1, drop grey-tier cards — only players rated 65+ show up in the reel.
+const MIN_VERSUS_OVR = 65;
+let _poolCache = {};
+function pool(){
+  if (!_poolCache[myRole]){
+    const f = DATA[myRole].pool.filter(p => p.ovr >= MIN_VERSUS_OVR);
+    _poolCache[myRole] = f.length >= 12 ? f : DATA[myRole].pool;
+  }
+  return _poolCache[myRole];
+}
 function randPlayer(){
   const p = pool(), legs = DATA[myRole].legends || [];
   if (legs.length && rng() < 0.03){ const a = legs.filter(x=>!buildState.used.has(x.name)); if (a.length) return a[Math.floor(rng()*a.length)]; }
