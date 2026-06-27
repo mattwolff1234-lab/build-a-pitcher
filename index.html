@@ -85,7 +85,7 @@
   /* ---------- foreground ---------- */
   .stage { position:relative; z-index:2; width:100%; max-width:860px; padding:26px 16px 40px;
     display:flex; flex-direction:column; align-items:center; }
-  .hero { text-align:center; margin-bottom:30px; }
+  .hero { text-align:center; margin-bottom:22px; }
   .hero .kick { font-family:'Oswald',sans-serif; font-size:12px; letter-spacing:5px; text-transform:uppercase;
     color:var(--accent2); border:1px solid rgba(25,198,255,.4); background:rgba(25,198,255,.07);
     padding:5px 13px 4px; border-radius:5px; display:inline-block; margin-bottom:18px; }
@@ -183,7 +183,7 @@
   .install-steps .step p { margin:2px 0 0; font-size:12px; color:var(--muted); line-height:1.45; }
 
   /* ---------- Face Off 1v1 banner ---------- */
-  .versus { position:relative; margin-top:18px; width:100%; display:flex; align-items:center; gap:16px;
+  .versus { position:relative; margin:0 0 18px; width:100%; display:flex; align-items:center; gap:16px;
     border:1px solid rgba(255,122,24,.4); border-radius:16px; padding:17px 20px; text-decoration:none; color:var(--ink);
     background:linear-gradient(110deg, rgba(255,122,24,.14), rgba(25,198,255,.12)); backdrop-filter:blur(6px);
     box-shadow:0 14px 40px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.06); transition:transform .15s, border-color .2s, box-shadow .2s; overflow:hidden; }
@@ -217,7 +217,11 @@
     .pick .desc { font-size:12px; }
     .pick .go { margin-top:12px; padding:8px 18px; }
     .opt { flex-direction:row; align-items:flex-start; max-width:300px; margin-left:auto; margin-right:auto; padding:13px 15px; }
-    .hero { margin-bottom:20px; }
+    .versus { align-items:flex-start; gap:12px; padding:16px 14px; }
+    .versus .vtitle { flex-wrap:wrap; gap:7px; font-size:17px; }
+    .versus .vdesc { font-size:12px; }
+    .versus .vgo { padding:8px 13px; letter-spacing:1.4px; }
+    .hero { margin-bottom:16px; }
   }
 </style>
 </head>
@@ -266,6 +270,15 @@
     <p>Spin the reel, draft a real MLB player into nine attribute slots, then simulate their entire career.</p>
   </div>
 
+  <a class="versus" href="/versus">
+    <span class="vbadge">NEW</span>
+    <div class="vtxt">
+      <div class="vtitle">⚔️ Face Off <b>1v1</b> <span class="vlive">● LIVE</span></div>
+      <div class="vdesc">Match up with a real player online. One pitches, one hits — highest Overall wins the at-bat.</div>
+    </div>
+    <div class="vgo">▶ Play</div>
+  </a>
+
   <div class="picks">
     <a class="pick pitch" href="/pitching">
       <span class="br tl"></span><span class="br tr"></span><span class="br bl"></span><span class="br br2"></span>
@@ -282,15 +295,6 @@
       <div class="go">▶ Play</div>
     </a>
   </div>
-
-  <a class="versus" href="/versus">
-    <span class="vbadge">NEW</span>
-    <div class="vtxt">
-      <div class="vtitle">⚔️ Face Off <b>1v1</b> <span class="vlive">● LIVE</span></div>
-      <div class="vdesc">Match up with a real player online. One pitches, one hits — highest Overall wins the at-bat.</div>
-    </div>
-    <div class="vgo">▶ Play</div>
-  </a>
 
   <div class="opt">
     <div class="otxt">
