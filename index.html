@@ -140,6 +140,23 @@
   .sw.on { background:rgba(163,102,255,.3); border-color:var(--legend); }
   .sw.on .knob { transform:translateX(26px); background:var(--legend); }
 
+  /* ---------- Face Off 1v1 banner ---------- */
+  .versus { position:relative; margin-top:18px; width:100%; display:flex; align-items:center; gap:16px;
+    border:1px solid rgba(255,122,24,.4); border-radius:16px; padding:17px 20px; text-decoration:none; color:var(--ink);
+    background:linear-gradient(110deg, rgba(255,122,24,.14), rgba(25,198,255,.12)); backdrop-filter:blur(6px);
+    box-shadow:0 14px 40px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.06); transition:transform .15s, border-color .2s, box-shadow .2s; overflow:hidden; }
+  .versus:hover { transform:translateY(-3px); border-color:var(--accent); box-shadow:0 20px 50px rgba(0,0,0,.6), 0 0 28px rgba(255,122,24,.3); }
+  .versus .vbadge { position:absolute; top:0; right:0; font-family:'Oswald',sans-serif; font-size:10px; letter-spacing:1.5px; font-weight:700;
+    color:#06121d; background:var(--accent); padding:3px 9px; border-radius:0 0 0 8px; }
+  .versus .vtxt { flex:1; }
+  .versus .vtitle { font-family:'Oswald',sans-serif; font-weight:700; font-size:19px; letter-spacing:1.5px; text-transform:uppercase;
+    display:flex; align-items:center; gap:9px; }
+  .versus .vtitle b { color:var(--accent); }
+  .versus .vlive { font-size:10px; letter-spacing:1.5px; color:#7CE38B; border:1px solid rgba(124,227,139,.4); border-radius:20px; padding:2px 8px; }
+  .versus .vdesc { color:var(--muted); font-size:12.5px; margin-top:5px; line-height:1.45; max-width:540px; }
+  .versus .vgo { flex-shrink:0; font-family:'Oswald',sans-serif; font-size:13px; letter-spacing:2px; text-transform:uppercase;
+    padding:9px 20px; border-radius:9px; color:#06121d; font-weight:700; background:linear-gradient(180deg,#ffd23f,#e0640c); box-shadow:0 8px 20px rgba(255,122,24,.35); }
+
   .foot { margin-top:26px; display:flex; align-items:center; gap:14px; z-index:2; }
   .foot a { color:var(--dim); font-size:12px; text-decoration:none; letter-spacing:.5px;
     border:1px solid var(--line); padding:6px 12px; border-radius:8px; transition:color .2s, border-color .2s; }
@@ -195,6 +212,15 @@
     </a>
   </div>
 
+  <a class="versus" href="/versus">
+    <span class="vbadge">NEW</span>
+    <div class="vtxt">
+      <div class="vtitle">⚔️ Face Off <b>1v1</b> <span class="vlive">● LIVE</span></div>
+      <div class="vdesc">Match up with a real player online. One pitches, one hits — highest Overall wins the at-bat.</div>
+    </div>
+    <div class="vgo">▶ Play</div>
+  </a>
+
   <div class="opt">
     <div class="otxt">
       <div class="otitle">🙈 Hard Mode <span class="badge">HIDE RATINGS</span></div>
@@ -230,7 +256,8 @@ gsap.from('.hero .kick', { y: -10, opacity: 0, duration: .35, ease: 'power2.out'
 gsap.from('.hero h1', { y: 14, opacity: 0, duration: .4, delay: .04, ease: 'power3.out' });
 gsap.from('.hero p', { y: 10, opacity: 0, duration: .35, delay: .1, ease: 'power2.out' });
 gsap.from('.pick', { y: 22, opacity: 0, duration: .4, delay: .14, stagger: .07, ease: 'back.out(1.4)' });
-gsap.from('.opt', { y: 12, opacity: 0, duration: .35, delay: .24, ease: 'power2.out' });
+gsap.from('.versus', { y: 14, opacity: 0, duration: .4, delay: .22, ease: 'back.out(1.3)' });
+gsap.from('.opt', { y: 12, opacity: 0, duration: .35, delay: .28, ease: 'power2.out' });
 
 /* ---- pointer tilt on the pick cards ---- */
 document.querySelectorAll('.pick').forEach(card => {
