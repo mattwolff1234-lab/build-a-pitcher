@@ -1029,6 +1029,12 @@ async function init() {
   document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.overlay.show').forEach(o => closeOverlay(o.id)); });
   renderAcct();
   initGoogle();
+
+  // deep-link from the home-page menu, e.g. /pitching#leaderboard → open that panel on load
+  const h = (location.hash || '').replace('#', '').toLowerCase();
+  if (h === 'hof') openHof();
+  else if (h === 'leaderboard' || h === 'lb') openLeaderboard('global');
+  else if (h === 'how' || h === 'howtoplay') openOverlay('howModal');
 }
 
 function toast(msg) {

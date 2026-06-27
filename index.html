@@ -168,6 +168,19 @@
   #acctSlot .signout { background:none; border:1px solid var(--line); color:var(--muted); border-radius:8px; padding:6px 10px; font-size:12px; cursor:pointer; }
   #acctSlot .signout:hover { color:var(--ink); border-color:var(--accent2); }
   #acctSlot .acct-hint { color:var(--muted); font-size:12px; text-align:center; line-height:1.45; }
+  #installNowBtn { font-family:'Oswald',sans-serif; letter-spacing:1px; text-transform:uppercase; font-weight:700; color:#06121d;
+    background:linear-gradient(180deg,#ffd23f,#e0640c); border:0; border-radius:10px; padding:11px; cursor:pointer; }
+  .install-steps { margin:-2px 0 2px; padding:13px; border-radius:10px; background:rgba(0,0,0,.28); border:1px solid var(--line); }
+  .install-steps .inst-label { font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:1.5px; text-transform:uppercase;
+    color:var(--accent2); margin:10px 0 9px; }
+  .install-steps .inst-label:first-of-type { margin-top:0; }
+  .install-steps .step { display:flex; gap:10px; margin-bottom:10px; }
+  .install-steps .step:last-child { margin-bottom:0; }
+  .install-steps .step-n { flex:0 0 auto; width:22px; height:22px; border-radius:50%; background:rgba(255,122,24,.15);
+    border:1px solid var(--accent); color:var(--accent); font-family:'Oswald',sans-serif; font-size:12px; font-weight:700;
+    display:flex; align-items:center; justify-content:center; }
+  .install-steps .step b { font-size:13px; color:var(--ink); }
+  .install-steps .step p { margin:2px 0 0; font-size:12px; color:var(--muted); line-height:1.45; }
 
   /* ---------- Face Off 1v1 banner ---------- */
   .versus { position:relative; margin-top:18px; width:100%; display:flex; align-items:center; gap:16px;
@@ -226,6 +239,20 @@
       <a class="menu-item" href="/pitching">⚾ Build a Pitcher</a>
       <a class="menu-item" href="/batting">🛠️ Build a Batter</a>
       <a class="menu-item" href="/versus">⚔️ 1v1 Live · Face Off</a>
+      <a class="menu-item" href="/pitching#hof">🏛️ My Hall of Fame</a>
+      <a class="menu-item" href="/pitching#leaderboard">🏆 Leaderboard</a>
+      <a class="menu-item" href="/pitching#how">📖 How to Play</a>
+      <button class="menu-item" id="miInstall">📲 Install App<span class="mi-chev" id="installChev" style="margin-left:auto;color:var(--muted)">⌄</span></button>
+      <div id="installSteps" class="install-steps" style="display:none">
+        <button id="installNowBtn" style="display:none;width:100%;margin-bottom:12px">⬇ Install Pitching Lab</button>
+        <div class="inst-label">On Desktop / Android (Chrome · Edge)</div>
+        <div class="step"><span class="step-n">1</span><div><b>Look for the install icon</b><p>Click the install icon (a screen with a ⊕) on the right side of the address bar.</p></div></div>
+        <div class="step"><span class="step-n">2</span><div><b>Click Install</b><p>Confirm in the prompt — the app opens in its own window with a home-screen icon.</p></div></div>
+        <div class="inst-label">On iPhone / iPad (Safari)</div>
+        <div class="step"><span class="step-n">1</span><div><b>Open in Safari</b><p>Make sure you're in Safari — not Chrome or another browser.</p></div></div>
+        <div class="step"><span class="step-n">2</span><div><b>Tap Share</b><p>Tap the Share button at the bottom of the screen (the box with an arrow pointing up).</p></div></div>
+        <div class="step"><span class="step-n">3</span><div><b>Add to Home Screen</b><p>Scroll down, tap "Add to Home Screen," then tap "Add."</p></div></div>
+      </div>
       <a class="menu-item" href="https://pitchergami.com" target="_blank" rel="noopener">⚾ PitcherGami ↗</a>
     </div>
   </div>
@@ -400,6 +427,23 @@ initGoogle();
 const menu = $('menu');
 $('menuBtn').onclick = () => { menu.classList.add('show'); renderAcct(); gsap.fromTo(menu.firstElementChild, { y: 14, opacity: 0 }, { y: 0, opacity: 1, duration: .3, ease: 'power3.out' }); };
 menu.addEventListener('click', e => { if (e.target === menu || e.target.hasAttribute('data-close')) menu.classList.remove('show'); });
+
+// Install App (PWA) — expandable steps + real one-click install where supported
+let deferredInstall = null;
+$('miInstall').onclick = () => {
+  const el = $('installSteps'), open = el.style.display === 'block';
+  el.style.display = open ? 'none' : 'block';
+  $('installChev').textContent = open ? '⌄' : '⌃';
+  if (!open) gsap.fromTo(el, { y: -6, opacity: 0 }, { y: 0, opacity: 1, duration: .25 });
+};
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredInstall = e; $('installNowBtn').style.display = 'block'; });
+$('installNowBtn').onclick = async () => {
+  if (!deferredInstall) return;
+  deferredInstall.prompt();
+  await deferredInstall.userChoice;
+  deferredInstall = null;
+  $('installNowBtn').style.display = 'none';
+};
 </script>
 </body>
 </html>
