@@ -181,6 +181,8 @@
   .pu#boostBtn:hover:not(:disabled) { border-color:var(--legend); background:rgba(163,102,255,.12); }
   .pu:disabled { opacity:.32; cursor:default; }
   .hint { color:var(--dim); font-size:12px; margin-top:8px; text-align:center; }
+  .mini-spin { display:inline-block; width:12px; height:12px; border-radius:50%; border:2px solid rgba(255,255,255,.18);
+    border-top-color:var(--accent); animation:spin .8s linear infinite; vertical-align:-1px; margin-right:6px; }
 
   /* ---------- at-bat ---------- */
   #atbatScreen { min-height:70vh; justify-content:center; }
@@ -466,7 +468,7 @@ let myRole=null, oppRole=null, matchId=null, seed=0, oppId=null, wasClaimer=fals
 let inviteCh=null, matchCh=null;
 let DATA={};               // role -> data json
 let myBuild=null, oppBuild=null, atBatStarted=false;
-let claimTimeout=null;
+let claimTimeout=null, waitTimeout=null;
 
 /* ---------- account + Elo rating ----------
    Two ways to have a rating:
@@ -555,7 +557,8 @@ async function applyResult(){
   const pr = pendingResult; pendingResult=null;
   try {
     const r = await fetch('/api/account', { method:'POST', headers:{'content-type':'application/json'},
-      body: JSON.stringify(Object.assign({ action:'pvpResult', matchId: pr.matchId, won: pr.won, oppElo: pr.oppElo }, principal())) }).then(x=>x.json());
+      body: JSON.stringify(Object.assign({ action:'pvpResult', matchId: pr.matchId, won: pr.won, oppElo: pr.oppElo,
+        role: pr.role, ovr: pr.ovr, oppOvr: pr.oppOvr }, principal())) }).then(x=>x.json());
     if (r.ok){ myStats = { elo:r.elo, wins:r.wins, losses:r.losses }; renderRatingResult(r); }
   } catch(e){}
 }
@@ -661,6 +664,7 @@ function resetMatch(){
   myBuild=null; oppBuild=null; atBatStarted=false; oppPresent=false;
   if (clockTimer){ clearInterval(clockTimer); clockTimer=null; }
   if (claimTimeout){ clearTimeout(claimTimeout); claimTimeout=null; }
+  if (waitTimeout){ clearTimeout(waitTimeout); waitTimeout=null; }
   if (matchCh){ try{ matchCh.presence.leave(); }catch(e){} matchCh.unsubscribe(); matchCh.presence.unsubscribe(); matchCh=null; }
 }
 
@@ -804,7 +808,7 @@ function animateReel(index, dur, ease, onDone){
   let prevX=gsap.getProperty(track,'x'),prevT=performance.now(),lastTick=prevX;
   gsap.to(track,{ x:-offset, duration:dur, ease,
     onUpdate:()=>{ const x=gsap.getProperty(track,'x'),t=performance.now(),dt=Math.max(8,t-prevT),sp=Math.abs(x-prevX)/dt; prevX=x;prevT=t;
-      const b=Math.min(5,sp*0.7); track.style.filter=b>0.4?`blur(${b.toFixed(1)}px)`:'none';
+      const b=Math.min(3.5,sp*0.6); track.style.filter=b>0.5?`blur(${b.toFixed(1)}px)`:'none';
       if(Math.abs(x-lastTick)>=CARD_W){ Sound.tick(sp/7); lastTick=x; } },
     onComplete:()=>{ track.style.filter='none'; buildState.spinning=false; onDone(); }
   });
@@ -887,10 +891,24 @@ function finishBuild(){
   const ovr = computeOvr(myRole, buildState.filled);
   const team = modalTeam(slots);
   myBuild = { role:myRole, ovr, team, slots, elo: myElo(), name: displayName() };
-  $('buildHint').textContent='Locked in! Waiting for your opponent…';
+  // clear "done" state so the screen doesn't look frozen while waiting on the opponent
+  $('clock').textContent = '✓'; $('clock').classList.remove('warn');
+  $('buildHint').innerHTML = '<span class="mini-spin"></span> Locked in (' + ovr + ' OVR)! Waiting for your opponent to finish…';
   publishBuild();
   updateOppPill();
+  // safety net: if the opponent never finishes (left/closed), don't hang forever
+  if (waitTimeout) clearTimeout(waitTimeout);
+  waitTimeout = setTimeout(() => { if (!oppBuild && !atBatStarted) showNoContest(); }, 75000);
   maybeStartAtBat();
+}
+function showNoContest(){
+  if (atBatStarted || oppBuild) return;
+  showScreen('resultScreen');
+  $('resultCard').className = 'result-card';
+  $('resultHead').textContent = 'NO CONTEST';
+  $('resultLine').textContent = 'Your opponent didn’t finish their build in time.';
+  $('resultSub').textContent = 'No rating change — try another match.';
+  $('ratingResult').innerHTML = '';
 }
 
 /* ---------- opponent status + messaging ---------- */
@@ -909,6 +927,7 @@ function updateOppPill(){
 function maybeStartAtBat(){
   if(atBatStarted || !myBuild || !oppBuild) return;
   atBatStarted=true;
+  if (waitTimeout){ clearTimeout(waitTimeout); waitTimeout=null; }
   setTimeout(playAtBat, 700);
 }
 function playAtBat(){
@@ -985,7 +1004,7 @@ function showResult(iWon, pitcher, batter, winnerRole){
   // Elo: report this result against the opponent's rating (came over with their build).
   // Works for guests (device rating) and signed-in users alike.
   const oppElo = (oppBuild && typeof oppBuild.elo === 'number') ? oppBuild.elo : 1000;
-  pendingResult = { matchId, won: iWon, oppElo };
+  pendingResult = { matchId, won: iWon, oppElo, role: myRole, ovr: (myBuild ? myBuild.ovr : 0), oppOvr: (oppBuild ? oppBuild.ovr : 0) };
   $('ratingResult').innerHTML = '';
   applyResult();
 }

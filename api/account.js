@@ -15,6 +15,9 @@ const crypto = require('crypto');
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID
   || '349698720898-t9bpb8fp7ks6scf8ci8mmoeec1lpm3d3.apps.googleusercontent.com';
 
+// Secret for the private balance-stats read (server-side only; not served to the browser).
+const STATS_TOKEN = process.env.STATS_TOKEN || 'pl-balance-7f3a9c21';
+
 function findConn() {
   const e = process.env;
   const named = e.DATABASE_URL || e.POSTGRES_URL || e.POSTGRES_PRISMA_URL
@@ -62,6 +65,16 @@ function ensure() {
         google_sub text NOT NULL,
         created_at timestamptz NOT NULL DEFAULT now(),
         PRIMARY KEY (match_id, google_sub)
+      )`;
+      // anonymous match outcome log (role + win + OVRs) for measuring real balance
+      await sql`CREATE TABLE IF NOT EXISTS pvp_matches (
+        match_id text NOT NULL,
+        role text NOT NULL,
+        won boolean NOT NULL,
+        ovr int,
+        opp_ovr int,
+        created_at timestamptz NOT NULL DEFAULT now(),
+        PRIMARY KEY (match_id, role)
       )`;
     })();
   }
@@ -172,6 +185,18 @@ module.exports = async (req, res) => {
         if (!matchId) return res.status(400).json({ ok: false, error: 'missing matchId' });
         const won = !!body.won;
         const oppElo = Math.max(100, Math.min(4000, Math.round(Number(body.oppElo) || 1000)));
+
+        // anonymous balance log (one row per match+role; idempotent)
+        const role = (body.role === 'pitcher' || body.role === 'batter') ? body.role : null;
+        if (role) {
+          const myOvr = Math.round(Number(body.ovr) || 0) || null;
+          const oppOvr = Math.round(Number(body.oppOvr) || 0) || null;
+          try {
+            await sql`INSERT INTO pvp_matches (match_id, role, won, ovr, opp_ovr)
+              VALUES (${matchId}, ${role}, ${won}, ${myOvr}, ${oppOvr})
+              ON CONFLICT (match_id, role) DO NOTHING`;
+          } catch (e) {}
+        }
         const [u] = await sql`SELECT pvp_elo AS elo, pvp_wins AS wins, pvp_losses AS losses FROM users WHERE google_sub = ${key}`;
         if (!u) return res.status(401).json({ ok: false, error: 'Not signed in' });
         // dedupe: only the first report for this (match, player) counts
@@ -220,6 +245,25 @@ module.exports = async (req, res) => {
           }
         }
         return res.status(200).json({ ok: true, rows, me });
+      }
+
+      // private read of the balance log (token-gated; for diagnosing pitcher-vs-batter win rate)
+      if (action === 'pvpMatchStats') {
+        if (body.token !== STATS_TOKEN) return res.status(403).json({ ok: false, error: 'forbidden' });
+        const [r] = await sql`SELECT
+          count(*) FILTER (WHERE role='pitcher')::int AS pitcher_n,
+          count(*) FILTER (WHERE role='pitcher' AND won)::int AS pitcher_wins,
+          count(*) FILTER (WHERE role='batter')::int AS batter_n,
+          count(*) FILTER (WHERE role='batter' AND won)::int AS batter_wins,
+          round(avg(ovr) FILTER (WHERE role='pitcher'), 1) AS pitcher_avg_ovr,
+          round(avg(ovr) FILTER (WHERE role='batter'), 1) AS batter_avg_ovr,
+          count(DISTINCT match_id)::int AS matches
+          FROM pvp_matches`;
+        const pr = r.pitcher_n ? (100 * r.pitcher_wins / r.pitcher_n) : null;
+        const br = r.batter_n ? (100 * r.batter_wins / r.batter_n) : null;
+        return res.status(200).json({ ok: true, stats: r,
+          pitcher_win_pct: pr == null ? null : Number(pr.toFixed(1)),
+          batter_win_pct: br == null ? null : Number(br.toFixed(1)) });
       }
 
       return res.status(400).json({ ok: false, error: 'Unknown action' });
