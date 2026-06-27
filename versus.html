@@ -241,7 +241,7 @@
   .silho { position:absolute; bottom:30%; height:150px; width:110px; mask-size:contain; mask-repeat:no-repeat; mask-position:center bottom;
     -webkit-mask-size:contain; -webkit-mask-repeat:no-repeat; -webkit-mask-position:center bottom; filter:drop-shadow(0 8px 16px rgba(0,0,0,.5)); }
   .silho.p { left:9%; -webkit-mask-image:url(pitcher-figure.png); mask-image:url(pitcher-figure.png); }
-  .silho.b { right:9%; -webkit-mask-image:url(batter-figure.png); mask-image:url(batter-figure.png); }
+  .silho.b { right:9%; transform:scaleX(-1); transform-origin:center bottom; -webkit-mask-image:url(batter-figure.png); mask-image:url(batter-figure.png); }
   .ball { position:absolute; width:16px; height:16px; border-radius:50%; background:radial-gradient(circle at 35% 30%,#fff,#cdd3da);
     box-shadow:0 0 10px rgba(255,255,255,.6); left:18%; bottom:42%; opacity:0; z-index:5; }
   .callout { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; }
@@ -249,8 +249,9 @@
     opacity:0; text-shadow:0 6px 24px rgba(0,0,0,.6); text-align:center; }
   .pitch-info { position:absolute; left:0; right:0; top:14px; text-align:center; font-family:'Oswald',sans-serif;
     letter-spacing:2px; font-size:13px; color:#cbd6e6; opacity:0; text-transform:uppercase; }
-  .pitch-seq { position:absolute; left:14px; right:14px; bottom:14px; z-index:7; display:flex; justify-content:center; gap:7px; flex-wrap:wrap; opacity:0; }
-  .pitch-pill { min-width:72px; border:1px solid var(--line); border-radius:9px; padding:7px 9px; text-align:center;
+  .pitch-seq { position:absolute; left:14px; right:14px; bottom:14px; z-index:7; display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(64px,76px)); justify-content:center; gap:7px; opacity:0; }
+  .pitch-pill { min-width:0; width:100%; border:1px solid var(--line); border-radius:9px; padding:7px 6px; text-align:center;
     background:rgba(4,7,13,.68); box-shadow:0 8px 18px rgba(0,0,0,.28); }
   .pitch-pill .pn { font-family:'Oswald',sans-serif; font-size:10px; letter-spacing:1.4px; text-transform:uppercase; color:var(--dim); }
   .pitch-pill .pc { font-family:'Oswald',sans-serif; font-size:16px; line-height:1.05; letter-spacing:.7px; text-transform:uppercase; color:var(--muted); margin-top:3px; }
@@ -1216,7 +1217,7 @@ function playAtBat(){
 
   const ball=$('ball'), call=$('callout'); call.style.opacity=0; call.textContent='';
   gsap.set(ball,{ opacity:0, left:'18%', bottom:'42%', scale:1 });
-  gsap.set('#silhoP',{ x:0, rotation:0 }); gsap.set('#silhoB',{ x:0, rotation:0 });
+  gsap.set('#silhoP',{ x:0, rotation:0 }); gsap.set('#silhoB',{ x:0, rotation:0, scaleX:-1 });
   renderPitchSeq(script);
   gsap.set('#pitchSeq', { opacity:1 });
 
@@ -1316,7 +1317,7 @@ function appendPitch(tl, pitch, idx){
     }, idx ? '+=.34' : 0)
     .to('#pitchInfo',{ opacity:1, duration:.18 })
     .set(ball,{ opacity:0, left:'18%', bottom:'42%', scale:1 })
-    .set('#silhoB',{ rotation:0, x:0 })
+    .set('#silhoB',{ rotation:0, x:0, scaleX:-1 })
     .fromTo('#silhoP',{ rotation:-6 },{ rotation:7, duration:.28, ease:'power2.in' })
     .to('#silhoP',{ rotation:0, duration:.12 })
     .set(ball,{ opacity:1 })
@@ -1338,7 +1339,7 @@ function appendPitch(tl, pitch, idx){
       .to('#silhoB',{ rotation:14, x:6, duration:.35, ease:'power1.in' },'<');
   } else if(pitch.result === 'hit'){
     tl.add(()=> Sound.crack())
-      .to(ball,{ left:'108%', bottom:'92%', scale:1.3, duration:.85, ease:'power2.out' })
+      .to(ball,{ left:'-10%', bottom:'86%', scale:1.3, duration:.85, ease:'power2.out' })
       .add(()=> showCall('HOME RUN!', 'var(--bat)'))
       .to('#silhoB',{ rotation:8, duration:.3 },'<');
   } else {
