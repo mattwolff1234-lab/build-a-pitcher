@@ -68,10 +68,23 @@ module.exports = async (req, res) => {
     // Optional sort by a career-total stat (trust-the-client, same as ovr). Whitelisted keys map to build.career.totals fields.
     const SORT_FIELDS = { k: 'k', war: 'war', wins: 'wins', rings: 'rings', cyYoung: 'cyYoung', hr: 'hr', hits: 'h', mvp: 'mvp' };
     const sortField = SORT_FIELDS[req.query && req.query.sort] || null;
+    const worst = (req.query && req.query.sort) === 'ovrAsc'; // ascending OVR ("worst overall")
     const NULL_SENTINEL = -1e30; // ranks missing-career entries last under a stat sort
 
     let rows;
-    if (sortField) {
+    if (worst) {
+      rows = daily
+        ? await sql`SELECT id, name, ovr,
+              CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots') ELSE build END AS build,
+              game, created_at FROM scores
+              WHERE game = ${game} AND created_at >= date_trunc('day', now())
+              ORDER BY ovr ASC, created_at ASC LIMIT ${limit}`
+        : await sql`SELECT id, name, ovr,
+              CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots') ELSE build END AS build,
+              game, created_at FROM scores
+              WHERE game = ${game}
+              ORDER BY ovr ASC, created_at ASC LIMIT ${limit}`;
+    } else if (sortField) {
       rows = daily
         ? await sql`SELECT id, name, ovr,
               CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots') ELSE build END AS build,
@@ -117,6 +130,13 @@ module.exports = async (req, res) => {
                   WHERE game = ${game}
                     AND (COALESCE((build->'career'->'totals'->>${sortField})::numeric, ${NULL_SENTINEL}) > ${meVal}
                       OR (COALESCE((build->'career'->'totals'->>${sortField})::numeric, ${NULL_SENTINEL}) = ${meVal} AND created_at < ${row.created_at}))`)[0].ahead;
+        } else if (worst) {
+          ahead = daily
+            ? (await sql`SELECT count(*)::int AS ahead FROM scores
+                  WHERE game = ${row.game} AND created_at >= date_trunc('day', now())
+                    AND (ovr < ${row.ovr} OR (ovr = ${row.ovr} AND created_at < ${row.created_at}))`)[0].ahead
+            : (await sql`SELECT count(*)::int AS ahead FROM scores
+                  WHERE game = ${row.game} AND (ovr < ${row.ovr} OR (ovr = ${row.ovr} AND created_at < ${row.created_at}))`)[0].ahead;
         } else {
           ahead = daily
             ? (await sql`SELECT count(*)::int AS ahead FROM scores

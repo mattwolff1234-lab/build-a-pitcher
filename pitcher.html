@@ -420,14 +420,35 @@
   .lb-row.top1 .rank { color:var(--gold); } .lb-row.top2 .rank { color:var(--silver); } .lb-row.top3 .rank { color:var(--bronze); }
   .lb-empty { color:var(--muted); font-size:13px; padding:18px; }
   .build-summary { color:var(--muted); font-size:12px; margin:-2px 0 12px; letter-spacing:.4px; text-transform:uppercase; }
-  .build-slots { display:flex; flex-direction:column; gap:7px; }
-  .build-slot { display:grid; grid-template-columns:auto 1fr auto; gap:11px; align-items:center; padding:8px 11px;
-    border-radius:8px; background:rgba(255,255,255,.035); border:1px solid var(--line); }
-  .build-slot img { width:42px; height:42px; border-radius:8px; object-fit:cover; background:#11161d; border:1px solid var(--line); }
-  .build-slot .slot-name { font-family:'Oswald',sans-serif; color:var(--accent2); text-transform:uppercase; letter-spacing:1px; font-size:11px; }
-  .build-slot .slot-player { color:var(--ink); font-size:13px; font-weight:700; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .build-slot .slot-team { color:var(--muted); font-size:10.5px; margin-top:2px; text-transform:uppercase; letter-spacing:.8px; }
-  .build-slot .slot-val { font-family:'Oswald',sans-serif; font-size:24px; font-weight:700; }
+  /* shareable build breakdown — vertical slot list with ringed headshots */
+  .bd-card { border:1px solid var(--line); border-radius:14px; padding:14px 15px 6px;
+    background:linear-gradient(180deg,rgba(16,25,38,.6),rgba(7,12,20,.7)); }
+  .bd-head { display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:13px;
+    padding:2px 2px 13px; border-bottom:1px solid var(--line); margin-bottom:6px; }
+  .bd-rank { font-family:'Oswald',sans-serif; font-weight:700; font-size:18px; min-width:38px; height:40px;
+    padding:0 7px; display:grid; place-items:center; border-radius:9px; color:var(--muted);
+    background:rgba(255,255,255,.05); border:1px solid var(--line); border-left:3px solid currentColor; }
+  .bd-id { min-width:0; }
+  .bd-name { font-family:'Oswald',sans-serif; font-weight:700; font-size:21px; letter-spacing:.5px; color:var(--ink);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.05; }
+  .bd-tier { font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:2px; text-transform:uppercase; margin-top:3px; }
+  .bd-ovr { text-align:center; }
+  .bd-ovr span { display:block; font-family:'Oswald',sans-serif; font-size:9px; letter-spacing:2px; color:var(--muted); }
+  .bd-ovr b { font-family:'Oswald',sans-serif; font-weight:700; font-size:34px; line-height:.85; }
+  .build-slots { display:flex; flex-direction:column; }
+  .build-slot { display:grid; grid-template-columns:auto 1fr auto; gap:13px; align-items:center; padding:9px 2px;
+    border-bottom:1px solid rgba(120,160,210,.09); }
+  .build-slot:last-child { border-bottom:0; }
+  .build-slot img { width:46px; height:46px; border-radius:50%; object-fit:cover; background:#11161d;
+    border:2.5px solid currentColor; box-shadow:0 0 11px -3px currentColor; }
+  .build-slot .slot-name { font-family:'Oswald',sans-serif; text-transform:uppercase; letter-spacing:1.2px; font-size:11px; font-weight:600; }
+  .build-slot .slot-player { color:var(--ink); font-size:14px; font-weight:700; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .build-slot .slot-val { font-family:'Oswald',sans-serif; font-size:23px; font-weight:700; }
+  .bd-share { width:100%; margin-top:14px; padding:12px; border-radius:10px; cursor:pointer;
+    font-family:'Oswald',sans-serif; font-size:13px; letter-spacing:1.5px; text-transform:uppercase;
+    color:#fff; background:#0a0a0a; border:1px solid #2a3340; }
+  .bd-share:hover { border-color:var(--accent2); box-shadow:0 0 14px rgba(25,198,255,.22); }
+  .bd-hint { text-align:center; color:var(--dim); font-size:11px; margin-top:9px; }
   .ghost-btn { font-family:'Oswald',sans-serif; font-size:13px; letter-spacing:1px; text-transform:uppercase; margin-top:16px;
     padding:10px 22px; border-radius:9px; color:var(--muted); border:1px solid var(--line); background:rgba(255,255,255,.03); }
   .ghost-btn:hover { color:var(--ink); border-color:var(--accent2); }
@@ -682,10 +703,14 @@
 
 <div id="buildModal" class="overlay">
   <div class="overlay-card panel">
-    <div class="overlay-head"><span class="overlay-title" id="buildDetailTitle">Build</span><button class="overlay-close" data-close="buildModal">✕</button></div>
+    <div class="overlay-head"><span class="overlay-title">Build Breakdown</span><button class="overlay-close" data-close="buildModal">✕</button></div>
     <div class="overlay-body">
-      <div id="buildDetailMeta" class="build-summary"></div>
-      <div id="buildDetailList" class="build-slots"></div>
+      <div id="buildDetailCard" class="bd-card">
+        <div id="buildDetailHead" class="bd-head"></div>
+        <div id="buildDetailList" class="build-slots"></div>
+      </div>
+      <button id="bdShare" class="bd-share">𝕏  Share on X</button>
+      <div class="bd-hint">📸 Screenshot the card above to post your build</div>
     </div>
   </div>
 </div>
@@ -865,8 +890,8 @@ let lbGame = LEADERBOARD_GAME;
 let lbSort = 'ovr';
 let lbEntries = new Map();
 const SORT_OPTIONS = {
-  pitcher: [{ key: 'ovr', label: 'OVR' }, { key: 'k', label: 'Strikeouts' }, { key: 'war', label: 'WAR' }, { key: 'wins', label: 'Wins' }, { key: 'rings', label: 'Rings' }, { key: 'cyYoung', label: 'Cy Youngs' }],
-  batter: [{ key: 'ovr', label: 'OVR' }, { key: 'hr', label: 'Home Runs' }, { key: 'hits', label: 'Hits' }, { key: 'war', label: 'WAR' }, { key: 'rings', label: 'Rings' }, { key: 'mvp', label: 'MVPs' }],
+  pitcher: [{ key: 'ovr', label: 'OVR' }, { key: 'ovrAsc', label: 'Worst' }, { key: 'k', label: 'Strikeouts' }, { key: 'war', label: 'WAR' }, { key: 'wins', label: 'Wins' }, { key: 'rings', label: 'Rings' }, { key: 'cyYoung', label: 'Cy Youngs' }],
+  batter: [{ key: 'ovr', label: 'OVR' }, { key: 'ovrAsc', label: 'Worst' }, { key: 'hr', label: 'Home Runs' }, { key: 'hits', label: 'Hits' }, { key: 'war', label: 'WAR' }, { key: 'rings', label: 'Rings' }, { key: 'mvp', label: 'MVPs' }],
 };
 function sortOptionsFor(game) { return SORT_OPTIONS[game === 'batter' ? 'batter' : 'pitcher']; }
 function fmtStat(v) { return lbSort === 'war' ? Number(v).toFixed(1) : Math.round(v); }
@@ -2227,7 +2252,7 @@ async function submitScore() {
 }
 
 function lbRow(rank, entry, cls) {
-  const sorted = lbSort !== 'ovr';
+  const sorted = lbSort !== 'ovr' && lbSort !== 'ovrAsc';
   const sub = sorted ? ` <span class="nm-ovr">${entry.ovr} OVR</span>` : '';
   const right = sorted
     ? `<div class="ov lb-stat">${entry.stat == null ? '—' : fmtStat(entry.stat)}</div>`
@@ -2257,25 +2282,39 @@ function headshotByName(name) {
   }
   return HEADSHOTS.get(name) || null;
 }
+const TIER_LABELS = { grey: 'Common', bronze: 'Bronze', silver: 'Silver', gold: 'Gold', diamond: 'Diamond', legend: 'Legend' };
+function shareBuild(entry) {
+  const kind = (entry.game === 'batter') ? 'batter' : 'pitcher';
+  const url = 'https://pitchinglab.pitchergami.com';
+  const txt = `I built a ${entry.ovr} OVR ${kind}${entry.name ? ` — "${entry.name}"` : ''} in Pitching Lab. Think you can do better?`;
+  window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(txt)}&url=${encodeURIComponent(url)}`, '_blank', 'noopener');
+}
 function openBuildDetails(entryId) {
   const entry = lbEntries.get(String(entryId));
   if (!entry) return;
   const slots = buildSlotsFromEntry(entry);
-  $('buildDetailTitle').textContent = entry.name || 'Build';
-  $('buildDetailMeta').textContent = `${entry.ovr} Overall`;
+  const t = tier(entry.ovr);
+  const name = (entry.name || 'Build').replace(/\s*\(you\)\s*$/, '');
+  $('buildDetailHead').innerHTML = `
+    <div class="bd-rank c-${t}">${entry._rank ? '#' + entry._rank : '—'}</div>
+    <div class="bd-id">
+      <div class="bd-name">${escapeHTML(name)}</div>
+      <div class="bd-tier c-${t}">${TIER_LABELS[t] || ''} · ${(entry.game === 'batter') ? 'Batter' : 'Pitcher'}</div>
+    </div>
+    <div class="bd-ovr"><span>OVR</span><b class="c-${t}">${entry.ovr}</b></div>`;
   $('buildDetailList').innerHTML = slots.length ? slots.map(s => {
-    const t = tier(Number(s.value) || 0);
+    const st = tier(Number(s.value) || 0);
     const val = s.display != null ? s.display : (s.value != null ? s.value : '—');
     return `<div class="build-slot">
-      <img src="${s.img || headshotByName(s.player) || SILHOUETTE}" alt="" loading="lazy" onerror="this.onerror=null;this.src='${SILHOUETTE}'">
+      <img class="c-${st}" src="${s.img || headshotByName(s.player) || SILHOUETTE}" alt="" loading="lazy" onerror="this.onerror=null;this.src='${SILHOUETTE}'">
       <div>
-        <div class="slot-name">${escapeHTML(s.slot || '')}</div>
+        <div class="slot-name c-${st}">${escapeHTML(s.slot || '')}</div>
         <div class="slot-player">${escapeHTML(s.player || 'Unknown')}${s.legend ? ' ★' : ''}</div>
-        ${s.team ? `<div class="slot-team">${escapeHTML(s.team)}</div>` : ''}
       </div>
-      <div class="slot-val c-${t}">${escapeHTML(String(val))}</div>
+      <div class="slot-val c-${st}">${escapeHTML(String(val))}</div>
     </div>`;
   }).join('') : '<div class="lb-empty">This build was saved before build details were tracked.</div>';
+  $('bdShare').onclick = () => shareBuild(entry);
   openOverlay('buildModal');
 }
 async function loadLeaderboard(scope = lbScope, game = lbGame, sort = lbSort) {
@@ -2296,6 +2335,7 @@ async function loadLeaderboard(scope = lbScope, game = lbGame, sort = lbSort) {
     lbEntries = new Map();
     // pin the submitter's rank at the top (works even if they're outside the top 200)
     if (data.me) {
+      data.me._rank = data.me.rank;
       lbEntries.set(String(data.me.id), data.me);
       html += `<div class="lb-pin">${lbRow('#' + data.me.rank, { ...data.me, name: data.me.name + ' (you)' }, 'mine pinned')}</div>`;
     }
@@ -2304,6 +2344,7 @@ async function loadLeaderboard(scope = lbScope, game = lbGame, sort = lbSort) {
     } else {
       html += data.rows.map((r, i) => {
         const rank = i + 1;
+        r._rank = rank;
         lbEntries.set(String(r.id), r);
         const cls = [rank <= 3 ? 'top' + rank : '', r.id === myEntryId ? 'mine' : ''].filter(Boolean).join(' ');
         return lbRow(rank, r, cls);
