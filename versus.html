@@ -588,7 +588,9 @@ async function loadData(role){
 
 async function connectAbly(){
   clientId = rid();
-  ably = new Ably.Realtime({ authUrl: '/api/ably-token?clientId=' + clientId, clientId });
+  // echoMessages:false → don't receive our OWN published messages (otherwise our build would
+  // come back to us and get treated as the opponent's = "you vs you").
+  ably = new Ably.Realtime({ authUrl: '/api/ably-token?clientId=' + clientId, clientId, echoMessages: false });
   await new Promise((resolve, reject) => {
     ably.connection.once('connected', resolve);
     ably.connection.once('failed', reject);
@@ -668,8 +670,9 @@ async function startMatch(mId, role, sd, opp, claimer){
   rng = mulberry32(seed || 1);
 
   matchCh = ably.channels.get('versus:match:' + matchId);
-  matchCh.subscribe('build', m => { oppBuild = m.data; updateOppPill(); maybeStartAtBat(); });
-  matchCh.subscribe('progress', m => updateOppProgress(m.data));
+  // ignore our own messages (belt-and-suspenders alongside echoMessages:false)
+  matchCh.subscribe('build', m => { if (m.clientId === clientId) return; oppBuild = m.data; updateOppPill(); maybeStartAtBat(); });
+  matchCh.subscribe('progress', m => { if (m.clientId === clientId) return; updateOppProgress(m.data); });
   matchCh.presence.subscribe('enter', () => { oppPresent=true; updateOppPill(); });
   matchCh.presence.subscribe('present', () => { oppPresent=true; updateOppPill(); });
   await matchCh.presence.enter({ role: myRole });
