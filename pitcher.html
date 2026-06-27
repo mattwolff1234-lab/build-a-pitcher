@@ -430,8 +430,12 @@
   /* shareable build breakdown — vertical slot list with ringed headshots */
   .bd-card { border:1px solid var(--line); border-radius:14px; padding:14px 15px 6px;
     background:linear-gradient(180deg,rgba(16,25,38,.6),rgba(7,12,20,.7)); }
-  .bd-head { display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:13px;
+  .bd-head { display:grid; grid-template-columns:auto auto 1fr auto; align-items:center; gap:11px;
     padding:2px 2px 13px; border-bottom:1px solid var(--line); margin-bottom:6px; }
+  .bd-fig { position:relative; width:46px; height:58px; flex:none; }
+  .bd-fig .lay { position:absolute; inset:0; pointer-events:none;
+    -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat; -webkit-mask-position:center; mask-position:center;
+    -webkit-mask-size:contain; mask-size:contain; }
   .bd-rank { font-family:'Oswald',sans-serif; font-weight:700; font-size:18px; min-width:38px; height:40px;
     padding:0 7px; display:grid; place-items:center; border-radius:9px; color:var(--muted);
     background:rgba(255,255,255,.05); border:1px solid var(--line); border-left:3px solid currentColor; }
@@ -2290,6 +2294,22 @@ function headshotByName(name) {
   return HEADSHOTS.get(name) || null;
 }
 const TIER_LABELS = { grey: 'Common', bronze: 'Bronze', silver: 'Silver', gold: 'Gold', diamond: 'Diamond', legend: 'Legend' };
+// Mini team-colored figure for a leaderboard build — per game, keyed by slot label (works for either board).
+const FIG_CONFIG = {
+  pitcher: { base: 'pitcher-figure.png', masks: { 'Velocity': 'seg-pitch_velocity.png', 'Break': 'seg-pitch_movement.png', 'Strikeout': 'seg-k_per_bf.png', 'Ground Ball': 'seg-hr_per_bf.png', 'Command': 'seg-pitch_control.png', 'Clutch': 'seg-pitching_clutch.png', 'Defense': 'seg-fielding_ability.png', 'Frame': 'seg-frame.png', 'Stamina': 'seg-stamina.png' } },
+  batter: { base: 'batter-figure.png', masks: { 'Vision': 'bat-seg-plate_vision.png', 'Power': 'bat-seg-power.png', 'Contact': 'bat-seg-contact.png', 'Speed': 'bat-seg-speed.png', 'Clutch': 'bat-seg-batting_clutch.png', 'Discipline': 'bat-seg-plate_discipline.png', 'Frame': 'bat-seg-frame.png', 'Defense': 'bat-seg-fielding_ability.svg' } },
+};
+function miniFigureHTML(entry, slots) {
+  const cfg = FIG_CONFIG[entry.game === 'batter' ? 'batter' : 'pitcher'];
+  const mask = u => `-webkit-mask:url(${u}) center/contain no-repeat;mask:url(${u}) center/contain no-repeat;`;
+  let layers = `<div class="lay" style="background:#39414c;${mask(cfg.base)}"></div>`;
+  for (const s of slots) {
+    const m = cfg.masks[s.slot];
+    if (m) layers += `<div class="lay" style="background:${teamColor(s.team)};${mask(m)}"></div>`;
+  }
+  const dim = (entry.game === 'batter') ? 'width:46px;height:60px' : 'width:64px;height:56px';
+  return `<div class="bd-fig" style="${dim}" title="Built figure">${layers}</div>`;
+}
 function shareBuild(entry) {
   const kind = (entry.game === 'batter') ? 'batter' : 'pitcher';
   const url = 'https://pitchinglab.pitchergami.com';
@@ -2304,6 +2324,7 @@ function openBuildDetails(entryId) {
   const name = (entry.name || 'Build').replace(/\s*\(you\)\s*$/, '');
   $('buildDetailHead').innerHTML = `
     <div class="bd-rank c-${t}">${entry._rank ? '#' + entry._rank : '—'}</div>
+    ${miniFigureHTML(entry, slots)}
     <div class="bd-id">
       <div class="bd-name">${escapeHTML(name)}</div>
       <div class="bd-tier c-${t}">${TIER_LABELS[t] || ''} · ${(entry.game === 'batter') ? 'Batter' : 'Pitcher'}</div>
