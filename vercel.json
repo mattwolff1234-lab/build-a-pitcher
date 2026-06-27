@@ -1,5 +1,6 @@
 {
   "rewrites": [
-    { "source": "/batting", "destination": "/build-a-batter.html" }
+    { "source": "/batting", "destination": "/build-a-batter.html" },
+    { "source": "/pitching", "destination": "/pitcher.html" }
   ]
 }
