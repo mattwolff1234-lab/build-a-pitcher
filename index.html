@@ -138,11 +138,20 @@
     border:1px solid var(--line); padding:6px 12px; border-radius:8px; transition:color .2s, border-color .2s; }
   .foot a:hover { color:var(--ink); border-color:var(--accent2); }
 
+  @media (min-width: 621px) {
+    .hero .kick { margin-top:40px; }   /* nudge the badge + hero down a bit on desktop */
+  }
   @media (max-width: 620px) {
-    .picks { grid-template-columns:1fr; gap:14px; }
-    .pick .fig { height:150px; }
-    .opt { flex-direction:row; align-items:flex-start; }
-    .hero { margin-bottom:22px; }
+    .stage { padding:18px 12px 30px; }
+    /* shrink the panels so the floating background shows through the side gutters */
+    .picks { grid-template-columns:1fr; gap:12px; max-width:300px; margin:0 auto; }
+    .pick { padding:18px 16px 16px; border-radius:16px; }
+    .pick .fig { height:120px; }
+    .pick .label { font-size:21px; margin-top:11px; }
+    .pick .desc { font-size:12px; }
+    .pick .go { margin-top:12px; padding:8px 18px; }
+    .opt { flex-direction:row; align-items:flex-start; max-width:300px; margin-left:auto; margin-right:auto; padding:13px 15px; }
+    .hero { margin-bottom:20px; }
   }
 </style>
 </head>
@@ -209,12 +218,12 @@ paintHard(readHard());
 sw.addEventListener('click', toggleHard);
 sw.addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); toggleHard(); } });
 
-/* ---- entrance ---- */
-gsap.from('.hero .kick', { y: -12, opacity: 0, duration: .6, ease: 'power2.out' });
-gsap.from('.hero h1', { y: 18, opacity: 0, duration: .7, delay: .08, ease: 'power3.out' });
-gsap.from('.hero p', { y: 12, opacity: 0, duration: .6, delay: .25, ease: 'power2.out' });
-gsap.from('.pick', { y: 30, opacity: 0, duration: .6, delay: .35, stagger: .12, ease: 'back.out(1.4)' });
-gsap.from('.opt', { y: 16, opacity: 0, duration: .5, delay: .6, ease: 'power2.out' });
+/* ---- entrance (kept snappy so the options land fast) ---- */
+gsap.from('.hero .kick', { y: -10, opacity: 0, duration: .35, ease: 'power2.out' });
+gsap.from('.hero h1', { y: 14, opacity: 0, duration: .4, delay: .04, ease: 'power3.out' });
+gsap.from('.hero p', { y: 10, opacity: 0, duration: .35, delay: .1, ease: 'power2.out' });
+gsap.from('.pick', { y: 22, opacity: 0, duration: .4, delay: .14, stagger: .07, ease: 'back.out(1.4)' });
+gsap.from('.opt', { y: 12, opacity: 0, duration: .35, delay: .24, ease: 'power2.out' });
 
 /* ---- pointer tilt on the pick cards ---- */
 document.querySelectorAll('.pick').forEach(card => {
