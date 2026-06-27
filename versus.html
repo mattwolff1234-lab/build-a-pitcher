@@ -72,6 +72,10 @@
   .btn:disabled { opacity:.5; cursor:default; }
   .btn.ghost { background:rgba(255,255,255,.05); color:var(--ink); border:1px solid var(--line); box-shadow:none; }
   .status { color:var(--muted); font-size:14px; margin-top:18px; min-height:20px; letter-spacing:.4px; }
+  .live-ticker { display:inline-flex; align-items:center; gap:8px; margin:0 auto 20px; padding:7px 15px; border-radius:20px;
+    border:1px solid rgba(124,227,139,.3); background:rgba(124,227,139,.07); font-family:'Oswald',sans-serif; font-size:13px; letter-spacing:.6px; color:var(--ink); }
+  .live-ticker .lt-dot { width:8px; height:8px; border-radius:50%; background:#7CE38B; box-shadow:0 0 9px #7CE38B; animation:ltpulse 1.6s ease-in-out infinite; }
+  @keyframes ltpulse { 0%,100%{ opacity:1; } 50%{ opacity:.3; } }
   .rating-chip { margin-bottom:18px; display:flex; flex-direction:column; align-items:center; gap:8px; }
   .rating-chip .elo { font-family:'Oswald',sans-serif; font-size:15px; letter-spacing:1px; text-transform:uppercase; color:var(--ink);
     border:1px solid rgba(255,206,58,.4); background:rgba(255,206,58,.08); border-radius:20px; padding:7px 16px; }
@@ -116,15 +120,23 @@
   .prompt { color:var(--muted); font-size:13px; line-height:1.5; }
 
   /* ---------- role reveal ---------- */
-  #roleScreen { justify-content:center; min-height:60vh; }
-  .role-card { width:300px; height:200px; border-radius:20px; display:flex; flex-direction:column;
-    align-items:center; justify-content:center; gap:8px; border:2px solid; box-shadow:0 20px 60px rgba(0,0,0,.55);
-    background:linear-gradient(180deg,var(--panel-a),var(--panel-b)); }
-  .role-card .emoji { font-size:60px; line-height:1; }
-  .role-card .rl { font-family:'Oswald',sans-serif; font-size:34px; font-weight:700; letter-spacing:3px; text-transform:uppercase; }
-  .role-card.pitcher { border-color:var(--pitch); } .role-card.pitcher .rl { color:var(--pitch); }
-  .role-card.batter { border-color:var(--bat); } .role-card.batter .rl { color:var(--bat); }
-  .role-sub { color:var(--muted); margin-top:18px; font-size:14px; }
+  #roleScreen { justify-content:center; align-items:center; min-height:74vh; text-align:center; }
+  .role-card { width:320px; border-radius:22px; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:18px; padding:34px 22px; border:2px solid; box-shadow:0 24px 70px rgba(0,0,0,.55);
+    background:radial-gradient(120% 80% at 50% 0%, color-mix(in srgb, var(--rc) 14%, transparent), transparent 60%), linear-gradient(180deg,var(--panel-a),var(--panel-b)); }
+  .role-card .role-fig { width:130px; height:180px; mask-size:contain; mask-repeat:no-repeat; mask-position:center bottom;
+    -webkit-mask-size:contain; -webkit-mask-repeat:no-repeat; -webkit-mask-position:center bottom;
+    background:var(--rc); animation:figGlow 2s ease-in-out infinite; }
+  @keyframes figGlow {
+    0%,100% { filter:drop-shadow(0 0 10px var(--rc)) drop-shadow(0 0 4px var(--rc)); }
+    50%     { filter:drop-shadow(0 0 26px var(--rc)) drop-shadow(0 0 46px var(--rc)); }
+  }
+  .role-card .rl { font-family:'Oswald',sans-serif; font-size:30px; font-weight:700; letter-spacing:2.5px; text-transform:uppercase; color:var(--rc); line-height:1.05; }
+  .role-card.pitcher { --rc:var(--pitch); border-color:var(--pitch); }
+  .role-card.pitcher .role-fig { -webkit-mask-image:url(pitcher-figure.png); mask-image:url(pitcher-figure.png); }
+  .role-card.batter { --rc:var(--bat); border-color:var(--bat); }
+  .role-card.batter .role-fig { -webkit-mask-image:url(batter-figure.png); mask-image:url(batter-figure.png); }
+  .role-sub { color:var(--muted); margin-top:18px; font-size:14px; max-width:340px; }
 
   /* ---------- build screen ---------- */
   .build-top { width:100%; max-width:760px; display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; }
@@ -286,6 +298,7 @@
       <h1>Face <i>Off</i></h1>
       <p>Match up with a real player. One of you pitches, one of you hits. Build fast — highest Overall wins the at-bat.</p>
     </div>
+    <div class="live-ticker" id="liveTicker" style="display:none"><span class="lt-dot"></span><span id="ltText">…</span></div>
     <div class="vs-card">
       <div id="ratingChip" class="rating-chip"></div>
       <button class="btn" id="findBtn">⚔️ Find Match</button>
@@ -312,7 +325,7 @@
 
   <!-- 2. Role reveal -->
   <div class="screen" id="roleScreen">
-    <div class="role-card" id="roleCard"><div class="emoji" id="roleEmoji">⚾</div><div class="rl" id="roleLabel">—</div></div>
+    <div class="role-card" id="roleCard"><div class="role-fig" id="roleFig"></div><div class="rl" id="roleLabel">—</div></div>
     <div class="role-sub" id="roleSub">Get ready…</div>
   </div>
 
@@ -610,15 +623,45 @@ async function loadData(role){
   return DATA[role];
 }
 
-async function connectAbly(){
-  clientId = rid();
-  // echoMessages:false → don't receive our OWN published messages (otherwise our build would
-  // come back to us and get treated as the opponent's = "you vs you").
-  ably = new Ably.Realtime({ authUrl: '/api/ably-token?clientId=' + clientId, clientId, echoMessages: false });
-  await new Promise((resolve, reject) => {
-    ably.connection.once('connected', resolve);
-    ably.connection.once('failed', reject);
+let ablyPromise = null;
+function connectAbly(){
+  // single shared connection (reused by the on-load presence ticker AND matchmaking)
+  if (ablyPromise) return ablyPromise;
+  ablyPromise = new Promise((resolve, reject) => {
+    clientId = rid();
+    // echoMessages:false → don't receive our OWN published messages (otherwise our build would
+    // come back to us and get treated as the opponent's = "you vs you").
+    ably = new Ably.Realtime({ authUrl: '/api/ably-token?clientId=' + clientId, clientId, echoMessages: false });
+    ably.connection.once('connected', () => resolve());
+    ably.connection.once('failed', e => { ablyPromise = null; reject(e); });
   });
+  return ablyPromise;
+}
+
+/* ---------- live "who's online" ticker (global Ably presence) ---------- */
+let onlineCh = null, myOnlineStatus = 'idle';
+async function goOnline(){
+  try { await connectAbly(); } catch(e){ return; }
+  onlineCh = ably.channels.get('versus:online');
+  onlineCh.presence.subscribe(['enter','leave','update'], recomputeTicker);
+  try { await onlineCh.presence.enter({ status: myOnlineStatus }); } catch(e){}
+  recomputeTicker();
+}
+async function setOnlineStatus(s){
+  myOnlineStatus = s;
+  if (onlineCh){ try { await onlineCh.presence.update({ status: s }); } catch(e){} }
+}
+async function recomputeTicker(){
+  if (!onlineCh) return;
+  let members;
+  try { members = await onlineCh.presence.get(); } catch(e){ return; }
+  let playing = 0, waiting = 0;
+  for (const m of members){ const st = m.data && m.data.status; if (st === 'playing') playing++; else if (st === 'searching') waiting++; }
+  const el = $('liveTicker'), t = $('ltText'); if (!el) return;
+  el.style.display = 'inline-flex';
+  t.textContent = (playing + waiting === 0)
+    ? 'Live · be the first to find a match'
+    : `${playing} playing · ${waiting} waiting for a match`;
 }
 
 let searching=false, retryTimer=null;
@@ -632,6 +675,7 @@ async function findMatch(){
     if (!ably || ably.connection.state !== 'connected') await connectAbly();
   } catch(e){ setStatus('Could not connect. Check Ably is configured, then retry.'); failBack(); return; }
   setStatus('Searching for an opponent…');
+  setOnlineStatus('searching');
 
   searching = true;
   // subscribe to my invite channel BEFORE asking the server (so I can't miss a hand-off)
@@ -675,6 +719,7 @@ function failBack(){ $('findBtn').style.display='inline-block'; $('mmSpin').styl
 
 async function cancelSearch(){
   stopSearch();
+  setOnlineStatus('idle');
   if (clientId) { try { await fetch('/api/match',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'leave',id:clientId})}); } catch(e){} }
   if (inviteCh) { inviteCh.unsubscribe(); inviteCh=null; }
   failBack(); setStatus('');
@@ -692,6 +737,7 @@ function resetMatch(){
 
 let oppPresent=false;
 async function startMatch(mId, role, sd, opp, claimer){
+  setOnlineStatus('playing');
   if (inviteCh){ inviteCh.unsubscribe(); inviteCh=null; }
   matchId=mId; myRole=role; oppRole=role==='pitcher'?'batter':'pitcher'; seed=(sd>>>0); oppId=opp; wasClaimer=!!claimer;
   rng = mulberry32(seed || 1);
@@ -720,12 +766,13 @@ function beginRoleReveal(){
   showScreen('roleScreen');
   const card = $('roleCard');
   card.className = 'role-card ' + myRole;
-  $('roleEmoji').textContent = myRole === 'pitcher' ? '⚾' : '🏏';
   $('roleLabel').textContent = "You're the " + (myRole === 'pitcher' ? 'Pitcher' : 'Batter');
   $('roleSub').textContent = myRole === 'pitcher'
     ? 'Build a pitcher to strike them out. Highest Overall wins.'
     : 'Build a hitter to crush it. Highest Overall wins.';
-  gsap.fromTo(card, { rotationY: 90, opacity: 0, scale: .8 }, { rotationY: 0, opacity: 1, scale: 1, duration: .7, ease: 'back.out(1.6)' });
+  gsap.fromTo(card, { opacity: 0, scale: .82, y: 16 }, { opacity: 1, scale: 1, y: 0, duration: .55, ease: 'back.out(1.6)' });
+  gsap.fromTo('#roleFig', { opacity: 0, y: 26, scale: .9 }, { opacity: 1, y: 0, scale: 1, duration: .6, delay: .12, ease: 'power3.out' });
+  gsap.fromTo('#roleLabel', { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: .4, delay: .28, ease: 'power2.out' });
   Sound.whoosh();
   setTimeout(beginBuild, 2200);
 }
@@ -966,6 +1013,7 @@ function updateWaitArena(){
 }
 function showNoContest(){
   waitingArena=false; $('waitArena').classList.remove('show');
+  setOnlineStatus('idle');
   if (atBatStarted || oppBuild) return;
   showScreen('resultScreen');
   $('resultCard').className = 'result-card';
@@ -1059,6 +1107,7 @@ function showCall(text, color){
 /* ---------- result ---------- */
 function showResult(iWon, pitcher, batter, winnerRole){
   showScreen('resultScreen');
+  setOnlineStatus('idle');
   const card=$('resultCard'); card.className='result-card '+(iWon?'win':'lose');
   $('resultHead').textContent = iWon ? 'YOU WIN' : 'YOU LOSE';
   const winSide = winnerRole==='pitcher'?'Pitcher':'Batter';
@@ -1133,6 +1182,7 @@ $('rematchBtn').onclick = () => { Sound.click(); findMatch(); };
 // sign-in + rating on load
 initGoogle();
 refreshStats().then(updateRatingChip);
+goOnline();  // join the global presence channel so the live ticker shows real counts
 // leave the queue if the tab closes while waiting
 window.addEventListener('pagehide', () => {
   if (clientId) { try { navigator.sendBeacon('/api/match', JSON.stringify({ action:'leave', id: clientId })); } catch(e){} }
