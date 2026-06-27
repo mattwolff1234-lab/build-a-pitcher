@@ -1152,12 +1152,12 @@ function makePitchSequence(pitcher, batter, winnerRole, rr){
 
   return {
     outcome:'hit',
-    summary:'Batter wins by barreling the at-bat',
-    finalCall:'BARRELED!',
+    summary:'Batter wins on a crushed home run',
+    finalCall:'HOME RUN!',
     pitches:[
       pitch('Ball 1','ball','ball'),
       pitch('Strike 1','strike','strike', { swing:false }),
-      pitch('Barrel','hit','hit', { swing:true, contact:true, final:true })
+      pitch('Crushed','hit','hit', { swing:true, contact:true, final:true })
     ]
   };
 }
@@ -1205,7 +1205,7 @@ function appendPitch(tl, pitch, idx){
   } else if(pitch.result === 'hit'){
     tl.add(()=> Sound.crack())
       .to(ball,{ left:'108%', bottom:'92%', scale:1.3, duration:.85, ease:'power2.out' })
-      .add(()=> showCall('BARRELED!', 'var(--bat)'))
+      .add(()=> showCall('HOME RUN!', 'var(--bat)'))
       .to('#silhoB',{ rotation:8, duration:.3 },'<');
   } else {
     tl.add(()=> Sound.catch())
