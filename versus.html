@@ -543,16 +543,18 @@ async function refreshStats(){
   try {
     const r = await fetch('/api/account', { method:'POST', headers:{'content-type':'application/json'},
       body: JSON.stringify(Object.assign({ action:'pvpStats' }, principal())) }).then(x=>x.json());
-    if (r.ok) myStats = { elo:r.elo, wins:r.wins, losses:r.losses };
+    if (r.ok) myStats = { elo:r.elo, wins:r.wins, losses:r.losses, streak:r.streak||0 };
     else if (account && r.error === 'Not signed in'){ account=null; try{ localStorage.removeItem('pl_account'); }catch(e){} return refreshStats(); }
   } catch(e){}
 }
 function updateRatingChip(){
   const el = $('ratingChip'); if (!el) return; el.innerHTML='';
   const elo = myStats ? myStats.elo : 1000, w = myStats ? myStats.wins : 0, l = myStats ? myStats.losses : 0;
+  const streak = myStats ? (myStats.streak || 0) : 0;
+  const streakTag = streak >= 2 ? ` · 🔥${streak}` : '';
   // editable handle + rating, always (signed in or guest)
   const row = document.createElement('div'); row.className='elo';
-  row.innerHTML = `⚔️ <input id="guestNameInput" maxlength="20" value="${escapeHTML(guestName)}"> Rating<b>${elo}</b><span class="rec">${w}W · ${l}L</span>`;
+  row.innerHTML = `⚔️ <input id="guestNameInput" maxlength="20" value="${escapeHTML(guestName)}"> Rating<b>${elo}</b><span class="rec">${w}W · ${l}L${streakTag}</span>`;
   el.appendChild(row);
   if (account){
     const note = document.createElement('div'); note.className='guest'; note.textContent='✓ Signed in · rating saved to your account';
@@ -574,7 +576,7 @@ async function applyResult(){
     const r = await fetch('/api/account', { method:'POST', headers:{'content-type':'application/json'},
       body: JSON.stringify(Object.assign({ action:'pvpResult', matchId: pr.matchId, won: pr.won, oppElo: pr.oppElo,
         role: pr.role, ovr: pr.ovr, oppOvr: pr.oppOvr }, principal())) }).then(x=>x.json());
-    if (r.ok){ myStats = { elo:r.elo, wins:r.wins, losses:r.losses }; renderRatingResult(r); }
+    if (r.ok){ myStats = { elo:r.elo, wins:r.wins, losses:r.losses, streak:r.streak||0 }; renderRatingResult(r); }
   } catch(e){}
 }
 function renderRatingResult(r){
@@ -582,7 +584,10 @@ function renderRatingResult(r){
   const prev = r.elo - r.delta;
   const dir = r.delta >= 0 ? 'up' : 'down';
   const sign = r.delta >= 0 ? '+' : '';
+  const streakLine = (r.bonus > 0)
+    ? `<div class="prompt" style="color:#ffb13a">🔥 ${r.streak}-win streak · +${r.bonus} streak bonus${r.streak >= 5 ? ' (max)' : ''}</div>` : '';
   el.innerHTML = `<div class="delta">Rating ${prev} → <b class="${dir}">${r.elo}</b> <span class="${dir}">(${sign}${r.delta})</span></div>`
+    + streakLine
     + `<div class="prompt">${r.wins}W · ${r.losses}L${isGuest() ? ' · saved on this device' : ''}</div>`;
   gsap.fromTo(el.querySelector('.delta'), { y:8, opacity:0 }, { y:0, opacity:1, duration:.5, ease:'power2.out' });
   // guests: offer to back the rating up to a Google account

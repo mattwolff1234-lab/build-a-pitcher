@@ -59,6 +59,7 @@ function ensure() {
       await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS pvp_elo int NOT NULL DEFAULT 1000`;
       await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS pvp_wins int NOT NULL DEFAULT 0`;
       await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS pvp_losses int NOT NULL DEFAULT 0`;
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS pvp_streak int NOT NULL DEFAULT 0`;
       // one row per (match, player) so a result can only count once even if reported twice
       await sql`CREATE TABLE IF NOT EXISTS pvp_results (
         match_id text NOT NULL,
@@ -100,6 +101,8 @@ function nextElo(elo, oppElo, won) {
   const delta = Math.round(32 * ((won ? 1 : 0) - expected));
   return { elo: Math.max(100, elo + delta), delta };
 }
+// Small win-streak bonus: +2 Elo per consecutive win, stops growing at a 5-win streak (max +10).
+const STREAK_BONUS = 2, STREAK_CAP = 5;
 
 async function authed(sub, sessionToken) {
   if (!sub || !sessionToken) return false;
@@ -173,9 +176,9 @@ module.exports = async (req, res) => {
       if (action === 'pvpStats') {
         const key = await pvpKey(body);
         if (!key) return res.status(401).json({ ok: false, error: 'Not signed in' });
-        const [u] = await sql`SELECT pvp_elo AS elo, pvp_wins AS wins, pvp_losses AS losses FROM users WHERE google_sub = ${key}`;
+        const [u] = await sql`SELECT pvp_elo AS elo, pvp_wins AS wins, pvp_losses AS losses, pvp_streak AS streak FROM users WHERE google_sub = ${key}`;
         if (!u) return res.status(401).json({ ok: false, error: 'Not signed in' });
-        return res.status(200).json({ ok: true, elo: u.elo, wins: u.wins, losses: u.losses });
+        return res.status(200).json({ ok: true, elo: u.elo, wins: u.wins, losses: u.losses, streak: u.streak });
       }
 
       if (action === 'pvpResult') {
@@ -197,16 +200,20 @@ module.exports = async (req, res) => {
               ON CONFLICT (match_id, role) DO NOTHING`;
           } catch (e) {}
         }
-        const [u] = await sql`SELECT pvp_elo AS elo, pvp_wins AS wins, pvp_losses AS losses FROM users WHERE google_sub = ${key}`;
+        const [u] = await sql`SELECT pvp_elo AS elo, pvp_wins AS wins, pvp_losses AS losses, pvp_streak AS streak FROM users WHERE google_sub = ${key}`;
         if (!u) return res.status(401).json({ ok: false, error: 'Not signed in' });
         // dedupe: only the first report for this (match, player) counts
         const ins = await sql`INSERT INTO pvp_results (match_id, google_sub) VALUES (${matchId}, ${key})
           ON CONFLICT DO NOTHING RETURNING match_id`;
-        if (!ins.length) return res.status(200).json({ ok: true, counted: false, elo: u.elo, delta: 0, wins: u.wins, losses: u.losses });
-        const { elo, delta } = nextElo(u.elo, oppElo, won);
+        if (!ins.length) return res.status(200).json({ ok: true, counted: false, elo: u.elo, delta: 0, bonus: 0, streak: u.streak, wins: u.wins, losses: u.losses });
+        const { delta } = nextElo(u.elo, oppElo, won);
+        // win-streak bonus (grows per consecutive win, capped at a 5-win streak)
+        const streak = won ? (u.streak || 0) + 1 : 0;
+        const bonus = won ? Math.min(streak, STREAK_CAP) * STREAK_BONUS : 0;
+        const elo = Math.max(100, u.elo + delta + bonus);
         const wins = u.wins + (won ? 1 : 0), losses = u.losses + (won ? 0 : 1);
-        await sql`UPDATE users SET pvp_elo = ${elo}, pvp_wins = ${wins}, pvp_losses = ${losses} WHERE google_sub = ${key}`;
-        return res.status(200).json({ ok: true, counted: true, elo, delta, wins, losses });
+        await sql`UPDATE users SET pvp_elo = ${elo}, pvp_wins = ${wins}, pvp_losses = ${losses}, pvp_streak = ${streak} WHERE google_sub = ${key}`;
+        return res.status(200).json({ ok: true, counted: true, elo, delta: delta + bonus, bonus, streak, wins, losses });
       }
 
       // Carry a device-guest's rating onto a Google account the first time they sign in
@@ -216,9 +223,9 @@ module.exports = async (req, res) => {
         const gid = body.guestId ? ('guest:' + String(body.guestId).slice(0, 48)) : null;
         const [acct] = await sql`SELECT pvp_elo AS elo, pvp_wins AS wins, pvp_losses AS losses FROM users WHERE google_sub = ${body.sub}`;
         if (gid && acct && acct.wins === 0 && acct.losses === 0) {
-          const [g] = await sql`SELECT pvp_elo AS elo, pvp_wins AS wins, pvp_losses AS losses FROM users WHERE google_sub = ${gid}`;
+          const [g] = await sql`SELECT pvp_elo AS elo, pvp_wins AS wins, pvp_losses AS losses, pvp_streak AS streak FROM users WHERE google_sub = ${gid}`;
           if (g && (g.wins > 0 || g.losses > 0)) {
-            await sql`UPDATE users SET pvp_elo = ${g.elo}, pvp_wins = ${g.wins}, pvp_losses = ${g.losses} WHERE google_sub = ${body.sub}`;
+            await sql`UPDATE users SET pvp_elo = ${g.elo}, pvp_wins = ${g.wins}, pvp_losses = ${g.losses}, pvp_streak = ${g.streak} WHERE google_sub = ${body.sub}`;
             await sql`DELETE FROM users WHERE google_sub = ${gid}`;  // retire the guest identity
             return res.status(200).json({ ok: true, claimed: true, elo: g.elo, wins: g.wins, losses: g.losses });
           }
