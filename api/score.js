@@ -61,6 +61,15 @@ module.exports = async (req, res) => {
       return res.status(200).json({ ok: true, id: Number(row.id), globalRank: ahead + 1 });
     }
 
+    // TEMP one-time cleanup: wipe the broken OVR-1 builds (Strikeout bug fallout).
+    // Token-locked AND hard-scoped to ovr=1 only, so it can't delete real scores. Remove after running.
+    if (req.method === 'DELETE') {
+      if ((req.query && req.query.key) !== '493f07d120b2eb2ae95813a403bd03997161ac86c5f38108')
+        return res.status(403).json({ ok: false, error: 'forbidden' });
+      const deleted = await sql`DELETE FROM scores WHERE ovr = 1 RETURNING id`;
+      return res.status(200).json({ ok: true, deleted: deleted.length });
+    }
+
     const scope = (req.query && req.query.scope) || 'global';
     const limit = Math.min(200, Math.max(1, parseInt(req.query && req.query.limit, 10) || 50));
     const daily = scope === 'daily';
