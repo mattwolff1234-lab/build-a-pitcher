@@ -7,6 +7,7 @@
 <meta name="theme-color" content="#0a1320">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="https://cdn.ably.com/lib/ably.min-2.js"></script>
+<script src="https://accounts.google.com/gsi/client" async></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -71,6 +72,20 @@
   .btn:disabled { opacity:.5; cursor:default; }
   .btn.ghost { background:rgba(255,255,255,.05); color:var(--ink); border:1px solid var(--line); box-shadow:none; }
   .status { color:var(--muted); font-size:14px; margin-top:18px; min-height:20px; letter-spacing:.4px; }
+  .rating-chip { margin-bottom:18px; display:flex; flex-direction:column; align-items:center; gap:8px; }
+  .rating-chip .elo { font-family:'Oswald',sans-serif; font-size:15px; letter-spacing:1px; text-transform:uppercase; color:var(--ink);
+    border:1px solid rgba(255,206,58,.4); background:rgba(255,206,58,.08); border-radius:20px; padding:7px 16px; }
+  .rating-chip .elo b { color:var(--gold); font-size:18px; margin:0 4px; }
+  .rating-chip .rec { color:var(--muted); font-weight:400; margin-left:6px; }
+  .rating-chip .elo input { width:108px; font-family:'Oswald',sans-serif; font-size:14px; letter-spacing:.5px; color:var(--ink);
+    background:rgba(0,0,0,.25); border:1px solid var(--line); border-radius:7px; padding:3px 8px; margin:0 4px; text-align:center; text-transform:none; }
+  .rating-chip .elo input:focus { outline:none; border-color:var(--accent2); }
+  .rating-chip .guest { color:var(--dim); font-size:12.5px; }
+  .rating-result { margin-top:16px; display:flex; flex-direction:column; align-items:center; gap:10px; }
+  .rating-result .delta { font-family:'Oswald',sans-serif; font-size:17px; letter-spacing:.5px; }
+  .rating-result .delta b { font-size:26px; margin:0 5px; }
+  .rating-result .up { color:#7CE38B; } .rating-result .down { color:#ff6b6b; }
+  .rating-result .prompt { color:var(--muted); font-size:13px; line-height:1.4; }
   .spinner { width:34px; height:34px; border-radius:50%; border:3px solid rgba(255,255,255,.12);
     border-top-color:var(--accent); margin:18px auto 0; animation:spin 0.8s linear infinite; display:none; }
   @keyframes spin { to { transform:rotate(360deg); } }
@@ -196,6 +211,7 @@
       <p>Match up with a real player. One of you pitches, one of you hits. Build fast — highest Overall wins the at-bat.</p>
     </div>
     <div class="vs-card">
+      <div id="ratingChip" class="rating-chip"></div>
       <button class="btn" id="findBtn">⚔️ Find Match</button>
       <div class="spinner" id="mmSpin"></div>
       <div class="status" id="mmStatus"></div>
@@ -252,6 +268,7 @@
       <div class="rh" id="resultHead">—</div>
       <div class="rline" id="resultLine"></div>
       <div class="rsub" id="resultSub"></div>
+      <div id="ratingResult" class="rating-result"></div>
       <div class="result-actions">
         <button class="btn" id="rematchBtn" style="font-size:14px;">⚔️ New Match</button>
         <a class="btn ghost" href="/" style="font-size:13px; padding:14px 22px; text-decoration:none; display:inline-block;">Home</a>
@@ -366,6 +383,105 @@ let DATA={};               // role -> data json
 let myBuild=null, oppBuild=null, atBatStarted=false;
 let claimTimeout=null;
 
+/* ---------- account + Elo rating ----------
+   Two ways to have a rating:
+   - Device guest: a random guestId + a chosen name, stored on this device. Rating persists
+     server-side (no password). Nudged to sign in to back it up / play on other devices.
+   - Google account: shared sign-in with the other games via localStorage 'pl_account'.
+   Either way the rating lives on the server; the client just sends a "principal" identifying who. */
+const GOOGLE_CLIENT_ID = '349698720898-t9bpb8fp7ks6scf8ci8mmoeec1lpm3d3.apps.googleusercontent.com';
+let account=null; try { account = JSON.parse(localStorage.getItem('pl_account') || 'null'); } catch(e){}
+let myStats=null;            // {elo,wins,losses} — set for guests AND signed-in users
+let pendingResult=null;      // {matchId, won, oppElo} captured at game end
+function myElo(){ return myStats ? myStats.elo : 1000; }
+function saveAccount(a){ account=a; try{ localStorage.setItem('pl_account', JSON.stringify(a)); }catch(e){} }
+
+// device-guest identity
+let guestId, guestName;
+try { guestId = localStorage.getItem('pl_guestId'); } catch(e){}
+if (!guestId){ guestId = 'g_' + Math.random().toString(36).slice(2) + Date.now().toString(36); try{ localStorage.setItem('pl_guestId', guestId); }catch(e){} }
+try { guestName = localStorage.getItem('pl_guestName'); } catch(e){}
+if (!guestName){ guestName = 'Player' + Math.floor(1000 + Math.random()*9000); try{ localStorage.setItem('pl_guestName', guestName); }catch(e){} }
+function setGuestName(n){ guestName = (String(n||'').trim().slice(0,20)) || guestName; try{ localStorage.setItem('pl_guestName', guestName); }catch(e){} }
+
+// who the server should treat this request as
+function principal(){ return account ? { sub:account.sub, sessionToken:account.sessionToken } : { guestId, name:guestName }; }
+function isGuest(){ return !account; }
+function displayName(){ return (account && account.name) ? account.name : guestName; }
+
+function initGoogle(tries=0){
+  if (!window.google || !google.accounts || !google.accounts.id){ if (tries<40) setTimeout(()=>initGoogle(tries+1), 250); return; }
+  try { google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleCredential, auto_select: true }); } catch(e){}
+  gsiReady=true; updateRatingChip();
+}
+let gsiReady=false;
+async function onGoogleCredential(resp){
+  try {
+    const j = await fetch('/api/account', { method:'POST', headers:{'content-type':'application/json'},
+      body: JSON.stringify({ action:'login', idToken: resp.credential }) }).then(x=>x.json());
+    if (j.ok){
+      saveAccount({ sub:j.sub, email:j.email, name:j.name, picture:j.picture, sessionToken:j.sessionToken });
+      // carry the guest rating onto the account (only if the account has never played)
+      try { await fetch('/api/account', { method:'POST', headers:{'content-type':'application/json'},
+        body: JSON.stringify({ action:'pvpClaim', sub:j.sub, sessionToken:j.sessionToken, guestId }) }); } catch(e){}
+      await refreshStats(); updateRatingChip();
+      if (pendingResult) applyResult();
+    }
+  } catch(e){}
+}
+async function refreshStats(){
+  try {
+    const r = await fetch('/api/account', { method:'POST', headers:{'content-type':'application/json'},
+      body: JSON.stringify(Object.assign({ action:'pvpStats' }, principal())) }).then(x=>x.json());
+    if (r.ok) myStats = { elo:r.elo, wins:r.wins, losses:r.losses };
+    else if (account && r.error === 'Not signed in'){ account=null; try{ localStorage.removeItem('pl_account'); }catch(e){} return refreshStats(); }
+  } catch(e){}
+}
+function updateRatingChip(){
+  const el = $('ratingChip'); if (!el) return; el.innerHTML='';
+  const elo = myStats ? myStats.elo : 1000, w = myStats ? myStats.wins : 0, l = myStats ? myStats.losses : 0;
+  if (account){
+    el.innerHTML = `<div class="elo">⚔️ Rating<b>${elo}</b><span class="rec">${w}W · ${l}L · ${escapeHTML(account.name||'You')}</span></div>`;
+  } else {
+    // guest: editable name + their persistent rating, plus a sign-in nudge
+    const row = document.createElement('div'); row.className='elo';
+    row.innerHTML = `⚔️ <input id="guestNameInput" maxlength="20" value="${escapeHTML(guestName)}"> Rating<b>${elo}</b><span class="rec">${w}W · ${l}L</span>`;
+    const note = document.createElement('div'); note.className='guest'; note.textContent='Sign in to save your rating & play on other devices';
+    const wrap = document.createElement('div'); wrap.id='gsiChip';
+    el.appendChild(row); el.appendChild(note); el.appendChild(wrap);
+    const inp = $('guestNameInput');
+    inp.onchange = () => { setGuestName(inp.value); refreshStats().then(updateRatingChip); };
+    inp.onkeydown = e => { if (e.key==='Enter') inp.blur(); };
+    if (gsiReady){ try { google.accounts.id.renderButton(wrap, { theme:'filled_black', size:'medium', shape:'pill', text:'signin_with' }); } catch(e){} }
+  }
+}
+async function applyResult(){
+  if (!pendingResult) return;
+  const pr = pendingResult; pendingResult=null;
+  try {
+    const r = await fetch('/api/account', { method:'POST', headers:{'content-type':'application/json'},
+      body: JSON.stringify(Object.assign({ action:'pvpResult', matchId: pr.matchId, won: pr.won, oppElo: pr.oppElo }, principal())) }).then(x=>x.json());
+    if (r.ok){ myStats = { elo:r.elo, wins:r.wins, losses:r.losses }; renderRatingResult(r); }
+  } catch(e){}
+}
+function renderRatingResult(r){
+  const el = $('ratingResult'); if (!el) return;
+  const prev = r.elo - r.delta;
+  const dir = r.delta >= 0 ? 'up' : 'down';
+  const sign = r.delta >= 0 ? '+' : '';
+  el.innerHTML = `<div class="delta">Rating ${prev} → <b class="${dir}">${r.elo}</b> <span class="${dir}">(${sign}${r.delta})</span></div>`
+    + `<div class="prompt">${r.wins}W · ${r.losses}L${isGuest() ? ' · saved on this device' : ''}</div>`;
+  gsap.fromTo(el.querySelector('.delta'), { y:8, opacity:0 }, { y:0, opacity:1, duration:.5, ease:'power2.out' });
+  // guests: offer to back the rating up to a Google account
+  if (isGuest()){
+    const p = document.createElement('div'); p.className='prompt'; p.style.marginTop='4px';
+    p.textContent='Sign in to save it & play on other devices →';
+    const wrap = document.createElement('div'); wrap.id='gsiResult';
+    el.appendChild(p); el.appendChild(wrap);
+    if (gsiReady){ try { google.accounts.id.renderButton(wrap, { theme:'filled_black', size:'large', shape:'pill', text:'signin_with' }); } catch(e){} }
+  }
+}
+
 function rid(){ return Math.random().toString(36).slice(2) + Date.now().toString(36); }
 
 async function loadData(role){
@@ -388,6 +504,7 @@ let searching=false, retryTimer=null;
 async function findMatch(){
   resetMatch();
   showScreen('mmScreen');
+  updateRatingChip();
   $('findBtn').style.display='none'; $('mmSpin').style.display='block'; $('cancelWrap').style.display='block';
   setStatus('Connecting…');
   try {
@@ -491,7 +608,7 @@ function beginRoleReveal(){
 /* ---------- quick build ---------- */
 const CARD_W = 98; // rcard width(90) + gap(8)
 const buildState = { filled:{}, used:new Set(), landed:null, spinning:false, finished:false };
-let clockLeft = 60, clockTimer = null;
+let clockLeft = 120, clockTimer = null;
 
 function pool(){ return DATA[myRole].pool; }
 function randPlayer(){
@@ -514,7 +631,7 @@ function beginBuild(){
   for (const s of ROLE[myRole].slots){ const d=document.createElement('div'); d.className='seg'; d.style.webkitMaskImage=`url(${s.mask})`; d.style.maskImage=`url(${s.mask})`; fw.appendChild(d); segEls[s.key]=d; }
   renderSlots(); updateOvr(); idleReel();
   $('spinBtn').onclick = spin;
-  clockLeft=60; $('clock').textContent=clockLeft; $('clock').classList.remove('warn');
+  clockLeft=120; $('clock').textContent=fmtClock(clockLeft); $('clock').classList.remove('warn');
   clockTimer = setInterval(tickClock, 1000);
   updateOppPill();
   publishProgress();
@@ -528,9 +645,12 @@ function renderSlots(){
     const armed = !!buildState.landed && !f;
     const d=document.createElement('div');
     d.className='slot ' + (f?'filled':'open') + (armed?' armed':'');
+    // when a player is landed, preview the exact rating they'd give each open slot (so you can strategize)
+    const preview = armed ? slotNumeric(myRole, buildState.landed, s) : null;
     d.innerHTML = `<div style="flex:1"><div class="sname">${s.label}</div><div class="spart">${s.part}</div></div>` +
       (f ? `<img class="shot" src="${f.img}" onerror="this.style.visibility='hidden'"><div class="sval">${f.value}</div>`
-         : `<div class="sval" style="color:#3a445a">${armed?'＋':'·'}</div>`);
+         : (armed ? `<div class="sval" style="color:var(--accent2)">+${preview}</div>`
+                  : `<div class="sval" style="color:#3a445a">·</div>`));
     if (armed) d.onclick = () => assign(s.key);
     wrap.appendChild(d);
   }
@@ -597,9 +717,10 @@ function assign(key){
   if(openSlots().length===0) finishBuild();
   else { if(idleTween)idleTween.kill(); idleReel(); }
 }
+function fmtClock(s){ s=Math.max(0,s); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
 function tickClock(){
-  clockLeft--; $('clock').textContent=Math.max(0,clockLeft);
-  if(clockLeft<=10)$('clock').classList.add('warn');
+  clockLeft--; $('clock').textContent=fmtClock(clockLeft);
+  if(clockLeft<=15)$('clock').classList.add('warn');
   if(clockLeft<=0){ clearInterval(clockTimer); clockTimer=null; autoFill(); }
 }
 function autoFill(){
@@ -618,7 +739,7 @@ function finishBuild(){
   const slots = ROLE[myRole].slots.map(s=>buildState.filled[s.key]);
   const ovr = computeOvr(myRole, buildState.filled);
   const team = modalTeam(slots);
-  myBuild = { role:myRole, ovr, team, slots, name:(myRole==='pitcher'?'Your Pitcher':'Your Hitter') };
+  myBuild = { role:myRole, ovr, team, slots, elo: myElo(), name: displayName() };
   $('buildHint').textContent='Locked in! Waiting for your opponent…';
   publishBuild();
   updateOppPill();
@@ -654,11 +775,13 @@ function playAtBat(){
   else winnerRole = rng()<0.5?'pitcher':'batter';
   const iWon = winnerRole===myRole;
 
-  // matchup header
+  // matchup header (with each player's name)
+  const pName = escapeHTML(pitcher.name || 'Pitcher') + (myRole==='pitcher'?' (You)':'');
+  const bName = escapeHTML(batter.name || 'Batter') + (myRole==='batter'?' (You)':'');
   $('matchup').innerHTML =
-    `<div class="side"><div class="who" style="color:var(--pitch)">⚾ Pitcher${myRole==='pitcher'?' (You)':''}</div><div class="o" style="color:var(--pitch)">${pitcher.ovr}</div></div>`+
+    `<div class="side"><div class="who" style="color:var(--pitch)">⚾ ${pName}</div><div class="o" style="color:var(--pitch)">${pitcher.ovr}</div></div>`+
     `<div class="mid">VS</div>`+
-    `<div class="side"><div class="who" style="color:var(--bat)">🏏 Batter${myRole==='batter'?' (You)':''}</div><div class="o" style="color:var(--bat)">${batter.ovr}</div></div>`;
+    `<div class="side"><div class="who" style="color:var(--bat)">🏏 ${bName}</div><div class="o" style="color:var(--bat)">${batter.ovr}</div></div>`;
   $('silhoP').style.background = brightTeam(pitcher.team);
   $('silhoB').style.background = brightTeam(batter.team);
 
@@ -707,17 +830,26 @@ function showResult(iWon, pitcher, batter, winnerRole){
   $('resultHead').textContent = iWon ? 'YOU WIN' : 'YOU LOSE';
   const winSide = winnerRole==='pitcher'?'Pitcher':'Batter';
   $('resultLine').textContent = `${winSide} wins · ${pitcher.ovr} OVR pitcher vs ${batter.ovr} OVR batter`;
-  $('resultSub').textContent = iWon ? 'Higher Overall takes it. Run it back?' : 'Out-rated this time. Build a better one.';
+  const oppName = (oppBuild && oppBuild.name) ? oppBuild.name : 'your opponent';
+  $('resultSub').textContent = iWon ? `You beat ${oppName}. Run it back?` : `${oppName} got you. Build a better one.`;
   iWon ? Sound.win() : Sound.lose();
   gsap.fromTo(card,{ y:24, opacity:0, scale:.92 },{ y:0, opacity:1, scale:1, duration:.5, ease:'back.out(1.5)' });
-  // record local W/L
-  try { const k='pl_pvp_record'; const r=JSON.parse(localStorage.getItem(k)||'{"w":0,"l":0}'); r[iWon?'w':'l']++; localStorage.setItem(k,JSON.stringify(r)); } catch(e){}
+
+  // Elo: report this result against the opponent's rating (came over with their build).
+  // Works for guests (device rating) and signed-in users alike.
+  const oppElo = (oppBuild && typeof oppBuild.elo === 'number') ? oppBuild.elo : 1000;
+  pendingResult = { matchId, won: iWon, oppElo };
+  $('ratingResult').innerHTML = '';
+  applyResult();
 }
 
 /* ---------- wiring ---------- */
 $('findBtn').onclick = () => { Sound.click(); findMatch(); };
 $('cancelBtn').onclick = () => cancelSearch();
 $('rematchBtn').onclick = () => { Sound.click(); findMatch(); };
+// sign-in + rating on load
+initGoogle();
+refreshStats().then(updateRatingChip);
 // leave the queue if the tab closes while waiting
 window.addEventListener('pagehide', () => {
   if (clientId) { try { navigator.sendBeacon('/api/match', JSON.stringify({ action:'leave', id: clientId })); } catch(e){} }

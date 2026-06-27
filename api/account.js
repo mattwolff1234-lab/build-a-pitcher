@@ -52,6 +52,17 @@ function ensure() {
         created_at timestamptz NOT NULL DEFAULT now()
       )`;
       await sql`CREATE INDEX IF NOT EXISTS idx_saves_user ON saves (google_sub, created_at DESC)`;
+      // 1v1 Elo rating + record, stored on the user. (DEFAULT backfills existing rows.)
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS pvp_elo int NOT NULL DEFAULT 1000`;
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS pvp_wins int NOT NULL DEFAULT 0`;
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS pvp_losses int NOT NULL DEFAULT 0`;
+      // one row per (match, player) so a result can only count once even if reported twice
+      await sql`CREATE TABLE IF NOT EXISTS pvp_results (
+        match_id text NOT NULL,
+        google_sub text NOT NULL,
+        created_at timestamptz NOT NULL DEFAULT now(),
+        PRIMARY KEY (match_id, google_sub)
+      )`;
     })();
   }
   return ready;
@@ -70,10 +81,33 @@ async function verifyGoogle(idToken) {
   } catch (e) { return null; }
 }
 
+// Standard Elo (K=32). Each player updates only their own rating, vs the opponent's reported rating.
+function nextElo(elo, oppElo, won) {
+  const expected = 1 / (1 + Math.pow(10, (oppElo - elo) / 400));
+  const delta = Math.round(32 * ((won ? 1 : 0) - expected));
+  return { elo: Math.max(100, elo + delta), delta };
+}
+
 async function authed(sub, sessionToken) {
   if (!sub || !sessionToken) return false;
   const [u] = await sql`SELECT session_token FROM users WHERE google_sub = ${sub}`;
   return !!(u && u.session_token && u.session_token === sessionToken);
+}
+
+// Resolve who a PvP request is "as": a signed-in Google user, or an anonymous device guest
+// (no password — the random guestId is the bearer). Returns the users-table key, or null.
+// Guests are stored in `users` with a "guest:" key and no session token (so they can't touch
+// account-only actions like save/list). Auto-creates the row so a fresh guest starts at 1000.
+async function pvpKey(body) {
+  if (body.guestId) {
+    const key = 'guest:' + String(body.guestId).slice(0, 48);
+    const name = String(body.name || 'Guest').trim().slice(0, 40) || 'Guest';
+    await sql`INSERT INTO users (google_sub, name) VALUES (${key}, ${name})
+      ON CONFLICT (google_sub) DO UPDATE SET name = EXCLUDED.name`;
+    return key;
+  }
+  if (await authed(body.sub, body.sessionToken)) return body.sub;
+  return null;
 }
 
 module.exports = async (req, res) => {
@@ -111,6 +145,50 @@ module.exports = async (req, res) => {
         if (!(await authed(body.sub, body.sessionToken))) return res.status(401).json({ ok: false, error: 'Not signed in' });
         await sql`DELETE FROM saves WHERE id = ${Number(body.id)} AND google_sub = ${body.sub}`;
         return res.status(200).json({ ok: true });
+      }
+
+      if (action === 'pvpStats') {
+        const key = await pvpKey(body);
+        if (!key) return res.status(401).json({ ok: false, error: 'Not signed in' });
+        const [u] = await sql`SELECT pvp_elo AS elo, pvp_wins AS wins, pvp_losses AS losses FROM users WHERE google_sub = ${key}`;
+        if (!u) return res.status(401).json({ ok: false, error: 'Not signed in' });
+        return res.status(200).json({ ok: true, elo: u.elo, wins: u.wins, losses: u.losses });
+      }
+
+      if (action === 'pvpResult') {
+        const key = await pvpKey(body);
+        if (!key) return res.status(401).json({ ok: false, error: 'Not signed in' });
+        const matchId = String(body.matchId || '').slice(0, 80);
+        if (!matchId) return res.status(400).json({ ok: false, error: 'missing matchId' });
+        const won = !!body.won;
+        const oppElo = Math.max(100, Math.min(4000, Math.round(Number(body.oppElo) || 1000)));
+        const [u] = await sql`SELECT pvp_elo AS elo, pvp_wins AS wins, pvp_losses AS losses FROM users WHERE google_sub = ${key}`;
+        if (!u) return res.status(401).json({ ok: false, error: 'Not signed in' });
+        // dedupe: only the first report for this (match, player) counts
+        const ins = await sql`INSERT INTO pvp_results (match_id, google_sub) VALUES (${matchId}, ${key})
+          ON CONFLICT DO NOTHING RETURNING match_id`;
+        if (!ins.length) return res.status(200).json({ ok: true, counted: false, elo: u.elo, delta: 0, wins: u.wins, losses: u.losses });
+        const { elo, delta } = nextElo(u.elo, oppElo, won);
+        const wins = u.wins + (won ? 1 : 0), losses = u.losses + (won ? 0 : 1);
+        await sql`UPDATE users SET pvp_elo = ${elo}, pvp_wins = ${wins}, pvp_losses = ${losses} WHERE google_sub = ${key}`;
+        return res.status(200).json({ ok: true, counted: true, elo, delta, wins, losses });
+      }
+
+      // Carry a device-guest's rating onto a Google account the first time they sign in
+      // (only if the account hasn't played yet, so we never clobber an existing rating).
+      if (action === 'pvpClaim') {
+        if (!(await authed(body.sub, body.sessionToken))) return res.status(401).json({ ok: false, error: 'Not signed in' });
+        const gid = body.guestId ? ('guest:' + String(body.guestId).slice(0, 48)) : null;
+        const [acct] = await sql`SELECT pvp_elo AS elo, pvp_wins AS wins, pvp_losses AS losses FROM users WHERE google_sub = ${body.sub}`;
+        if (gid && acct && acct.wins === 0 && acct.losses === 0) {
+          const [g] = await sql`SELECT pvp_elo AS elo, pvp_wins AS wins, pvp_losses AS losses FROM users WHERE google_sub = ${gid}`;
+          if (g && (g.wins > 0 || g.losses > 0)) {
+            await sql`UPDATE users SET pvp_elo = ${g.elo}, pvp_wins = ${g.wins}, pvp_losses = ${g.losses} WHERE google_sub = ${body.sub}`;
+            await sql`DELETE FROM users WHERE google_sub = ${gid}`;  // retire the guest identity
+            return res.status(200).json({ ok: true, claimed: true, elo: g.elo, wins: g.wins, losses: g.losses });
+          }
+        }
+        return res.status(200).json({ ok: true, claimed: false, elo: acct ? acct.elo : 1000, wins: acct ? acct.wins : 0, losses: acct ? acct.losses : 0 });
       }
 
       return res.status(400).json({ ok: false, error: 'Unknown action' });
