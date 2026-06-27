@@ -204,6 +204,15 @@
     opacity:0; text-shadow:0 6px 24px rgba(0,0,0,.6); text-align:center; }
   .pitch-info { position:absolute; left:0; right:0; top:14px; text-align:center; font-family:'Oswald',sans-serif;
     letter-spacing:2px; font-size:13px; color:#cbd6e6; opacity:0; text-transform:uppercase; }
+  /* waiting-for-opponent overlay (shown on the arena before the at-bat) */
+  .wait-arena { position:absolute; left:0; right:0; bottom:18px; display:none; flex-direction:column; align-items:center; gap:9px; z-index:6; }
+  .wait-arena.show { display:flex; }
+  .wait-arena .wa-spin { width:26px; height:26px; border-radius:50%; border:3px solid rgba(255,255,255,.16); border-top-color:var(--accent); animation:spin .8s linear infinite; }
+  .wait-arena .wa-title { font-family:'Oswald',sans-serif; font-weight:600; letter-spacing:1.5px; text-transform:uppercase; font-size:16px; text-shadow:0 3px 12px rgba(0,0,0,.6); }
+  .wait-arena .wa-bar { width:min(70%,300px); height:8px; border-radius:6px; background:rgba(255,255,255,.12); overflow:hidden; }
+  .wait-arena .wa-fill { height:100%; width:0%; border-radius:6px; background:linear-gradient(90deg,var(--accent),var(--accent2)); transition:width .35s ease; }
+  .wait-arena .wa-count { font-family:'Oswald',sans-serif; font-size:12px; letter-spacing:1px; color:var(--muted); }
+  .silho.dim { opacity:.18; filter:grayscale(1); }
   .matchup { width:100%; max-width:680px; display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
   .matchup .side { display:flex; flex-direction:column; align-items:center; gap:2px; }
   .matchup .side .who { font-family:'Oswald',sans-serif; font-size:13px; letter-spacing:1px; text-transform:uppercase; }
@@ -345,6 +354,12 @@
       <div class="silho b" id="silhoB"></div>
       <div class="ball" id="ball"></div>
       <div class="callout"><span id="callout"></span></div>
+      <div class="wait-arena" id="waitArena">
+        <div class="wa-spin"></div>
+        <div class="wa-title" id="waTitle">Waiting for the Pitcher…</div>
+        <div class="wa-bar"><div class="wa-fill" id="waFill"></div></div>
+        <div class="wa-count" id="waCount">building…</div>
+      </div>
     </div>
   </div>
 
@@ -661,7 +676,8 @@ async function cancelSearch(){
 
 function resetMatch(){
   stopSearch();
-  myBuild=null; oppBuild=null; atBatStarted=false; oppPresent=false;
+  myBuild=null; oppBuild=null; atBatStarted=false; oppPresent=false; waitingArena=false;
+  if ($('waitArena')) $('waitArena').classList.remove('show');
   if (clockTimer){ clearInterval(clockTimer); clockTimer=null; }
   if (claimTimeout){ clearTimeout(claimTimeout); claimTimeout=null; }
   if (waitTimeout){ clearTimeout(waitTimeout); waitTimeout=null; }
@@ -891,17 +907,50 @@ function finishBuild(){
   const ovr = computeOvr(myRole, buildState.filled);
   const team = modalTeam(slots);
   myBuild = { role:myRole, ovr, team, slots, elo: myElo(), name: displayName() };
-  // clear "done" state so the screen doesn't look frozen while waiting on the opponent
-  $('clock').textContent = '✓'; $('clock').classList.remove('warn');
-  $('buildHint').innerHTML = '<span class="mini-spin"></span> Locked in (' + ovr + ' OVR)! Waiting for your opponent to finish…';
   publishBuild();
   updateOppPill();
   // safety net: if the opponent never finishes (left/closed), don't hang forever
   if (waitTimeout) clearTimeout(waitTimeout);
   waitTimeout = setTimeout(() => { if (!oppBuild && !atBatStarted) showNoContest(); }, 75000);
-  maybeStartAtBat();
+  if (oppBuild) maybeStartAtBat();   // opponent already finished → straight to the at-bat
+  else showWaitArena();              // otherwise wait IN the arena, watching their progress
+}
+
+let waitingArena=false;
+// You finished first → sit in the arena (your fighter ready, opponent's spot greyed out) and
+// watch how close the opponent is to finishing.
+function showWaitArena(){
+  waitingArena=true;
+  showScreen('atbatScreen');
+  const minePitcher = myRole==='pitcher';
+  const pitcherSide = minePitcher
+    ? `<div class="who" style="color:var(--pitch)">⚾ ${escapeHTML(displayName())} (You)</div><div class="o" style="color:var(--pitch)">${myBuild.ovr}</div>`
+    : `<div class="who" style="color:var(--pitch)">⚾ Pitcher</div><div class="o" style="color:var(--pitch)">?</div>`;
+  const batterSide = !minePitcher
+    ? `<div class="who" style="color:var(--bat)">🏏 ${escapeHTML(displayName())} (You)</div><div class="o" style="color:var(--bat)">${myBuild.ovr}</div>`
+    : `<div class="who" style="color:var(--bat)">🏏 Batter</div><div class="o" style="color:var(--bat)">?</div>`;
+  $('matchup').innerHTML = `<div class="side">${pitcherSide}</div><div class="mid">VS</div><div class="side">${batterSide}</div>`;
+  $('silhoP').style.background = brightTeam(minePitcher ? myBuild.team : 'FA');
+  $('silhoB').style.background = brightTeam(!minePitcher ? myBuild.team : 'FA');
+  $('silhoP').classList.toggle('dim', !minePitcher);
+  $('silhoB').classList.toggle('dim', minePitcher);
+  gsap.set('#ball', { opacity:0 }); $('callout').textContent=''; $('pitchInfo').style.opacity=0;
+  $('waTitle').textContent = 'Waiting for the ' + (minePitcher ? 'Batter' : 'Pitcher') + '…';
+  $('waitArena').classList.add('show');
+  updateWaitArena();
+}
+function updateWaitArena(){
+  if (!waitingArena) return;
+  const oppIsPitcher = myRole !== 'pitcher';
+  const total = oppProg.total || (oppIsPitcher ? 9 : 8);
+  const filled = Math.min(oppProg.filled || 0, total);
+  $('waFill').style.width = Math.round(100 * filled / total) + '%';
+  $('waCount').textContent = oppPresent
+    ? (oppIsPitcher ? 'Pitcher' : 'Batter') + ' building · ' + filled + '/' + total + ' slots filled'
+    : 'Connecting to opponent…';
 }
 function showNoContest(){
+  waitingArena=false; $('waitArena').classList.remove('show');
   if (atBatStarted || oppBuild) return;
   showScreen('resultScreen');
   $('resultCard').className = 'result-card';
@@ -915,12 +964,13 @@ function showNoContest(){
 function publishProgress(){ if(matchCh){ const n=ROLE[myRole].slots.filter(s=>buildState.filled[s.key]).length; try{ matchCh.publish('progress',{ filled:n, total:ROLE[myRole].slots.length }); }catch(e){} } }
 function publishBuild(){ if(matchCh){ try{ matchCh.publish('build', myBuild); }catch(e){} } }
 let oppProg={filled:0,total:9};
-function updateOppProgress(d){ oppProg=d; updateOppPill(); }
+function updateOppProgress(d){ oppProg=d; updateOppPill(); updateWaitArena(); }
 function updateOppPill(){
   const pill=$('oppPill');
   if(oppBuild){ pill.textContent='Opponent: ready ✓'; pill.style.color='#7CE38B'; }
   else if(oppPresent){ pill.textContent=`Opponent: building ${oppProg.filled}/${oppProg.total}`; pill.style.color='var(--muted)'; }
   else { pill.textContent='Opponent: connecting…'; pill.style.color='var(--muted)'; }
+  updateWaitArena();
 }
 
 /* ---------- at-bat ---------- */
@@ -932,6 +982,8 @@ function maybeStartAtBat(){
 }
 function playAtBat(){
   showScreen('atbatScreen');
+  waitingArena=false; $('waitArena').classList.remove('show');
+  $('silhoP').classList.remove('dim'); $('silhoB').classList.remove('dim');
   const pitcher = myRole==='pitcher' ? myBuild : oppBuild;
   const batter  = myRole==='pitcher' ? oppBuild : myBuild;
   // winner: higher OVR; tie -> seeded coin (identical on both phones)
