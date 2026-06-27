@@ -241,7 +241,7 @@
   .silho { position:absolute; bottom:30%; height:150px; width:110px; mask-size:contain; mask-repeat:no-repeat; mask-position:center bottom;
     -webkit-mask-size:contain; -webkit-mask-repeat:no-repeat; -webkit-mask-position:center bottom; filter:drop-shadow(0 8px 16px rgba(0,0,0,.5)); }
   .silho.p { left:9%; -webkit-mask-image:url(pitcher-figure.png); mask-image:url(pitcher-figure.png); }
-  .silho.b { right:9%; transform:scaleX(-1); transform-origin:center bottom; -webkit-mask-image:url(batter-figure.png); mask-image:url(batter-figure.png); }
+  .silho.b { right:9%; transform:rotateY(180deg); transform-origin:center bottom; -webkit-mask-image:url(batter-figure.png); mask-image:url(batter-figure.png); }
   .ball { position:absolute; width:16px; height:16px; border-radius:50%; background:radial-gradient(circle at 35% 30%,#fff,#cdd3da);
     box-shadow:0 0 10px rgba(255,255,255,.6); left:18%; bottom:42%; opacity:0; z-index:5; }
   .callout { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; }
@@ -302,6 +302,10 @@
     .node .preview { font-size:17px; }
     .diamond { height:300px; }
     .silho { height:115px; }
+    .pitch-seq { left:8px; right:8px; bottom:8px; grid-template-columns:repeat(2,minmax(0,1fr)); gap:5px; }
+    .pitch-pill { padding:5px 4px; border-radius:7px; }
+    .pitch-pill .pn { font-size:8px; letter-spacing:.8px; }
+    .pitch-pill .pc { font-size:12px; letter-spacing:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .callout span { font-size:40px; }
     /* build header: let it wrap and shrink so the clock/OVR/opponent pill always fit */
     .build-top { flex-wrap:wrap; gap:8px 12px; justify-content:space-between; }
@@ -1217,7 +1221,7 @@ function playAtBat(){
 
   const ball=$('ball'), call=$('callout'); call.style.opacity=0; call.textContent='';
   gsap.set(ball,{ opacity:0, left:'18%', bottom:'42%', scale:1 });
-  gsap.set('#silhoP',{ x:0, rotation:0 }); gsap.set('#silhoB',{ x:0, rotation:0, scaleX:-1 });
+  gsap.set('#silhoP',{ x:0, rotation:0 }); gsap.set('#silhoB',{ x:0, rotation:0, rotationY:180 });
   renderPitchSeq(script);
   gsap.set('#pitchSeq', { opacity:1 });
 
@@ -1317,7 +1321,7 @@ function appendPitch(tl, pitch, idx){
     }, idx ? '+=.34' : 0)
     .to('#pitchInfo',{ opacity:1, duration:.18 })
     .set(ball,{ opacity:0, left:'18%', bottom:'42%', scale:1 })
-    .set('#silhoB',{ rotation:0, x:0, scaleX:-1 })
+    .set('#silhoB',{ rotation:0, x:0, rotationY:180 })
     .fromTo('#silhoP',{ rotation:-6 },{ rotation:7, duration:.28, ease:'power2.in' })
     .to('#silhoP',{ rotation:0, duration:.12 })
     .set(ball,{ opacity:1 })
