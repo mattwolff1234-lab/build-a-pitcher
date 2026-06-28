@@ -143,7 +143,7 @@
 
   /* ---------- build screen ---------- */
   #buildScreen { flex-direction:row !important; align-items:flex-start; gap:22px; max-width:980px; width:100%; }
-  .build-left { flex:0 0 320px; display:flex; flex-direction:column; }
+  .build-left { flex:0 0 390px; display:flex; flex-direction:column; }
   .build-right { flex:1; min-width:0; display:flex; flex-direction:column; gap:10px; }
   .build-top { width:100%; display:flex; align-items:center; justify-content:space-between; gap:12px; }
   .clock { font-family:'Oswald',sans-serif; font-size:30px; font-weight:700; letter-spacing:1px; }
@@ -312,6 +312,14 @@
     50%   { box-shadow:0 4px 26px rgba(25,198,255,.55), inset 0 1px 0 rgba(255,255,255,.08); }
   }
   .btn.rmatch-glow { animation:rmatch-pulse .9s ease-in-out infinite; }
+
+  @media (min-width: 681px) {
+    .slot.open:not(.armed) { display:none; }
+    .rcard { width:108px; flex:0 0 108px; }
+    .rcard img { width:56px; height:56px; }
+    .rcard .ov { font-size:21px; }
+    .reel { height:160px; }
+  }
 
   @media (max-width: 680px) {
     .stage { padding:14px 11px 40px; }
