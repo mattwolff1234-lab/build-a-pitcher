@@ -116,8 +116,11 @@
   .lb-row .lr-rank { font-family:'Oswald',sans-serif; font-weight:700; color:var(--muted); width:30px; }
   .lb-row .lr-name { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .lb-row .lr-rec { color:var(--muted); font-size:12px; }
-  .lb-row .lr-elo { font-family:'Oswald',sans-serif; font-weight:700; font-size:17px; color:var(--gold); width:48px; text-align:right; }
+  .lb-row .lr-elo { font-family:'Oswald',sans-serif; font-weight:700; font-size:17px; width:68px; text-align:right; }
   .prompt { color:var(--muted); font-size:13px; line-height:1.5; }
+  .tier-badge { display:inline-flex; align-items:center; gap:6px; }
+  .tier-name { font-family:'Oswald',sans-serif; font-weight:700; text-transform:uppercase; }
+  .lb-row .lr-elo { display:inline-flex; align-items:center; justify-content:flex-end; gap:5px; }
 
   /* ---------- role reveal ---------- */
   #roleScreen { justify-content:center; align-items:center; min-height:74vh; text-align:center; }
@@ -493,6 +496,38 @@ function headshot(p){ return p.img || (p.mlbamId ? `https://midfield.mlbstatic.c
 function tier(ovr){ return ovr>=85?'diamond':ovr>=80?'gold':ovr>=75?'silver':ovr>=65?'bronze':'grey'; }
 function borderTier(p){ return p.legend?'legend':tier(p.ovr); }
 
+/* ---------- elo tiers ---------- */
+const ELO_TIERS = [
+  { name:'Bronze',   min:0,    color:'#cd7f32', glow:'rgba(205,127,50,.85)'   },
+  { name:'Silver',   min:1100, color:'#bfc9d4', glow:'rgba(191,201,212,.85)'  },
+  { name:'Gold',     min:1250, color:'#ffd700', glow:'rgba(255,215,0,.85)'    },
+  { name:'Platinum', min:1400, color:'#4de8e0', glow:'rgba(77,232,224,.85)'   },
+  { name:'Diamond',  min:1550, color:'#5eb8ff', glow:'rgba(94,184,255,.85)'   },
+];
+const TOP10_TIER = { name:'Top 10', color:'#cc44ff', glow:'rgba(204,68,255,.85)' };
+function getEloTier(elo, rank){
+  if (rank && rank <= 10) return TOP10_TIER;
+  for (let i = ELO_TIERS.length - 1; i >= 0; i--){
+    if (elo >= ELO_TIERS[i].min) return ELO_TIERS[i];
+  }
+  return ELO_TIERS[0];
+}
+function batSVG(color, glow, size=22){
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="${size}" height="${size}" `
+    + `style="display:inline-block;vertical-align:middle;flex-shrink:0;filter:drop-shadow(0 0 5px ${glow}) drop-shadow(0 0 2px ${glow})">`
+    + `<g transform="rotate(45 12 12)" fill="${color}">`
+    + `<ellipse cx="12" cy="5" rx="4" ry="4"/>`
+    + `<polygon points="8.5,8.5 15.5,8.5 14,14 10,14"/>`
+    + `<rect x="10.5" y="14" width="3" height="5" rx="1"/>`
+    + `<ellipse cx="12" cy="21" rx="3" ry="1.5"/>`
+    + `</g></svg>`;
+}
+function tierBadgeHTML(elo, rank, size=20){
+  const t = getEloTier(elo, rank);
+  const fs = Math.round(size * 0.65);
+  return `<span class="tier-badge">${batSVG(t.color, t.glow, size)}<span class="tier-name" style="color:${t.color};font-size:${fs}px;letter-spacing:1.5px">${t.name}</span></span>`;
+}
+
 const PITCHER_SLOTS = [
   { key:'hr_per_bf', label:'Ground Ball', part:'Ball', ax:30, ay:5, lx:13, ly:9 },
   { key:'pitch_movement', label:'Break', part:'Wrist', ax:29, ay:11, lx:10, ly:27 },
@@ -636,6 +671,10 @@ function updateRatingChip(){
   const row = document.createElement('div'); row.className='elo';
   row.innerHTML = `⚔️ <input id="guestNameInput" maxlength="20" value="${escapeHTML(guestName)}"> Rating<b>${elo}</b><span class="rec">${w}W · ${l}L${streakTag}</span>`;
   el.appendChild(row);
+  const tierRow = document.createElement('div');
+  tierRow.style.cssText = 'display:flex;align-items:center;justify-content:center;margin:4px 0 2px';
+  tierRow.innerHTML = tierBadgeHTML(elo, null, 22);
+  el.appendChild(tierRow);
   if (account){
     const note = document.createElement('div'); note.className='guest'; note.textContent='✓ Signed in · rating saved to your account';
     el.appendChild(note);
@@ -667,6 +706,7 @@ function renderRatingResult(r){
   const streakLine = (r.bonus > 0)
     ? `<div class="prompt" style="color:#ffb13a">🔥 ${r.streak}-win streak · +${r.bonus} streak bonus${r.streak >= 5 ? ' (max)' : ''}</div>` : '';
   el.innerHTML = `<div class="delta">Rating ${prev} → <b class="${dir}">${r.elo}</b> <span class="${dir}">(${sign}${r.delta})</span></div>`
+    + `<div style="display:flex;align-items:center;justify-content:center;margin:5px 0 3px">${tierBadgeHTML(r.elo, null, 22)}</div>`
     + streakLine
     + `<div class="prompt">${r.wins}W · ${r.losses}L${isGuest() ? ' · saved on this device' : ''}</div>`;
   gsap.fromTo(el.querySelector('.delta'), { y:8, opacity:0 }, { y:0, opacity:1, duration:.5, ease:'power2.out' });
@@ -1464,7 +1504,7 @@ async function loadStats(){
     $('statsPersonal').innerHTML =
       `<div class="stat-top">
          <div class="stat-name">${escapeHTML(me.name || displayName())}${isGuest()?' · guest':''}</div>
-         <div class="stat-elo"><b>${me.elo}</b><span>RATING</span></div>
+         <div class="stat-elo"><b>${me.elo}</b><span>RATING</span><div style="display:flex;align-items:center;justify-content:center;margin-top:7px">${tierBadgeHTML(me.elo, me.rank, 24)}</div></div>
          ${me.rank ? `<div class="stat-rank">#${me.rank}<span>worldwide</span></div>` : ''}
        </div>
        <div class="stat-grid">
@@ -1480,7 +1520,8 @@ async function loadStats(){
   if (data.rows && data.rows.length){
     const rowsHtml = data.rows.map((r,i) => {
       const mine = me && me.rank && (i === me.rank - 1);
-      return `<div class="lb-row${mine?' mine':''}"><span class="lr-rank">${i+1}</span><span class="lr-name">${escapeHTML(r.name||'Player')}</span><span class="lr-rec">${r.wins}-${r.losses}</span><span class="lr-elo">${r.elo}</span></div>`;
+      const rt = getEloTier(r.elo, i + 1);
+      return `<div class="lb-row${mine?' mine':''}"><span class="lr-rank">${i+1}</span><span class="lr-name">${escapeHTML(r.name||'Player')}</span><span class="lr-rec">${r.wins}-${r.losses}</span><span class="lr-elo">${batSVG(rt.color, rt.glow, 14)}<span style="color:${rt.color}">${r.elo}</span></span></div>`;
     }).join('');
     $('statsBoard').innerHTML = `<div class="lb-head">🏆 Top Players</div><div class="lb-rows">${rowsHtml}</div>`;
   } else {
