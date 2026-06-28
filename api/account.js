@@ -273,6 +273,29 @@ module.exports = async (req, res) => {
           batter_win_pct: br == null ? null : Number(br.toFixed(1)) });
       }
 
+      // admin: look up a player by name and cross-check reported vs logged matches
+      if (action === 'pvpUserLookup') {
+        if (body.token !== STATS_TOKEN) return res.status(403).json({ ok: false, error: 'forbidden' });
+        const name = String(body.name || '').trim();
+        if (!name) return res.status(400).json({ ok: false, error: 'name required' });
+        const rows = await sql`
+          SELECT u.google_sub, u.name, u.email, u.created_at,
+            u.pvp_elo AS elo, u.pvp_wins AS wins, u.pvp_losses AS losses, u.pvp_streak AS streak,
+            count(r.match_id)::int AS logged_matches
+          FROM users u
+          LEFT JOIN pvp_results r ON r.google_sub = u.google_sub
+          WHERE lower(u.name) LIKE lower(${'%' + name + '%'})
+          GROUP BY u.google_sub, u.name, u.email, u.created_at, u.pvp_elo, u.pvp_wins, u.pvp_losses, u.pvp_streak
+          ORDER BY u.pvp_elo DESC`;
+        return res.status(200).json({ ok: true, rows: rows.map(r => ({
+          name: r.name, email: r.email, created_at: r.created_at,
+          elo: r.elo, wins: r.wins, losses: r.losses, streak: r.streak,
+          logged_matches: r.logged_matches,
+          // if wins+losses >> logged_matches, they may be submitting fake results
+          discrepancy: (r.wins + r.losses) - r.logged_matches
+        })) });
+      }
+
       return res.status(400).json({ ok: false, error: 'Unknown action' });
     }
 
