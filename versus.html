@@ -513,13 +513,13 @@ function getEloTier(elo, rank){
   return ELO_TIERS[0];
 }
 function batSVG(color, glow, size=22){
+  // barrel (circle, upper-right) + handle (rotated rect) + knob (circle, lower-left)
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="${size}" height="${size}" `
     + `style="display:inline-block;vertical-align:middle;flex-shrink:0;filter:drop-shadow(0 0 5px ${glow}) drop-shadow(0 0 2px ${glow})">`
-    + `<g transform="rotate(45 12 12)" fill="${color}">`
-    + `<ellipse cx="12" cy="5" rx="4" ry="4"/>`
-    + `<polygon points="8.5,8.5 15.5,8.5 14,14 10,14"/>`
-    + `<rect x="10.5" y="14" width="3" height="5" rx="1"/>`
-    + `<ellipse cx="12" cy="21" rx="3" ry="1.5"/>`
+    + `<g fill="${color}">`
+    + `<circle cx="17" cy="7" r="5"/>`
+    + `<rect x="10.5" y="7" width="3" height="13" rx="1.5" transform="rotate(45 12 12)"/>`
+    + `<circle cx="5" cy="19" r="2.5"/>`
     + `</g></svg>`;
 }
 function tierBadgeHTML(elo, rank, size=20){
@@ -705,11 +705,41 @@ function renderRatingResult(r){
   const sign = r.delta >= 0 ? '+' : '';
   const streakLine = (r.bonus > 0)
     ? `<div class="prompt" style="color:#ffb13a">🔥 ${r.streak}-win streak · +${r.bonus} streak bonus${r.streak >= 5 ? ' (max)' : ''}</div>` : '';
+  const oldTier = getEloTier(prev, null);
+  const newTier = getEloTier(r.elo, null);
+  const tierChanged = oldTier.name !== newTier.name;
+  const tierUp = tierChanged && (ELO_TIERS.indexOf(newTier) > ELO_TIERS.indexOf(oldTier) || newTier === TOP10_TIER);
+
   el.innerHTML = `<div class="delta">Rating ${prev} → <b class="${dir}">${r.elo}</b> <span class="${dir}">(${sign}${r.delta})</span></div>`
-    + `<div style="display:flex;align-items:center;justify-content:center;margin:5px 0 3px">${tierBadgeHTML(r.elo, null, 22)}</div>`
+    + `<div class="tier-result" style="display:flex;align-items:center;justify-content:center;margin:5px 0 3px">${tierBadgeHTML(r.elo, null, 22)}</div>`
     + streakLine
     + `<div class="prompt">${r.wins}W · ${r.losses}L${isGuest() ? ' · saved on this device' : ''}</div>`;
   gsap.fromTo(el.querySelector('.delta'), { y:8, opacity:0 }, { y:0, opacity:1, duration:.5, ease:'power2.out' });
+
+  // tier change animations
+  if (tierChanged) {
+    const tierResultEl = el.querySelector('.tier-result');
+    const badgeEl = el.querySelector('.tier-badge');
+    if (tierUp) {
+      // inject TIER UP label
+      const label = document.createElement('div');
+      label.style.cssText = `font-family:'Oswald',sans-serif;font-size:19px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:${newTier.color};text-align:center;opacity:0;margin-top:2px`;
+      label.textContent = '⬆ TIER UP!';
+      tierResultEl.after(label);
+      // badge pop + label burst
+      const tl = gsap.timeline({ delay: 0.45 });
+      tl.fromTo(badgeEl, { scale:1 }, { scale:1.8, duration:0.25, ease:'power3.out' })
+        .to(badgeEl, { scale:1, duration:0.55, ease:'elastic.out(1.2, 0.45)' });
+      gsap.fromTo(label, { y:10, opacity:0, scale:0.7 }, { y:0, opacity:1, scale:1, duration:0.4, delay:0.55, ease:'back.out(2)' });
+      // card glow pulse
+      const card = $('resultCard');
+      gsap.fromTo(card, { filter:'brightness(1)' }, { filter:'brightness(1.35)', duration:0.2, delay:0.45, yoyo:true, repeat:3, ease:'power2.inOut',
+        onComplete(){ card.style.filter=''; } });
+    } else {
+      // tier down: shake the badge
+      gsap.to(badgeEl, { x:-7, duration:0.07, delay:0.4, yoyo:true, repeat:7, ease:'none', onComplete(){ gsap.set(badgeEl, { x:0 }); } });
+    }
+  }
   // guests: offer to back the rating up to a Google account
   if (isGuest()){
     const p = document.createElement('div'); p.className='prompt'; p.style.marginTop='4px';
