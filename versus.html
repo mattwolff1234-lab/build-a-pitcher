@@ -798,6 +798,7 @@ function resetMatch(){
   if (clockTimer){ clearInterval(clockTimer); clockTimer=null; }
   if (claimTimeout){ clearTimeout(claimTimeout); claimTimeout=null; }
   if (waitTimeout){ clearTimeout(waitTimeout); waitTimeout=null; }
+  if (buildRepub){ clearInterval(buildRepub); buildRepub=null; }
   if (matchCh){ try{ matchCh.presence.leave(); }catch(e){} matchCh.unsubscribe(); matchCh.presence.unsubscribe(); try{ matchCh.detach(); }catch(e){} matchCh=null; }
 }
 
@@ -1223,7 +1224,18 @@ function showForfeitResult(iWon, filled, data={}){
 
 /* ---------- opponent status + messaging ---------- */
 function publishProgress(){ if(matchCh){ const n=ROLE[myRole].slots.filter(s=>buildState.filled[s.key]).length; try{ matchCh.publish('progress',{ filled:n, total:ROLE[myRole].slots.length }); }catch(e){} } }
-function publishBuild(){ if(matchCh){ try{ matchCh.publish('build', myBuild); }catch(e){} } }
+let buildRepub=null;
+async function publishBuild(){
+  if(!matchCh) return;
+  for(let i=0;i<3;i++){
+    try{ await matchCh.publish('build', myBuild); break; }catch(e){ if(i<2) await new Promise(r=>setTimeout(r,600*(i+1))); }
+  }
+  if(buildRepub) clearInterval(buildRepub);
+  buildRepub = setInterval(()=>{
+    if(!myBuild||oppBuild||atBatStarted||matchResolved){ clearInterval(buildRepub); buildRepub=null; return; }
+    try{ matchCh.publish('build', myBuild); }catch(e){}
+  }, 5000);
+}
 function publishForfeit(filled){ if(matchCh){ try{ matchCh.publish('forfeit',{ role:myRole, filled, total:ROLE[myRole].slots.length, elo:myElo(), name:displayName() }); }catch(e){} } }
 let oppProg={filled:0,total:9};
 function updateOppProgress(d){ oppProg=d; updateOppPill(); updateWaitArena(); }
