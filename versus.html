@@ -296,7 +296,16 @@
   .result-card.win .rh { color:var(--gold); } .result-card.lose .rh { color:var(--muted); }
   .result-card .rline { color:var(--ink); margin:14px 0 6px; font-size:16px; }
   .result-card .rsub { color:var(--muted); font-size:13px; }
-  .result-actions { display:flex; gap:12px; justify-content:center; margin-top:24px; flex-wrap:wrap; }
+  .result-actions { display:flex; gap:12px; justify-content:center; margin-top:20px; flex-wrap:wrap; }
+  #rematchStatus { min-height:20px; margin:10px 0 -4px; font-family:'Oswald',sans-serif;
+    font-size:13px; color:var(--muted); text-align:center; letter-spacing:.5px; }
+  #rematchStatus .rs-count { color:var(--accent); font-weight:700; font-size:15px; }
+  #rematchStatus .rs-want { color:var(--bat); }
+  @keyframes rmatch-pulse {
+    0%,100%{ box-shadow:0 4px 26px rgba(25,198,255,0), inset 0 1px 0 rgba(255,255,255,.08); }
+    50%   { box-shadow:0 4px 26px rgba(25,198,255,.55), inset 0 1px 0 rgba(255,255,255,.08); }
+  }
+  .btn.rmatch-glow { animation:rmatch-pulse .9s ease-in-out infinite; }
 
   @media (max-width: 680px) {
     .stage { padding:14px 11px 40px; }
@@ -455,6 +464,7 @@
       <div class="rline" id="resultLine"></div>
       <div class="rsub" id="resultSub"></div>
       <div id="ratingResult" class="rating-result"></div>
+      <div id="rematchStatus"></div>
       <div class="result-actions">
         <button class="btn" id="rematchBtn" style="font-size:14px;">⚔️ New Match</button>
         <button class="btn ghost" id="resultStatsBtn" style="font-size:13px; padding:14px 20px;">📊 Stats</button>
@@ -603,6 +613,7 @@ const Sound = (() => {
 let ably=null, clientId=null;
 let myRole=null, oppRole=null, matchId=null, seed=0, oppId=null, wasClaimer=false;
 let inviteCh=null, matchCh=null;
+let rematchOffered=false, rematchOppOffer=null, rematchCountdown=null, rematchSec=10;
 let DATA={};               // role -> data json
 let myBuild=null, oppBuild=null, atBatStarted=false, matchResolved=false;
 let claimTimeout=null, waitTimeout=null;
@@ -896,9 +907,10 @@ async function startMatch(mId, role, sd, opp, claimer){
 
   matchCh = ably.channels.get('versus:match:' + matchId);
   // ignore our own messages (belt-and-suspenders alongside echoMessages:false)
-  matchCh.subscribe('build', m => { if (m.clientId === clientId) return; oppBuild = m.data; updateOppPill(); maybeStartAtBat(); });
+  matchCh.subscribe('build',    m => { if (m.clientId === clientId) return; oppBuild = m.data; updateOppPill(); maybeStartAtBat(); });
   matchCh.subscribe('progress', m => { if (m.clientId === clientId) return; updateOppProgress(m.data); });
-  matchCh.subscribe('forfeit', m => { if (m.clientId === clientId) return; handleOpponentForfeit(m.data || {}); });
+  matchCh.subscribe('forfeit',  m => { if (m.clientId === clientId) return; handleOpponentForfeit(m.data || {}); });
+  matchCh.subscribe('rematch',  m => { if (m.clientId === clientId) return; handleRematchMsg(m.data); });
   matchCh.presence.subscribe('enter', () => { oppPresent=true; updateOppPill(); });
   matchCh.presence.subscribe('present', () => { oppPresent=true; updateOppPill(); });
   await matchCh.presence.enter({ role: myRole });
@@ -1262,12 +1274,13 @@ function showNoContest(){
   setOnlineStatus('idle');
   if (atBatStarted || oppBuild || matchResolved) return;
   matchResolved=true;
-  showScreen('resultScreen');
-  $('resultCard').className = 'result-card';
-  $('resultHead').textContent = 'NO CONTEST';
-  $('resultLine').textContent = 'Your opponent didn’t finish their build in time.';
-  $('resultSub').textContent = 'No rating change — try another match.';
-  $('ratingResult').innerHTML = '';
+  showScreen(‘resultScreen’);
+  resetRematchUI(‘⚔️ New Match’);
+  $(‘resultCard’).className = ‘result-card’;
+  $(‘resultHead’).textContent = ‘NO CONTEST’;
+  $(‘resultLine’).textContent = ‘Your opponent didn’t finish their build in time.’;
+  $(‘resultSub’).textContent = ‘No rating change — try another match.’;
+  $(‘ratingResult’).innerHTML = ‘’;
 }
 function forfeitMatch(filled){
   if(matchResolved) return;
@@ -1291,6 +1304,7 @@ function showForfeitResult(iWon, filled, data={}){
   $('waitArena').classList.remove('show');
   setOnlineStatus('idle');
   showScreen('resultScreen');
+  resetRematchUI();
   const card=$('resultCard'); card.className='result-card '+(iWon?'win':'lose');
   $('resultHead').textContent = iWon ? 'YOU WIN' : 'YOU LOSE';
   const oppName = data.name || ((oppBuild && oppBuild.name) ? oppBuild.name : 'your opponent');
@@ -1517,12 +1531,68 @@ function showCall(text, color){
   gsap.fromTo('#diamond',{ x:-6 },{ x:0, duration:.5, ease:'elastic.out(1,0.4)' });
 }
 
+/* ---------- rematch ---------- */
+function resetRematchUI(label='⚔️ Rematch?'){
+  if (rematchCountdown){ clearInterval(rematchCountdown); rematchCountdown=null; }
+  rematchOffered=false; rematchOppOffer=null;
+  const rs=$('rematchStatus'); if(rs) rs.innerHTML='';
+  const rb=$('rematchBtn'); if(rb){ rb.textContent=label; rb.classList.remove('rmatch-glow'); }
+}
+function handleRematchMsg(data){
+  if (!matchResolved) return;
+  if (data.type === 'offer'){
+    rematchOppOffer = data;
+    if (rematchOffered){
+      acceptOppRematch(); // both offered simultaneously — I'm authority since I offered first
+    } else {
+      const oppName = escapeHTML(oppBuild && oppBuild.name ? oppBuild.name : 'Opponent');
+      $('rematchStatus').innerHTML = `<span class="rs-want">⚔️ ${oppName} wants a rematch!</span>`;
+      const rb = $('rematchBtn'); rb.textContent = '✅ Accept!'; rb.classList.add('rmatch-glow');
+    }
+  } else if (data.type === 'start'){
+    doRematch(data.matchId, data.yourRole, data.seed);
+  }
+}
+function offerRematch(){
+  if (!matchCh || rematchOffered) return;
+  rematchOffered = true;
+  try { matchCh.publish('rematch', { type:'offer' }); } catch(e){}
+  const oppName = escapeHTML(oppBuild && oppBuild.name ? oppBuild.name : 'opponent');
+  $('rematchBtn').textContent = 'Cancel';
+  $('rematchBtn').classList.remove('rmatch-glow');
+  rematchSec = 10;
+  $('rematchStatus').innerHTML = `Waiting for ${oppName} to accept… <span class="rs-count">${rematchSec}</span>`;
+  rematchCountdown = setInterval(() => {
+    rematchSec--;
+    const c = $('rematchStatus') && $('rematchStatus').querySelector('.rs-count');
+    if (c) c.textContent = rematchSec;
+    if (rematchSec <= 0){ resetRematchUI(); }
+  }, 1000);
+}
+async function acceptOppRematch(){
+  if (rematchCountdown){ clearInterval(rematchCountdown); rematchCountdown=null; }
+  const newId = rid();
+  const newSeed = (Math.random() * 0xFFFFFFFF) | 0;
+  const myNewRole  = myRole === 'pitcher' ? 'batter' : 'pitcher';
+  const oppNewRole = myRole; // roles swap
+  try { await matchCh.publish('rematch', { type:'start', matchId:newId, seed:newSeed, yourRole:oppNewRole }); } catch(e){}
+  doRematch(newId, myNewRole, newSeed);
+}
+function doRematch(newMatchId, newRole, newSeed){
+  if (rematchCountdown){ clearInterval(rematchCountdown); rematchCountdown=null; }
+  rematchOffered=false; rematchOppOffer=null;
+  const savedOppId = oppId;
+  resetMatch();
+  startMatch(newMatchId, newRole, newSeed, savedOppId, false);
+}
+
 /* ---------- result ---------- */
 function showResult(iWon, pitcher, batter, winnerRole, script){
   if(matchResolved) return;
   matchResolved=true;
   showScreen('resultScreen');
   setOnlineStatus('idle');
+  resetRematchUI();
   const card=$('resultCard'); card.className='result-card '+(iWon?'win':'lose');
   $('resultHead').textContent = iWon ? 'YOU WIN' : 'YOU LOSE';
   const winSide = winnerRole==='pitcher'?'Pitcher':'Batter';
@@ -1595,7 +1665,14 @@ $('resultStatsBtn').onclick = () => { Sound.click(); openStats(); };
 $('statsBack').onclick = () => { showScreen('mmScreen'); updateRatingChip(); };
 // deep-link: /versus#stats opens the stats page straight away (from the hamburger menus)
 if (location.hash === '#stats') openStats();
-$('rematchBtn').onclick = () => { Sound.click(); findMatch(); };
+$('rematchBtn').onclick = () => {
+  Sound.click();
+  if (matchResolved && matchId && matchCh){
+    if (rematchOppOffer && !rematchOffered){ acceptOppRematch(); }
+    else if (rematchOffered){ resetRematchUI(); }   // cancel pending offer
+    else { offerRematch(); }
+  } else { findMatch(); }
+};
 // sign-in + rating on load
 initGoogle();
 refreshStats().then(updateRatingChip);
