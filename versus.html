@@ -142,14 +142,16 @@
   .role-sub { color:var(--muted); margin-top:18px; font-size:14px; max-width:340px; }
 
   /* ---------- build screen ---------- */
-  .build-top { width:100%; max-width:760px; display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; }
+  #buildScreen { flex-direction:row !important; align-items:flex-start; gap:22px; max-width:980px; width:100%; }
+  .build-left { flex:0 0 320px; display:flex; flex-direction:column; }
+  .build-right { flex:1; min-width:0; display:flex; flex-direction:column; gap:10px; }
+  .build-top { width:100%; display:flex; align-items:center; justify-content:space-between; gap:12px; }
   .clock { font-family:'Oswald',sans-serif; font-size:30px; font-weight:700; letter-spacing:1px; }
   .clock.warn { color:#ff5a5a; }
   .pill { font-size:12px; color:var(--muted); border:1px solid var(--line); border-radius:20px; padding:6px 12px; letter-spacing:.4px; }
   .ovr-badge { font-family:'Oswald',sans-serif; font-size:14px; color:var(--muted); }
   .ovr-badge b { font-size:26px; color:var(--ink); margin-left:6px; }
-  .build-grid { width:100%; max-width:860px; display:grid; grid-template-columns:minmax(0,1fr) 230px; gap:18px; align-items:start; margin-top:16px; }
-  .figwrap { position:relative; width:100%; max-width:560px; aspect-ratio:823/711; margin:0 auto; border:1px solid var(--line); border-radius:16px; overflow:hidden;
+  .figwrap { position:relative; width:100%; aspect-ratio:823/711; border:1px solid var(--line); border-radius:16px; overflow:hidden;
     background:radial-gradient(120% 100% at 50% 30%, #122236 0%, #060a12 76%);
     box-shadow:inset 0 0 60px rgba(0,0,0,.58), 0 14px 44px rgba(0,0,0,.44); }
   .figwrap::before, .figwrap::after { content:''; position:absolute; width:22px; height:22px; z-index:8; pointer-events:none; opacity:.68; }
@@ -197,8 +199,8 @@
   .slot .sval { font-family:'Oswald',sans-serif; font-size:20px; font-weight:700; min-width:34px; text-align:right; }
   .slot .shot { width:26px; height:26px; border-radius:6px; object-fit:cover; background:#11161d; }
 
-  .reel-wrap { width:100%; max-width:760px; margin-top:16px; }
-  .reel { position:relative; height:120px; overflow:hidden; border:1px solid var(--line); border-radius:14px;
+  .reel-wrap { width:100%; }
+  .reel { position:relative; height:150px; overflow:hidden; border:1px solid var(--line); border-radius:14px;
     background:linear-gradient(180deg,rgba(8,13,22,.7),rgba(4,7,13,.85)); }
   .reel .pointer { position:absolute; left:50%; top:0; width:2px; height:100%; transform:translateX(-50%);
     background:linear-gradient(var(--accent),transparent); z-index:3; pointer-events:none; }
@@ -313,8 +315,11 @@
 
   @media (max-width: 680px) {
     .stage { padding:14px 11px 40px; }
-    .build-grid { grid-template-columns:1fr; gap:14px; }
-    .figwrap { max-width:430px; }
+    #buildScreen { flex-direction:column !important; align-items:center; }
+    .build-left { flex:none; width:100%; }
+    .build-right { flex:none; width:100%; }
+    .figwrap { max-width:430px; margin:0 auto; }
+    .reel { height:110px; }
     .node { width:80px; padding:0 0 5px; border-radius:8px; }
     .node .accent { height:3px; }
     .node .body { padding:4px 5px 0; }
@@ -410,31 +415,33 @@
 
   <!-- 3. Quick build -->
   <div class="screen" id="buildScreen">
-    <div class="build-top">
-      <div class="clock" id="clock">60</div>
-      <div class="ovr-badge">OVR<b id="ovrNum">—</b></div>
-      <div class="pill" id="oppPill">Opponent: connecting…</div>
-    </div>
-    <div class="reel-wrap">
-      <div class="reel"><div class="pointer"></div><div class="track" id="track"></div></div>
-      <div class="landed-bar">
-        <button class="btn" id="spinBtn" style="font-size:14px; padding:11px 22px;">🎰 Spin</button>
-        <div class="li" id="landedLi"><img id="landedImg" alt=""><div><div class="lnm" id="landedName">—</div></div><div class="lov" id="landedOvr">—</div></div>
-      </div>
-      <div class="powerups" id="powerups">
-        <button class="pu" id="snagLeftBtn" title="Take the card to the left">◄ Snag</button>
-        <button class="pu" id="respinBtn" title="Discard and spin again">🔄 Re-spin</button>
-        <button class="pu" id="boostBtn" title="Upgrade to their Prime card">⚡ Boost</button>
-        <button class="pu" id="snagRightBtn" title="Take the card to the right">Snag ►</button>
-      </div>
-      <div class="hint" id="buildHint">Spin the reel, then tap a glowing body part to assign the player.</div>
-    </div>
-    <div class="build-grid">
+    <div class="build-left">
       <div class="figwrap" id="figwrap">
         <div class="base"></div>
         <div class="shade" id="figureShade"></div>
         <svg class="wires" id="wires" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
         <div class="nodes" id="nodes"></div>
+      </div>
+    </div>
+    <div class="build-right">
+      <div class="build-top">
+        <div class="clock" id="clock">60</div>
+        <div class="ovr-badge">OVR<b id="ovrNum">—</b></div>
+        <div class="pill" id="oppPill">Opponent: connecting…</div>
+      </div>
+      <div class="reel-wrap">
+        <div class="reel"><div class="pointer"></div><div class="track" id="track"></div></div>
+        <div class="landed-bar">
+          <button class="btn" id="spinBtn" style="font-size:14px; padding:11px 22px;">🎰 Spin</button>
+          <div class="li" id="landedLi"><img id="landedImg" alt=""><div><div class="lnm" id="landedName">—</div></div><div class="lov" id="landedOvr">—</div></div>
+        </div>
+        <div class="powerups" id="powerups">
+          <button class="pu" id="snagLeftBtn" title="Take the card to the left">◄ Snag</button>
+          <button class="pu" id="respinBtn" title="Discard and spin again">🔄 Re-spin</button>
+          <button class="pu" id="boostBtn" title="Upgrade to their Prime card">⚡ Boost</button>
+          <button class="pu" id="snagRightBtn" title="Take the card to the right">Snag ►</button>
+        </div>
+        <div class="hint" id="buildHint">Spin the reel, then tap a glowing body part to assign the player.</div>
       </div>
       <div class="slots" id="slots"></div>
     </div>
