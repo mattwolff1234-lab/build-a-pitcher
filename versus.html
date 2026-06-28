@@ -743,8 +743,16 @@ function renderRatingResult(r){
       gsap.fromTo(card, { filter:'brightness(1)' }, { filter:'brightness(1.35)', duration:0.2, delay:0.45, yoyo:true, repeat:3, ease:'power2.inOut',
         onComplete(){ card.style.filter=''; } });
     } else {
-      // tier down: shake the badge
-      gsap.to(badgeEl, { x:-7, duration:0.07, delay:0.4, yoyo:true, repeat:7, ease:'none', onComplete(){ gsap.set(badgeEl, { x:0 }); } });
+      // tier down: label drop + shake
+      const label = document.createElement('div');
+      label.style.cssText = `font-family:'Oswald',sans-serif;font-size:19px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:${newTier.color};text-align:center;opacity:0;margin-top:2px`;
+      label.textContent = '⬇ TIER DOWN';
+      tierResultEl.after(label);
+      gsap.fromTo(label, { y:-10, opacity:0, scale:0.8 }, { y:0, opacity:1, scale:1, duration:0.35, delay:0.5, ease:'power2.out' });
+      gsap.to(badgeEl, { x:-6, duration:0.07, delay:0.45, yoyo:true, repeat:7, ease:'none', onComplete(){ gsap.set(badgeEl, { x:0 }); } });
+      const card = $('resultCard');
+      gsap.fromTo(card, { filter:'brightness(1)' }, { filter:'brightness(0.75)', duration:0.18, delay:0.45, yoyo:true, repeat:3, ease:'power2.inOut',
+        onComplete(){ card.style.filter=''; } });
     }
   }
   // guests: offer to back the rating up to a Google account
