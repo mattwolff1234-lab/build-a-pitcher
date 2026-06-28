@@ -140,6 +140,10 @@
   .role-card.batter { --rc:var(--bat); border-color:var(--bat); }
   .role-card.batter .role-fig { -webkit-mask-image:url(batter-figure.png); mask-image:url(batter-figure.png); }
   .role-sub { color:var(--muted); margin-top:18px; font-size:14px; max-width:340px; }
+  .opp-chip { margin-top:20px; display:flex; flex-direction:column; align-items:center; gap:4px; }
+  .opp-chip .oc-vs { font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:4px; text-transform:uppercase; color:var(--accent2); }
+  .opp-chip .oc-name { font-family:'Oswald',sans-serif; font-size:22px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:#fff; }
+  .opp-chip .oc-elo { font-size:12px; color:var(--muted); letter-spacing:.5px; margin-top:1px; }
 
   /* ---------- build screen ---------- */
   /* desktop: figure on the left, controls (clock, reel, slots) stacked on the right */
@@ -434,6 +438,11 @@
   <div class="screen" id="roleScreen">
     <div class="role-card" id="roleCard"><div class="role-fig" id="roleFig"></div><div class="rl" id="roleLabel">—</div></div>
     <div class="role-sub" id="roleSub">Get ready…</div>
+    <div class="opp-chip" id="oppChip" style="opacity:0">
+      <div class="oc-vs">vs.</div>
+      <div class="oc-name" id="oppChipName">Opponent</div>
+      <div class="oc-elo" id="oppChipElo"></div>
+    </div>
   </div>
 
   <!-- 3. Quick build -->
@@ -662,6 +671,7 @@ let ably=null, clientId=null;
 let myRole=null, oppRole=null, matchId=null, seed=0, oppId=null, wasClaimer=false;
 let inviteCh=null, matchCh=null;
 let rematchOffered=false, rematchOppOffer=null, rematchCountdown=null, rematchSec=10;
+let oppPresenceName='', oppPresenceElo=0;
 let DATA={};               // role -> data json
 let myBuild=null, oppBuild=null, atBatStarted=false, matchResolved=false;
 let claimTimeout=null, waitTimeout=null;
@@ -938,7 +948,7 @@ async function cancelSearch(){
 function resetMatch(){
   stopSearch();
   myBuild=null; oppBuild=null; atBatStarted=false; matchResolved=false; oppPresent=false; waitingArena=false;
-  oppProg={filled:0,total:9};
+  oppProg={filled:0,total:9}; oppPresenceName=''; oppPresenceElo=0;
   if ($('waitArena')) $('waitArena').classList.remove('show');
   if (clockTimer){ clearInterval(clockTimer); clockTimer=null; }
   if (claimTimeout){ clearTimeout(claimTimeout); claimTimeout=null; }
@@ -960,10 +970,10 @@ async function startMatch(mId, role, sd, opp, claimer){
   matchCh.subscribe('progress', m => { if (m.clientId === clientId) return; updateOppProgress(m.data); });
   matchCh.subscribe('forfeit',  m => { if (m.clientId === clientId) return; handleOpponentForfeit(m.data || {}); });
   matchCh.subscribe('rematch',  m => { if (m.clientId === clientId) return; handleRematchMsg(m.data); });
-  matchCh.presence.subscribe('enter', () => { oppPresent=true; updateOppPill(); });
-  matchCh.presence.subscribe('present', () => { oppPresent=true; updateOppPill(); });
-  await matchCh.presence.enter({ role: myRole });
-  try { const members = await matchCh.presence.get(); if (members.length > 1) { oppPresent=true; } } catch(e){}
+  matchCh.presence.subscribe('enter', m => { if (m.clientId === clientId) return; oppPresent=true; captureOppPresence(m.data); updateOppPill(); });
+  matchCh.presence.subscribe('present', m => { if (m.clientId === clientId) return; oppPresent=true; captureOppPresence(m.data); updateOppPill(); });
+  await matchCh.presence.enter({ role: myRole, name: displayName(), elo: myElo() });
+  try { const members = await matchCh.presence.get(); const opp = members.find(m => m.clientId !== clientId); if (opp){ oppPresent=true; captureOppPresence(opp.data); } } catch(e){}
 
   // Dead-waiter guard: if I claimed someone who never shows up, re-queue.
   if (wasClaimer){
@@ -976,6 +986,18 @@ async function startMatch(mId, role, sd, opp, claimer){
 }
 
 /* ---------- role reveal ---------- */
+function captureOppPresence(data){
+  if (!data) return;
+  if (data.name) oppPresenceName = data.name;
+  if (data.elo)  oppPresenceElo  = data.elo;
+  updateOppChip();
+}
+function updateOppChip(){
+  const nm = $('oppChipName'); if (!nm) return;
+  nm.textContent = oppPresenceName || 'Opponent';
+  const el = $('oppChipElo');
+  el.textContent = oppPresenceElo ? ('⚡ ' + oppPresenceElo + ' Rating') : '';
+}
 function beginRoleReveal(){
   showScreen('roleScreen');
   const card = $('roleCard');
@@ -984,11 +1006,14 @@ function beginRoleReveal(){
   $('roleSub').textContent = myRole === 'pitcher'
     ? 'Build a pitcher to strike them out. Highest Overall wins.'
     : 'Build a hitter to crush it. Highest Overall wins.';
+  updateOppChip();
+  gsap.set('#oppChip', { opacity:0, y:18 });
   gsap.fromTo(card, { opacity: 0, scale: .82, y: 16 }, { opacity: 1, scale: 1, y: 0, duration: .55, ease: 'back.out(1.6)' });
   gsap.fromTo('#roleFig', { opacity: 0, y: 26, scale: .9 }, { opacity: 1, y: 0, scale: 1, duration: .6, delay: .12, ease: 'power3.out' });
   gsap.fromTo('#roleLabel', { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: .4, delay: .28, ease: 'power2.out' });
+  gsap.to('#oppChip', { opacity:1, y:0, duration:.45, delay:.52, ease:'back.out(1.8)' });
   Sound.whoosh();
-  setTimeout(beginBuild, 2200);
+  setTimeout(beginBuild, 2600);
 }
 
 /* ---------- quick build ---------- */
