@@ -1274,13 +1274,13 @@ function showNoContest(){
   setOnlineStatus('idle');
   if (atBatStarted || oppBuild || matchResolved) return;
   matchResolved=true;
-  showScreen(‘resultScreen’);
-  resetRematchUI(‘⚔️ New Match’);
-  $(‘resultCard’).className = ‘result-card’;
-  $(‘resultHead’).textContent = ‘NO CONTEST’;
-  $(‘resultLine’).textContent = ‘Your opponent didn’t finish their build in time.’;
-  $(‘resultSub’).textContent = ‘No rating change — try another match.’;
-  $(‘ratingResult’).innerHTML = ‘’;
+  showScreen('resultScreen');
+  resetRematchUI('⚔️ New Match');
+  $('resultCard').className = 'result-card';
+  $('resultHead').textContent = 'NO CONTEST';
+  $('resultLine').textContent = "Your opponent didn’t finish their build in time.";
+  $('resultSub').textContent = 'No rating change — try another match.';
+  $('ratingResult').innerHTML = '';
 }
 function forfeitMatch(filled){
   if(matchResolved) return;
