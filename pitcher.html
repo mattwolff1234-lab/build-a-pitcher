@@ -481,6 +481,10 @@
     border-radius:10px; color:var(--ink); background:linear-gradient(180deg,#1b2535,#121a27); border:1px solid var(--line); }
   .menu-item:last-child { margin-bottom:0; }
   .menu-item:hover { border-color:var(--accent2); box-shadow:0 0 14px rgba(25,198,255,.25); }
+  .tip-item { align-items:flex-start; border-color:rgba(255,122,24,.4); }
+  .tip-item:hover { border-color:var(--accent); box-shadow:0 0 14px rgba(255,122,24,.3); }
+  .tip-item .ti-text { display:flex; flex-direction:column; gap:3px; }
+  .tip-item .ti-text small { text-transform:none; letter-spacing:0; font-family:'Inter',sans-serif; font-size:12px; color:var(--muted); line-height:1.35; }
   .mi-chev { margin-left:auto; font-size:14px; color:var(--muted); }
   .install-steps { margin:-2px 0 9px; padding:13px; border-radius:10px; background:rgba(0,0,0,.28); border:1px solid var(--line); }
   .install-steps .inst-label { font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:1.5px; text-transform:uppercase;
@@ -682,6 +686,7 @@
         <div class="step"><span class="step-n">2</span><div><b>Tap Share</b><p>Tap the Share button at the bottom of the screen (the box with an arrow pointing up).</p></div></div>
         <div class="step"><span class="step-n">3</span><div><b>Add to Home Screen</b><p>Scroll down, tap "Add to Home Screen," then tap "Add."</p></div></div>
       </div>
+      <a class="menu-item tip-item" href="https://buymeacoffee.com/mattwolff1d" target="_blank" rel="noopener">☕<span class="ti-text"><b>Buy me a coffee</b><small>I'm a solo dev paying for the servers out of pocket to keep this free for everyone — anything's hugely appreciated! ↗</small></span></a>
       <a class="menu-item" href="https://pitchergami.com" target="_blank" rel="noopener">⚾ PitcherGami ↗</a>
     </div>
   </div>

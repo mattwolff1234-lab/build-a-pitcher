@@ -160,6 +160,11 @@
   .menu-item { display:flex; align-items:center; gap:10px; text-decoration:none; color:var(--ink); font-size:15px;
     border:1px solid var(--line); border-radius:11px; padding:13px 15px; background:rgba(255,255,255,.02); cursor:pointer; }
   .menu-item:hover { border-color:var(--accent2); background:rgba(25,198,255,.07); }
+  .tip-item { align-items:flex-start; border-color:rgba(255,122,24,.35); background:rgba(255,122,24,.06); }
+  .tip-item:hover { border-color:var(--accent); background:rgba(255,122,24,.12); }
+  .tip-item .ti-text { display:flex; flex-direction:column; gap:3px; line-height:1.32; }
+  .tip-item .ti-text b { font-weight:600; }
+  .tip-item .ti-text small { color:var(--muted); font-size:12px; }
   #acctSlot { padding:4px 2px 8px; display:flex; flex-direction:column; align-items:center; gap:8px; }
   #acctSlot .acct { display:flex; align-items:center; gap:11px; width:100%; border:1px solid var(--line); border-radius:12px; padding:11px 13px; background:rgba(255,255,255,.03); }
   #acctSlot .acct img { width:38px; height:38px; border-radius:50%; }
@@ -258,6 +263,7 @@
         <div class="step"><span class="step-n">2</span><div><b>Tap Share</b><p>Tap the Share button at the bottom of the screen (the box with an arrow pointing up).</p></div></div>
         <div class="step"><span class="step-n">3</span><div><b>Add to Home Screen</b><p>Scroll down, tap "Add to Home Screen," then tap "Add."</p></div></div>
       </div>
+      <a class="menu-item tip-item" href="https://buymeacoffee.com/mattwolff1d" target="_blank" rel="noopener">☕<span class="ti-text"><b>Buy me a coffee</b><small>I'm a solo dev paying for the servers out of pocket to keep this free for everyone — anything's hugely appreciated! ↗</small></span></a>
       <a class="menu-item" href="https://pitchergami.com" target="_blank" rel="noopener">⚾ PitcherGami ↗</a>
     </div>
   </div>
