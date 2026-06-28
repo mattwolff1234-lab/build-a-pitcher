@@ -121,6 +121,12 @@
   .tier-badge { display:inline-flex; align-items:center; gap:6px; }
   .tier-name { font-family:'Oswald',sans-serif; font-weight:700; text-transform:uppercase; }
   .lb-row .lr-elo { display:inline-flex; align-items:center; justify-content:flex-end; gap:5px; }
+  .stats-tabs { display:flex; gap:0; border-bottom:2px solid var(--line); margin-bottom:20px; }
+  .stab { font-family:'Oswald',sans-serif; font-size:13px; letter-spacing:1.5px; text-transform:uppercase;
+    padding:9px 20px; background:none; border:none; border-bottom:2px solid transparent; margin-bottom:-2px;
+    color:var(--muted); cursor:pointer; transition:color .15s; }
+  .stab.active { color:var(--accent2); border-bottom-color:var(--accent2); }
+  .stab:hover:not(.active) { color:var(--ink); }
 
   /* ---------- role reveal ---------- */
   #roleScreen { justify-content:center; align-items:center; min-height:74vh; text-align:center; }
@@ -439,9 +445,17 @@
   <div class="screen" id="statsScreen">
     <div class="hero" style="margin:22px 0 14px"><h1 style="font-size:clamp(30px,7vw,48px)">My <i>Stats</i></h1></div>
     <div class="vs-card" style="max-width:520px; text-align:left">
-      <div id="statsPersonal"></div>
-      <div id="statsHistory"></div>
-      <div id="statsBoard"></div>
+      <div class="stats-tabs">
+        <button class="stab active" id="tabStats">My Stats</button>
+        <button class="stab" id="tabHistory">History</button>
+      </div>
+      <div id="statsPanel">
+        <div id="statsPersonal"></div>
+        <div id="statsBoard"></div>
+      </div>
+      <div id="historyPanel" style="display:none">
+        <div id="statsHistory"></div>
+      </div>
       <div style="text-align:center"><button class="btn ghost" id="statsBack" style="margin-top:22px; font-size:13px; padding:10px 22px;">‹ Back</button></div>
     </div>
   </div>
@@ -1726,11 +1740,19 @@ function showResult(iWon, pitcher, batter, winnerRole, script){
 }
 
 /* ---------- stats page ---------- */
-function openStats(){
+function switchStatsTab(tab){
+  const isStats = tab !== 'history';
+  $('tabStats').classList.toggle('active', isStats);
+  $('tabHistory').classList.toggle('active', !isStats);
+  $('statsPanel').style.display = isStats ? '' : 'none';
+  $('historyPanel').style.display = isStats ? 'none' : '';
+}
+function openStats(tab='stats'){
   showScreen('statsScreen');
   $('statsPersonal').innerHTML = '<div class="prompt">Loading…</div>';
-  $('statsHistory').innerHTML = '';
+  $('statsHistory').innerHTML = '<div class="prompt">Loading…</div>';
   $('statsBoard').innerHTML = '';
+  switchStatsTab(tab);
   loadStats();
 }
 async function loadStats(){
@@ -1803,6 +1825,8 @@ $('cancelBtn').onclick = () => cancelSearch();
 $('statsBtn').onclick = () => { Sound.click(); openStats(); };
 $('resultStatsBtn').onclick = () => { Sound.click(); openStats(); };
 $('statsBack').onclick = () => { showScreen('mmScreen'); updateRatingChip(); };
+$('tabStats').onclick = () => switchStatsTab('stats');
+$('tabHistory').onclick = () => { switchStatsTab('history'); };
 // deep-link: /versus#stats opens the stats page straight away (from the hamburger menus)
 if (location.hash === '#stats') openStats();
 $('newMatchBtn').onclick = () => { Sound.click(); findMatch(); };
