@@ -252,8 +252,8 @@
     opacity:0; text-shadow:0 6px 24px rgba(0,0,0,.6); text-align:center; }
   .pitch-info { position:absolute; left:0; right:0; top:14px; text-align:center; font-family:'Oswald',sans-serif;
     letter-spacing:2px; font-size:13px; color:#cbd6e6; opacity:0; text-transform:uppercase; }
-  .pitch-seq { position:absolute; left:10px; right:10px; bottom:12px; z-index:7;
-    display:flex; justify-content:center; align-items:flex-end; gap:10px; opacity:0; }
+  .pitch-seq { display:flex; justify-content:center; align-items:center; gap:10px;
+    margin-top:10px; opacity:0; min-height:52px; flex-wrap:wrap; }
   .pitch-dot { display:flex; flex-direction:column; align-items:center; gap:3px; flex:0 0 auto; }
   .pitch-dot .pd-num { width:30px; height:30px; border-radius:50%; border:2px solid rgba(255,255,255,.18);
     background:rgba(4,7,13,.8); display:flex; align-items:center; justify-content:center;
@@ -433,7 +433,6 @@
     <div class="diamond" id="diamond">
       <div class="crowd"></div>
       <div class="pitch-info" id="pitchInfo"></div>
-      <div class="pitch-seq" id="pitchSeq"></div>
       <div class="mound"></div><div class="plate"></div>
       <div class="silho p" id="silhoP"></div>
       <div class="silho b" id="silhoB"></div>
@@ -446,6 +445,7 @@
         <div class="wa-count" id="waCount">building…</div>
       </div>
     </div>
+    <div class="pitch-seq" id="pitchSeq"></div>
   </div>
 
   <!-- 5. Result -->
@@ -1443,28 +1443,31 @@ function renderPitchSeq(script){
     `<div class="pitch-dot" id="pitchPill${i}"><div class="pd-num">${i+1}</div><div class="pd-call">—</div></div>`
   ).join('');
 }
-function markPitch(idx, pitch){
+function activatePitch(idx){
   const pill = $('pitchPill' + idx);
   if(!pill) return;
-  // settle previous active dot
   document.querySelectorAll('.pitch-dot.active').forEach(d => {
     d.classList.remove('active');
     gsap.to(d.querySelector('.pd-num'), { scale:1, duration:.2, ease:'power2.out' });
-    gsap.to(d.querySelector('.pd-call'), { opacity:.75, duration:.2 });
   });
-  pill.className = 'pitch-dot active ' + pitch.klass;
+  pill.classList.add('active');
   const num = pill.querySelector('.pd-num');
+  gsap.fromTo(num, { scale:1 }, { scale:1.25, duration:.22, ease:'back.out(2.5)' });
+  gsap.to(num, { scale:1.05, duration:.2, delay:.22, ease:'power2.inOut' });
+}
+function resolvePitch(idx, pitch){
+  const pill = $('pitchPill' + idx);
+  if(!pill) return;
+  pill.className = 'pitch-dot active ' + pitch.klass;
   const call = pill.querySelector('.pd-call');
   call.textContent = pitch.call;
-  gsap.fromTo(num, { scale:.65 }, { scale:1.2, duration:.32, ease:'back.out(2.2)' });
-  gsap.to(num, { scale:1.05, duration:.22, delay:.32, ease:'power2.inOut' });
-  gsap.fromTo(call, { opacity:0, y:5 }, { opacity:1, y:0, duration:.22, delay:.18, ease:'power2.out' });
+  gsap.fromTo(call, { opacity:0, y:4 }, { opacity:1, y:0, duration:.22, ease:'power2.out' });
 }
 function appendPitch(tl, pitch, idx){
   const ball = $('ball');
   tl.add(() => {
       $('pitchInfo').textContent = `${pitch.type} · ${pitch.velo} MPH`;
-      markPitch(idx, pitch);
+      activatePitch(idx);
       if(!pitch.final) { $('callout').textContent=''; $('callout').style.opacity=0; }
     }, idx ? '+=.34' : 0)
     .to('#pitchInfo',{ opacity:1, duration:.18 })
@@ -1480,22 +1483,22 @@ function appendPitch(tl, pitch, idx){
   }
 
   if(pitch.result === 'groundout'){
-    tl.add(()=> Sound.crack())
+    tl.add(()=> { Sound.crack(); resolvePitch(idx, pitch); })
       .to(ball,{ left:'46%', bottom:'8%', scale:.75, duration:.55, ease:'power2.out' })
       .add(()=> showCall('GROUND OUT!', 'var(--pitch)'))
       .to('#silhoB',{ rotation:12, x:5, duration:.32, ease:'power1.in' },'<');
   } else if(pitch.result === 'strikeout'){
-    tl.add(()=> Sound.catch())
+    tl.add(()=> { Sound.catch(); resolvePitch(idx, pitch); })
       .to(ball,{ left:'82%', bottom:'30%', scale:.8, duration:.16, ease:'power2.in' })
       .add(()=> showCall('STRIKEOUT!', 'var(--pitch)'))
       .to('#silhoB',{ rotation:14, x:6, duration:.35, ease:'power1.in' },'<');
   } else if(pitch.result === 'hit'){
-    tl.add(()=> Sound.crack())
+    tl.add(()=> { Sound.crack(); resolvePitch(idx, pitch); })
       .to(ball,{ left:'-10%', bottom:'86%', scale:1.3, duration:.85, ease:'power2.out' })
       .add(()=> showCall('HOME RUN!', 'var(--bat)'))
       .to('#silhoB',{ rotation:8, duration:.3 },'<');
   } else {
-    tl.add(()=> Sound.catch())
+    tl.add(()=> { Sound.catch(); resolvePitch(idx, pitch); })
       .to(ball,{ left:'82%', bottom:'30%', scale:.8, duration:.14, ease:'power2.in' })
       .to(ball,{ opacity:0, duration:.12 });
   }
