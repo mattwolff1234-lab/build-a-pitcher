@@ -296,7 +296,11 @@
   .result-card.win .rh { color:var(--gold); } .result-card.lose .rh { color:var(--muted); }
   .result-card .rline { color:var(--ink); margin:14px 0 6px; font-size:16px; }
   .result-card .rsub { color:var(--muted); font-size:13px; }
-  .result-actions { display:flex; gap:12px; justify-content:center; margin-top:20px; flex-wrap:wrap; }
+  .result-actions { display:flex; flex-direction:column; align-items:center; gap:10px; margin-top:20px; }
+  .result-actions .ra-primary { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; width:100%; }
+  .result-actions .ra-secondary { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
+  .result-actions .ra-primary .btn { flex:1; min-width:130px; max-width:200px; font-size:14px; }
+  .result-actions .ra-secondary .btn, .result-actions .ra-secondary a.btn { font-size:12px; padding:10px 16px; }
   #rematchStatus { min-height:20px; margin:10px 0 -4px; font-family:'Oswald',sans-serif;
     font-size:13px; color:var(--muted); text-align:center; letter-spacing:.5px; }
   #rematchStatus .rs-count { color:var(--accent); font-weight:700; font-size:15px; }
@@ -466,9 +470,14 @@
       <div id="ratingResult" class="rating-result"></div>
       <div id="rematchStatus"></div>
       <div class="result-actions">
-        <button class="btn" id="rematchBtn" style="font-size:14px;">⚔️ New Match</button>
-        <button class="btn ghost" id="resultStatsBtn" style="font-size:13px; padding:14px 20px;">📊 Stats</button>
-        <a class="btn ghost" href="/" style="font-size:13px; padding:14px 22px; text-decoration:none; display:inline-block;">Home</a>
+        <div class="ra-primary">
+          <button class="btn" id="rematchBtn">⚔️ Rematch?</button>
+          <button class="btn ghost" id="newMatchBtn">🔄 New Match</button>
+        </div>
+        <div class="ra-secondary">
+          <button class="btn ghost" id="resultStatsBtn">📊 Stats</button>
+          <a class="btn ghost" href="/" style="text-decoration:none;">🏠 Home</a>
+        </div>
       </div>
     </div>
   </div>
@@ -1275,7 +1284,7 @@ function showNoContest(){
   if (atBatStarted || oppBuild || matchResolved) return;
   matchResolved=true;
   showScreen('resultScreen');
-  resetRematchUI('⚔️ New Match');
+  resetRematchUI();
   $('resultCard').className = 'result-card';
   $('resultHead').textContent = 'NO CONTEST';
   $('resultLine').textContent = "Your opponent didn’t finish their build in time.";
@@ -1532,11 +1541,11 @@ function showCall(text, color){
 }
 
 /* ---------- rematch ---------- */
-function resetRematchUI(label='⚔️ Rematch?'){
+function resetRematchUI(){
   if (rematchCountdown){ clearInterval(rematchCountdown); rematchCountdown=null; }
   rematchOffered=false; rematchOppOffer=null;
   const rs=$('rematchStatus'); if(rs) rs.innerHTML='';
-  const rb=$('rematchBtn'); if(rb){ rb.textContent=label; rb.classList.remove('rmatch-glow'); }
+  const rb=$('rematchBtn'); if(rb){ rb.textContent='⚔️ Rematch?'; rb.classList.remove('rmatch-glow'); }
 }
 function handleRematchMsg(data){
   if (!matchResolved) return;
@@ -1665,6 +1674,7 @@ $('resultStatsBtn').onclick = () => { Sound.click(); openStats(); };
 $('statsBack').onclick = () => { showScreen('mmScreen'); updateRatingChip(); };
 // deep-link: /versus#stats opens the stats page straight away (from the hamburger menus)
 if (location.hash === '#stats') openStats();
+$('newMatchBtn').onclick = () => { Sound.click(); findMatch(); };
 $('rematchBtn').onclick = () => {
   Sound.click();
   if (matchResolved && matchId && matchCh){
