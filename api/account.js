@@ -77,6 +77,20 @@ function ensure() {
         created_at timestamptz NOT NULL DEFAULT now(),
         PRIMARY KEY (match_id, role)
       )`;
+      await sql`CREATE TABLE IF NOT EXISTS pvp_history (
+        id serial PRIMARY KEY,
+        player_key text NOT NULL,
+        match_id text NOT NULL,
+        won boolean NOT NULL,
+        my_role text,
+        my_ovr int,
+        opp_name text,
+        opp_ovr int,
+        elo_before int,
+        elo_after int,
+        created_at timestamptz NOT NULL DEFAULT now()
+      )`;
+      await sql`CREATE INDEX IF NOT EXISTS idx_pvp_history_player ON pvp_history (player_key, created_at DESC)`;
     })();
   }
   return ready;
@@ -188,12 +202,13 @@ module.exports = async (req, res) => {
         if (!matchId) return res.status(400).json({ ok: false, error: 'missing matchId' });
         const won = !!body.won;
         const oppElo = Math.max(100, Math.min(4000, Math.round(Number(body.oppElo) || 1000)));
+        const role = (body.role === 'pitcher' || body.role === 'batter') ? body.role : null;
+        const myOvr = Math.round(Number(body.ovr) || 0) || null;
+        const oppOvr = Math.round(Number(body.oppOvr) || 0) || null;
+        const oppName = String(body.oppName || '').trim().slice(0, 40) || null;
 
         // anonymous balance log (one row per match+role; idempotent)
-        const role = (body.role === 'pitcher' || body.role === 'batter') ? body.role : null;
         if (role) {
-          const myOvr = Math.round(Number(body.ovr) || 0) || null;
-          const oppOvr = Math.round(Number(body.oppOvr) || 0) || null;
           try {
             await sql`INSERT INTO pvp_matches (match_id, role, won, ovr, opp_ovr)
               VALUES (${matchId}, ${role}, ${won}, ${myOvr}, ${oppOvr})
@@ -213,7 +228,19 @@ module.exports = async (req, res) => {
         const elo = Math.max(100, u.elo + delta + bonus);
         const wins = u.wins + (won ? 1 : 0), losses = u.losses + (won ? 0 : 1);
         await sql`UPDATE users SET pvp_elo = ${elo}, pvp_wins = ${wins}, pvp_losses = ${losses}, pvp_streak = ${streak} WHERE google_sub = ${key}`;
+        try {
+          await sql`INSERT INTO pvp_history (player_key, match_id, won, my_role, my_ovr, opp_name, opp_ovr, elo_before, elo_after)
+            VALUES (${key}, ${matchId}, ${won}, ${role}, ${myOvr}, ${oppName}, ${oppOvr}, ${u.elo}, ${elo})`;
+        } catch (e) {}
         return res.status(200).json({ ok: true, counted: true, elo, delta: delta + bonus, bonus, streak, wins, losses });
+      }
+
+      if (action === 'pvpHistory') {
+        const key = await pvpKey(body);
+        if (!key) return res.status(401).json({ ok: false, error: 'Not signed in' });
+        const rows = await sql`SELECT won, my_role, my_ovr, opp_name, opp_ovr, elo_before, elo_after, created_at
+          FROM pvp_history WHERE player_key = ${key} ORDER BY created_at DESC LIMIT 20`;
+        return res.status(200).json({ ok: true, history: rows });
       }
 
       // Carry a device-guest's rating onto a Google account the first time they sign in

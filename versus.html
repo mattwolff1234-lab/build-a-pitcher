@@ -140,6 +140,17 @@
   .role-card.batter { --rc:var(--bat); border-color:var(--bat); }
   .role-card.batter .role-fig { -webkit-mask-image:url(batter-figure.png); mask-image:url(batter-figure.png); }
   .role-sub { color:var(--muted); margin-top:18px; font-size:14px; max-width:340px; }
+  .hist-head { font-family:'Oswald',sans-serif; font-size:13px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin:22px 0 8px; }
+  .hist-row { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--line); }
+  .hist-row:last-child { border-bottom:none; }
+  .hist-wl { font-family:'Oswald',sans-serif; font-weight:700; font-size:15px; width:16px; flex-shrink:0; }
+  .hist-wl.w { color:#4ade80; } .hist-wl.l { color:#ff6b6b; }
+  .hist-role { font-size:15px; flex-shrink:0; }
+  .hist-info { flex:1; min-width:0; }
+  .hist-vs { font-size:13px; font-weight:600; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .hist-sub { font-size:11px; color:var(--muted); margin-top:1px; }
+  .hist-delta { font-family:'Oswald',sans-serif; font-size:15px; font-weight:700; flex-shrink:0; }
+  .hist-delta.pos { color:#4ade80; } .hist-delta.neg { color:#ff6b6b; }
   .opp-chip { margin-top:20px; display:flex; flex-direction:column; align-items:center; gap:4px; }
   .opp-chip .oc-vs { font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:4px; text-transform:uppercase; color:var(--accent2); }
   .opp-chip .oc-name { font-family:'Oswald',sans-serif; font-size:22px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:#fff; }
@@ -429,6 +440,7 @@
     <div class="hero" style="margin:22px 0 14px"><h1 style="font-size:clamp(30px,7vw,48px)">My <i>Stats</i></h1></div>
     <div class="vs-card" style="max-width:520px; text-align:left">
       <div id="statsPersonal"></div>
+      <div id="statsHistory"></div>
       <div id="statsBoard"></div>
       <div style="text-align:center"><button class="btn ghost" id="statsBack" style="margin-top:22px; font-size:13px; padding:10px 22px;">‹ Back</button></div>
     </div>
@@ -770,7 +782,7 @@ async function applyResult(){
   try {
     const r = await fetch('/api/account', { method:'POST', headers:{'content-type':'application/json'},
       body: JSON.stringify(Object.assign({ action:'pvpResult', matchId: pr.matchId, won: pr.won, oppElo: pr.oppElo,
-        role: pr.role, ovr: pr.ovr, oppOvr: pr.oppOvr }, principal())) }).then(x=>x.json());
+        role: pr.role, ovr: pr.ovr, oppOvr: pr.oppOvr, oppName: pr.oppName || '' }, principal())) }).then(x=>x.json());
     if (r.ok){ myStats = { elo:r.elo, wins:r.wins, losses:r.losses, streak:r.streak||0 }; renderRatingResult(r); }
   } catch(e){}
 }
@@ -1415,7 +1427,8 @@ function showForfeitResult(iWon, filled, data={}){
   gsap.fromTo(card,{ y:24, opacity:0, scale:.92 },{ y:0, opacity:1, scale:1, duration:.5, ease:'back.out(1.5)' });
 
   const oppElo = typeof data.elo === 'number' ? data.elo : ((oppBuild && typeof oppBuild.elo === 'number') ? oppBuild.elo : 1000);
-  pendingResult = { matchId, won:iWon, oppElo, role:myRole, ovr:(myBuild ? myBuild.ovr : 0), oppOvr:(oppBuild ? oppBuild.ovr : 0) };
+  const oppForfeitName = data.name || (oppBuild && oppBuild.name ? oppBuild.name : '');
+  pendingResult = { matchId, won:iWon, oppElo, role:myRole, ovr:(myBuild ? myBuild.ovr : 0), oppOvr:(oppBuild ? oppBuild.ovr : 0), oppName:oppForfeitName };
   $('ratingResult').innerHTML = '';
   applyResult();
 }
@@ -1707,7 +1720,7 @@ function showResult(iWon, pitcher, batter, winnerRole, script){
   // Elo: report this result against the opponent's rating (came over with their build).
   // Works for guests (device rating) and signed-in users alike.
   const oppElo = (oppBuild && typeof oppBuild.elo === 'number') ? oppBuild.elo : 1000;
-  pendingResult = { matchId, won: iWon, oppElo, role: myRole, ovr: (myBuild ? myBuild.ovr : 0), oppOvr: (oppBuild ? oppBuild.ovr : 0) };
+  pendingResult = { matchId, won: iWon, oppElo, role: myRole, ovr: (myBuild ? myBuild.ovr : 0), oppOvr: (oppBuild ? oppBuild.ovr : 0), oppName: oppName };
   $('ratingResult').innerHTML = '';
   applyResult();
 }
@@ -1716,16 +1729,39 @@ function showResult(iWon, pitcher, batter, winnerRole, script){
 function openStats(){
   showScreen('statsScreen');
   $('statsPersonal').innerHTML = '<div class="prompt">Loading…</div>';
+  $('statsHistory').innerHTML = '';
   $('statsBoard').innerHTML = '';
   loadStats();
 }
 async function loadStats(){
-  let data;
+  let data, hist;
   try {
-    data = await fetch('/api/account', { method:'POST', headers:{'content-type':'application/json'},
-      body: JSON.stringify(Object.assign({ action:'pvpLeaderboard', limit:50 }, principal())) }).then(x=>x.json());
+    [data, hist] = await Promise.all([
+      fetch('/api/account', { method:'POST', headers:{'content-type':'application/json'},
+        body: JSON.stringify(Object.assign({ action:'pvpLeaderboard', limit:50 }, principal())) }).then(x=>x.json()),
+      fetch('/api/account', { method:'POST', headers:{'content-type':'application/json'},
+        body: JSON.stringify(Object.assign({ action:'pvpHistory' }, principal())) }).then(x=>x.json()).catch(()=>null)
+    ]);
   } catch(e){ $('statsPersonal').innerHTML = '<div class="prompt">Could not load stats. Try again.</div>'; return; }
   if (!data || !data.ok){ $('statsPersonal').innerHTML = '<div class="prompt">Could not load stats.</div>'; return; }
+  if (hist && hist.ok && hist.history && hist.history.length) {
+    const rows = hist.history.map(r => {
+      const delta = (r.elo_after != null && r.elo_before != null) ? (r.elo_after - r.elo_before) : null;
+      const sign = delta >= 0 ? '+' : '';
+      const roleIcon = r.my_role === 'pitcher' ? '⚾' : '🏏';
+      const sub = [r.my_ovr ? `${r.my_ovr} OVR` : null, r.opp_ovr ? `opp ${r.opp_ovr}` : null].filter(Boolean).join(' · ');
+      return `<div class="hist-row">
+        <div class="hist-wl ${r.won?'w':'l'}">${r.won?'W':'L'}</div>
+        <div class="hist-role">${roleIcon}</div>
+        <div class="hist-info">
+          <div class="hist-vs">vs. ${escapeHTML(r.opp_name || 'Opponent')}</div>
+          ${sub ? `<div class="hist-sub">${sub}</div>` : ''}
+        </div>
+        ${delta != null ? `<div class="hist-delta ${delta>=0?'pos':'neg'}">${sign}${delta}</div>` : ''}
+      </div>`;
+    }).join('');
+    $('statsHistory').innerHTML = `<div class="hist-head">Recent Matches</div><div>${rows}</div>`;
+  }
 
   const me = data.me;
   if (me){
