@@ -499,10 +499,10 @@ function borderTier(p){ return p.legend?'legend':tier(p.ovr); }
 /* ---------- elo tiers ---------- */
 const ELO_TIERS = [
   { name:'Bronze',   min:0,    color:'#cd7f32', glow:'rgba(205,127,50,.85)'   },
-  { name:'Silver',   min:1100, color:'#bfc9d4', glow:'rgba(191,201,212,.85)'  },
-  { name:'Gold',     min:1250, color:'#ffd700', glow:'rgba(255,215,0,.85)'    },
-  { name:'Platinum', min:1400, color:'#4de8e0', glow:'rgba(77,232,224,.85)'   },
-  { name:'Diamond',  min:1550, color:'#5eb8ff', glow:'rgba(94,184,255,.85)'   },
+  { name:'Silver',   min:900,  color:'#bfc9d4', glow:'rgba(191,201,212,.85)'  },
+  { name:'Gold',     min:1000, color:'#ffd700', glow:'rgba(255,215,0,.85)'    },
+  { name:'Platinum', min:1100, color:'#4de8e0', glow:'rgba(77,232,224,.85)'   },
+  { name:'Diamond',  min:1200, color:'#5eb8ff', glow:'rgba(94,184,255,.85)'   },
 ];
 const TOP10_TIER = { name:'Top 10', color:'#cc44ff', glow:'rgba(204,68,255,.85)' };
 function getEloTier(elo, rank){
