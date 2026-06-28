@@ -967,7 +967,8 @@ function beginRoleReveal(){
 }
 
 /* ---------- quick build ---------- */
-const CARD_W = 98; // rcard width(90) + gap(8)
+const CARD_W = 98; // rcard width(90) + gap(8) — fallback; liveCardW() reads actual rendered size
+function liveCardW(){ const el=document.querySelector('#track .rcard'); return el ? Math.round(el.getBoundingClientRect().width)+8 : CARD_W; }
 const buildState = { filled:{}, used:new Set(), landed:null, spinning:false, finished:false,
   respinUsed:false, boostUsed:false, snagUsed:false, boostedThisLand:false, strip:null, targetIndex:0 };
 let clockLeft = 120, clockTimer = null;
@@ -1117,7 +1118,7 @@ function idleReel(){
   for(let i=0;i<N;i++)cards.push(pool()[Math.floor(rng()*pool().length)]);
   track.innerHTML = cards.concat(cards).map(rcardHTML).join('');
   gsap.set(track,{x:0,filter:'none'});
-  idleTween = gsap.to(track,{x:-(N*CARD_W),duration:N*0.9,ease:'none',repeat:-1});
+  const cw0=liveCardW(); idleTween = gsap.to(track,{x:-(N*cw0),duration:N*0.9,ease:'none',repeat:-1});
 }
 function spin(){
   if(buildState.spinning || buildState.finished) return;
@@ -1131,12 +1132,13 @@ function spin(){
   animateReel(ti, 2.6, 'power4.out', () => land(target));
 }
 function animateReel(index, dur, ease, onDone){
-  const track=$('track'); const frameW=track.parentElement.clientWidth; const offset=index*CARD_W-(frameW/2)+CARD_W/2+8;
+  const track=$('track'); const cw=liveCardW();
+  const frameW=track.parentElement.clientWidth; const offset=index*cw-(frameW/2)+cw/2+8;
   let prevX=gsap.getProperty(track,'x'),prevT=performance.now(),lastTick=prevX;
   gsap.to(track,{ x:-offset, duration:dur, ease,
     onUpdate:()=>{ const x=gsap.getProperty(track,'x'),t=performance.now(),dt=Math.max(8,t-prevT),sp=Math.abs(x-prevX)/dt; prevX=x;prevT=t;
       const b=Math.min(3.5,sp*0.6); track.style.filter=b>0.5?`blur(${b.toFixed(1)}px)`:'none';
-      if(Math.abs(x-lastTick)>=CARD_W){ Sound.tick(sp/7); lastTick=x; } },
+      if(Math.abs(x-lastTick)>=cw){ Sound.tick(sp/7); lastTick=x; } },
     onComplete:()=>{ track.style.filter='none'; buildState.spinning=false; onDone(); }
   });
 }
