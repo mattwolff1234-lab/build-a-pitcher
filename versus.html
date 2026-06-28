@@ -1744,8 +1744,9 @@ async function loadStats(){
     ]);
   } catch(e){ $('statsPersonal').innerHTML = '<div class="prompt">Could not load stats. Try again.</div>'; return; }
   if (!data || !data.ok){ $('statsPersonal').innerHTML = '<div class="prompt">Could not load stats.</div>'; return; }
-  if (hist && hist.ok && hist.history && hist.history.length) {
-    const rows = hist.history.map(r => {
+  const histRows = (hist && hist.ok && hist.history) ? hist.history : [];
+  if (histRows.length) {
+    const rows = histRows.map(r => {
       const delta = (r.elo_after != null && r.elo_before != null) ? (r.elo_after - r.elo_before) : null;
       const sign = delta >= 0 ? '+' : '';
       const roleIcon = r.my_role === 'pitcher' ? '⚾' : '🏏';
@@ -1761,6 +1762,8 @@ async function loadStats(){
       </div>`;
     }).join('');
     $('statsHistory').innerHTML = `<div class="hist-head">Recent Matches</div><div>${rows}</div>`;
+  } else {
+    $('statsHistory').innerHTML = `<div class="hist-head">Recent Matches</div><div class="prompt" style="margin:6px 0 0">No matches logged yet — play a 1v1 to start tracking history.</div>`;
   }
 
   const me = data.me;
