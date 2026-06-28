@@ -938,6 +938,7 @@ async function cancelSearch(){
 function resetMatch(){
   stopSearch();
   myBuild=null; oppBuild=null; atBatStarted=false; matchResolved=false; oppPresent=false; waitingArena=false;
+  oppProg={filled:0,total:9};
   if ($('waitArena')) $('waitArena').classList.remove('show');
   if (clockTimer){ clearInterval(clockTimer); clockTimer=null; }
   if (claimTimeout){ clearTimeout(claimTimeout); claimTimeout=null; }
@@ -955,7 +956,7 @@ async function startMatch(mId, role, sd, opp, claimer){
 
   matchCh = ably.channels.get('versus:match:' + matchId);
   // ignore our own messages (belt-and-suspenders alongside echoMessages:false)
-  matchCh.subscribe('build',    m => { if (m.clientId === clientId) return; oppBuild = m.data; updateOppPill(); maybeStartAtBat(); });
+  matchCh.subscribe('build',    m => { if (m.clientId === clientId) return; oppBuild = m.data; updateOppPill(); if (myBuild && !atBatStarted && !matchResolved){ try{ matchCh.publish('build', myBuild); }catch(e){} } maybeStartAtBat(); });
   matchCh.subscribe('progress', m => { if (m.clientId === clientId) return; updateOppProgress(m.data); });
   matchCh.subscribe('forfeit',  m => { if (m.clientId === clientId) return; handleOpponentForfeit(m.data || {}); });
   matchCh.subscribe('rematch',  m => { if (m.clientId === clientId) return; handleRematchMsg(m.data); });
@@ -1616,7 +1617,9 @@ function handleRematchMsg(data){
   if (data.type === 'offer'){
     rematchOppOffer = data;
     if (rematchOffered){
-      acceptOppRematch(); // both offered simultaneously — I'm authority since I offered first
+      // tiebreaker: lower clientId is the authority who generates the new matchId
+      if (clientId < oppId) acceptOppRematch();
+      // else: wait for opponent's 'start' message
     } else {
       const oppName = escapeHTML(oppBuild && oppBuild.name ? oppBuild.name : 'Opponent');
       $('rematchStatus').innerHTML = `<span class="rs-want">⚔️ ${oppName} wants a rematch!</span>`;
