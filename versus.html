@@ -162,6 +162,18 @@
   .opp-chip .oc-name { font-family:'Oswald',sans-serif; font-size:22px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:#fff; }
   .opp-chip .oc-elo { font-size:12px; color:var(--muted); letter-spacing:.5px; margin-top:1px; }
 
+  /* ---------- challenge ---------- */
+  .chal-notif { background:linear-gradient(180deg,var(--panel-a),var(--panel-b));
+    border:2px solid var(--accent2); border-radius:16px; padding:20px 22px;
+    box-shadow:0 16px 50px rgba(0,0,0,.6); text-align:center; }
+  .chal-notif .cn-tag { font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:3px;
+    text-transform:uppercase; color:var(--accent2); margin-bottom:8px; }
+  .chal-notif .cn-name { font-family:'Oswald',sans-serif; font-size:22px; font-weight:700;
+    letter-spacing:1.5px; color:#fff; margin-bottom:4px; }
+  .chal-notif .cn-sub { font-size:13px; color:var(--muted); margin-bottom:18px; }
+  .chal-notif .cn-btns { display:flex; gap:10px; justify-content:center; }
+  .chal-notif .cn-btns .btn { font-size:13px; padding:10px 22px; }
+
   /* ---------- build screen ---------- */
   /* desktop: figure on the left, controls (clock, reel, slots) stacked on the right */
   #buildScreen.on { display:grid; grid-template-columns:390px minmax(0,1fr); column-gap:22px; row-gap:10px;
@@ -456,7 +468,11 @@
       <div id="historyPanel" style="display:none">
         <div id="statsHistory"></div>
       </div>
-      <div style="text-align:center"><button class="btn ghost" id="statsBack" style="margin-top:22px; font-size:13px; padding:10px 22px;">‹ Back</button></div>
+      <div id="challengeLinkWrap" style="text-align:center;margin-top:18px">
+        <button class="btn ghost" id="challengeLinkBtn" style="font-size:13px;padding:10px 20px;">🔗 Copy Challenge Link</button>
+        <div id="chalCopied" style="display:none;color:var(--accent2);font-size:12px;margin-top:6px;letter-spacing:.3px">✓ Link copied! Share it with a friend for a friendly match.</div>
+      </div>
+      <div style="text-align:center"><button class="btn ghost" id="statsBack" style="margin-top:14px; font-size:13px; padding:10px 22px;">‹ Back</button></div>
     </div>
   </div>
 
@@ -529,6 +545,22 @@
     <div class="pitch-seq" id="pitchSeq"></div>
   </div>
 
+  <!-- Challenge screen (opened via a shared challenge link) -->
+  <div class="screen" id="challengeScreen">
+    <div class="hero" style="margin:30px 0 20px">
+      <div class="kick">Friendly Match</div>
+      <h1>You've Been <i>Challenged!</i></h1>
+    </div>
+    <div class="vs-card" style="text-align:center">
+      <div style="font-size:13px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">challenged by</div>
+      <div id="chalChallengerName" style="font-family:'Oswald',sans-serif;font-size:28px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#fff;margin-bottom:10px"></div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:24px">Friendly match · no Elo change · just bragging rights</div>
+      <button class="btn" id="chalAcceptBtn" style="width:100%;max-width:280px;margin:0 auto;display:block;">⚔️ Accept Challenge</button>
+      <div class="status" id="chalStatus" style="margin-top:14px;min-height:20px"></div>
+      <div style="margin-top:12px"><button class="btn ghost" id="chalDeclineBtn" style="font-size:13px;padding:9px 18px;">Decline</button></div>
+    </div>
+  </div>
+
   <!-- 5. Result -->
   <div class="screen" id="resultScreen">
     <div class="result-card" id="resultCard">
@@ -550,6 +582,19 @@
     </div>
   </div>
 
+</div>
+
+<!-- Floating challenge notification (shown when someone accepts your shared link) -->
+<div id="challengeNotif" style="display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:50;max-width:380px;width:calc(100% - 32px)">
+  <div class="chal-notif">
+    <div class="cn-tag">Friendly Challenge</div>
+    <div class="cn-name" id="chalNotifName"></div>
+    <div class="cn-sub">wants a friendly 1v1 · no Elo change</div>
+    <div class="cn-btns">
+      <button class="btn" id="chalNotifAccept">⚔️ Accept</button>
+      <button class="btn ghost" id="chalNotifDecline">Decline</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -698,6 +743,10 @@ let myRole=null, oppRole=null, matchId=null, seed=0, oppId=null, wasClaimer=fals
 let inviteCh=null, matchCh=null;
 let rematchOffered=false, rematchOppOffer=null, rematchCountdown=null, rematchSec=10;
 let oppPresenceName='', oppPresenceElo=0;
+let friendlyMode=false;
+let challengeInboxCh=null, _incomingChalId=null, _incomingChalName=null;
+let pendingChallenge=null; // {replyId, replyClientId, name} — incoming challenge waiting on the notif
+let chalWaitTimeout=null;
 let DATA={};               // role -> data json
 let myBuild=null, oppBuild=null, atBatStarted=false, matchResolved=false;
 let claimTimeout=null, waitTimeout=null;
@@ -892,6 +941,97 @@ async function goOnline(){
   onlineCh.presence.subscribe(['enter','leave','update'], recomputeTicker);
   try { await onlineCh.presence.enter({ status: myOnlineStatus }); } catch(e){}
   recomputeTicker();
+  subscribeChallengeInbox();
+}
+
+/* ---------- friend challenge ---------- */
+function subscribeChallengeInbox(){
+  if (challengeInboxCh) return;
+  try {
+    challengeInboxCh = ably.channels.get('versus:challenge:' + personId());
+    challengeInboxCh.subscribe(msg => handleChallengeMsg(msg));
+  } catch(e){}
+}
+
+function handleChallengeMsg(msg){
+  const d = msg.data; if (!d || !d.type) return;
+  if (d.type === 'request'){
+    // someone opened your challenge link and clicked Accept
+    if (atBatStarted && !matchResolved) return; // mid-match, ignore
+    pendingChallenge = { replyId: d.replyId, replyClientId: d.clientId, name: d.name || 'Challenger' };
+    showChallengeNotif(d.name || 'Challenger');
+  } else if (d.type === 'accept'){
+    // challenger accepted our request — start the friendly match
+    if (chalWaitTimeout){ clearTimeout(chalWaitTimeout); chalWaitTimeout=null; }
+    startMatch(d.matchId, d.yourRole, d.seed, d.chalClientId || '', false, true);
+  } else if (d.type === 'decline'){
+    pendingChallenge = null;
+    hideChallengeNotif();
+  }
+}
+
+function checkChallengeURL(){
+  const params = new URLSearchParams(location.search);
+  const ch = params.get('ch'), cn = params.get('cn');
+  if (!ch) return;
+  _incomingChalId = ch;
+  _incomingChalName = cn ? decodeURIComponent(cn) : 'Challenger';
+  $('chalChallengerName').textContent = _incomingChalName;
+  showScreen('challengeScreen');
+}
+
+async function sendChallengeRequest(){
+  if (!ably || !_incomingChalId) return;
+  $('chalAcceptBtn').disabled = true;
+  $('chalStatus').textContent = 'Contacting challenger…';
+  try {
+    const ch = ably.channels.get('versus:challenge:' + _incomingChalId);
+    await ch.publish({ type:'request', replyId: personId(), clientId, name: displayName() });
+    $('chalStatus').innerHTML = 'Waiting for challenger to accept… <span id="chalCancelTxt" style="cursor:pointer;color:var(--accent2);font-size:11px;letter-spacing:.3px;text-decoration:underline;margin-left:4px">cancel</span>';
+    const cancelTxt = $('chalCancelTxt');
+    if (cancelTxt) cancelTxt.onclick = () => { if(chalWaitTimeout){clearTimeout(chalWaitTimeout);chalWaitTimeout=null;} showScreen('mmScreen'); };
+    chalWaitTimeout = setTimeout(() => { $('chalStatus').textContent = 'No response. They may be offline.'; $('chalAcceptBtn').disabled=false; }, 60000);
+  } catch(e){ $('chalStatus').textContent = 'Could not reach challenger. Check your connection.'; $('chalAcceptBtn').disabled=false; }
+}
+
+async function acceptChallengeNotif(){
+  if (!pendingChallenge || !ably) return;
+  hideChallengeNotif();
+  const pr = pendingChallenge; pendingChallenge = null;
+  const newId = rid(), newSeed = (Math.random() * 0xFFFFFFFF)|0;
+  const myNewRole = Math.random() < 0.5 ? 'pitcher' : 'batter';
+  const theirRole = myNewRole === 'pitcher' ? 'batter' : 'pitcher';
+  try {
+    const ch = ably.channels.get('versus:challenge:' + pr.replyId);
+    await ch.publish({ type:'accept', matchId:newId, seed:newSeed, yourRole:theirRole, chalClientId:clientId });
+  } catch(e){}
+  startMatch(newId, myNewRole, newSeed, pr.replyClientId, false, true);
+}
+
+function declineChallengeNotif(){
+  const pr = pendingChallenge; pendingChallenge = null;
+  hideChallengeNotif();
+  if (pr && ably) {
+    try { ably.channels.get('versus:challenge:' + pr.replyId).publish({ type:'decline' }); } catch(e){}
+  }
+}
+
+function showChallengeNotif(name){
+  $('chalNotifName').textContent = name;
+  const el = $('challengeNotif'); el.style.display = 'block';
+  gsap.fromTo(el, { y:40, opacity:0 }, { y:0, opacity:1, duration:.4, ease:'back.out(1.8)' });
+}
+
+function hideChallengeNotif(){
+  const el = $('challengeNotif'); if (!el || el.style.display === 'none') return;
+  gsap.to(el, { y:20, opacity:0, duration:.25, ease:'power2.in', onComplete(){ el.style.display='none'; } });
+}
+
+function copyChallengeLinkFn(){
+  const link = location.origin + '/versus?ch=' + encodeURIComponent(personId()) + '&cn=' + encodeURIComponent(displayName());
+  const done = () => { const c=$('chalCopied'); if(c){ c.style.display=''; setTimeout(()=>{ if(c) c.style.display='none'; },3000); } };
+  if (navigator.clipboard) { navigator.clipboard.writeText(link).then(done).catch(()=>{ prompt('Copy this link:', link); }); }
+  else { try { prompt('Copy this link:', link); done(); } catch(e){} }
 }
 async function setOnlineStatus(s){
   myOnlineStatus = s;
@@ -973,6 +1113,8 @@ async function cancelSearch(){
 
 function resetMatch(){
   stopSearch();
+  friendlyMode=false; pendingChallenge=null;
+  if ($('challengeNotif')) { gsap.killTweensOf($('challengeNotif')); $('challengeNotif').style.display='none'; }
   myBuild=null; oppBuild=null; atBatStarted=false; matchResolved=false; oppPresent=false; waitingArena=false;
   oppProg={filled:0,total:9}; oppPresenceName=''; oppPresenceElo=0;
   if ($('waitArena')) $('waitArena').classList.remove('show');
@@ -984,7 +1126,8 @@ function resetMatch(){
 }
 
 let oppPresent=false;
-async function startMatch(mId, role, sd, opp, claimer){
+async function startMatch(mId, role, sd, opp, claimer, friendly=false){
+  friendlyMode = !!friendly;
   setOnlineStatus('playing');
   if (inviteCh){ inviteCh.unsubscribe(); try{ inviteCh.detach(); }catch(e){} inviteCh=null; }
   matchId=mId; myRole=role; oppRole=role==='pitcher'?'batter':'pitcher'; seed=(sd>>>0); oppId=opp; wasClaimer=!!claimer;
@@ -1442,9 +1585,13 @@ function showForfeitResult(iWon, filled, data={}){
 
   const oppElo = typeof data.elo === 'number' ? data.elo : ((oppBuild && typeof oppBuild.elo === 'number') ? oppBuild.elo : 1000);
   const oppForfeitName = data.name || (oppBuild && oppBuild.name ? oppBuild.name : '');
-  pendingResult = { matchId, won:iWon, oppElo, role:myRole, ovr:(myBuild ? myBuild.ovr : 0), oppOvr:(oppBuild ? oppBuild.ovr : 0), oppName:oppForfeitName };
-  $('ratingResult').innerHTML = '';
-  applyResult();
+  if (friendlyMode) {
+    $('ratingResult').innerHTML = '<div class="prompt" style="color:var(--accent2);font-size:14px;margin-top:4px">⚔️ Friendly Match · No Elo Change</div>';
+  } else {
+    pendingResult = { matchId, won:iWon, oppElo, role:myRole, ovr:(myBuild ? myBuild.ovr : 0), oppOvr:(oppBuild ? oppBuild.ovr : 0), oppName:oppForfeitName };
+    $('ratingResult').innerHTML = '';
+    applyResult();
+  }
 }
 
 /* ---------- opponent status + messaging ---------- */
@@ -1709,9 +1856,9 @@ async function acceptOppRematch(){
 function doRematch(newMatchId, newRole, newSeed){
   if (rematchCountdown){ clearInterval(rematchCountdown); rematchCountdown=null; }
   rematchOffered=false; rematchOppOffer=null;
-  const savedOppId = oppId;
+  const savedOppId = oppId, savedFriendly = friendlyMode;
   resetMatch();
-  startMatch(newMatchId, newRole, newSeed, savedOppId, false);
+  startMatch(newMatchId, newRole, newSeed, savedOppId, false, savedFriendly);
 }
 
 /* ---------- result ---------- */
@@ -1731,12 +1878,15 @@ function showResult(iWon, pitcher, batter, winnerRole, script){
   iWon ? Sound.win() : Sound.lose();
   gsap.fromTo(card,{ y:24, opacity:0, scale:.92 },{ y:0, opacity:1, scale:1, duration:.5, ease:'back.out(1.5)' });
 
-  // Elo: report this result against the opponent's rating (came over with their build).
-  // Works for guests (device rating) and signed-in users alike.
   const oppElo = (oppBuild && typeof oppBuild.elo === 'number') ? oppBuild.elo : 1000;
-  pendingResult = { matchId, won: iWon, oppElo, role: myRole, ovr: (myBuild ? myBuild.ovr : 0), oppOvr: (oppBuild ? oppBuild.ovr : 0), oppName: oppName };
-  $('ratingResult').innerHTML = '';
-  applyResult();
+  if (friendlyMode) {
+    $('ratingResult').innerHTML = '<div class="prompt" style="color:var(--accent2);font-size:14px;margin-top:4px">⚔️ Friendly Match · No Elo Change</div>';
+  } else {
+    // Elo: report this result against the opponent's rating (came over with their build).
+    pendingResult = { matchId, won: iWon, oppElo, role: myRole, ovr: (myBuild ? myBuild.ovr : 0), oppOvr: (oppBuild ? oppBuild.ovr : 0), oppName: oppName };
+    $('ratingResult').innerHTML = '';
+    applyResult();
+  }
 }
 
 /* ---------- stats page ---------- */
@@ -1746,6 +1896,7 @@ function switchStatsTab(tab){
   $('tabHistory').classList.toggle('active', !isStats);
   $('statsPanel').style.display = isStats ? '' : 'none';
   $('historyPanel').style.display = isStats ? 'none' : '';
+  if ($('challengeLinkWrap')) $('challengeLinkWrap').style.display = isStats ? '' : 'none';
 }
 function openStats(tab='stats'){
   showScreen('statsScreen');
@@ -1838,9 +1989,16 @@ $('rematchBtn').onclick = () => {
     else { offerRematch(); }
   } else { findMatch(); }
 };
+// challenge feature wiring
+$('chalAcceptBtn').onclick = () => { Sound.click(); sendChallengeRequest(); };
+$('chalDeclineBtn').onclick = () => { showScreen('mmScreen'); _incomingChalId=null; updateRatingChip(); };
+$('chalNotifAccept').onclick = () => { Sound.click(); acceptChallengeNotif(); };
+$('chalNotifDecline').onclick = () => { Sound.click(); declineChallengeNotif(); };
+$('challengeLinkBtn').onclick = () => { Sound.click(); copyChallengeLinkFn(); };
 // sign-in + rating on load
 initGoogle();
 refreshStats().then(updateRatingChip);
+checkChallengeURL();  // show challenge screen immediately if URL has ?ch= (no Ably needed for the screen)
 goOnline();  // join the global presence channel so the live ticker shows real counts
 // leave the queue if the tab closes while waiting
 window.addEventListener('pagehide', () => {
