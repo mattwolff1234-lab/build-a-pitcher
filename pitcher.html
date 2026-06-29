@@ -1235,6 +1235,7 @@ async function init() {
   initGoogle();
   renderStreakChip();
   updateDailyBtn();
+  if (account) syncAccountDates();   // pull this account's daily status (locks today if already played)
 
   // deep-link from the home-page menu, e.g. /pitching#leaderboard → open that panel on load
   const h = (location.hash || '').replace('#', '').toLowerCase();
@@ -1264,8 +1265,14 @@ const HOF_GAME = 'pitcher';
 let account = null;
 try { account = JSON.parse(localStorage.getItem('pl_account') || 'null'); } catch (e) {}
 
-function saveAccount(a) { account = a; try { localStorage.setItem('pl_account', JSON.stringify(a)); } catch (e) {} renderAcct(); if (window.Ach) Ach.sync(); }
-function clearAccount() { account = null; try { localStorage.removeItem('pl_account'); } catch (e) {} try { google.accounts.id.disableAutoSelect(); } catch (e) {} renderAcct(); if (window.Ach) Ach.signOut(); }
+function saveAccount(a) {
+  const changed = !account || account.sub !== a.sub;
+  account = a; try { localStorage.setItem('pl_account', JSON.stringify(a)); } catch (e) {} renderAcct();
+  if (window.Ach) Ach.sync();
+  if (changed) { try { localStorage.removeItem(dcKey()); } catch (e) {} updateDailyBtn(); }   // new identity -> reset device daily gate
+  syncAccountDates();   // then pull this account's true daily status (re-locks if already played today)
+}
+function clearAccount() { account = null; try { localStorage.removeItem('pl_account'); } catch (e) {} try { localStorage.removeItem(dcKey()); } catch (e) {} try { google.accounts.id.disableAutoSelect(); } catch (e) {} renderAcct(); updateDailyBtn(); if (window.Ach) Ach.signOut(); }
 
 function googleConfigured() { return GOOGLE_CLIENT_ID && GOOGLE_CLIENT_ID.indexOf('REPLACE_WITH') !== 0; }
 function initGoogle(tries) {
@@ -1481,11 +1488,14 @@ async function syncAccountDates() {
   try {
     const r = await fetch(`/api/score?action=dailyDates&game=${LEADERBOARD_GAME}&sub=${encodeURIComponent(account.sub)}`);
     const j = await r.json();
-    if (j.ok && Array.isArray(j.dates) && j.dates.length) {
+    if (!j.ok) return;
+    if (Array.isArray(j.dates) && j.dates.length) {
       const s = getPlayedDates();
       j.dates.forEach(d => s.add(d));
       try { localStorage.setItem('pl_played', JSON.stringify([...s].sort())); } catch (e) {}
     }
+    // account-scoped one-per-day gate: if this account already played today (any device), lock it here
+    if (j.today && !getDailyStatus()) { setDailyDone({ ovr: j.today.ovr, rank: j.today.rank, total: j.today.total }); updateDailyBtn(); }
   } catch (e) {}
 }
 function openStreak() {
@@ -1626,9 +1636,11 @@ function showDailyInfo() {
   el.style.display = 'flex';
 }
 function hideDailyInfo() { const el = $('dailyInfo'); if (el) el.style.display = 'none'; }
-function startDailyChallenge() {
+async function startDailyChallenge() {
   closeOverlay('menu');
-  const done = getDailyStatus();
+  let done = getDailyStatus();
+  // signed in but no local record? verify against the account (catches other devices / re-sign-in)
+  if (!done && account) { await syncAccountDates(); done = getDailyStatus(); }
   if (done) { rankReveal(done.ovr, done.rank, done.total, false, true); return; }
   reset();                          // reset() clears dailyMode/lucky, so set them right after
   dailyMode = true;

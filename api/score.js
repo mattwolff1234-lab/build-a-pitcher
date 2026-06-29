@@ -84,14 +84,22 @@ module.exports = async (req, res) => {
       return res.status(200).json({ ok: true, rows, total: Number(total) });
     }
 
-    // GET ?action=dailyDates&sub=<sub>|&guestId=<id> — the player's daily-play dates (streak calendar).
+    // GET ?action=dailyDates&sub=<sub>|&guestId=<id> — the player's daily-play dates (streak calendar)
+    // plus today's result (so the one-per-day gate is enforced per ACCOUNT, across devices).
     if (req.method !== 'POST' && (req.query && req.query.action) === 'dailyDates') {
       const key = playerKey(req.query);
-      if (!key) return res.status(200).json({ ok: true, dates: [] });
+      if (!key) return res.status(200).json({ ok: true, dates: [], today: null });
       const game = gameOf(req.query && req.query.game);
       const rows = await sql`SELECT to_char(challenge_date, 'YYYY-MM-DD') AS d FROM daily_scores
         WHERE player_key = ${key} AND game = ${game} ORDER BY challenge_date`;
-      return res.status(200).json({ ok: true, dates: rows.map(r => r.d) });
+      const [t] = await sql`SELECT ovr FROM daily_scores WHERE player_key = ${key} AND game = ${game} AND challenge_date = CURRENT_DATE`;
+      let today = null;
+      if (t) {
+        const [{ rank }] = await sql`SELECT count(*)::int + 1 AS rank FROM daily_scores WHERE game = ${game} AND challenge_date = CURRENT_DATE AND ovr > ${t.ovr}`;
+        const [{ total }] = await sql`SELECT count(*)::int AS total FROM daily_scores WHERE game = ${game} AND challenge_date = CURRENT_DATE`;
+        today = { ovr: Number(t.ovr), rank: Number(rank), total: Number(total) };
+      }
+      return res.status(200).json({ ok: true, dates: rows.map(r => r.d), today });
     }
 
     if (req.method === 'POST') {
