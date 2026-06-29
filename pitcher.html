@@ -1401,11 +1401,20 @@ function checkStreakMilestone(n) {
   dayToast(m); Sound.legend();
 }
 function nextMilestonePreview() {
-  const next = STREAK_MILESTONES.find(m => m > streak.count);
+  // base it on the streak you'd HAVE after finishing today (playing today already counts)
+  const today = todayUTC();
+  const d = new Date(today + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() - 1);
+  const yd = d.toISOString().slice(0, 10);
+  const projected = streak.lastDate === today ? streak.count : (streak.lastDate === yd ? streak.count + 1 : 1);
+  if (STREAK_MILESTONES.includes(projected)) {
+    const freeze = FREEZE_MILESTONES.includes(projected) ? ' + a 🧊 Freeze' : '';
+    return `Finish today for a 🔥 ${projected}-day streak${freeze}!`;
+  }
+  const next = STREAK_MILESTONES.find(m => m > projected);
   if (!next) return '';
-  const left = next - streak.count;
-  const freeze = FREEZE_MILESTONES.includes(next) ? ' + 🧊 Freeze token' : '';
-  return `${left} more day${left === 1 ? '' : 's'} = 🔥 ${next}-day streak${freeze}`;
+  const left = next - projected;
+  const freeze = FREEZE_MILESTONES.includes(next) ? ' + 🧊 Freeze' : '';
+  return `${left} more day${left === 1 ? '' : 's'} → 🔥 ${next}-day streak${freeze}`;
 }
 function dayToast(msg) {
   let t = $('dayToast');
@@ -1450,7 +1459,7 @@ function showDailyInfo() {
   let html = '';
   if (luckyToday) html += `<span class="di-lucky">✨ LUCKY SPIN — a 💎 Diamond is locked into your first card!</span>`;
   if (best > 0) html += `<span class="di-best">🏆 Your best daily: <b>${best}</b> OVR — beat it!</span>`;
-  if (preview) html += `<span class="di-prev">🔥 ${preview}</span>`;
+  if (preview) html += `<span class="di-prev">${preview}</span>`;
   el.innerHTML = html || `<span class="di-prev">🎯 Same pitchers for everyone today. One shot — make it count.</span>`;
   el.style.display = 'flex';
 }
