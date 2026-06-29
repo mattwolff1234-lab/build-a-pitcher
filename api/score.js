@@ -22,6 +22,9 @@ const gameOf = g => (g === 'batter' ? 'batter' : 'pitcher');
 // Per-player key for daily dedup: signed-in account, else device guest id. Trust-the-client, same
 // posture as the rest of the leaderboard — the UNIQUE constraint is what enforces one attempt/day.
 const playerKey = b => (b && b.sub ? 'acct:' + String(b.sub).slice(0, 80) : (b && b.guestId ? 'guest:' + String(b.guestId).slice(0, 80) : null));
+// The daily resets at each player's LOCAL midnight, so the browser sends its own date (YYYY-MM-DD).
+// We validate it and fall back to the server's CURRENT_DATE (UTC) when absent/malformed.
+const dailyDate = v => (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
 
 let ready;
 function ensure() {
@@ -78,9 +81,10 @@ module.exports = async (req, res) => {
     if (req.method !== 'POST' && (req.query && req.query.action) === 'challengeLeaderboard') {
       const game = gameOf(req.query && req.query.game);
       const limit = Math.max(1, Math.min(200, parseInt(req.query && req.query.limit, 10) || 50));
+      const cd = dailyDate(req.query && req.query.date);
       const rows = await sql`SELECT name, ovr FROM daily_scores
-        WHERE game = ${game} AND challenge_date = CURRENT_DATE ORDER BY ovr DESC, created_at ASC LIMIT ${limit}`;
-      const [{ total }] = await sql`SELECT count(*)::int AS total FROM daily_scores WHERE game = ${game} AND challenge_date = CURRENT_DATE`;
+        WHERE game = ${game} AND challenge_date = COALESCE(${cd}::date, CURRENT_DATE) ORDER BY ovr DESC, created_at ASC LIMIT ${limit}`;
+      const [{ total }] = await sql`SELECT count(*)::int AS total FROM daily_scores WHERE game = ${game} AND challenge_date = COALESCE(${cd}::date, CURRENT_DATE)`;
       return res.status(200).json({ ok: true, rows, total: Number(total) });
     }
 
@@ -92,11 +96,12 @@ module.exports = async (req, res) => {
       const game = gameOf(req.query && req.query.game);
       const rows = await sql`SELECT to_char(challenge_date, 'YYYY-MM-DD') AS d FROM daily_scores
         WHERE player_key = ${key} AND game = ${game} ORDER BY challenge_date`;
-      const [t] = await sql`SELECT ovr FROM daily_scores WHERE player_key = ${key} AND game = ${game} AND challenge_date = CURRENT_DATE`;
+      const cd = dailyDate(req.query && req.query.date);
+      const [t] = await sql`SELECT ovr FROM daily_scores WHERE player_key = ${key} AND game = ${game} AND challenge_date = COALESCE(${cd}::date, CURRENT_DATE)`;
       let today = null;
       if (t) {
-        const [{ rank }] = await sql`SELECT count(*)::int + 1 AS rank FROM daily_scores WHERE game = ${game} AND challenge_date = CURRENT_DATE AND ovr > ${t.ovr}`;
-        const [{ total }] = await sql`SELECT count(*)::int AS total FROM daily_scores WHERE game = ${game} AND challenge_date = CURRENT_DATE`;
+        const [{ rank }] = await sql`SELECT count(*)::int + 1 AS rank FROM daily_scores WHERE game = ${game} AND challenge_date = COALESCE(${cd}::date, CURRENT_DATE) AND ovr > ${t.ovr}`;
+        const [{ total }] = await sql`SELECT count(*)::int AS total FROM daily_scores WHERE game = ${game} AND challenge_date = COALESCE(${cd}::date, CURRENT_DATE)`;
         today = { ovr: Number(t.ovr), rank: Number(rank), total: Number(total) };
       }
       return res.status(200).json({ ok: true, dates: rows.map(r => r.d), today });
@@ -120,13 +125,14 @@ module.exports = async (req, res) => {
         const ovr = Math.max(1, Math.min(120, Math.round(Number(body.ovr) || 0)));
         const cname = String(body.name == null ? '' : body.name).trim().slice(0, 40) || 'Anonymous';
         const cbuild = body.build && typeof body.build === 'object' ? JSON.stringify(body.build) : null;
-        await sql`INSERT INTO daily_scores (player_key, game, name, ovr, build)
-          VALUES (${key}, ${game}, ${cname}, ${ovr}, ${cbuild}::jsonb)
+        const cd = dailyDate(body.date);
+        await sql`INSERT INTO daily_scores (player_key, game, name, ovr, build, challenge_date)
+          VALUES (${key}, ${game}, ${cname}, ${ovr}, ${cbuild}::jsonb, COALESCE(${cd}::date, CURRENT_DATE))
           ON CONFLICT (player_key, game, challenge_date) DO NOTHING`;
         const [{ rank }] = await sql`SELECT count(*)::int + 1 AS rank FROM daily_scores
-          WHERE game = ${game} AND challenge_date = CURRENT_DATE AND ovr > ${ovr}`;
+          WHERE game = ${game} AND challenge_date = COALESCE(${cd}::date, CURRENT_DATE) AND ovr > ${ovr}`;
         const [{ total }] = await sql`SELECT count(*)::int AS total FROM daily_scores
-          WHERE game = ${game} AND challenge_date = CURRENT_DATE`;
+          WHERE game = ${game} AND challenge_date = COALESCE(${cd}::date, CURRENT_DATE)`;
         return res.status(200).json({ ok: true, rank: Number(rank), total: Number(total) });
       }
 

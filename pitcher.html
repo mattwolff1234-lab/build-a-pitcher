@@ -1445,9 +1445,11 @@ function randPitcher(rng) {
 }
 
 /* ===== Daily Challenge + streak (habit loop - phase 1 foundation) ===== */
+// The daily resets at the player's LOCAL midnight, so "today" is the local calendar date.
+// (Name kept for churn; it's the local date now. addDays does plain string math, so streaks stay consistent.)
 function todayUTC() {
   const d = new Date();
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 function getOrCreateGuestId() {
   let gid = null;
@@ -1488,7 +1490,7 @@ async function syncAccountDates() {
   // stale local value - that was the "0 OVR" bug when signed out.
   const q = account ? `sub=${encodeURIComponent(account.sub)}` : `guestId=${encodeURIComponent(getOrCreateGuestId())}`;
   try {
-    const r = await fetch(`/api/score?action=dailyDates&game=${LEADERBOARD_GAME}&${q}`);
+    const r = await fetch(`/api/score?action=dailyDates&game=${LEADERBOARD_GAME}&date=${todayUTC()}&${q}`);
     const j = await r.json();
     if (!j.ok) return null;
     if (Array.isArray(j.dates) && j.dates.length) {
@@ -1614,7 +1616,7 @@ let _playedTodayCache = null;
 async function fetchPlayedToday() {
   if (_playedTodayCache != null) return _playedTodayCache;
   try {
-    const r = await fetch(`/api/score?action=challengeLeaderboard&game=${LEADERBOARD_GAME}&limit=1`);
+    const r = await fetch(`/api/score?action=challengeLeaderboard&game=${LEADERBOARD_GAME}&limit=1&date=${todayUTC()}`);
     const j = await r.json(); if (j.ok) { _playedTodayCache = j.total; return j.total; }
   } catch (e) {}
   return null;
@@ -1666,7 +1668,7 @@ async function finishDailyChallenge(ovr, name, build) {
   const reel = document.querySelector('.reel-frame'); if (reel) reel.classList.remove('lucky');
   let rank = 1, total = 1;
   try {
-    const body = { action: 'challengeSubmit', game: LEADERBOARD_GAME, ovr, name, build };
+    const body = { action: 'challengeSubmit', game: LEADERBOARD_GAME, ovr, name, build, date: todayUTC() };
     if (account) body.sub = account.sub; else body.guestId = getOrCreateGuestId();
     const r = await fetch('/api/score', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const j = await r.json(); if (j.ok) { rank = j.rank; total = j.total; }
@@ -1738,7 +1740,7 @@ async function showDailyResults() {
     try { best = bestPossibleOvr(state.dealtCards); } catch (e) { console.warn('[DAILY] bestPossibleOvr failed', e); }
     let rows = [];
     try {
-      const r = await fetch(`/api/score?action=challengeLeaderboard&game=${LEADERBOARD_GAME}&limit=8`);
+      const r = await fetch(`/api/score?action=challengeLeaderboard&game=${LEADERBOARD_GAME}&limit=8&date=${todayUTC()}`);
       const j = await r.json(); if (j.ok) rows = j.rows || [];
     } catch (e) {}
     renderDailyResults(res, best, rows, name);
@@ -1811,7 +1813,7 @@ function rankReveal(ovr, rank, total, isPB, replay, frozeUsed) {
 function closeDailyReveal() { stopDailyCountdown(); const ov = $('dailyReveal'); if (ov) ov.classList.remove('show'); }
 // Live countdown to the next daily (UTC midnight) shown on the "already played" reveal.
 let _dailyCountdown = null;
-function msToNextDaily() { const n = new Date(); return Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate() + 1) - n.getTime(); }
+function msToNextDaily() { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate() + 1, 0, 0, 0, 0).getTime() - n.getTime(); }
 function fmtCountdown(ms) { const s = Math.max(0, Math.floor(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = s % 60; return `${h}h ${String(m).padStart(2, '0')}m ${String(x).padStart(2, '0')}s`; }
 function startDailyCountdown(el) {
   stopDailyCountdown();
@@ -3089,7 +3091,7 @@ async function loadChallengeBoard() {
   $('lbSortTabs').innerHTML = '';   // daily board has no sort options
   list.innerHTML = '<div class="lb-empty">Loading…</div>';
   try {
-    const res = await fetch(`/api/score?action=challengeLeaderboard&game=${lbGame}&limit=200`);
+    const res = await fetch(`/api/score?action=challengeLeaderboard&game=${lbGame}&limit=200&date=${todayUTC()}`);
     const data = await res.json();
     if (!data.ok) throw new Error();
     let html = `<div class="lb-empty" style="color:var(--accent2);border-color:rgba(25,198,255,.25)">🎯 Today's Daily Challenge · ${data.total} player${data.total === 1 ? '' : 's'} played</div>`;
