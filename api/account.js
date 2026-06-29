@@ -438,6 +438,99 @@ module.exports = async (req, res) => {
       return res.status(400).json({ ok: false, error: 'Unknown action' });
     }
 
+    // GET ?action=pvpBackfillPreview&token=... — browser-friendly admin page for the loss backfill
+    if ((req.query && req.query.action) === 'pvpBackfillPreview') {
+      if (req.query.token !== STATS_TOKEN) {
+        return res.status(403).send('<h2 style="font-family:sans-serif;color:red">Forbidden</h2>');
+      }
+      await ensure();
+      const applying = req.query.apply === '1';
+
+      const orphanedWins = await sql`
+        SELECT h.match_id, h.player_key AS winner_key, h.opp_name, h.opp_ovr,
+               h.elo_before AS winner_elo_before, h.my_ovr AS winner_ovr, h.my_role AS winner_role,
+               h.created_at
+        FROM pvp_history h
+        WHERE h.won = true
+          AND NOT EXISTS (
+            SELECT 1 FROM pvp_history h2
+            WHERE h2.match_id = h.match_id AND h2.won = false
+          )
+        ORDER BY h.created_at ASC`;
+
+      let applied = 0;
+      const byPlayer = {};
+      for (const win of orphanedWins) {
+        const candidates = await sql`
+          SELECT google_sub, pvp_elo, pvp_wins, pvp_losses, pvp_streak, name FROM users
+          WHERE name = ${win.opp_name} AND google_sub <> ${win.winner_key}
+            AND NOT EXISTS (
+              SELECT 1 FROM pvp_results WHERE match_id = ${win.match_id} AND google_sub = users.google_sub
+            )`;
+        if (candidates.length !== 1) continue;
+        const loser = candidates[0];
+        const { delta } = nextElo(loser.pvp_elo, win.winner_elo_before, false);
+        const newElo = Math.max(100, loser.pvp_elo + delta);
+        if (!byPlayer[loser.name]) byPlayer[loser.name] = { losses: 0, elo_drop: 0 };
+        byPlayer[loser.name].losses++;
+        byPlayer[loser.name].elo_drop += delta;
+        if (applying) {
+          const ins = await sql`INSERT INTO pvp_results (match_id, google_sub)
+            VALUES (${win.match_id}, ${loser.google_sub}) ON CONFLICT DO NOTHING RETURNING match_id`;
+          if (ins.length) {
+            await sql`UPDATE users SET pvp_elo = ${newElo}, pvp_losses = ${loser.pvp_losses + 1}, pvp_streak = 0 WHERE google_sub = ${loser.google_sub}`;
+            const loserRole = win.winner_role ? (win.winner_role === 'pitcher' ? 'batter' : 'pitcher') : null;
+            const [wu] = await sql`SELECT name FROM users WHERE google_sub = ${win.winner_key}`;
+            try {
+              await sql`INSERT INTO pvp_history (player_key, match_id, won, my_role, my_ovr, opp_name, opp_ovr, elo_before, elo_after)
+                VALUES (${loser.google_sub}, ${win.match_id}, false, ${loserRole}, ${win.opp_ovr}, ${wu ? wu.name : ''}, ${win.winner_ovr}, ${loser.pvp_elo}, ${newElo})`;
+            } catch(e) {}
+            applied++;
+          }
+        }
+      }
+
+      const ranked = Object.entries(byPlayer)
+        .map(([name, d]) => ({ name, losses: d.losses, elo_drop: d.elo_drop }))
+        .sort((a, b) => b.losses - a.losses);
+      const total = ranked.reduce((s, r) => s + r.losses, 0);
+      const token = req.query.token;
+      const applyUrl = `/api/account?action=pvpBackfillPreview&token=${encodeURIComponent(token)}&apply=1`;
+
+      const rows = ranked.map((p, i) => `<tr>
+        <td>${i + 1}</td><td><b>${p.name}</b></td>
+        <td style="text-align:center">${p.losses}</td>
+        <td style="text-align:center;color:#e55">${p.elo_drop}</td>
+      </tr>`).join('');
+
+      const html = `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Loss Backfill</title>
+<style>
+  body{font-family:system-ui,sans-serif;background:#111;color:#eee;padding:16px;max-width:600px;margin:0 auto}
+  h1{font-size:20px;margin-bottom:4px}
+  .sub{color:#aaa;font-size:13px;margin-bottom:20px}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th{text-align:left;color:#aaa;padding:6px 8px;border-bottom:1px solid #333}
+  td{padding:6px 8px;border-bottom:1px solid #222}
+  .btn{display:block;margin:24px 0 8px;padding:14px;background:#e55;color:#fff;font-size:16px;font-weight:700;border:none;border-radius:8px;width:100%;cursor:pointer;text-align:center;text-decoration:none}
+  .btn:hover{background:#c33}
+  .done{background:#2a2;color:#fff;padding:14px;border-radius:8px;font-weight:700;text-align:center;font-size:16px}
+  .skipped{color:#888;font-size:12px;margin-top:12px}
+</style></head><body>
+<h1>Loss Backfill ${applying ? '— Applied ✓' : '— Preview'}</h1>
+<div class="sub">${orphanedWins.length} orphaned wins found · ${total} losses to assign</div>
+${applying
+  ? `<div class="done">✓ Applied ${applied} loss${applied !== 1 ? 'es' : ''} to ${ranked.length} player${ranked.length !== 1 ? 's' : ''}</div>`
+  : `<a class="btn" href="${applyUrl}" onclick="return confirm('Apply ${total} losses to ${ranked.length} players?')">Apply All ${total} Losses</a>`}
+<table>
+  <tr><th>#</th><th>Player</th><th style="text-align:center">Losses</th><th style="text-align:center">Elo Drop</th></tr>
+  ${rows || '<tr><td colspan="4" style="color:#888;padding:12px">No recoverable dodged losses found</td></tr>'}
+</table>
+</body></html>`;
+
+      return res.status(200).setHeader('content-type', 'text/html').send(html);
+    }
+
     // GET ?action=list
     if ((req.query && req.query.action) === 'list') {
       const sub = req.query.sub, sessionToken = req.query.sessionToken;
