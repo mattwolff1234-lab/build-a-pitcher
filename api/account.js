@@ -232,6 +232,28 @@ module.exports = async (req, res) => {
           await sql`INSERT INTO pvp_history (player_key, match_id, won, my_role, my_ovr, opp_name, opp_ovr, elo_before, elo_after)
             VALUES (${key}, ${matchId}, ${won}, ${role}, ${myOvr}, ${oppName}, ${oppOvr}, ${u.elo}, ${elo})`;
         } catch (e) {}
+        // When the winner reports, server-side apply the loss to the opponent so they can't
+        // dodge it by refreshing before pvpResult fires on their end.
+        if (won && body.oppKey) {
+          const oppKeyVal = String(body.oppKey).slice(0, 80);
+          if (/^(acct:|guest:)/.test(oppKeyVal) && oppKeyVal !== key) {
+            try {
+              const oppIns = await sql`INSERT INTO pvp_results (match_id, google_sub)
+                VALUES (${matchId}, ${oppKeyVal}) ON CONFLICT DO NOTHING RETURNING match_id`;
+              if (oppIns.length) {
+                const [opp] = await sql`SELECT pvp_elo, pvp_wins, pvp_losses FROM users WHERE google_sub = ${oppKeyVal}`;
+                if (opp) {
+                  const { delta: oppDelta } = nextElo(opp.pvp_elo, u.elo, false);
+                  const oppNewElo = Math.max(100, opp.pvp_elo + oppDelta);
+                  await sql`UPDATE users SET pvp_elo = ${oppNewElo}, pvp_losses = ${opp.pvp_losses + 1}, pvp_streak = 0 WHERE google_sub = ${oppKeyVal}`;
+                  const oppHistRole = role ? (role === 'pitcher' ? 'batter' : 'pitcher') : null;
+                  await sql`INSERT INTO pvp_history (player_key, match_id, won, my_role, my_ovr, opp_name, opp_ovr, elo_before, elo_after)
+                    VALUES (${oppKeyVal}, ${matchId}, false, ${oppHistRole}, ${oppOvr}, ${String(body.name || '').slice(0, 40)}, ${myOvr}, ${opp.pvp_elo}, ${oppNewElo})`;
+                }
+              }
+            } catch (e) {}
+          }
+        }
         return res.status(200).json({ ok: true, counted: true, elo, delta: delta + bonus, bonus, streak, wins, losses });
       }
 
@@ -321,6 +343,96 @@ module.exports = async (req, res) => {
           // if wins+losses >> logged_matches, they may be submitting fake results
           discrepancy: (r.wins + r.losses) - r.logged_matches
         })) });
+      }
+
+      // admin: backfill losses for players who dodged by refreshing before the result fired.
+      // Finds wins with no corresponding loss in pvp_history, matches the loser by name,
+      // and applies the loss if exactly one candidate exists (ambiguous names are skipped).
+      // Defaults to dryRun:true — pass dryRun:false to actually commit changes.
+      if (action === 'pvpBackfillLosses') {
+        if (body.token !== STATS_TOKEN) return res.status(403).json({ ok: false, error: 'forbidden' });
+        const dryRun = body.dryRun !== false;
+
+        // Wins with no corresponding loss row in pvp_history for the same match
+        const orphanedWins = await sql`
+          SELECT h.match_id, h.player_key AS winner_key, h.opp_name, h.opp_ovr,
+                 h.elo_before AS winner_elo_before, h.my_ovr AS winner_ovr, h.my_role AS winner_role,
+                 h.created_at
+          FROM pvp_history h
+          WHERE h.won = true
+            AND NOT EXISTS (
+              SELECT 1 FROM pvp_history h2
+              WHERE h2.match_id = h.match_id AND h2.won = false
+            )
+          ORDER BY h.created_at ASC`;
+
+        const results = [];
+        let applied = 0, skipped_ambiguous = 0, skipped_no_candidate = 0;
+
+        for (const win of orphanedWins) {
+          // Find users whose display name matches the loser name and who haven't
+          // submitted any result for this match yet
+          const candidates = await sql`
+            SELECT google_sub, pvp_elo, pvp_wins, pvp_losses, pvp_streak, name
+            FROM users
+            WHERE name = ${win.opp_name}
+              AND google_sub <> ${win.winner_key}
+              AND NOT EXISTS (
+                SELECT 1 FROM pvp_results
+                WHERE match_id = ${win.match_id} AND google_sub = users.google_sub
+              )`;
+
+          if (candidates.length === 0) {
+            skipped_no_candidate++;
+            results.push({ match_id: win.match_id, winner: win.winner_key, loser_name: win.opp_name, status: 'no_candidate', dry: dryRun });
+            continue;
+          }
+          if (candidates.length > 1) {
+            skipped_ambiguous++;
+            results.push({ match_id: win.match_id, winner: win.winner_key, loser_name: win.opp_name, status: 'ambiguous', candidates: candidates.length, dry: dryRun });
+            continue;
+          }
+
+          const loser = candidates[0];
+          const { delta } = nextElo(loser.pvp_elo, win.winner_elo_before, false);
+          const newElo = Math.max(100, loser.pvp_elo + delta);
+
+          results.push({
+            match_id: win.match_id,
+            winner_key: win.winner_key,
+            loser_key: loser.google_sub,
+            loser_name: loser.name,
+            loser_elo_before: loser.pvp_elo,
+            loser_elo_after: newElo,
+            elo_delta: delta,
+            match_date: win.created_at,
+            status: dryRun ? 'would_apply' : 'applied',
+          });
+
+          if (!dryRun) {
+            const ins = await sql`INSERT INTO pvp_results (match_id, google_sub)
+              VALUES (${win.match_id}, ${loser.google_sub}) ON CONFLICT DO NOTHING RETURNING match_id`;
+            if (ins.length) {
+              await sql`UPDATE users SET pvp_elo = ${newElo}, pvp_losses = ${loser.pvp_losses + 1}, pvp_streak = 0
+                WHERE google_sub = ${loser.google_sub}`;
+              const loserRole = win.winner_role ? (win.winner_role === 'pitcher' ? 'batter' : 'pitcher') : null;
+              const [wu] = await sql`SELECT name FROM users WHERE google_sub = ${win.winner_key}`;
+              try {
+                await sql`INSERT INTO pvp_history (player_key, match_id, won, my_role, my_ovr, opp_name, opp_ovr, elo_before, elo_after)
+                  VALUES (${loser.google_sub}, ${win.match_id}, false, ${loserRole}, ${win.opp_ovr},
+                          ${wu ? wu.name : ''}, ${win.winner_ovr}, ${loser.pvp_elo}, ${newElo})`;
+              } catch (e) {}
+              applied++;
+            }
+          }
+        }
+
+        return res.status(200).json({
+          ok: true, dryRun,
+          total_orphaned_wins: orphanedWins.length,
+          applied, skipped_ambiguous, skipped_no_candidate,
+          results,
+        });
       }
 
       return res.status(400).json({ ok: false, error: 'Unknown action' });
