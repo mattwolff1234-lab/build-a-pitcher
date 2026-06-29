@@ -319,16 +319,20 @@
   <script>
   (function(){
     var bar = document.getElementById('statBar'); if (!bar) return;
-    bar.style.display = 'inline-flex'; // show teaser immediately; upgrade when stats load
-    fetch('/api/score?action=stats&game=pitcher').then(function(r){ return r.json(); }).then(function(d){
-      if (!d || !d.ok || !d.total) return;
-      var plays = bar.querySelector('.sb-plays'), msg = bar.querySelector('.sb-msg');
-      plays.textContent = d.total.toLocaleString() + ' BUILDS'; plays.style.display = '';
-      if (d.total >= 25) {
-        var p = d.pct, t = p >= 10 ? Math.round(p) + '%' : (p > 0 ? p.toFixed(1) + '%' : '<0.1%');
-        msg.innerHTML = 'Only <b>' + t + '</b> build the <b class="sb-goat">GOAT</b> (99 OVR) — can you?';
-      }
-    }).catch(function(){});
+    bar.style.display = 'inline-flex'; // show teaser immediately; fill in live stats below
+    var playsEl = bar.querySelector('.sb-plays'), msg = bar.querySelector('.sb-msg');
+    function load(){
+      fetch('/api/score?action=stats&game=pitcher').then(function(r){ return r.json(); }).then(function(d){
+        if (!d || !d.ok) return;
+        if (d.plays) { playsEl.textContent = Number(d.plays).toLocaleString() + ' PLAYS'; playsEl.style.display = ''; }
+        if (d.total >= 25) {
+          var p = d.pct, t = p >= 10 ? Math.round(p) + '%' : (p > 0 ? p.toFixed(1) + '%' : '<0.1%');
+          msg.innerHTML = 'Only <b>' + t + '</b> build the <b class="sb-goat">GOAT</b> (99 OVR) — can you?';
+        }
+      }).catch(function(){});
+    }
+    load();
+    setInterval(load, 20000); // keep the play count ticking live
   })();
   </script>
 

@@ -34,6 +34,9 @@ function ensure() {
       await sql`ALTER TABLE scores ADD COLUMN IF NOT EXISTS game text NOT NULL DEFAULT 'pitcher'`;
       await sql`CREATE INDEX IF NOT EXISTS idx_scores_game_ovr ON scores (game, ovr DESC, created_at ASC)`;
       await sql`CREATE INDEX IF NOT EXISTS idx_scores_created ON scores (created_at)`;
+      // Live play counter, seeded at 210k (estimated historical plays we never tracked).
+      await sql`CREATE TABLE IF NOT EXISTS counters (key text PRIMARY KEY, n bigint NOT NULL DEFAULT 0)`;
+      await sql`INSERT INTO counters (key, n) VALUES ('plays', 210000) ON CONFLICT (key) DO NOTHING`;
     })();
   }
   return ready;
@@ -44,18 +47,27 @@ module.exports = async (req, res) => {
   try {
     await ensure();
 
-    // GET ?action=stats[&game=pitcher|batter|all] — total builds + how many hit the GOAT (99 OVR).
+    // GET ?action=stats[&game=pitcher|batter|all] — total builds, GOAT (99 OVR) count, + live play counter.
     if (req.method !== 'POST' && (req.query && req.query.action) === 'stats') {
       const g = req.query && req.query.game;
       const [{ total, goat }] = (g === 'all')
         ? await sql`SELECT count(*)::int AS total, count(*) FILTER (WHERE ovr >= 99)::int AS goat FROM scores`
         : await sql`SELECT count(*)::int AS total, count(*) FILTER (WHERE ovr >= 99)::int AS goat FROM scores WHERE game = ${gameOf(g)}`;
+      const [{ n: plays }] = await sql`SELECT n FROM counters WHERE key = 'plays'`;
       const t = Number(total), gt = Number(goat);
-      return res.status(200).json({ ok: true, total: t, goat: gt, pct: t > 0 ? (gt / t) * 100 : 0 });
+      return res.status(200).json({ ok: true, total: t, goat: gt, pct: t > 0 ? (gt / t) * 100 : 0, plays: Number(plays) });
     }
 
     if (req.method === 'POST') {
       const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
+
+      // Play counter: fired once per game session (first spin). Increments the live "plays" headline.
+      if (body.action === 'play' || (req.query && req.query.action === 'play')) {
+        const [{ n }] = await sql`INSERT INTO counters (key, n) VALUES ('plays', 1)
+          ON CONFLICT (key) DO UPDATE SET n = counters.n + 1 RETURNING n`;
+        return res.status(200).json({ ok: true, plays: Number(n) });
+      }
+
       let name = String(body.name == null ? '' : body.name).trim().slice(0, 20);
       if (!name) name = 'Anonymous';
       const ovr = Math.max(1, Math.min(99, Math.round(Number(body.ovr) || 0)));
