@@ -211,6 +211,18 @@
   .versus .vdesc { color:var(--muted); font-size:12.5px; margin-top:5px; line-height:1.45; max-width:540px; }
   .versus .vgo { flex-shrink:0; font-family:'Oswald',sans-serif; font-size:13px; letter-spacing:2px; text-transform:uppercase;
     padding:9px 20px; border-radius:9px; color:#06121d; font-weight:700; background:linear-gradient(180deg,#ffd23f,#e0640c); box-shadow:0 8px 20px rgba(255,122,24,.35); }
+  /* Daily Challenge CTA + streak banner (habit-loop cues on the landing page) */
+  .daily-cta { border-color:rgba(255,206,58,.4); }
+  .daily-cta:hover { border-color:var(--gold); box-shadow:0 20px 50px rgba(0,0,0,.6), 0 0 28px rgba(255,206,58,.32); }
+  .daily-cta .dc-badge { background:linear-gradient(180deg,#ffd23f,#e0a40c); color:#06121d; }
+  .daily-cta .vtitle b { color:var(--gold); }
+  .daily-cta.done { opacity:.78; }
+  #dailyCount { color:var(--gold)!important; border-color:rgba(255,206,58,.4)!important; }
+  .streak-banner { width:100%; margin:0 0 14px; padding:12px 16px; border-radius:12px; display:flex; align-items:center; gap:10px;
+    border:1px solid rgba(255,122,24,.45); background:rgba(255,122,24,.1); color:var(--ink);
+    font-family:'Oswald',sans-serif; font-size:14px; letter-spacing:.4px; animation:sbPulse 2s ease-in-out infinite; }
+  .streak-banner a { margin-left:auto; flex-shrink:0; color:var(--gold); text-decoration:none; font-weight:700; white-space:nowrap; }
+  @keyframes sbPulse { 0%,100%{ box-shadow:0 0 0 rgba(255,122,24,0); } 50%{ box-shadow:0 0 18px rgba(255,122,24,.4); } }
 
   .foot { margin-top:26px; display:flex; align-items:center; gap:14px; z-index:2; }
   .foot a { color:var(--dim); font-size:12px; text-decoration:none; letter-spacing:.5px;
@@ -281,6 +293,17 @@
     <h1>Goat<i>Lab</i></h1>
     <p>Spin the reel, draft a real MLB player into nine attribute slots, then simulate their entire career.</p>
   </div>
+
+  <div id="streakBanner" class="streak-banner" style="display:none"></div>
+
+  <a class="versus daily-cta" id="dailyCta" href="/pitching#daily">
+    <span class="vbadge dc-badge">DAILY</span>
+    <div class="vtxt">
+      <div class="vtitle">🎯 Daily <b>Challenge</b> <span id="dailyCount" class="vlive" style="display:none"></span></div>
+      <div class="vdesc" id="dailyDesc">Everyone gets the same pitchers today. One shot — climb the daily leaderboard.</div>
+    </div>
+    <div class="vgo" id="dailyGo">▶ Play Today</div>
+  </a>
 
   <a class="versus" href="/versus">
     <span class="vbadge">NEW</span>
@@ -461,6 +484,30 @@ $('installNowBtn').onclick = async () => {
   deferredInstall = null;
   $('installNowBtn').style.display = 'none';
 };
+
+// Daily Challenge cues on the landing page (cue + easy path into the loop)
+(function dailyLanding() {
+  const todayUTC = () => { const d = new Date(); return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`; };
+  let streak = null, playedToday = false;
+  try { streak = JSON.parse(localStorage.getItem('pl_streak') || 'null'); } catch (e) {}
+  try { playedToday = !!JSON.parse(localStorage.getItem('pl_dc_' + todayUTC()) || 'null'); } catch (e) {}
+  const count = (streak && Number(streak.count)) || 0;
+  // cue: at-risk streak banner
+  if (count >= 2 && !playedToday) {
+    const sb = $('streakBanner');
+    if (sb) { sb.innerHTML = `🔥 Your <b style="color:var(--gold)">${count}-day</b> streak resets tonight! <a href="/pitching#daily">Play today's challenge →</a>`; sb.style.display = 'flex'; }
+  }
+  // already played → reflect "Done" on the CTA
+  if (playedToday) {
+    const cta = $('dailyCta'); if (cta) cta.classList.add('done');
+    const desc = $('dailyDesc'); if (desc) desc.textContent = "You've played today — come back tomorrow for a new puzzle. (Tap to see your result.)";
+    const go = $('dailyGo'); if (go) go.textContent = '✅ Done';
+  }
+  // social proof: how many played today
+  fetch('/api/score?action=challengeLeaderboard&game=pitcher&limit=1').then(r => r.json()).then(j => {
+    if (j && j.ok && j.total > 0) { const c = $('dailyCount'); if (c) { c.textContent = `${j.total} played today`; c.style.display = 'inline-block'; } }
+  }).catch(() => {});
+})();
 </script>
 <script>
 (function(){

@@ -116,6 +116,35 @@
     border:1px solid rgba(255,206,58,.4); color:var(--ink); padding:13px 20px; border-radius:13px; font-size:14px; line-height:1.4;
     box-shadow:0 14px 44px rgba(0,0,0,.55), 0 0 26px rgba(255,206,58,.16); align-items:center; justify-content:center; }
   @media (max-width:560px){ .day-toast { left:12px; right:12px; transform:none; max-width:none; } }
+  .streak-chip .freeze { color:var(--diamond); }
+  /* daily info banner (craving: best target, milestone preview, lucky) */
+  .daily-info { display:none; flex-wrap:wrap; gap:8px 14px; justify-content:center; align-items:center; margin:0 0 12px;
+    padding:10px 14px; border:1px solid rgba(255,206,58,.3); border-radius:12px; background:rgba(255,206,58,.06);
+    font-family:'Oswald',sans-serif; font-size:12.5px; letter-spacing:.4px; }
+  .daily-info .di-best b { color:var(--gold); }
+  .daily-info .di-lucky { color:var(--gold); font-weight:600; }
+  .daily-info .di-prev { color:var(--accent2); }
+  /* lucky-spin reel glow */
+  .reel-frame.lucky { box-shadow:0 0 0 2px rgba(255,206,58,.5), 0 0 34px rgba(255,206,58,.4) !important; animation:luckyGlow 1.6s ease-in-out infinite; }
+  @keyframes luckyGlow { 0%,100%{ box-shadow:0 0 0 2px rgba(255,206,58,.45), 0 0 22px rgba(255,206,58,.3); } 50%{ box-shadow:0 0 0 2px rgba(255,206,58,.7), 0 0 40px rgba(255,206,58,.55); } }
+  /* satisfying rank reveal */
+  .daily-reveal { position:fixed; inset:0; z-index:260; display:none; align-items:center; justify-content:center; padding:16px;
+    background:rgba(2,5,10,.78); backdrop-filter:blur(4px); }
+  .daily-reveal.show { display:flex; }
+  .dr-card { width:100%; max-width:380px; text-align:center; padding:26px 24px; border-radius:18px;
+    border:1px solid rgba(255,206,58,.4); background:linear-gradient(180deg,rgba(20,31,48,.96),rgba(9,15,25,.98));
+    box-shadow:0 24px 70px rgba(0,0,0,.6), 0 0 40px rgba(255,206,58,.16); }
+  .dr-eyebrow { font-family:'Oswald',sans-serif; font-size:12px; letter-spacing:3px; text-transform:uppercase; color:var(--gold); }
+  .dr-ovr { font-family:'Oswald',sans-serif; font-weight:700; font-size:62px; line-height:1; margin:6px 0 2px; color:var(--ink); }
+  .dr-ovr small { font-size:15px; color:var(--muted); letter-spacing:2px; margin-left:6px; }
+  .dr-pb { font-family:'Oswald',sans-serif; font-weight:700; letter-spacing:1px; color:var(--gold); margin:6px 0; animation:pbFlash 1s ease-in-out infinite; }
+  @keyframes pbFlash { 0%,100%{ opacity:1; transform:scale(1); } 50%{ opacity:.6; transform:scale(1.05); } }
+  .dr-froze { color:var(--diamond); font-size:13px; margin:4px 0; }
+  .dr-rank { font-family:'Oswald',sans-serif; font-weight:700; font-size:40px; line-height:1; margin-top:10px; color:var(--accent2); }
+  .dr-pct { font-family:'Oswald',sans-serif; font-size:18px; letter-spacing:1px; color:var(--gold); margin-top:2px; }
+  .dr-field { color:var(--muted); font-size:12.5px; margin-top:4px; }
+  .dr-streak { color:var(--accent); font-family:'Oswald',sans-serif; font-size:14px; letter-spacing:.5px; margin-top:12px; }
+  .dr-replay { color:var(--dim); font-size:12px; margin-top:4px; }
   .toast { position:fixed; bottom:26px; left:50%; transform:translateX(-50%); z-index:200; display:none;
     background:#10202e; border:1px solid var(--line); color:var(--ink); padding:11px 18px; border-radius:10px;
     font-size:13px; box-shadow:0 10px 30px rgba(0,0,0,.55); }
@@ -513,6 +542,15 @@
   .mi-chev { margin-left:auto; font-size:14px; color:var(--muted); }
   .disc-item { border-color:rgba(88,101,242,.5); }
   .disc-item:hover { border-color:#5865F2; box-shadow:0 0 14px rgba(88,101,242,.4); }
+  .social-row { display:flex; gap:10px; margin:2px 0 6px; }
+  .soc-tile { width:46px; height:46px; border-radius:12px; display:flex; align-items:center; justify-content:center;
+    color:#fff; border:1px solid var(--line); transition:transform .1s ease, box-shadow .15s ease; }
+  .soc-tile:hover { transform:translateY(-2px); }
+  .soc-tile svg { width:22px; height:22px; }
+  .soc-discord { background:#5865F2; }
+  .soc-discord:hover { box-shadow:0 6px 16px rgba(88,101,242,.45); }
+  .soc-x { background:#000; }
+  .soc-x:hover { box-shadow:0 6px 16px rgba(0,0,0,.5); border-color:rgba(255,255,255,.3); }
   .discord-cta { display:flex; align-items:flex-start; gap:12px; width:100%; box-sizing:border-box;
     margin-top:14px; padding:15px 16px; border-radius:12px; text-decoration:none; color:var(--ink);
     background:linear-gradient(180deg,rgba(88,101,242,.16),rgba(88,101,242,.05)); border:1px solid rgba(88,101,242,.55); }
@@ -595,6 +633,7 @@
   <div id="loading" class="loading">Loading pitchers…</div>
 
   <div id="game" style="display:none">
+    <div id="dailyInfo" class="daily-info" style="display:none"></div>
     <div class="reel-frame panel">
       <div class="pointer"></div>
       <div class="pointer bottom"></div>
@@ -731,7 +770,10 @@
         <div class="step"><span class="step-n">3</span><div><b>Add to Home Screen</b><p>Scroll down, tap "Add to Home Screen," then tap "Add."</p></div></div>
       </div>
       <div class="menu-sec">Community</div>
-      <a class="menu-item disc-item" href="https://discord.gg/bMVX2zJp49" target="_blank" rel="noopener">💬 Join our Discord ↗</a>
+      <div class="social-row">
+        <a class="soc-tile soc-discord" href="https://discord.gg/bMVX2zJp49" target="_blank" rel="noopener" title="Join our Discord" aria-label="Discord"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M20.317 4.369A19.79 19.79 0 0 0 15.432 3a.07.07 0 0 0-.074.036c-.211.375-.444.864-.608 1.249a18.27 18.27 0 0 0-5.487 0 12.6 12.6 0 0 0-.617-1.25.07.07 0 0 0-.073-.035A19.736 19.736 0 0 0 3.677 4.37a.064.064 0 0 0-.03.025C.533 9.046-.32 13.58.099 18.057a.08.08 0 0 0 .031.055 19.9 19.9 0 0 0 5.993 3.03.07.07 0 0 0 .076-.027c.462-.63.873-1.295 1.226-1.994a.07.07 0 0 0-.038-.098 13.1 13.1 0 0 1-1.872-.892.07.07 0 0 1-.007-.117c.126-.094.252-.192.372-.291a.07.07 0 0 1 .073-.01c3.927 1.793 8.18 1.793 12.061 0a.07.07 0 0 1 .074.009c.12.099.246.198.373.292a.07.07 0 0 1-.006.117c-.598.349-1.224.645-1.873.891a.07.07 0 0 0-.038.099c.36.698.772 1.362 1.225 1.993a.07.07 0 0 0 .076.028 19.84 19.84 0 0 0 6.002-3.03.07.07 0 0 0 .032-.054c.5-5.177-.838-9.673-3.549-13.66a.06.06 0 0 0-.031-.027zM8.02 15.331c-1.182 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg></a>
+        <a class="soc-tile soc-x" href="https://x.com/GoatLabApp" target="_blank" rel="noopener" title="Follow on X" aria-label="X"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24h-6.66l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zM17.083 19.77h1.833L7.084 4.126H5.117z"/></svg></a>
+      </div>
       <a class="menu-item" href="https://pitchergami.com" target="_blank" rel="noopener">⚾ PitcherGami ↗</a>
       <a class="menu-item tip-item" href="https://buymeacoffee.com/mattwolff1d" target="_blank" rel="noopener">☕<span class="ti-text"><b>Buy me a coffee</b><small>I'm a solo dev paying for the servers out of pocket so it stays free for everyone. Anything's hugely appreciated! ↗</small></span></a>
     </div>
@@ -825,6 +867,21 @@
 </div>
 
 <div id="toast" class="toast"></div>
+
+<div id="dailyReveal" class="daily-reveal">
+  <div id="drCard" class="dr-card">
+    <div class="dr-eyebrow">🎯 Daily Challenge</div>
+    <div class="dr-ovr"><span id="drOvr">0</span><small>OVR</small></div>
+    <div id="drPB" class="dr-pb" style="display:none">🏆 NEW PERSONAL BEST!</div>
+    <div id="drFroze" class="dr-froze" style="display:none">🧊 Streak Freeze used — your streak is safe!</div>
+    <div class="dr-rank"><span id="drRankNum">—</span></div>
+    <div class="dr-pct">Top <span id="drPctNum">0</span>%</div>
+    <div id="drField" class="dr-field"></div>
+    <div id="drStreak" class="dr-streak"></div>
+    <div id="drReplay" class="dr-replay"></div>
+    <button id="drClose" class="primary" style="margin-top:14px;width:100%">Nice 🔥</button>
+  </div>
+</div>
 
 <div class="footer-note">Ratings from MLB The Show — Live series only. Not affiliated with MLB or Sony.</div>
 
@@ -1060,6 +1117,8 @@ async function init() {
   // menu + overlays
   $('menuBtn').onclick = () => { Sound.click(); openOverlay('menu'); };
   $('dailyBtn').onclick = () => { Sound.click(); startDailyChallenge(); };
+  $('drClose').onclick = () => { Sound.click(); closeDailyReveal(); };
+  $('dailyReveal').addEventListener('click', e => { if (e.target.id === 'dailyReveal') closeDailyReveal(); });
   $('miDaily').onclick = () => { Sound.click(); startDailyChallenge(); };
   $('miHof').onclick = () => { closeOverlay('menu'); openHof(); };
   $('miAch').onclick = () => { closeOverlay('menu'); Sound.click(); window.Ach && Ach.open(); };
@@ -1303,67 +1362,122 @@ function getOrCreateGuestId() {
 let streak = { count: 0, best: 0, lastDate: null };
 try { const _s = JSON.parse(localStorage.getItem('pl_streak') || 'null'); if (_s && typeof _s === 'object') streak = _s; } catch (e) {}
 streak.count = Number(streak.count) || 0; streak.best = Number(streak.best) || 0;
+let freezeTokens = 0;
+try { freezeTokens = Number(localStorage.getItem('pl_freeze') || '0') || 0; } catch (e) {}
 function saveStreak() { try { localStorage.setItem('pl_streak', JSON.stringify(streak)); } catch (e) {} }
+function saveFreeze() { try { localStorage.setItem('pl_freeze', String(freezeTokens)); } catch (e) {} }
+// Returns { firstToday, frozeUsed }. A Streak Freeze 🧊 covers exactly one missed day.
 function markPlayedToday() {
   const today = todayUTC();
-  if (streak.lastDate === today) return false;
+  if (streak.lastDate === today) return { firstToday: false, frozeUsed: false };
   const d = new Date(today + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() - 1);
   const yd = d.toISOString().slice(0, 10);
-  streak.count = (streak.lastDate === yd) ? (streak.count + 1) : 1;
+  d.setUTCDate(d.getUTCDate() - 1);
+  const dby = d.toISOString().slice(0, 10);
+  let frozeUsed = false;
+  if (streak.lastDate === yd) streak.count++;
+  else if (streak.lastDate === dby && freezeTokens > 0) { freezeTokens--; saveFreeze(); streak.count++; frozeUsed = true; }
+  else streak.count = 1;
   streak.best = Math.max(streak.best, streak.count);
   streak.lastDate = today; saveStreak(); renderStreakChip();
-  return true;
+  return { firstToday: true, frozeUsed };
 }
 function renderStreakChip() {
   const chip = $('streakChip'); if (!chip) return;
-  if (streak.count >= 2) { chip.textContent = `🔥 ${streak.count}`; chip.style.display = 'inline-flex'; }
-  else chip.style.display = 'none';
+  if (streak.count >= 2 || freezeTokens > 0) {
+    chip.innerHTML = `🔥 ${streak.count}` + (freezeTokens > 0 ? ` <span class="freeze">🧊${freezeTokens > 1 ? freezeTokens : ''}</span>` : '');
+    chip.style.display = 'inline-flex';
+  } else chip.style.display = 'none';
 }
 const STREAK_MILESTONES = [3, 7, 14, 30, 100];
+const FREEZE_MILESTONES = [7, 14, 30, 100];   // each grants a Streak Freeze token
 function checkStreakMilestone(n) {
+  let gotFreeze = false;
+  if (FREEZE_MILESTONES.includes(n)) { freezeTokens++; saveFreeze(); renderStreakChip(); gotFreeze = true; }
   if (!STREAK_MILESTONES.includes(n)) return;
-  const msgs = { 3: "3-day streak! You're on a roll. 🔥", 7: 'One full week! See you tomorrow? 🔥🔥', 14: "Two weeks straight. You're hooked. 🔥🔥🔥", 30: '30 days! Legendary dedication. 🏆', 100: '100 days. You are the absolute GOAT. 🐐' };
-  dayToast(msgs[n] || `${n}-day streak!`); Sound.legend();
+  const msgs = { 3: "3-day streak! You're on a roll. 🔥", 7: 'One full week! 🔥🔥', 14: "Two weeks straight. You're hooked. 🔥🔥🔥", 30: '30 days! Legendary dedication. 🏆', 100: '100 days. You are the absolute GOAT. 🐐' };
+  let m = msgs[n] || `${n}-day streak!`;
+  if (gotFreeze) m += '\n🧊 Earned a Streak Freeze — protects one missed day!';
+  dayToast(m); Sound.legend();
+}
+function nextMilestonePreview() {
+  const next = STREAK_MILESTONES.find(m => m > streak.count);
+  if (!next) return '';
+  const left = next - streak.count;
+  const freeze = FREEZE_MILESTONES.includes(next) ? ' + 🧊 Freeze token' : '';
+  return `${left} more day${left === 1 ? '' : 's'} = 🔥 ${next}-day streak${freeze}`;
 }
 function dayToast(msg) {
   let t = $('dayToast');
   if (!t) { t = document.createElement('div'); t.id = 'dayToast'; t.className = 'day-toast'; document.body.appendChild(t); }
   t.textContent = msg; t.style.display = 'flex'; gsap.killTweensOf(t);
   gsap.fromTo(t, { y: 14, opacity: 0, scale: .94 }, { y: 0, opacity: 1, scale: 1, duration: .45, ease: 'back.out(1.5)' });
-  clearTimeout(t._tmr); t._tmr = setTimeout(() => gsap.to(t, { opacity: 0, y: -10, duration: .4, onComplete: () => { t.style.display = 'none'; } }), 4500);
+  clearTimeout(t._tmr); t._tmr = setTimeout(() => gsap.to(t, { opacity: 0, y: -10, duration: .4, onComplete: () => { t.style.display = 'none'; } }), 4800);
 }
 
-let dailyMode = false, dailyRng = null;
+// personal best (best daily OVR ever) — the craving target + the satisfying "new best" flash
+function dailyBest() { try { return Number(localStorage.getItem('pl_dc_best') || '0') || 0; } catch (e) { return 0; } }
+function setDailyBest(v) { try { localStorage.setItem('pl_dc_best', String(v)); } catch (e) {} }
+
+let dailyMode = false, dailyRng = null, luckyToday = false, luckyConsumed = false;
 function dcKey() { return `pl_dc_${todayUTC()}`; }
 function getDailyStatus() { try { return JSON.parse(localStorage.getItem(dcKey()) || 'null'); } catch (e) { return null; } }
 function setDailyDone(data) { try { localStorage.setItem(dcKey(), JSON.stringify(data)); } catch (e) {} }
+// Lucky Spin: 1-in-7 days (seeded by date → same for everyone) the reel guarantees a Diamond in slot 1.
+function isLuckyToday() { return seededRandom(`pl-lucky-${todayUTC()}`)() < (1 / 7); }
+
+let _playedTodayCache = null;
+async function fetchPlayedToday() {
+  if (_playedTodayCache != null) return _playedTodayCache;
+  try {
+    const r = await fetch(`/api/score?action=challengeLeaderboard&game=${LEADERBOARD_GAME}&limit=1`);
+    const j = await r.json(); if (j.ok) { _playedTodayCache = j.total; return j.total; }
+  } catch (e) {}
+  return null;
+}
 function updateDailyBtn() {
   const btn = $('dailyBtn'); if (!btn) return;
   const done = getDailyStatus();
   if (done) { btn.textContent = '✅ Done'; btn.classList.add('done'); btn.classList.remove('pulse'); btn.title = `Today: ${done.ovr} OVR · #${done.rank} of ${done.total}`; }
-  else { btn.textContent = '🎯 Daily'; btn.classList.remove('done'); btn.classList.add('pulse'); btn.title = 'Daily Challenge — same pitchers for everyone today!'; }
+  else {
+    btn.textContent = '🎯 Daily'; btn.classList.remove('done'); btn.classList.add('pulse'); btn.title = 'Daily Challenge — same pitchers for everyone today!';
+    fetchPlayedToday().then(n => { if (n != null && n > 0 && !getDailyStatus()) { btn.textContent = `🎯 Daily · ${n}`; btn.title = `${n} played today`; } });
+  }
 }
+function showDailyInfo() {
+  const el = $('dailyInfo'); if (!el) return;
+  const best = dailyBest(), preview = nextMilestonePreview();
+  let html = '';
+  if (luckyToday) html += `<span class="di-lucky">✨ LUCKY SPIN — a 💎 Diamond is locked into your first card!</span>`;
+  if (best > 0) html += `<span class="di-best">🏆 Your best daily: <b>${best}</b> OVR — beat it!</span>`;
+  if (preview) html += `<span class="di-prev">🔥 ${preview}</span>`;
+  el.innerHTML = html || `<span class="di-prev">🎯 Same pitchers for everyone today. One shot — make it count.</span>`;
+  el.style.display = 'flex';
+}
+function hideDailyInfo() { const el = $('dailyInfo'); if (el) el.style.display = 'none'; }
 function startDailyChallenge() {
   closeOverlay('menu');
   const done = getDailyStatus();
-  if (done) {
-    const pct = done.total > 1 ? Math.round((1 - (done.rank - 1) / done.total) * 100) : 100;
-    dayToast(`Today: ${done.ovr} OVR · #${done.rank} of ${done.total} (top ${pct}%) 🎯 Come back tomorrow!`);
-    return;
-  }
-  reset();                          // reset() clears dailyMode, so set it right after
+  if (done) { rankReveal(done.ovr, done.rank, done.total, false, true); return; }
+  reset();                          // reset() clears dailyMode/lucky, so set them right after
   dailyMode = true;
+  luckyConsumed = false;
   dailyRng = seededRandom(`pl-daily-${todayUTC()}-pitcher-v1`);
+  luckyToday = isLuckyToday();
   const tagEl = document.querySelector('header .tag');
   if (tagEl) { tagEl.textContent = '🎯 Daily Challenge'; tagEl.classList.add('dc-header-tag'); }
-  dayToast('🎯 Daily Challenge — same pitchers for everyone today. One shot!');
+  const reel = document.querySelector('.reel-frame'); if (reel) reel.classList.toggle('lucky', luckyToday);
+  showDailyInfo();
+  if (luckyToday && Sound.gold) Sound.gold();
   if (window.matchMedia('(max-width: 720px)').matches) $('spinBtn').scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 async function finishDailyChallenge(ovr, name, build) {
   if (!dailyMode) return;
-  dailyMode = false; dailyRng = null;
+  dailyMode = false; dailyRng = null; luckyToday = false;
+  hideDailyInfo();
   const tagEl = document.querySelector('header .tag');
   if (tagEl) { tagEl.textContent = 'Draft Mode'; tagEl.classList.remove('dc-header-tag'); }
+  const reel = document.querySelector('.reel-frame'); if (reel) reel.classList.remove('lucky');
   let rank = 1, total = 1;
   try {
     const body = { action: 'challengeSubmit', game: LEADERBOARD_GAME, ovr, name, build };
@@ -1372,9 +1486,13 @@ async function finishDailyChallenge(ovr, name, build) {
     const j = await r.json(); if (j.ok) { rank = j.rank; total = j.total; }
   } catch (e) {}
   setDailyDone({ ovr, rank, total });
+  _playedTodayCache = null;
   updateDailyBtn();
-  // streak bump (first daily play of the day) + daily achievements
-  if (markPlayedToday()) {
+  const prevBest = dailyBest(); const isPB = ovr > prevBest; if (isPB) setDailyBest(ovr);
+  let frozeUsed = false;
+  const mp = markPlayedToday();
+  if (mp.firstToday) {
+    frozeUsed = mp.frozeUsed;
     checkStreakMilestone(streak.count);
     if (account) {
       try {
@@ -1384,9 +1502,31 @@ async function finishDailyChallenge(ovr, name, build) {
     }
   }
   bumpDailyAch();
-  const pct = total > 1 ? Math.round((1 - (rank - 1) / total) * 100) : 100;
-  dayToast(`🎯 Daily done! ${ovr} OVR · #${rank} of ${total} today (top ${pct}%)`);
+  rankReveal(ovr, rank, total, isPB, false, frozeUsed);
 }
+
+// Satisfying: animated rank reveal — rank + percentile count up, tier sound, PB / freeze flash.
+function rankReveal(ovr, rank, total, isPB, replay, frozeUsed) {
+  const ov = $('dailyReveal'); if (!ov) return;
+  const pct = total > 1 ? Math.max(1, Math.round((1 - (rank - 1) / total) * 100)) : 100;
+  $('drOvr').textContent = ovr;
+  $('drPctNum').textContent = '0';
+  $('drRankNum').textContent = '—';
+  $('drField').textContent = `of ${total.toLocaleString()} player${total === 1 ? '' : 's'} today`;
+  $('drPB').style.display = isPB ? 'block' : 'none';
+  $('drFroze').style.display = frozeUsed ? 'block' : 'none';
+  $('drStreak').textContent = streak.count >= 2 ? `🔥 ${streak.count}-day streak${freezeTokens > 0 ? ` · 🧊${freezeTokens}` : ''}` : '';
+  $('drReplay').textContent = replay ? 'Come back tomorrow for a new puzzle!' : '';
+  ov.classList.add('show');
+  gsap.fromTo($('drCard'), { y: 18, opacity: 0, scale: .94 }, { y: 0, opacity: 1, scale: 1, duration: .5, ease: 'back.out(1.6)' });
+  const rk = { v: Math.min(total, Math.max(rank, Math.round(total * 0.6))) }, pc = { v: 0 };
+  gsap.to(rk, { v: rank, duration: 1.1, ease: 'power2.out', onUpdate: () => { $('drRankNum').textContent = '#' + Math.round(rk.v).toLocaleString(); } });
+  gsap.to(pc, {
+    v: pct, duration: 1.1, ease: 'power2.out', onUpdate: () => { $('drPctNum').textContent = Math.round(pc.v); },
+    onComplete: () => { if (pct <= 5) Sound.legend(); else if (pct <= 25) (Sound.diamond || Sound.gold || Sound.complete)(); else Sound.complete(); if (isPB && Sound.gold) Sound.gold(); }
+  });
+}
+function closeDailyReveal() { const ov = $('dailyReveal'); if (ov) ov.classList.remove('show'); }
 // Daily achievements on the live board: Show Up + Daily Grind I/II/III (7/30/100).
 function bumpDailyAch() {
   if (!window.Ach) return;
@@ -1444,7 +1584,16 @@ function spin() {
   $('landed').classList.remove('show');
 
   const rng = dailyMode ? dailyRng : undefined;       // seeded reel on Daily Challenge days
-  const target = randPitcher(rng);
+  let target;
+  if (dailyMode && luckyToday && !luckyConsumed && openSlots().length === SLOTS.length) {
+    // Lucky Spin: first card of a lucky daily is a guaranteed Diamond (seeded → same for everyone).
+    const dpool = DATA.pool.filter(p => p.ovr >= 85);
+    const lr = seededRandom(`pl-lucky-pick-${todayUTC()}`);
+    target = dpool.length ? dpool[Math.floor(lr() * dpool.length)] : randPitcher(rng);
+    luckyConsumed = true;
+  } else {
+    target = randPitcher(rng);
+  }
   const strip = [];
   const STRIP_LEN = 45;
   const targetIndex = STRIP_LEN - 6;
@@ -2501,7 +2650,7 @@ function finish() {
   $('careerCard').style.display = 'none';
   $('submitRow').style.display = 'none';
   $('submitBtn').disabled = false;
-  $('nameInput').value = '';
+  $('nameInput').value = (() => { try { return localStorage.getItem('pl_lastName') || ''; } catch (e) { return ''; } })();
   $('submitMsg').textContent = '';
   $('done').classList.add('show');
   $('spinBtn').disabled = true;
@@ -2521,6 +2670,7 @@ async function submitScore() {
   $('submitMsg').textContent = 'Submitting…';
   Sound.click();
   const name = $('nameInput').value.trim() || 'Anonymous';
+  if (name !== 'Anonymous') { try { localStorage.setItem('pl_lastName', name); } catch (e) {} }   // pre-fill next time
   try {
     const res = await fetch('/api/score', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
