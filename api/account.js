@@ -232,6 +232,28 @@ module.exports = async (req, res) => {
           await sql`INSERT INTO pvp_history (player_key, match_id, won, my_role, my_ovr, opp_name, opp_ovr, elo_before, elo_after)
             VALUES (${key}, ${matchId}, ${won}, ${role}, ${myOvr}, ${oppName}, ${oppOvr}, ${u.elo}, ${elo})`;
         } catch (e) {}
+        // When the winner reports, server-side apply the loss to the opponent so they can't
+        // dodge it by refreshing before pvpResult fires on their end.
+        if (won && body.oppKey) {
+          const oppKeyVal = String(body.oppKey).slice(0, 80);
+          if (/^(acct:|guest:)/.test(oppKeyVal) && oppKeyVal !== key) {
+            try {
+              const oppIns = await sql`INSERT INTO pvp_results (match_id, google_sub)
+                VALUES (${matchId}, ${oppKeyVal}) ON CONFLICT DO NOTHING RETURNING match_id`;
+              if (oppIns.length) {
+                const [opp] = await sql`SELECT pvp_elo, pvp_wins, pvp_losses FROM users WHERE google_sub = ${oppKeyVal}`;
+                if (opp) {
+                  const { delta: oppDelta } = nextElo(opp.pvp_elo, u.elo, false);
+                  const oppNewElo = Math.max(100, opp.pvp_elo + oppDelta);
+                  await sql`UPDATE users SET pvp_elo = ${oppNewElo}, pvp_losses = ${opp.pvp_losses + 1}, pvp_streak = 0 WHERE google_sub = ${oppKeyVal}`;
+                  const oppHistRole = role ? (role === 'pitcher' ? 'batter' : 'pitcher') : null;
+                  await sql`INSERT INTO pvp_history (player_key, match_id, won, my_role, my_ovr, opp_name, opp_ovr, elo_before, elo_after)
+                    VALUES (${oppKeyVal}, ${matchId}, false, ${oppHistRole}, ${oppOvr}, ${String(body.name || '').slice(0, 40)}, ${myOvr}, ${opp.pvp_elo}, ${oppNewElo})`;
+                }
+              }
+            } catch (e) {}
+          }
+        }
         return res.status(200).json({ ok: true, counted: true, elo, delta: delta + bonus, bonus, streak, wins, losses });
       }
 

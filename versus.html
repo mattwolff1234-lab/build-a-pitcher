@@ -796,7 +796,7 @@ async function applyResult(){
   try {
     const r = await fetch('/api/account', { method:'POST', headers:{'content-type':'application/json'},
       body: JSON.stringify(Object.assign({ action:'pvpResult', matchId: pr.matchId, won: pr.won, oppElo: pr.oppElo,
-        role: pr.role, ovr: pr.ovr, oppOvr: pr.oppOvr, oppName: pr.oppName || '' }, principal())) }).then(x=>x.json());
+        role: pr.role, ovr: pr.ovr, oppOvr: pr.oppOvr, oppName: pr.oppName || '', oppKey: pr.oppKey || '' }, principal())) }).then(x=>x.json());
     if (r.ok){ myStats = { elo:r.elo, wins:r.wins, losses:r.losses, streak:r.streak||0 }; renderRatingResult(r); }
   } catch(e){}
 }
@@ -1344,7 +1344,7 @@ function finishBuild(){
   const slots = ROLE[myRole].slots.map(s=>buildState.filled[s.key]);
   const ovr = computeOvr(myRole, buildState.filled);
   const team = modalTeam(slots);
-  myBuild = { role:myRole, ovr, team, slots, elo: myElo(), name: displayName() };
+  myBuild = { role:myRole, ovr, team, slots, elo: myElo(), name: displayName(), key: personId() };
   publishBuild();
   updateOppPill();
   // safety net: if the opponent never finishes (left/closed), don't hang forever
@@ -1442,7 +1442,7 @@ function showForfeitResult(iWon, filled, data={}){
 
   const oppElo = typeof data.elo === 'number' ? data.elo : ((oppBuild && typeof oppBuild.elo === 'number') ? oppBuild.elo : 1000);
   const oppForfeitName = data.name || (oppBuild && oppBuild.name ? oppBuild.name : '');
-  pendingResult = { matchId, won:iWon, oppElo, role:myRole, ovr:(myBuild ? myBuild.ovr : 0), oppOvr:(oppBuild ? oppBuild.ovr : 0), oppName:oppForfeitName };
+  pendingResult = { matchId, won:iWon, oppElo, role:myRole, ovr:(myBuild ? myBuild.ovr : 0), oppOvr:(oppBuild ? oppBuild.ovr : 0), oppName:oppForfeitName, oppKey:(oppBuild && oppBuild.key ? oppBuild.key : '') };
   $('ratingResult').innerHTML = '';
   applyResult();
 }
@@ -1734,7 +1734,7 @@ function showResult(iWon, pitcher, batter, winnerRole, script){
   // Elo: report this result against the opponent's rating (came over with their build).
   // Works for guests (device rating) and signed-in users alike.
   const oppElo = (oppBuild && typeof oppBuild.elo === 'number') ? oppBuild.elo : 1000;
-  pendingResult = { matchId, won: iWon, oppElo, role: myRole, ovr: (myBuild ? myBuild.ovr : 0), oppOvr: (oppBuild ? oppBuild.ovr : 0), oppName: oppName };
+  pendingResult = { matchId, won: iWon, oppElo, role: myRole, ovr: (myBuild ? myBuild.ovr : 0), oppOvr: (oppBuild ? oppBuild.ovr : 0), oppName: oppName, oppKey: (oppBuild && oppBuild.key ? oppBuild.key : '') };
   $('ratingResult').innerHTML = '';
   applyResult();
 }
