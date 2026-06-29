@@ -82,11 +82,16 @@
   // ---- persistent state ----
   // Local cache. ACH_VER bumps wipe any pre-launch local data so everyone starts fresh; the
   // signed-in account (below) is the source of truth and follows the user's email across devices.
-  const ACH_VER = '2026-06-29';
+  const ACH_VER = '2026-06-29c';
   let done = {};
   try {
     if (localStorage.getItem('pl_ach_ver') === ACH_VER) done = JSON.parse(localStorage.getItem('pl_achievements') || '{}');
-    else { localStorage.setItem('pl_ach_ver', ACH_VER); localStorage.removeItem('pl_achievements'); done = {}; }
+    else {
+      localStorage.setItem('pl_ach_ver', ACH_VER);
+      localStorage.removeItem('pl_achievements');
+      localStorage.setItem('pl_ach_rst', ACH_VER); // also wipe the account copy on next sync
+      done = {};
+    }
   } catch (e) { done = {}; }
   const save = () => { try { localStorage.setItem('pl_achievements', JSON.stringify(done)); } catch (e) {} };
 
@@ -96,12 +101,14 @@
   async function serverSync() {
     const a = acct();
     if (!a || !a.sub || !a.sessionToken) return;
+    const resetting = (() => { try { return localStorage.getItem('pl_ach_rst') === ACH_VER; } catch (e) { return false; } })();
     try {
       const r = await fetch('/api/account', {
         method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ action: 'achSync', sub: a.sub, sessionToken: a.sessionToken, achievements: done }),
+        body: JSON.stringify({ action: 'achSync', sub: a.sub, sessionToken: a.sessionToken, achievements: done, reset: resetting }),
       }).then(x => x.json());
       if (r && r.ok && r.achievements) {
+        if (resetting) { try { localStorage.removeItem('pl_ach_rst'); } catch (e) {} }
         done = r.achievements; save(); refreshBadges();
         if (chromeReady && built && ov && ov.classList.contains('show')) render();
       }

@@ -195,8 +195,10 @@ module.exports = async (req, res) => {
       if (action === 'achSync') {
         if (!(await authed(body.sub, body.sessionToken))) return res.status(401).json({ ok: false, error: 'Not signed in' });
         const incoming = (body.achievements && typeof body.achievements === 'object') ? body.achievements : {};
-        const [u] = await sql`SELECT achievements FROM users WHERE google_sub = ${body.sub}`;
-        const merged = Object.assign({}, (u && u.achievements) || {});
+        // reset=true replaces the account copy with the caller's current set (used for version wipes);
+        // otherwise merge (union, earliest unlock time wins) so progress follows the email across devices.
+        const base = body.reset === true ? {} : ((await sql`SELECT achievements FROM users WHERE google_sub = ${body.sub}`)[0] || {}).achievements || {};
+        const merged = Object.assign({}, base);
         let n = 0;
         for (const k in incoming) {
           if (n++ > 200) break;
