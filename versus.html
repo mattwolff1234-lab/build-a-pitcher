@@ -768,7 +768,14 @@ const WEIGHTS_P = { k_per_bf:1.2, hr_per_bf:1.2, pitch_control:1.2, pitch_veloci
 const WEIGHTS_B = { contact:1.2, power:1.2, plate_discipline:1.1, plate_vision:1.1, batting_clutch:1.1, speed:1.0, fielding_ability:1.0, frame:1.0 };
 function heightToRatingP(inches){ return inches ? clamp(Math.round(50+(inches-67)*3.5),1,99) : 65; }
 function heightToRatingB(inches){ return inches ? clamp(Math.round(82+(inches-72)*1.5),76,93) : 82; }
-function slotWeightP(k,v){ const ramp=(lo,hi)=>0.4+0.9*clamp((v-lo)/(hi-lo),0,1); if(k==='frame')return ramp(78,92); if(k==='fielding_ability')return ramp(73,85); return WEIGHTS_P[k]||1; }
+// Pitcher Defense (fielding_ability) is uniquely compressed/low in the data (median 48 vs 60s-80s
+// for every other slot), so it was a guaranteed anchor with no agency. For 1v1 we (1) curve it onto
+// the same scale as the other slots so a rare elite glove is a real edge, and (2) keep its weight
+// low for average gloves so it barely drags, ramping up only for genuinely elite (curved) defense.
+// Batter Defense is already well-distributed, so this only applies to the pitcher role.
+function curvePitchDef(v){ return Math.max(1, Math.round(62 + (v - 48) * 1.5)); }
+function defWeightP(v){ return 0.3 + 0.9 * clamp((v - 70) / 22, 0, 1); }
+function slotWeightP(k,v){ const ramp=(lo,hi)=>0.4+0.9*clamp((v-lo)/(hi-lo),0,1); if(k==='frame')return ramp(78,92); if(k==='fielding_ability')return defWeightP(v); return WEIGHTS_P[k]||1; }
 
 const ROLE = {
   pitcher: { data:'pitchers.json', figure:'pitcher-figure.png', slots:PITCHER_SLOTS,
@@ -776,8 +783,16 @@ const ROLE = {
   batter: { data:'batters.json', figure:'batter-figure.png', slots:BATTER_SLOTS,
     h2r:heightToRatingB, slotWeight:(k,v)=>WEIGHTS_B[k]||1 },
 };
-function slotNumeric(role,p,s){ return s.type==='height' ? ROLE[role].h2r(p.heightIn) : (p[s.key]||0); }
-function slotDisplay(role,p,s){ return s.type==='height' ? (p.height||'—') : (p[s.key]||0); }
+function slotNumeric(role,p,s){
+  if(s.type==='height') return ROLE[role].h2r(p.heightIn);
+  if(role==='pitcher' && s.key==='fielding_ability') return curvePitchDef(p[s.key]||0);
+  return p[s.key]||0;
+}
+function slotDisplay(role,p,s){
+  if(s.type==='height') return p.height||'—';
+  if(role==='pitcher' && s.key==='fielding_ability') return curvePitchDef(p[s.key]||0);
+  return p[s.key]||0;
+}
 function computeOvr(role, filled){
   let vs=0, ws=0;
   for(const s of ROLE[role].slots){ const v=filled[s.key].value; const w=ROLE[role].slotWeight(s.key,v); vs+=v*w; ws+=w; }
