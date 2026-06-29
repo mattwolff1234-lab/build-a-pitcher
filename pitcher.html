@@ -936,7 +936,7 @@
 <div id="dailyReveal" class="daily-reveal">
   <div id="drCard" class="dr-card">
     <div class="dr-eyebrow">🎯 Daily Challenge</div>
-    <div class="dr-ovr"><span id="drOvr">0</span><small>OVR</small></div>
+    <div class="dr-ovr"><span id="drDailyOvr">0</span><small>OVR</small></div>
     <div id="drPB" class="dr-pb" style="display:none">🏆 NEW PERSONAL BEST!</div>
     <div id="drFroze" class="dr-froze" style="display:none">🧊 Streak Freeze used - your streak is safe!</div>
     <div class="dr-rank"><span id="drRankNum">-</span></div>
@@ -1787,7 +1787,7 @@ function closeDailyResults(thenSim) {
 function rankReveal(ovr, rank, total, isPB, replay, frozeUsed) {
   const ov = $('dailyReveal'); if (!ov) return;
   const pct = total > 1 ? Math.max(1, Math.round((1 - (rank - 1) / total) * 100)) : 100;
-  $('drOvr').textContent = ovr;
+  $('drDailyOvr').textContent = ovr;
   $('drPctNum').textContent = '0';
   $('drRankNum').textContent = '-';
   $('drField').textContent = `of ${total.toLocaleString()} player${total === 1 ? '' : 's'} today`;
