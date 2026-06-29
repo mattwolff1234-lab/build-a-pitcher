@@ -442,6 +442,14 @@
     <div class="vs-card">
       <div id="ratingChip" class="rating-chip"></div>
       <button class="btn" id="findBtn">⚔️ Find Match</button>
+      <div style="display:flex;align-items:center;gap:10px;margin:18px 0 14px;">
+        <div style="flex:1;height:1px;background:var(--line)"></div>
+        <span style="font-size:11px;letter-spacing:1.5px;color:var(--dim);text-transform:uppercase;white-space:nowrap">or play a friend</span>
+        <div style="flex:1;height:1px;background:var(--line)"></div>
+      </div>
+      <button class="btn ghost" id="mmChalBtn" style="width:100%;font-size:13px;padding:11px 20px;letter-spacing:1.5px;">🔗 Copy Challenge Link</button>
+      <div style="color:var(--dim);font-size:11.5px;margin-top:7px;letter-spacing:.2px;">Play 1v1 with a friend · No Elo change</div>
+      <div id="mmChalCopied" style="display:none;color:var(--accent2);font-size:12px;margin-top:6px;letter-spacing:.3px">✓ Link copied! Share it with a friend.</div>
       <div class="spinner" id="mmSpin"></div>
       <div class="status" id="mmStatus"></div>
       <div style="margin-top:18px; display:none;" id="cancelWrap">
@@ -1029,7 +1037,7 @@ function hideChallengeNotif(){
 
 function copyChallengeLinkFn(){
   const link = location.origin + '/versus?ch=' + encodeURIComponent(personId()) + '&cn=' + encodeURIComponent(displayName());
-  const done = () => { const c=$('chalCopied'); if(c){ c.style.display=''; setTimeout(()=>{ if(c) c.style.display='none'; },3000); } };
+  const done = () => { ['chalCopied','mmChalCopied'].forEach(id => { const c=$(id); if(c){ c.style.display=''; setTimeout(()=>{ if(c) c.style.display='none'; },3000); } }); };
   if (navigator.clipboard) { navigator.clipboard.writeText(link).then(done).catch(()=>{ prompt('Copy this link:', link); }); }
   else { try { prompt('Copy this link:', link); done(); } catch(e){} }
 }
@@ -1994,6 +2002,7 @@ $('chalDeclineBtn').onclick = () => { showScreen('mmScreen'); _incomingChalId=nu
 $('chalNotifAccept').onclick = () => { Sound.click(); acceptChallengeNotif(); };
 $('chalNotifDecline').onclick = () => { Sound.click(); declineChallengeNotif(); };
 $('challengeLinkBtn').onclick = () => { Sound.click(); copyChallengeLinkFn(); };
+$('mmChalBtn').onclick = () => { Sound.click(); copyChallengeLinkFn(); };
 // sign-in + rating on load
 initGoogle();
 refreshStats().then(updateRatingChip);
