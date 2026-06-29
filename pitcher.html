@@ -1474,8 +1474,27 @@ function recordPlayedDate(dateStr) {
   try { localStorage.setItem('pl_played', JSON.stringify([...s].sort())); } catch (e) {}
 }
 // Scrollable day-by-day streak timeline with milestone markers.
+// Pull this account's daily-play history from the server (so the calendar follows the signed-in
+// account across devices, not just this device's localStorage).
+async function syncAccountDates() {
+  if (!account) return;
+  try {
+    const r = await fetch(`/api/score?action=dailyDates&game=${LEADERBOARD_GAME}&sub=${encodeURIComponent(account.sub)}`);
+    const j = await r.json();
+    if (j.ok && Array.isArray(j.dates) && j.dates.length) {
+      const s = getPlayedDates();
+      j.dates.forEach(d => s.add(d));
+      try { localStorage.setItem('pl_played', JSON.stringify([...s].sort())); } catch (e) {}
+    }
+  } catch (e) {}
+}
 function openStreak() {
   closeOverlay('menu');
+  renderStreakTimeline();
+  openOverlay('streakModal');
+  syncAccountDates().then(renderStreakTimeline);   // refresh from the account once it loads
+}
+function renderStreakTimeline() {
   const played = getPlayedDates();
   const today = todayUTC();
   let start = played.size ? [...played].sort()[0] : addDays(today, -6);
@@ -1507,7 +1526,6 @@ function openStreak() {
     cells.push(`<div class="sk-day ${cls}${ll ? ' ll' : ''}" title="${MON[dt.getUTCMonth()]} ${dom}">${badge}<div class="sk-dow">${DOW[dt.getUTCDay()]}</div><div class="sk-dot">${icon}</div><div class="sk-dom">${dom}</div><div class="sk-mon">${showMon ? MON[dt.getUTCMonth()] : ''}</div></div>`);
   }
   $('skTimeline').innerHTML = cells.join('');
-  openOverlay('streakModal');
   const tl = $('skTimeline'); requestAnimationFrame(() => { tl.scrollLeft = tl.scrollWidth; });   // jump to today
 }
 // Returns { firstToday, frozeUsed }. A Streak Freeze 🧊 covers exactly one missed day.

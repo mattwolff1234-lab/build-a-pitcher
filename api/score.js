@@ -84,6 +84,16 @@ module.exports = async (req, res) => {
       return res.status(200).json({ ok: true, rows, total: Number(total) });
     }
 
+    // GET ?action=dailyDates&sub=<sub>|&guestId=<id> — the player's daily-play dates (streak calendar).
+    if (req.method !== 'POST' && (req.query && req.query.action) === 'dailyDates') {
+      const key = playerKey(req.query);
+      if (!key) return res.status(200).json({ ok: true, dates: [] });
+      const game = gameOf(req.query && req.query.game);
+      const rows = await sql`SELECT to_char(challenge_date, 'YYYY-MM-DD') AS d FROM daily_scores
+        WHERE player_key = ${key} AND game = ${game} ORDER BY challenge_date`;
+      return res.status(200).json({ ok: true, dates: rows.map(r => r.d) });
+    }
+
     if (req.method === 'POST') {
       const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
 
