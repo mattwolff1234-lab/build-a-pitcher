@@ -429,15 +429,17 @@
   /* career card (final, shareable) */
   .career-card { max-width:380px; margin:16px auto 0; border-radius:14px; overflow:hidden; text-align:left;
     border:1px solid var(--line); box-shadow:0 14px 44px rgba(0,0,0,.5); }
-  .cc-top { padding:14px 16px; color:#fff; position:relative; }
+  .cc-top { padding:14px 16px; color:#fff; position:relative; display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+  .cc-meta { min-width:0; }
   .cc-top .cc-team { font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:2px; text-transform:uppercase; opacity:.85; }
   .cc-top .cc-name { font-family:'Oswald',sans-serif; font-size:24px; font-weight:700; line-height:1.05; margin-top:2px; }
   .cc-top .cc-role { font-size:11px; opacity:.85; margin-top:2px; }
-  .cc-top .cc-ovr { position:absolute; top:12px; right:14px; font-family:'Oswald',sans-serif; font-size:34px; font-weight:700;
-    background:rgba(0,0,0,.25); border-radius:10px; padding:2px 12px; }
-  .cc-logo { position:absolute; right:16px; bottom:14px; width:54px; height:54px; border-radius:50%;
+  .cc-badge { flex-shrink:0; display:flex; align-items:center; gap:9px; }
+  .cc-top .cc-ovr { font-family:'Oswald',sans-serif; font-size:32px; font-weight:700; line-height:1.15;
+    background:rgba(0,0,0,.25); border-radius:10px; padding:2px 11px; }
+  .cc-logo { width:46px; height:46px; border-radius:50%; flex-shrink:0;
     background:rgba(255,255,255,.92); display:grid; place-items:center; box-shadow:0 0 18px rgba(0,0,0,.25); }
-  .cc-logo img { width:43px; height:43px; object-fit:contain; }
+  .cc-logo img { width:36px; height:36px; object-fit:contain; }
   .cc-verdict { font-family:'Oswald',sans-serif; font-size:14px; font-weight:700; text-transform:uppercase; letter-spacing:1px;
     padding:9px 16px; text-align:center; background:#0a111c; }
   .cc-vote { font-size:11px; color:var(--muted); text-transform:none; letter-spacing:0; margin-top:2px; font-weight:400; }
@@ -2912,12 +2914,16 @@ function buildCard(career, verdict, voteLine) {
 
   $('careerCard').innerHTML = `
     <div class="cc-top" style="background:linear-gradient(135deg, ${team.color}, ${shade(team.color, -34)});">
-      <div class="cc-ovr">${state.finalOvr}</div>
-      <div class="cc-logo"><img src="${team.logo}" alt="${escapeHTML(team.name)} logo" onerror="this.parentElement.style.display='none'"></div>
-      <div class="cc-team">${escapeHTML(team.name)}</div>
-      <div class="cc-name">${escapeHTML(name)}</div>
-      ${state.archetype ? `<div class="cc-arch">${escapeHTML(state.archetype.name)}</div>` : ''}
-      <div class="cc-role">${career.role} · age ${yrs} · ${career.seasons.length} seasons</div>
+      <div class="cc-meta">
+        <div class="cc-team">${escapeHTML(team.name)}</div>
+        <div class="cc-name">${escapeHTML(name)}</div>
+        ${state.archetype ? `<div class="cc-arch">${escapeHTML(state.archetype.name)}</div>` : ''}
+        <div class="cc-role">${career.role} · age ${yrs} · ${career.seasons.length} seasons</div>
+      </div>
+      <div class="cc-badge">
+        <div class="cc-logo"><img src="${team.logo}" alt="${escapeHTML(team.name)} logo" onerror="this.parentElement.style.display='none'"></div>
+        <div class="cc-ovr">${state.finalOvr}</div>
+      </div>
     </div>
     <div class="cc-verdict" style="color:${verdictColor(verdict.cls)}">${verdict.txt}${voteLine ? `<div class="cc-vote">${voteLine}</div>` : ''}</div>
     <div class="cc-line">
