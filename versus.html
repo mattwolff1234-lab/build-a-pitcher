@@ -1055,7 +1055,7 @@ function subscribeChallengeInbox(){
   if (challengeInboxCh) return;
   try {
     challengeInboxCh = ably.channels.get('versus:challenge:' + personId());
-    challengeInboxCh.subscribe(msg => handleChallengeMsg(msg));
+    challengeInboxCh.subscribe('m', msg => handleChallengeMsg(msg));
   } catch(e){}
 }
 
@@ -1126,7 +1126,7 @@ async function sendChallengeRequest(){
     setChalStatus(tries === 1 ? 'Contacting challenger…' : `Pinging… (attempt ${tries}/${MAX_TRIES})`);
     try {
       const ch = ably.channels.get('versus:challenge:' + _incomingChalId);
-      await ch.publish({ type:'request', replyId: personId(), clientId, name: displayName() });
+      await ch.publish('m', { type:'request', replyId: personId(), clientId, name: displayName() });
     } catch(e){}
     if (chalGaveUp) return;
     if (tries < MAX_TRIES){
@@ -1155,7 +1155,7 @@ async function acceptChallengeNotif(){
   const ch = ably.channels.get('versus:challenge:' + pr.replyId);
   const payload = { type:'accept', matchId:newId, seed:newSeed, yourRole:theirRole, chalClientId:clientId, mode:gameMode };
   for (let i = 0; i < 3; i++){
-    try { await ch.publish(payload); break; } catch(e){ if (i < 2) await new Promise(r => setTimeout(r, 800)); }
+    try { await ch.publish('m', payload); break; } catch(e){ if (i < 2) await new Promise(r => setTimeout(r, 800)); }
   }
   startMatch(newId, myNewRole, newSeed, pr.replyClientId, false, true);
 }
@@ -1164,7 +1164,7 @@ function declineChallengeNotif(){
   const pr = pendingChallenge; pendingChallenge = null;
   hideChallengeNotif();
   if (pr && ably) {
-    try { ably.channels.get('versus:challenge:' + pr.replyId).publish({ type:'decline' }); } catch(e){}
+    try { ably.channels.get('versus:challenge:' + pr.replyId).publish('m', { type:'decline' }); } catch(e){}
   }
 }
 
