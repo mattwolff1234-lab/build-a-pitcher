@@ -1042,7 +1042,7 @@ let account = null;
 try { account = JSON.parse(localStorage.getItem('pl_account') || 'null'); } catch (e) {}
 
 function saveAccount(a) { account = a; try { localStorage.setItem('pl_account', JSON.stringify(a)); } catch (e) {} renderAcct(); }
-function clearAccount() { account = null; try { localStorage.removeItem('pl_account'); } catch (e) {} try { google.accounts.id.disableAutoSelect(); } catch (e) {} renderAcct(); }
+function clearAccount() { account = null; try { localStorage.removeItem('pl_account'); } catch (e) {} try { google.accounts.id.disableAutoSelect(); } catch (e) {} renderAcct(); if (window.Ach) Ach.signOut(); }
 
 function googleConfigured() { return GOOGLE_CLIENT_ID && GOOGLE_CLIENT_ID.indexOf('REPLACE_WITH') !== 0; }
 function initGoogle(tries) {

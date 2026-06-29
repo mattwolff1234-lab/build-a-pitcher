@@ -101,20 +101,33 @@
   async function serverSync() {
     const a = acct();
     if (!a || !a.sub || !a.sessionToken) return;
-    const resetting = (() => { try { return localStorage.getItem('pl_ach_rst') === ACH_VER; } catch (e) { return false; } })();
+    let owner = null, resetting = false;
+    try { owner = localStorage.getItem('pl_ach_owner'); resetting = localStorage.getItem('pl_ach_rst') === ACH_VER; } catch (e) {}
+    // If the local cache already belongs to this account, push its unlocks up (covers offline play).
+    // Otherwise it's guest progress (or a different account) — adopt this account's set and discard
+    // the local data, so achievements stay tied to whoever is signed in with Google.
+    const sameOwner = owner === a.sub;
+    const payload = (sameOwner || resetting) ? done : {};
     try {
       const r = await fetch('/api/account', {
         method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ action: 'achSync', sub: a.sub, sessionToken: a.sessionToken, achievements: done, reset: resetting }),
+        body: JSON.stringify({ action: 'achSync', sub: a.sub, sessionToken: a.sessionToken, achievements: payload, reset: resetting }),
       }).then(x => x.json());
       if (r && r.ok && r.achievements) {
-        if (resetting) { try { localStorage.removeItem('pl_ach_rst'); } catch (e) {} }
+        try { if (resetting) localStorage.removeItem('pl_ach_rst'); localStorage.setItem('pl_ach_owner', a.sub); } catch (e) {}
         done = r.achievements; save(); refreshBadges();
         if (chromeReady && built && ov && ov.classList.contains('show')) render();
       }
     } catch (e) {}
   }
   function queueSync() { clearTimeout(syncTimer); syncTimer = setTimeout(serverSync, 400); }
+  // Called on sign-out: a guest should not inherit the previous account's board.
+  function signOut() {
+    done = {};
+    try { localStorage.removeItem('pl_achievements'); localStorage.removeItem('pl_ach_owner'); } catch (e) {}
+    refreshBadges();
+    if (chromeReady && built && ov && ov.classList.contains('show')) render();
+  }
 
   // ---- styles (injected so this file is fully drop-in) ----
   const css = `
@@ -214,7 +227,7 @@
   const ZMIN = 0.4, ZMAX = 1.8;
   function applyZoom() { CW = BASE.CW * zoom; CH = BASE.CH * zoom; X0 = BASE.X0 * zoom; Y0 = BASE.Y0 * zoom; SZ = BASE.SZ * zoom; }
   applyZoom();
-  let ACTIVE = 'all', OFFSET = 0, built = false;
+  let ACTIVE = 'all', built = false;
   let ov, canvas, svg, tabsEl, tip, toast, progEl, wrap;
 
   let chromeReady = false;
@@ -259,8 +272,8 @@
 
     // background headshots on a jittered grid (no overlap)
     let n = 0;
-    for (let gy = 0; gy < 2300; gy += 200) {
-      for (let gx = 0; gx < 760; gx += 165) {
+    for (let gy = 0; gy < 2900; gy += 200) {
+      for (let gx = 0; gx < 940; gx += 165) {
         const img = document.createElement('img');
         img.className = 'ach-hs'; img.loading = 'lazy'; img.src = hsUrl(HEADSHOT_IDS[n++ % HEADSHOT_IDS.length]);
         img.style.left = (gx + 16 + (Math.random() * 36 - 18)) + 'px';
@@ -295,8 +308,28 @@
   function scheduleRender() { if (rafPending) return; rafPending = true; requestAnimationFrame(() => { rafPending = false; render(); }); }
   function setZoom(z) { zoom = Math.max(ZMIN, Math.min(ZMAX, z)); scheduleRender(); }
 
-  const px = a => ({ x: X0 + a.col * CW, y: Y0 + (a.row - OFFSET) * CH });
+  let rowMap = {};
+  const px = a => ({ x: X0 + a.col * CW, y: Y0 + (rowMap[a.id] || 0) * CH });
   const visible = a => ACTIVE === 'all' || a.cat === ACTIVE;
+  // Lay categories out in non-overlapping vertical bands so the "All" view never stacks two
+  // categories' tiles on the same coordinate (e.g. Bargain Bin under Strikeout Artist I).
+  function buildRowMap(vis) {
+    rowMap = {};
+    if (ACTIVE === 'all') {
+      let y = 0;
+      for (const c of CATS) {
+        if (c.id === 'all') continue;
+        const rows = ACHIEVEMENTS.filter(a => a.cat === c.id).map(a => a.row);
+        if (!rows.length) continue;
+        const mn = Math.min(...rows), mx = Math.max(...rows);
+        ACHIEVEMENTS.forEach(a => { if (a.cat === c.id) rowMap[a.id] = y + (a.row - mn); });
+        y += (mx - mn + 1) + 1; // one empty row of breathing space between categories
+      }
+    } else {
+      const mn = Math.min(...vis.map(a => a.row));
+      vis.forEach(a => { rowMap[a.id] = a.row - mn; });
+    }
+  }
   const isDone = id => !!done[id];
 
   function renderTabs() {
@@ -327,9 +360,9 @@
     applyZoom();
     renderTabs();
     const vis = ACHIEVEMENTS.filter(visible);
-    OFFSET = ACTIVE === 'all' ? 0 : Math.min(...vis.map(a => a.row));
-    const maxRow = Math.max(...vis.map(a => a.row)), maxCol = Math.max(...vis.map(a => a.col));
-    canvas.style.height = (Y0 * 2 + (maxRow - OFFSET + 1) * CH) + 'px';
+    buildRowMap(vis);
+    const maxRow = Math.max(...vis.map(a => rowMap[a.id])), maxCol = Math.max(...vis.map(a => a.col));
+    canvas.style.height = (Y0 * 2 + (maxRow + 1) * CH) + 'px';
     canvas.style.width = (X0 * 2 + (maxCol + 1) * CW) + 'px';
     canvas.querySelectorAll('.ach-node').forEach(e => e.remove());
     for (const a of vis) {
@@ -468,6 +501,7 @@
     open, close,
     refreshBadges,
     sync: serverSync,
+    signOut,
     all: ACHIEVEMENTS,
   };
   window.Ach = Ach;
