@@ -1585,20 +1585,34 @@ function bestPossibleOvr(cards) {
 // The daily flow inserts this between finishing the build and simulating the career.
 async function showDailyResults() {
   if (dailyResultsShown) return;                     // guard: only show once per build
-  dailyResultsShown = true;                          // marks the daily as submitted
   const ov = $('dailyResults');
-  const name = $('nameInput').value.trim() || (account && account.name) || 'Anonymous';
-  if (name !== 'Anonymous') { try { localStorage.setItem('pl_lastName', name); } catch (e) {} }
-  const ovr = state.finalOvr;
-  const res = (await finishDailyChallenge(ovr, name, { slots: state.build, career: null })) || { ovr, rank: 1, total: 1, isPB: false, frozeUsed: false };
-  const best = bestPossibleOvr(state.dealtCards);
-  let rows = [];
+  if (!ov) { dailyResultsShown = true; runCareerPlaythrough(); return; }
+  dailyResultsShown = true;                          // marks the daily as submitted
+  // Show the panel IMMEDIATELY (before any await) so it always appears, then fill it in.
+  $('dResOvr').textContent = state.finalOvr;
+  $('dResRank').textContent = '…'; $('dResPct').textContent = '…';
+  $('dResField').textContent = 'submitting…';
+  $('dResPB').style.display = 'none'; $('dResFroze').style.display = 'none';
+  $('dResBest').innerHTML = ''; $('dResBoard').innerHTML = ''; $('dResStreak').textContent = '';
+  ov.classList.add('show');
+  document.body.classList.add('ach-open');
+  gsap.fromTo($('dResCard'), { y: 26, opacity: 0, scale: .92 }, { y: 0, opacity: 1, scale: 1, duration: .55, ease: 'back.out(1.6)' });
   try {
-    const r = await fetch(`/api/score?action=challengeLeaderboard&game=${LEADERBOARD_GAME}&limit=8`);
-    const j = await r.json(); if (j.ok) rows = j.rows || [];
-  } catch (e) {}
-  if (!ov) { runCareerPlaythrough(); return; }       // panel missing → just continue to sim
-  renderDailyResults(res, best, rows, name);
+    const name = $('nameInput').value.trim() || (account && account.name) || 'Anonymous';
+    if (name !== 'Anonymous') { try { localStorage.setItem('pl_lastName', name); } catch (e) {} }
+    const res = (await finishDailyChallenge(state.finalOvr, name, { slots: state.build, career: null })) || { ovr: state.finalOvr, rank: 1, total: 1, isPB: false, frozeUsed: false };
+    let best = null;
+    try { best = bestPossibleOvr(state.dealtCards); } catch (e) { console.warn('[DAILY] bestPossibleOvr failed', e); }
+    let rows = [];
+    try {
+      const r = await fetch(`/api/score?action=challengeLeaderboard&game=${LEADERBOARD_GAME}&limit=8`);
+      const j = await r.json(); if (j.ok) rows = j.rows || [];
+    } catch (e) {}
+    renderDailyResults(res, best, rows, name);
+  } catch (e) {
+    console.error('[DAILY] showDailyResults fill failed:', e);
+    $('dResField').textContent = 'Tap Continue to simulate.';   // panel still usable
+  }
 }
 function renderDailyResults(res, best, rows, name) {
   const ov = $('dailyResults');
@@ -1621,10 +1635,8 @@ function renderDailyResults(res, best, rows, name) {
   $('dResBoard').innerHTML = rows.length
     ? rows.map((r, i) => `<div class="dres-row${(i + 1) === res.rank && r.name === name ? ' me' : ''}"><span>${i + 1}</span><span class="dres-nm">${escapeHTML(r.name)}</span><span class="dres-rov c-${tier(r.ovr)}">${r.ovr}</span></div>`).join('')
     : '<div class="dr-field" style="padding:6px">Be the first on today\'s board!</div>';
-  ov.classList.add('show');
-  document.body.classList.add('ach-open');
-  gsap.fromTo($('dResCard'), { y: 26, opacity: 0, scale: .92 }, { y: 0, opacity: 1, scale: 1, duration: .55, ease: 'back.out(1.6)' });
-  gsap.from($('dResBoard').children, { x: 30, opacity: 0, duration: .4, stagger: .05, delay: .25, ease: 'power2.out' });
+  ov.classList.add('show');   // (already shown upfront in showDailyResults; safe to re-assert)
+  gsap.from($('dResBoard').children, { x: 30, opacity: 0, duration: .4, stagger: .05, delay: .05, ease: 'power2.out' });
   const rk = { v: Math.min(res.total, Math.max(res.rank, Math.round(res.total * 0.6))) }, pc = { v: 0 };
   gsap.to(rk, { v: res.rank, duration: 1.2, ease: 'power2.out', onUpdate: () => { $('dResRank').textContent = '#' + Math.round(rk.v).toLocaleString(); } });
   gsap.to(pc, {
@@ -2804,6 +2816,7 @@ function finish() {
   gsap.to(o, { v: avg, duration: 1.0, ease: 'power2.out', onUpdate: () => { $('doneOvr').textContent = Math.round(o.v); } });
   gsap.fromTo($('doneArch'), { opacity: 0 }, { opacity: 1, duration: .6, delay: .8 });
   // Daily: the results leaderboard pops up automatically once the build is done.
+  console.log('[DAILY] finish: dailyMode =', dailyMode);
   if (dailyMode) setTimeout(showDailyResults, 900);
 }
 
