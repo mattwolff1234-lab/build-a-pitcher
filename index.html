@@ -320,7 +320,7 @@
   (function(){
     var bar = document.getElementById('statBar'); if (!bar) return;
     bar.style.display = 'inline-flex'; // show teaser immediately; upgrade when stats load
-    fetch('/api/score?action=stats&game=all').then(function(r){ return r.json(); }).then(function(d){
+    fetch('/api/score?action=stats&game=pitcher').then(function(r){ return r.json(); }).then(function(d){
       if (!d || !d.ok || !d.total) return;
       var plays = bar.querySelector('.sb-plays'), msg = bar.querySelector('.sb-msg');
       plays.textContent = d.total.toLocaleString() + ' BUILDS'; plays.style.display = '';
