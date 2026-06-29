@@ -1427,14 +1427,30 @@ function respin() {
 
 function boost() {
   if (state.boostUsed || !state.landed) return;
-  const primeCard = DATA.prime[state.landed.name];
+  const base = state.landed;
+  const primeCard = DATA.prime[base.name];
   if (!primeCard) return;
   state.boostUsed = true;
   state.boostedThisLand = true;
   (state.turnPowers || (state.turnPowers = new Set())).add('boost');
   Sound.prime();
   updatePowerups();
-  land(primeCard);
+  land(boostedCard(base, primeCard));
+}
+
+// Boost should never leave an attribute flat or worse than the card you landed — guarantee every
+// rating attribute is at least +5 over the original (Prime keeps the higher value when it's bigger).
+// Frame is the player's real height, so it's left unchanged.
+function boostedCard(base, prime) {
+  const c = Object.assign({}, prime);
+  for (const s of SLOTS) {
+    if (s.type === 'height') continue;
+    const baseVal = Number(base[s.key]);
+    if (isNaN(baseVal)) continue;
+    const primeVal = Number(c[s.key]);
+    c[s.key] = Math.max(isNaN(primeVal) ? -Infinity : primeVal, baseVal + 5);
+  }
+  return c;
 }
 
 function snag(dir) {

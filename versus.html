@@ -1575,10 +1575,23 @@ function respin(){
 }
 function boost(){
   if(buildState.boostUsed || !buildState.landed) return;
-  const primeCard = DATA[myRole].prime && DATA[myRole].prime[buildState.landed.name];
+  const base = buildState.landed;
+  const primeCard = DATA[myRole].prime && DATA[myRole].prime[base.name];
   if(!primeCard) return;
   buildState.boostUsed=true; buildState.boostedThisLand=true; Sound.prime();
-  land(primeCard);
+  land(boostedCard(base, primeCard));
+}
+// Guarantee every rating attribute is at least +5 over the landed card (Frame/height unchanged).
+function boostedCard(base, prime){
+  const c = Object.assign({}, prime);
+  for(const s of ROLE[myRole].slots){
+    if(s.type==='height') continue;
+    const baseVal = Number(base[s.key]);
+    if(isNaN(baseVal)) continue;
+    const primeVal = Number(c[s.key]);
+    c[s.key] = Math.max(isNaN(primeVal) ? -Infinity : primeVal, baseVal + 5);
+  }
+  return c;
 }
 function snag(dir){
   if(buildState.snagUsed || buildState.spinning || !buildState.strip) return;
