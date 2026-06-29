@@ -149,7 +149,8 @@
   .dr-pct { font-family:'Oswald',sans-serif; font-size:18px; letter-spacing:1px; color:var(--gold); margin-top:2px; }
   .dr-field { color:var(--muted); font-size:12.5px; margin-top:4px; }
   .dr-streak { color:var(--accent); font-family:'Oswald',sans-serif; font-size:14px; letter-spacing:.5px; margin-top:12px; }
-  .dr-replay { color:var(--dim); font-size:12px; margin-top:4px; }
+  .dr-replay { color:var(--gold); font-family:'Oswald',sans-serif; font-size:15px; letter-spacing:.5px; margin-top:8px; }
+  .dr-replay:empty { display:none; }
   /* daily results panel (rank + best build, before the career sim) */
   .dres-card { max-width:420px; }
   .dres-you { display:flex; align-items:center; gap:16px; justify-content:center; margin:8px 0 2px; }
@@ -1494,8 +1495,8 @@ async function syncAccountDates() {
       j.dates.forEach(d => s.add(d));
       try { localStorage.setItem('pl_played', JSON.stringify([...s].sort())); } catch (e) {}
     }
-    // account-scoped one-per-day gate: if this account already played today (any device), lock it here
-    if (j.today && !getDailyStatus()) { setDailyDone({ ovr: j.today.ovr, rank: j.today.rank, total: j.today.total }); updateDailyBtn(); }
+    // account-scoped one-per-day gate: refresh today's lock + result straight from the account
+    if (j.today) { setDailyDone({ ovr: j.today.ovr, rank: j.today.rank, total: j.today.total }); updateDailyBtn(); }
   } catch (e) {}
 }
 function openStreak() {
@@ -1638,9 +1639,8 @@ function showDailyInfo() {
 function hideDailyInfo() { const el = $('dailyInfo'); if (el) el.style.display = 'none'; }
 async function startDailyChallenge() {
   closeOverlay('menu');
-  let done = getDailyStatus();
-  // signed in but no local record? verify against the account (catches other devices / re-sign-in)
-  if (!done && account) { await syncAccountDates(); done = getDailyStatus(); }
+  if (account) await syncAccountDates();   // always pull the account's true daily status first
+  const done = getDailyStatus();
   if (done) { rankReveal(done.ovr, done.rank, done.total, false, true); return; }
   reset();                          // reset() clears dailyMode/lucky, so set them right after
   dailyMode = true;
@@ -1792,7 +1792,7 @@ function rankReveal(ovr, rank, total, isPB, replay, frozeUsed) {
   $('drPB').style.display = isPB ? 'block' : 'none';
   $('drFroze').style.display = frozeUsed ? 'block' : 'none';
   $('drStreak').textContent = streak.count >= 2 ? `🔥 ${streak.count}-day streak${freezeTokens > 0 ? ` · 🧊${freezeTokens}` : ''}` : '';
-  $('drReplay').textContent = replay ? 'Come back tomorrow for a new puzzle!' : '';
+  if (replay) startDailyCountdown($('drReplay')); else { stopDailyCountdown(); $('drReplay').textContent = ''; }
   ov.classList.add('show');
   gsap.fromTo($('drCard'), { y: 18, opacity: 0, scale: .94 }, { y: 0, opacity: 1, scale: 1, duration: .5, ease: 'back.out(1.6)' });
   const rk = { v: Math.min(total, Math.max(rank, Math.round(total * 0.6))) }, pc = { v: 0 };
@@ -1802,7 +1802,21 @@ function rankReveal(ovr, rank, total, isPB, replay, frozeUsed) {
     onComplete: () => { if (pct <= 5) Sound.legend(); else if (pct <= 25) (Sound.diamond || Sound.gold || Sound.complete)(); else Sound.complete(); if (isPB && Sound.gold) Sound.gold(); }
   });
 }
-function closeDailyReveal() { const ov = $('dailyReveal'); if (ov) ov.classList.remove('show'); }
+function closeDailyReveal() { stopDailyCountdown(); const ov = $('dailyReveal'); if (ov) ov.classList.remove('show'); }
+// Live countdown to the next daily (UTC midnight) shown on the "already played" reveal.
+let _dailyCountdown = null;
+function msToNextDaily() { const n = new Date(); return Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate() + 1) - n.getTime(); }
+function fmtCountdown(ms) { const s = Math.max(0, Math.floor(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = s % 60; return `${h}h ${String(m).padStart(2, '0')}m ${String(x).padStart(2, '0')}s`; }
+function startDailyCountdown(el) {
+  stopDailyCountdown();
+  const tick = () => {
+    const ms = msToNextDaily();
+    if (ms <= 0) { stopDailyCountdown(); el.textContent = '✨ New daily ready — refresh!'; return; }
+    el.textContent = '🔒 Next puzzle in ' + fmtCountdown(ms);
+  };
+  tick(); _dailyCountdown = setInterval(tick, 1000);
+}
+function stopDailyCountdown() { if (_dailyCountdown) { clearInterval(_dailyCountdown); _dailyCountdown = null; } }
 // Daily achievements on the live board: Show Up + Daily Grind I/II/III (7/30/100).
 function bumpDailyAch() {
   if (!window.Ach) return;
