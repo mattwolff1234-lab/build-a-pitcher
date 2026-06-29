@@ -94,6 +94,14 @@
     border-top-color:var(--accent); margin:18px auto 0; animation:spin 0.8s linear infinite; display:none; }
   @keyframes spin { to { transform:rotate(360deg); } }
 
+  /* ---------- mode picker ---------- */
+  .mode-picker { display:flex; gap:7px; justify-content:center; margin-bottom:10px; }
+  .mp-btn { font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:1.5px; text-transform:uppercase;
+    padding:7px 13px; border-radius:20px; border:1px solid var(--line); background:transparent;
+    color:var(--muted); cursor:pointer; transition:border-color .18s,background .18s,color .18s; }
+  .mp-btn.active { border-color:var(--accent2); background:rgba(25,198,255,.12); color:var(--ink); }
+  .mp-btn:hover:not(.active){ border-color:rgba(120,160,210,.35); color:var(--ink); }
+
   /* ---------- stats ---------- */
   .stat-top { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
     border-bottom:1px solid var(--line); padding-bottom:16px; margin-bottom:16px; }
@@ -442,14 +450,29 @@
     <div class="vs-card">
       <div id="ratingChip" class="rating-chip"></div>
       <button class="btn" id="findBtn">⚔️ Find Match</button>
-      <div style="display:flex;align-items:center;gap:10px;margin:18px 0 14px;">
-        <div style="flex:1;height:1px;background:var(--line)"></div>
-        <span style="font-size:11px;letter-spacing:1.5px;color:var(--dim);text-transform:uppercase;white-space:nowrap">or play a friend</span>
-        <div style="flex:1;height:1px;background:var(--line)"></div>
+      <div id="mmFriendSection">
+        <div style="display:flex;align-items:center;gap:10px;margin:18px 0 14px;">
+          <div style="flex:1;height:1px;background:var(--line)"></div>
+          <span style="font-size:11px;letter-spacing:1.5px;color:var(--dim);text-transform:uppercase;white-space:nowrap">or play a friend</span>
+          <div style="flex:1;height:1px;background:var(--line)"></div>
+        </div>
+        <div class="mode-picker" id="modePicker">
+          <button class="mp-btn active" data-mode="classic">⚔️ Classic</button>
+          <button class="mp-btn" data-mode="legends">🟣 Legends</button>
+          <button class="mp-btn" data-mode="hard">🔒 Hard</button>
+        </div>
+        <div id="modeDesc" style="font-size:11.5px;color:var(--dim);text-align:center;margin-bottom:12px;letter-spacing:.2px;">Standard draft · all tiers</div>
+        <button class="btn ghost" id="mmChalBtn" style="width:100%;font-size:13px;padding:11px 20px;letter-spacing:1.5px;">🔗 Copy Challenge Link</button>
+        <div style="color:var(--dim);font-size:11.5px;margin-top:7px;letter-spacing:.2px;text-align:center;">Play 1v1 with a friend · No Elo change</div>
+        <div id="mmChalCopied" style="display:none;color:var(--accent2);font-size:12px;margin-top:6px;letter-spacing:.3px;text-align:center;">✓ Link copied! Share it with a friend.</div>
       </div>
-      <button class="btn ghost" id="mmChalBtn" style="width:100%;font-size:13px;padding:11px 20px;letter-spacing:1.5px;">🔗 Copy Challenge Link</button>
-      <div style="color:var(--dim);font-size:11.5px;margin-top:7px;letter-spacing:.2px;">Play 1v1 with a friend · No Elo change</div>
-      <div id="mmChalCopied" style="display:none;color:var(--accent2);font-size:12px;margin-top:6px;letter-spacing:.3px">✓ Link copied! Share it with a friend.</div>
+      <div id="mmLobby" style="display:none;text-align:center;padding-top:6px;">
+        <div style="font-family:'Oswald',sans-serif;font-size:15px;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;">Waiting in Lobby</div>
+        <div id="mmLobbyMode" style="display:inline-block;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent2);border:1px solid rgba(25,198,255,.4);background:rgba(25,198,255,.07);border-radius:20px;padding:5px 13px 4px;margin-bottom:14px;">⚔️ Classic</div>
+        <div class="spinner" style="display:block;width:28px;height:28px;border-width:3px;margin:0 auto 14px;"></div>
+        <div style="color:var(--muted);font-size:13px;margin-bottom:16px;line-height:1.5;">Share the link — the match starts automatically when your friend joins.</div>
+        <button class="btn ghost" id="mmLobbyCancel" style="font-size:13px;padding:9px 18px;">Cancel</button>
+      </div>
       <div class="spinner" id="mmSpin"></div>
       <div class="status" id="mmStatus"></div>
       <div style="margin-top:18px; display:none;" id="cancelWrap">
@@ -562,7 +585,8 @@
     <div class="vs-card" style="text-align:center">
       <div style="font-size:13px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">challenged by</div>
       <div id="chalChallengerName" style="font-family:'Oswald',sans-serif;font-size:28px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#fff;margin-bottom:10px"></div>
-      <div style="font-size:13px;color:var(--muted);margin-bottom:24px">Friendly match · no Elo change · just bragging rights</div>
+      <div id="chalModeTag" style="display:none;margin-bottom:10px;"><span id="chalModeTagInner" style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent2);border:1px solid rgba(25,198,255,.4);background:rgba(25,198,255,.07);border-radius:20px;padding:5px 13px 4px;"></span></div>
+      <div id="chalModeLine" style="font-size:13px;color:var(--muted);margin-bottom:24px">Friendly match · no Elo change · just bragging rights</div>
       <button class="btn" id="chalAcceptBtn" style="width:100%;max-width:280px;margin:0 auto;display:block;">⚔️ Accept Challenge</button>
       <div class="status" id="chalStatus" style="margin-top:14px;min-height:20px"></div>
       <div style="margin-top:12px"><button class="btn ghost" id="chalDeclineBtn" style="font-size:13px;padding:9px 18px;">Decline</button></div>
@@ -752,6 +776,11 @@ let inviteCh=null, matchCh=null;
 let rematchOffered=false, rematchOppOffer=null, rematchCountdown=null, rematchSec=10;
 let oppPresenceName='', oppPresenceElo=0;
 let friendlyMode=false;
+let gameMode='classic'; // 'classic' | 'legends' | 'hard'
+let lobbyWaiting=false;
+let _incomingChalMode='classic';
+const MODE_LABEL={ classic:'⚔️ Classic', legends:'🟣 Legends Only', hard:'🔒 Hard Mode' };
+const MODE_DESC={ classic:'Standard draft · all tiers', legends:'Legends only · purple tier cards', hard:'Standard draft · ratings hidden' };
 let challengeInboxCh=null, _incomingChalId=null, _incomingChalName=null;
 let pendingChallenge=null; // {replyId, replyClientId, name} — incoming challenge waiting on the notif
 let chalWaitTimeout=null;
@@ -967,10 +996,16 @@ function handleChallengeMsg(msg){
     // someone opened your challenge link and clicked Accept
     if (atBatStarted && !matchResolved) return; // mid-match, ignore
     pendingChallenge = { replyId: d.replyId, replyClientId: d.clientId, name: d.name || 'Challenger' };
-    showChallengeNotif(d.name || 'Challenger');
+    if (lobbyWaiting){
+      cancelLobby();
+      acceptChallengeNotif();
+    } else {
+      showChallengeNotif(d.name || 'Challenger');
+    }
   } else if (d.type === 'accept'){
     // challenger accepted our request — start the friendly match
     if (chalWaitTimeout){ clearTimeout(chalWaitTimeout); chalWaitTimeout=null; }
+    gameMode = d.mode || 'classic';
     startMatch(d.matchId, d.yourRole, d.seed, d.chalClientId || '', false, true);
   } else if (d.type === 'decline'){
     pendingChallenge = null;
@@ -980,11 +1015,21 @@ function handleChallengeMsg(msg){
 
 function checkChallengeURL(){
   const params = new URLSearchParams(location.search);
-  const ch = params.get('ch'), cn = params.get('cn');
+  const ch = params.get('ch'), cn = params.get('cn'), md = params.get('mode');
   if (!ch) return;
   _incomingChalId = ch;
   _incomingChalName = cn ? decodeURIComponent(cn) : 'Challenger';
+  _incomingChalMode = (md && MODE_LABEL[md]) ? md : 'classic';
   $('chalChallengerName').textContent = _incomingChalName;
+  const tag = $('chalModeTag'), tagInner = $('chalModeTagInner');
+  if (_incomingChalMode !== 'classic' && tag && tagInner){
+    tagInner.textContent = MODE_LABEL[_incomingChalMode];
+    tag.style.display = '';
+  }
+  const modeLine = $('chalModeLine');
+  if (modeLine && _incomingChalMode !== 'classic'){
+    modeLine.innerHTML = `Friendly match · no Elo change · <span style="color:var(--accent2)">${MODE_LABEL[_incomingChalMode]}</span>`;
+  }
   showScreen('challengeScreen');
 }
 
@@ -1011,7 +1056,7 @@ async function acceptChallengeNotif(){
   const theirRole = myNewRole === 'pitcher' ? 'batter' : 'pitcher';
   try {
     const ch = ably.channels.get('versus:challenge:' + pr.replyId);
-    await ch.publish({ type:'accept', matchId:newId, seed:newSeed, yourRole:theirRole, chalClientId:clientId });
+    await ch.publish({ type:'accept', matchId:newId, seed:newSeed, yourRole:theirRole, chalClientId:clientId, mode:gameMode });
   } catch(e){}
   startMatch(newId, myNewRole, newSeed, pr.replyClientId, false, true);
 }
@@ -1036,10 +1081,24 @@ function hideChallengeNotif(){
 }
 
 function copyChallengeLinkFn(){
-  const link = location.origin + '/versus?ch=' + encodeURIComponent(personId()) + '&cn=' + encodeURIComponent(displayName());
-  const done = () => { ['chalCopied','mmChalCopied'].forEach(id => { const c=$(id); if(c){ c.style.display=''; setTimeout(()=>{ if(c) c.style.display='none'; },3000); } }); };
-  if (navigator.clipboard) { navigator.clipboard.writeText(link).then(done).catch(()=>{ prompt('Copy this link:', link); }); }
-  else { try { prompt('Copy this link:', link); done(); } catch(e){} }
+  const link = location.origin + '/versus?ch=' + encodeURIComponent(personId()) + '&cn=' + encodeURIComponent(displayName()) + '&mode=' + gameMode;
+  const onCopied = () => {
+    ['chalCopied','mmChalCopied'].forEach(id => { const c=$(id); if(c){ c.style.display=''; setTimeout(()=>{ if(c) c.style.display='none'; },2000); } });
+    showLobby();
+  };
+  if (navigator.clipboard) { navigator.clipboard.writeText(link).then(onCopied).catch(()=>{ prompt('Copy this link:', link); onCopied(); }); }
+  else { try { prompt('Copy this link:', link); onCopied(); } catch(e){} }
+}
+function showLobby(){
+  lobbyWaiting = true;
+  if ($('mmLobbyMode')) $('mmLobbyMode').textContent = MODE_LABEL[gameMode] || '⚔️ Classic';
+  if ($('mmFriendSection')) $('mmFriendSection').style.display = 'none';
+  if ($('mmLobby')) $('mmLobby').style.display = '';
+}
+function cancelLobby(){
+  lobbyWaiting = false;
+  if ($('mmLobby')) $('mmLobby').style.display = 'none';
+  if ($('mmFriendSection')) $('mmFriendSection').style.display = '';
 }
 async function setOnlineStatus(s){
   myOnlineStatus = s;
@@ -1121,6 +1180,9 @@ async function cancelSearch(){
 
 function resetMatch(){
   stopSearch();
+  lobbyWaiting=false; _poolCache={};
+  if ($('mmLobby')) $('mmLobby').style.display='none';
+  if ($('mmFriendSection')) $('mmFriendSection').style.display='';
   friendlyMode=false; pendingChallenge=null;
   if ($('challengeNotif')) { gsap.killTweensOf($('challengeNotif')); $('challengeNotif').style.display='none'; }
   myBuild=null; oppBuild=null; atBatStarted=false; matchResolved=false; oppPresent=false; waitingArena=false;
@@ -1204,11 +1266,14 @@ let clockLeft = 120, clockTimer = null;
 const MIN_VERSUS_OVR = 65;
 let _poolCache = {};
 function pool(){
-  if (!_poolCache[myRole]){
-    const f = DATA[myRole].pool.filter(p => p.ovr >= MIN_VERSUS_OVR);
-    _poolCache[myRole] = f.length >= 12 ? f : DATA[myRole].pool;
+  const cacheKey = myRole + ':' + gameMode;
+  if (!_poolCache[cacheKey]){
+    let f = DATA[myRole].pool;
+    if (gameMode === 'legends') f = f.filter(p => !!p.legend);
+    else f = f.filter(p => p.ovr >= MIN_VERSUS_OVR);
+    _poolCache[cacheKey] = f.length >= 4 ? f : DATA[myRole].pool.filter(p => !!p.legend);
   }
-  return _poolCache[myRole];
+  return _poolCache[cacheKey];
 }
 function randPlayer(){
   const p = pool(), legs = DATA[myRole].legends || [];
@@ -1269,9 +1334,10 @@ function renderSlots(){
     d.className='slot ' + (f?'filled':'open') + (armed?' armed':'');
     // when a player is landed, preview the exact rating they'd give each open slot (so you can strategize)
     const preview = armed ? slotNumeric(myRole, buildState.landed, s) : null;
+    const previewTxt = gameMode === 'hard' ? '?' : `+${preview}`;
     d.innerHTML = `<div style="flex:1"><div class="sname">${s.label}</div><div class="spart">${s.part}</div></div>` +
       (f ? `<img class="shot" src="${f.img}" onerror="this.style.visibility='hidden'"><div class="sval">${f.display}</div>`
-         : (armed ? `<div class="sval" style="color:var(--accent2)">+${preview}</div>`
+         : (armed ? `<div class="sval" style="color:var(--accent2)">${previewTxt}</div>`
                   : `<div class="sval" style="color:#3a445a">·</div>`));
     if (armed) d.onclick = () => assign(s.key);
     wrap.appendChild(d);
@@ -1382,8 +1448,8 @@ const TIER_COL = { grey:'#9aa6b8', bronze:'#d28b4e', silver:'#cdd6e2', gold:'#ff
 function land(p){
   buildState.landed=p;
   $('landedImg').src=headshot(p); $('landedImg').onerror=function(){this.onerror=null;this.src=SILHOUETTE;};
-  $('landedName').textContent=`${p.name} · ${p.ovr} OVR`;
-  $('landedOvr').textContent=p.ovr; $('landedLi').classList.add('show');
+  $('landedName').textContent = gameMode==='hard' ? p.name : `${p.name} · ${p.ovr} OVR`;
+  $('landedOvr').textContent = gameMode==='hard' ? '?' : p.ovr; $('landedLi').classList.add('show');
   const tcol = TIER_COL[borderTier(p)] || '#c8d0da';
   $('landedOvr').style.color = tcol; $('landedImg').style.boxShadow = `0 0 14px ${tcol}66`;
   $('landedImg').style.border = `2px solid ${tcol}`;
@@ -2003,6 +2069,14 @@ $('chalNotifAccept').onclick = () => { Sound.click(); acceptChallengeNotif(); };
 $('chalNotifDecline').onclick = () => { Sound.click(); declineChallengeNotif(); };
 $('challengeLinkBtn').onclick = () => { Sound.click(); copyChallengeLinkFn(); };
 $('mmChalBtn').onclick = () => { Sound.click(); copyChallengeLinkFn(); };
+$('mmLobbyCancel').onclick = () => { Sound.click(); cancelLobby(); };
+document.querySelectorAll('#modePicker .mp-btn').forEach(btn => {
+  btn.onclick = () => {
+    gameMode = btn.dataset.mode;
+    document.querySelectorAll('#modePicker .mp-btn').forEach(b => b.classList.toggle('active', b===btn));
+    const desc = $('modeDesc'); if (desc) desc.textContent = MODE_DESC[gameMode] || '';
+  };
+});
 // sign-in + rating on load
 initGoogle();
 refreshStats().then(updateRatingChip);
