@@ -90,7 +90,9 @@ function ensure() {
         elo_after int,
         created_at timestamptz NOT NULL DEFAULT now()
       )`;
+      await sql`ALTER TABLE pvp_history ADD COLUMN IF NOT EXISTS opp_key text`;
       await sql`CREATE INDEX IF NOT EXISTS idx_pvp_history_player ON pvp_history (player_key, created_at DESC)`;
+      await sql`CREATE INDEX IF NOT EXISTS idx_pvp_history_opp_key ON pvp_history (opp_key) WHERE opp_key IS NOT NULL`;
     })();
   }
   return ready;
@@ -228,31 +230,31 @@ module.exports = async (req, res) => {
         const elo = Math.max(100, u.elo + delta + bonus);
         const wins = u.wins + (won ? 1 : 0), losses = u.losses + (won ? 0 : 1);
         await sql`UPDATE users SET pvp_elo = ${elo}, pvp_wins = ${wins}, pvp_losses = ${losses}, pvp_streak = ${streak} WHERE google_sub = ${key}`;
+        const oppKeyVal = body.oppKey ? String(body.oppKey).slice(0, 80) : null;
+        const validOppKey = oppKeyVal && /^(acct:|guest:)/.test(oppKeyVal) && oppKeyVal !== key ? oppKeyVal : null;
         try {
-          await sql`INSERT INTO pvp_history (player_key, match_id, won, my_role, my_ovr, opp_name, opp_ovr, elo_before, elo_after)
-            VALUES (${key}, ${matchId}, ${won}, ${role}, ${myOvr}, ${oppName}, ${oppOvr}, ${u.elo}, ${elo})`;
+          await sql`INSERT INTO pvp_history (player_key, match_id, won, my_role, my_ovr, opp_name, opp_ovr, opp_key, elo_before, elo_after)
+            VALUES (${key}, ${matchId}, ${won}, ${role}, ${myOvr}, ${oppName}, ${oppOvr}, ${validOppKey}, ${u.elo}, ${elo})`;
         } catch (e) {}
         // When the winner reports, server-side apply the loss to the opponent so they can't
         // dodge it by refreshing before pvpResult fires on their end.
-        if (won && body.oppKey) {
-          const oppKeyVal = String(body.oppKey).slice(0, 80);
-          if (/^(acct:|guest:)/.test(oppKeyVal) && oppKeyVal !== key) {
-            try {
-              const oppIns = await sql`INSERT INTO pvp_results (match_id, google_sub)
-                VALUES (${matchId}, ${oppKeyVal}) ON CONFLICT DO NOTHING RETURNING match_id`;
-              if (oppIns.length) {
-                const [opp] = await sql`SELECT pvp_elo, pvp_wins, pvp_losses FROM users WHERE google_sub = ${oppKeyVal}`;
-                if (opp) {
-                  const { delta: oppDelta } = nextElo(opp.pvp_elo, u.elo, false);
-                  const oppNewElo = Math.max(100, opp.pvp_elo + oppDelta);
-                  await sql`UPDATE users SET pvp_elo = ${oppNewElo}, pvp_losses = ${opp.pvp_losses + 1}, pvp_streak = 0 WHERE google_sub = ${oppKeyVal}`;
-                  const oppHistRole = role ? (role === 'pitcher' ? 'batter' : 'pitcher') : null;
-                  await sql`INSERT INTO pvp_history (player_key, match_id, won, my_role, my_ovr, opp_name, opp_ovr, elo_before, elo_after)
-                    VALUES (${oppKeyVal}, ${matchId}, false, ${oppHistRole}, ${oppOvr}, ${String(body.name || '').slice(0, 40)}, ${myOvr}, ${opp.pvp_elo}, ${oppNewElo})`;
-                }
+        if (won && validOppKey) {
+          try {
+            const oppIns = await sql`INSERT INTO pvp_results (match_id, google_sub)
+              VALUES (${matchId}, ${validOppKey}) ON CONFLICT DO NOTHING RETURNING match_id`;
+            if (oppIns.length) {
+              const [opp] = await sql`SELECT pvp_elo, pvp_wins, pvp_losses FROM users WHERE google_sub = ${validOppKey}`;
+              if (opp) {
+                const { delta: oppDelta } = nextElo(opp.pvp_elo, u.elo, false);
+                const oppNewElo = Math.max(100, opp.pvp_elo + oppDelta);
+                await sql`UPDATE users SET pvp_elo = ${oppNewElo}, pvp_losses = ${opp.pvp_losses + 1}, pvp_streak = 0 WHERE google_sub = ${validOppKey}`;
+                const oppHistRole = role ? (role === 'pitcher' ? 'batter' : 'pitcher') : null;
+                const winnerName = String(body.name || '').slice(0, 40);
+                await sql`INSERT INTO pvp_history (player_key, match_id, won, my_role, my_ovr, opp_name, opp_ovr, opp_key, elo_before, elo_after)
+                  VALUES (${validOppKey}, ${matchId}, false, ${oppHistRole}, ${oppOvr}, ${winnerName}, ${myOvr}, ${key}, ${opp.pvp_elo}, ${oppNewElo})`;
               }
-            } catch (e) {}
-          }
+            }
+          } catch (e) {}
         }
         return res.status(200).json({ ok: true, counted: true, elo, delta: delta + bonus, bonus, streak, wins, losses });
       }
@@ -449,17 +451,26 @@ module.exports = async (req, res) => {
 
       // Current user row(s) matching this name
       const users = await sql`SELECT google_sub, name, pvp_elo, pvp_wins, pvp_losses, pvp_streak FROM users WHERE lower(name) = lower(${name})`;
+      const userKeys = users.map(u => u.google_sub);
 
-      // Every pvp_history row where someone reported beating a player with this name
+      // Every pvp_history row where someone reported beating this player —
+      // match by opp_key (stable identity, name-change-proof) OR opp_name (legacy rows)
       const timesBeaten = await sql`
-        SELECT h.match_id, h.player_key AS winner_key, h.created_at,
+        SELECT h.match_id, h.player_key AS winner_key, h.opp_key, h.created_at,
           EXISTS (
             SELECT 1 FROM pvp_results pr
-            JOIN users u ON u.google_sub = pr.google_sub
-            WHERE pr.match_id = h.match_id AND lower(u.name) = lower(${name})
+            WHERE pr.match_id = h.match_id
+              AND (
+                pr.google_sub = ANY(${userKeys})
+                OR (h.opp_key IS NOT NULL AND pr.google_sub = h.opp_key)
+              )
           ) AS loss_reported
         FROM pvp_history h
-        WHERE lower(h.opp_name) = lower(${name}) AND h.won = true
+        WHERE h.won = true
+          AND (
+            (h.opp_key IS NOT NULL AND h.opp_key = ANY(${userKeys}))
+            OR (h.opp_key IS NULL AND lower(h.opp_name) = lower(${name}))
+          )
         ORDER BY h.created_at DESC`;
 
       const total = timesBeaten.length;
@@ -469,6 +480,7 @@ module.exports = async (req, res) => {
       const beatRows = timesBeaten.map(r => `<tr>
         <td style="color:#aaa;font-size:11px">${new Date(r.created_at).toLocaleDateString()}</td>
         <td style="font-size:12px;word-break:break-all">${r.winner_key}</td>
+        <td style="text-align:center;font-size:11px;color:#666">${r.opp_key ? '🔑 key' : '📛 name'}</td>
         <td style="text-align:center">${r.loss_reported ? '<span style="color:#4c4">✓</span>' : '<span style="color:#e55">✗ DODGED</span>'}</td>
       </tr>`).join('');
 
@@ -503,7 +515,7 @@ module.exports = async (req, res) => {
   ${userRows || '<tr><td colspan="4" style="color:#888">No user found with this exact name</td></tr>'}
 </table>
 <h2>Match log (times beaten)</h2>
-<table><tr><th>Date</th><th>Winner key</th><th style="text-align:center">Loss filed?</th></tr>
+<table><tr><th>Date</th><th>Winner key</th><th>Match by</th><th style="text-align:center">Loss filed?</th></tr>
   ${beatRows || '<tr><td colspan="3" style="color:#888">No recorded losses found — name may have changed</td></tr>'}
 </table>
 </body></html>`;
