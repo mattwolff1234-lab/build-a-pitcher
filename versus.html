@@ -262,7 +262,7 @@
   .slot .shot { width:26px; height:26px; border-radius:6px; object-fit:cover; background:#11161d; }
 
   .reel-wrap { width:100%; }
-  /* full-size reel — identical layout to the Build a Pitcher game */
+  /* full-size reel - identical layout to the Build a Pitcher game */
   .reel { position:relative; height:226px; overflow:hidden; border-radius:14px; margin-top:6px; }
   .reel .pointer { position:absolute; top:0; left:50%; transform:translateX(-50%); width:0; height:0;
     border-left:9px solid transparent; border-right:9px solid transparent; border-top:13px solid var(--accent);
@@ -285,7 +285,7 @@
   .rcard .yr { font-family:'Oswald',sans-serif; font-size:11px; color:var(--accent); font-weight:600; }
   .rcard .legend-tag { font-family:'Oswald',sans-serif; font-size:11px; font-weight:600; color:var(--legend); letter-spacing:1px; }
   .rcard.win { border-color:#fff; box-shadow:0 0 0 2px rgba(255,255,255,.5),0 0 26px rgba(25,198,255,.55); }
-  /* tier coloring — border + OVR + a faint glow, like the main game */
+  /* tier coloring - border + OVR + a faint glow, like the main game */
   .rcard.t-grey    { --tc:#9aa6b8; border-color:#9aa6b8; }
   .rcard.t-bronze  { --tc:#d28b4e; border-color:#d08a3e; box-shadow:0 0 12px rgba(208,138,62,.4); }
   .rcard.t-silver  { --tc:#cdd6e2; border-color:#c8d0da; box-shadow:0 0 12px rgba(200,208,218,.4); }
@@ -397,7 +397,7 @@
 
   @media (max-width: 680px) {
     .stage { padding:14px 11px 40px; }
-    /* mobile: single column — reel sits above the silhouette */
+    /* mobile: single column - reel sits above the silhouette */
     #buildScreen.on { display:flex; flex-direction:column; align-items:stretch; }
     .reel-wrap, .build-top, .slots { width:100%; }
     .figwrap { max-width:430px; margin:0 auto; }
@@ -461,7 +461,7 @@
     <div class="hero">
       <div class="kick">Live 1v1</div>
       <h1>Face <i>Off</i></h1>
-      <p>Match up with a real player. One of you pitches, one of you hits. Build fast — highest Overall wins the at-bat.</p>
+      <p>Match up with a real player. One of you pitches, one of you hits. Build fast - highest Overall wins the at-bat.</p>
     </div>
     <div class="live-ticker" id="liveTicker" style="display:none"><span class="lt-dot"></span><span id="ltText">…</span></div>
     <div class="vs-card">
@@ -514,7 +514,7 @@
       </div>
       <div class="lobby-link-box">
         <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Challenge Link</div>
-        <div class="lobby-link-url" id="lobbyLinkUrl">—</div>
+        <div class="lobby-link-url" id="lobbyLinkUrl">-</div>
         <button class="btn" id="lobbyCopyBtn" style="width:100%;font-size:13px;padding:10px 20px;letter-spacing:1.5px;">🔗 Copy Link</button>
         <div id="lobbyCopied" style="display:none;color:var(--accent2);font-size:12px;margin-top:8px;text-align:center;letter-spacing:.3px;">✓ Copied! Share it with your friend.</div>
       </div>
@@ -553,7 +553,7 @@
 
   <!-- 2. Role reveal -->
   <div class="screen" id="roleScreen">
-    <div class="role-card" id="roleCard"><div class="role-fig" id="roleFig"></div><div class="rl" id="roleLabel">—</div></div>
+    <div class="role-card" id="roleCard"><div class="role-fig" id="roleFig"></div><div class="rl" id="roleLabel">-</div></div>
     <div class="role-sub" id="roleSub">Get ready…</div>
     <div class="opp-chip" id="oppChip" style="opacity:0">
       <div class="oc-vs">vs.</div>
@@ -566,7 +566,7 @@
   <div class="screen" id="buildScreen">
     <div class="build-top">
       <div class="clock" id="clock">60</div>
-      <div class="ovr-badge">OVR<b id="ovrNum">—</b></div>
+      <div class="ovr-badge">OVR<b id="ovrNum">-</b></div>
       <div class="pill" id="oppPill">Opponent: connecting…</div>
     </div>
     <div class="reel-wrap">
@@ -580,7 +580,7 @@
       </div>
       <div class="landed-bar">
         <button class="btn" id="spinBtn" style="font-size:14px; padding:11px 22px;">🎰 Spin</button>
-        <div class="li" id="landedLi"><img id="landedImg" alt=""><div><div class="lnm" id="landedName">—</div></div><div class="lov" id="landedOvr">—</div></div>
+        <div class="li" id="landedLi"><img id="landedImg" alt=""><div><div class="lnm" id="landedName">-</div></div><div class="lov" id="landedOvr">-</div></div>
       </div>
       <div class="powerups" id="powerups">
         <button class="pu" id="snagLeftBtn" title="Take the card to the left">◄ Snag</button>
@@ -640,7 +640,7 @@
   <!-- 5. Result -->
   <div class="screen" id="resultScreen">
     <div class="result-card" id="resultCard">
-      <div class="rh" id="resultHead">—</div>
+      <div class="rh" id="resultHead">-</div>
       <div class="rline" id="resultLine"></div>
       <div class="rsub" id="resultSub"></div>
       <div id="ratingResult" class="rating-result"></div>
@@ -789,7 +789,7 @@ function slotNumeric(role,p,s){
   return p[s.key]||0;
 }
 function slotDisplay(role,p,s){
-  if(s.type==='height') return p.height||'—';
+  if(s.type==='height') return p.height||'-';
   if(role==='pitcher' && s.key==='fielding_ability') return curvePitchDef(p[s.key]||0);
   return p[s.key]||0;
 }
@@ -814,7 +814,7 @@ const Sound = (() => {
     tick(sp=0.5){ const f=210+Math.min(1,sp)*280; note(f,0,0.05,{type:'square',vol:0.05,glide:f*0.55}); },
     click(){ note(620,0,0.06,{type:'square',vol:0.12,glide:470}); },
     assign(){ note(520,0,0.06,{type:'square',vol:0.14}); note(780,0.05,0.1,{vol:0.16}); },
-    // landing chimes — same as the Build a Pitcher game, scaled by tier
+    // landing chimes - same as the Build a Pitcher game, scaled by tier
     land(){ note(440,0,0.1,{vol:0.12}); note(660,0.04,0.12,{vol:0.1}); },
     gold(){ arp([660,880],0.09,{vol:0.2,dur:0.18}); },
     diamond(){ arp([660,990,1320],0.08,{vol:0.2,dur:0.2}); note(1980,0.24,0.25,{type:'sine',vol:0.12}); },
@@ -841,7 +841,7 @@ let _incomingChalMode='classic';
 const MODE_LABEL={ classic:'⚔️ Classic', legends:'🟣 Legends Only', hard:'🔒 Hard Mode' };
 const MODE_DESC={ classic:'Standard draft · all tiers', legends:'Legends only · purple tier cards', hard:'Standard draft · ratings hidden' };
 let challengeInboxCh=null, _incomingChalId=null, _incomingChalName=null;
-let pendingChallenge=null; // {replyId, replyClientId, name} — incoming challenge waiting on the notif
+let pendingChallenge=null; // {replyId, replyClientId, name} - incoming challenge waiting on the notif
 let chalWaitTimeout=null;
 let DATA={};               // role -> data json
 let myBuild=null, oppBuild=null, atBatStarted=false, matchResolved=false;
@@ -855,7 +855,7 @@ let claimTimeout=null, waitTimeout=null;
    Either way the rating lives on the server; the client just sends a "principal" identifying who. */
 const GOOGLE_CLIENT_ID = '349698720898-t9bpb8fp7ks6scf8ci8mmoeec1lpm3d3.apps.googleusercontent.com';
 let account=null; try { account = JSON.parse(localStorage.getItem('pl_account') || 'null'); } catch(e){}
-let myStats=null;            // {elo,wins,losses} — set for guests AND signed-in users
+let myStats=null;            // {elo,wins,losses} - set for guests AND signed-in users
 let pendingResult=null;      // {matchId, won, oppElo} captured at game end
 function myElo(){ return myStats ? myStats.elo : 1000; }
 function saveAccount(a){ account=a; try{ localStorage.setItem('pl_account', JSON.stringify(a)); }catch(e){} if(window.Ach) Ach.sync(); }
@@ -869,7 +869,7 @@ if (!guestName){ guestName = 'Player' + Math.floor(1000 + Math.random()*9000); t
 function setGuestName(n){ guestName = (String(n||'').trim().slice(0,20)) || guestName; try{ localStorage.setItem('pl_guestName', guestName); }catch(e){} }
 
 // who the server should treat this request as. `name` is the player's chosen 1v1 handle (NOT their
-// Google full name) — sent for guests AND signed-in users so the leaderboard shows the handle.
+// Google full name) - sent for guests AND signed-in users so the leaderboard shows the handle.
 function principal(){ return account
   ? { sub:account.sub, sessionToken:account.sessionToken, name:guestName }
   : { guestId, name:guestName }; }
@@ -1072,7 +1072,7 @@ function handleChallengeMsg(msg){
       showChallengeNotif(d.name || 'Challenger');
     }
   } else if (d.type === 'accept'){
-    // challenger accepted our request — start the friendly match
+    // challenger accepted our request - start the friendly match
     if (chalWaitTimeout){ clearTimeout(chalWaitTimeout); chalWaitTimeout=null; }
     gameMode = d.mode || 'classic';
     startMatch(d.matchId, d.yourRole, d.seed, d.chalClientId || '', false, true);
@@ -1107,7 +1107,7 @@ async function sendChallengeRequest(){
   $('chalAcceptBtn').disabled = true;
   $('chalStatus').textContent = 'Connecting…';
   try { await connectAbly(); } catch(e){
-    $('chalStatus').textContent = 'Connection error — check your network.';
+    $('chalStatus').textContent = 'Connection error - check your network.';
     $('chalAcceptBtn').disabled = false; return;
   }
 
@@ -1134,7 +1134,7 @@ async function sendChallengeRequest(){
     } else {
       chalWaitTimeout = setTimeout(() => {
         if (chalGaveUp) return;
-        $('chalStatus').innerHTML = 'No response — they may be offline. <span id="chalCancelTxt" style="cursor:pointer;color:var(--accent2);font-size:11px;text-decoration:underline;margin-left:4px">go back</span>';
+        $('chalStatus').innerHTML = 'No response - they may be offline. <span id="chalCancelTxt" style="cursor:pointer;color:var(--accent2);font-size:11px;text-decoration:underline;margin-left:4px">go back</span>';
         const c=$('chalCancelTxt'); if(c) c.onclick=()=>{ showScreen('mmScreen'); updateRatingChip(); };
         $('chalAcceptBtn').disabled = false;
       }, RETRY_MS);
@@ -1150,7 +1150,7 @@ async function acceptChallengeNotif(){
   const newId = rid(), newSeed = (Math.random() * 0xFFFFFFFF)|0;
   const myNewRole = Math.random() < 0.5 ? 'pitcher' : 'batter';
   const theirRole = myNewRole === 'pitcher' ? 'batter' : 'pitcher';
-  // Retry the accept publish up to 3 times — if this fails silently, the acceptor
+  // Retry the accept publish up to 3 times - if this fails silently, the acceptor
   // never gets the green light and times out even though the challenger is ready.
   const ch = ably.channels.get('versus:challenge:' + pr.replyId);
   const payload = { type:'accept', matchId:newId, seed:newSeed, yourRole:theirRole, chalClientId:clientId, mode:gameMode };
@@ -1247,7 +1247,7 @@ async function findMatch(){
   attemptMatch();
 }
 
-// Try to claim a waiting opponent; if none, we're enqueued — retry every few seconds so two
+// Try to claim a waiting opponent; if none, we're enqueued - retry every few seconds so two
 // people who clicked at the same instant (both enqueued, neither claimed) still pair up.
 async function attemptMatch(){
   if (!searching) return;
@@ -1268,7 +1268,7 @@ async function attemptMatch(){
     startMatch(r.matchId, r.role, r.seed, r.oppId, true);
     return;
   }
-  // still waiting — the invite handler may fire first; otherwise we retry.
+  // still waiting - the invite handler may fire first; otherwise we retry.
   retryTimer = setTimeout(attemptMatch, 3000);
 }
 
@@ -1360,13 +1360,13 @@ function beginRoleReveal(){
 }
 
 /* ---------- quick build ---------- */
-const REEL_GAP = 12, REEL_PAD_L = 14, CARD_W = 162; // rcard width(150) + gap(12) — fallback; liveCardW() reads actual rendered size
+const REEL_GAP = 12, REEL_PAD_L = 14, CARD_W = 162; // rcard width(150) + gap(12) - fallback; liveCardW() reads actual rendered size
 function liveCardW(){ const el=document.querySelector('#track .rcard'); return el ? Math.round(el.getBoundingClientRect().width)+REEL_GAP : CARD_W; }
 const buildState = { filled:{}, used:new Set(), landed:null, spinning:false, finished:false,
   respinUsed:false, boostUsed:false, snagUsed:false, boostedThisLand:false, strip:null, targetIndex:0 };
 let clockLeft = 120, clockTimer = null;
 
-// In 1v1, drop grey-tier cards — only players rated 65+ show up in the reel.
+// In 1v1, drop grey-tier cards - only players rated 65+ show up in the reel.
 const MIN_VERSUS_OVR = 65;
 let _poolCache = {};
 function pool(){
@@ -1510,7 +1510,7 @@ function updateFigure(){
 }
 function updateOvr(){
   const keys = ROLE[myRole].slots.filter(s=>buildState.filled[s.key]).map(s=>s.key);
-  if(!keys.length){ $('ovrNum').textContent='—'; return; }
+  if(!keys.length){ $('ovrNum').textContent='-'; return; }
   const partial={}; keys.forEach(k=>partial[k]=buildState.filled[k]);
   let vs=0,ws=0; for(const k of keys){ const v=partial[k].value; const w=ROLE[myRole].slotWeight(k,v); vs+=v*w; ws+=w; }
   $('ovrNum').textContent = Math.round(vs/ws);
@@ -1569,10 +1569,10 @@ function land(p){
   $('snagRightBtn').disabled = !canSnag || !buildState.strip[buildState.targetIndex+1];
   renderSlots(); renderNodes();
   revealWin(p);
-  // landing sound by rarity — same chimes as the Build a Pitcher game
+  // landing sound by rarity - same chimes as the Build a Pitcher game
   if (p.legend) Sound.legend();
   else { const tt = tier(p.ovr); if (tt === 'diamond') Sound.diamond(); else if (tt === 'gold') Sound.gold(); else Sound.land(); }
-  $('buildHint').textContent='Tap a glowing body part to assign ' + p.name + ' — or use a power-up.';
+  $('buildHint').textContent='Tap a glowing body part to assign ' + p.name + ' - or use a power-up.';
 }
 // Cinematic reveal: light sweep + the winning card pops; legend pulls shake the board.
 function revealWin(p){
@@ -1738,7 +1738,7 @@ function showNoContest(){
   $('resultCard').className = 'result-card';
   $('resultHead').textContent = 'NO CONTEST';
   $('resultLine').textContent = "Your opponent didn’t finish their build in time.";
-  $('resultSub').textContent = 'No rating change — try another match.';
+  $('resultSub').textContent = 'No rating change - try another match.';
   $('ratingResult').innerHTML = '';
 }
 function forfeitMatch(filled){
@@ -1927,7 +1927,7 @@ function makePitchSequence(pitcher, batter, winnerRole, rr){
 }
 function renderPitchSeq(script){
   $('pitchSeq').innerHTML = script.pitches.map((p,i) =>
-    `<div class="pitch-dot" id="pitchPill${i}"><div class="pd-num">${i+1}</div><div class="pd-call">—</div></div>`
+    `<div class="pitch-dot" id="pitchPill${i}"><div class="pd-num">${i+1}</div><div class="pd-call">-</div></div>`
   ).join('');
 }
 function activatePitch(idx){
@@ -2139,7 +2139,7 @@ async function loadStats(){
     }).join('');
     $('statsHistory').innerHTML = `<div class="hist-head">Recent Matches</div><div>${rows}</div>`;
   } else {
-    $('statsHistory').innerHTML = `<div class="hist-head">Recent Matches</div><div class="prompt" style="margin:6px 0 0">No matches logged yet — play a 1v1 to start tracking history.</div>`;
+    $('statsHistory').innerHTML = `<div class="hist-head">Recent Matches</div><div class="prompt" style="margin:6px 0 0">No matches logged yet - play a 1v1 to start tracking history.</div>`;
   }
 
   const me = data.me;
@@ -2158,7 +2158,7 @@ async function loadStats(){
          <div class="sbox"><b>${games}</b><span>Games</span></div>
        </div>`;
   } else {
-    $('statsPersonal').innerHTML = `<div class="prompt">No games yet — you start at rating <b>1000</b>. Play a 1v1 to get on the board!</div>`;
+    $('statsPersonal').innerHTML = `<div class="prompt">No games yet - you start at rating <b>1000</b>. Play a 1v1 to get on the board!</div>`;
   }
 
   if (data.rows && data.rows.length){
@@ -2169,7 +2169,7 @@ async function loadStats(){
     }).join('');
     $('statsBoard').innerHTML = `<div class="lb-head">🏆 Top Players</div><div class="lb-rows">${rowsHtml}</div>`;
   } else {
-    $('statsBoard').innerHTML = `<div class="prompt" style="margin-top:16px">No ranked players yet — be the first!</div>`;
+    $('statsBoard').innerHTML = `<div class="prompt" style="margin-top:16px">No ranked players yet - be the first!</div>`;
   }
 }
 
