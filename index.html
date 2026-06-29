@@ -289,9 +289,9 @@
         <button id="installNowBtn" style="display:none;width:100%;margin-bottom:12px">⬇ Install GoatLab</button>
         <div class="inst-label">On Desktop / Android (Chrome · Edge)</div>
         <div class="step"><span class="step-n">1</span><div><b>Look for the install icon</b><p>Click the install icon (a screen with a ⊕) on the right side of the address bar.</p></div></div>
-        <div class="step"><span class="step-n">2</span><div><b>Click Install</b><p>Confirm in the prompt — the app opens in its own window with a home-screen icon.</p></div></div>
+        <div class="step"><span class="step-n">2</span><div><b>Click Install</b><p>Confirm in the prompt - the app opens in its own window with a home-screen icon.</p></div></div>
         <div class="inst-label">On iPhone / iPad (Safari)</div>
-        <div class="step"><span class="step-n">1</span><div><b>Open in Safari</b><p>Make sure you're in Safari — not Chrome or another browser.</p></div></div>
+        <div class="step"><span class="step-n">1</span><div><b>Open in Safari</b><p>Make sure you're in Safari - not Chrome or another browser.</p></div></div>
         <div class="step"><span class="step-n">2</span><div><b>Tap Share</b><p>Tap the Share button at the bottom of the screen (the box with an arrow pointing up).</p></div></div>
         <div class="step"><span class="step-n">3</span><div><b>Add to Home Screen</b><p>Scroll down, tap "Add to Home Screen," then tap "Add."</p></div></div>
       </div>
@@ -340,7 +340,7 @@
     <span class="vbadge">NEW</span>
     <div class="vtxt">
       <div class="vtitle">⚔️ Face Off <b>1v1</b> <span class="vlive">● LIVE</span></div>
-      <div class="vdesc">Match up with a real player online. One pitches, one hits — highest Overall wins the at-bat.</div>
+      <div class="vdesc">Match up with a real player online. One pitches, one hits - highest Overall wins the at-bat.</div>
     </div>
     <div class="vgo">▶ Play</div>
   </a>
@@ -499,7 +499,7 @@ const menu = $('menu');
 $('menuBtn').onclick = () => { menu.classList.add('show'); renderAcct(); gsap.fromTo(menu.firstElementChild, { y: 14, opacity: 0 }, { y: 0, opacity: 1, duration: .3, ease: 'power3.out' }); };
 menu.addEventListener('click', e => { if (e.target === menu || e.target.hasAttribute('data-close')) menu.classList.remove('show'); });
 
-// Install App (PWA) — expandable steps + real one-click install where supported
+// Install App (PWA) - expandable steps + real one-click install where supported
 let deferredInstall = null;
 $('miInstall').onclick = () => {
   const el = $('installSteps'), open = el.style.display === 'block';

@@ -427,7 +427,7 @@
   .lb-row.top1 .rank { color:var(--gold); } .lb-row.top2 .rank { color:var(--silver); } .lb-row.top3 .rank { color:var(--bronze); }
   .lb-empty { color:var(--muted); font-size:13px; padding:18px; }
   .build-summary { color:var(--muted); font-size:12px; margin:-2px 0 12px; letter-spacing:.4px; text-transform:uppercase; }
-  /* shareable build breakdown — vertical slot list with ringed headshots */
+  /* shareable build breakdown - vertical slot list with ringed headshots */
   .bd-card { border:1px solid var(--line); border-radius:14px; padding:14px 15px 6px;
     background:linear-gradient(180deg,rgba(16,25,38,.6),rgba(7,12,20,.7)); }
   .bd-head { display:grid; grid-template-columns:auto auto 1fr auto; align-items:center; gap:11px;
@@ -602,9 +602,9 @@
       <div class="landed-top">
         <img id="landedImg" src="" alt="">
         <div class="landed-info">
-          <h2 id="landedName">—<span id="primeBadge" class="prime-badge" style="display:none">PRIME</span></h2>
-          <div class="sub" id="landedSub">—</div>
-          <div class="big-ov" id="landedOvr">—</div>
+          <h2 id="landedName">-<span id="primeBadge" class="prime-badge" style="display:none">PRIME</span></h2>
+          <div class="sub" id="landedSub">-</div>
+          <div class="big-ov" id="landedOvr">-</div>
         </div>
       </div>
       <div class="hint">Tap a glowing body part to lock this hitter's rating into that slot.</div>
@@ -626,7 +626,7 @@
           <div class="t">Overall</div>
           <div class="n" id="slotsLeft">8 slots left</div>
         </div>
-        <div class="ring" id="ovrRing"><span id="ovrNum">—</span></div>
+        <div class="ring" id="ovrRing"><span id="ovrNum">-</span></div>
       </div>
     </div>
 
@@ -643,7 +643,7 @@
 
     <div id="done" class="done panel">
       <h2>Hitter Complete</h2>
-      <div class="total" id="doneOvr">—</div>
+      <div class="total" id="doneOvr">-</div>
       <div class="done-sub">Weighted overall rating</div>
 
       <div id="preSim" class="pre-sim">
@@ -655,7 +655,7 @@
         <div class="career-top">
           <div>
             <div class="career-title">Career Simulation</div>
-            <div id="careerSpan" class="done-sub" style="margin:3px 0 0">—</div>
+            <div id="careerSpan" class="done-sub" style="margin:3px 0 0">-</div>
           </div>
           <div id="careerVerdict" class="career-verdict">…</div>
           <div id="careerNote" class="career-note" style="display:none"></div>
@@ -707,9 +707,9 @@
         <button id="installNowBtn" class="primary" style="display:none;width:100%;margin-bottom:12px">⬇ Install GoatLab</button>
         <div class="inst-label">On Desktop / Android (Chrome · Edge)</div>
         <div class="step"><span class="step-n">1</span><div><b>Look for the install icon</b><p>Click the install icon (a screen with a ⊕) on the right side of the address bar.</p></div></div>
-        <div class="step"><span class="step-n">2</span><div><b>Click Install</b><p>Confirm in the prompt — the app opens in its own window with a home-screen icon.</p></div></div>
+        <div class="step"><span class="step-n">2</span><div><b>Click Install</b><p>Confirm in the prompt - the app opens in its own window with a home-screen icon.</p></div></div>
         <div class="inst-label">On iPhone / iPad (Safari)</div>
-        <div class="step"><span class="step-n">1</span><div><b>Open in Safari</b><p>Make sure you're in Safari — not Chrome or another browser.</p></div></div>
+        <div class="step"><span class="step-n">1</span><div><b>Open in Safari</b><p>Make sure you're in Safari - not Chrome or another browser.</p></div></div>
         <div class="step"><span class="step-n">2</span><div><b>Tap Share</b><p>Tap the Share button at the bottom of the screen (the box with an arrow pointing up).</p></div></div>
         <div class="step"><span class="step-n">3</span><div><b>Add to Home Screen</b><p>Scroll down, tap "Add to Home Screen," then tap "Add."</p></div></div>
       </div>
@@ -811,7 +811,7 @@
 
 <div id="toast" class="toast"></div>
 
-<div class="footer-note">Ratings from MLB The Show — Live series only. Not affiliated with MLB or Sony.</div>
+<div class="footer-note">Ratings from MLB The Show - Live series only. Not affiliated with MLB or Sony.</div>
 
 <script>
 // Each slot maps an attribute to a body part. ax/ay = anchor point on the figure (%),
@@ -907,7 +907,7 @@ function heightToRating(inches) {
   return clamp(Math.round(82 + (inches - 72) * 1.5), 76, 93);
 }
 function slotNumeric(p, s) { return s.type === 'height' ? heightToRating(p.heightIn) : (p[s.key] || 0); }
-function slotDisplay(p, s) { return s.type === 'height' ? (p.height || '—') : (p[s.key] || 0); }
+function slotDisplay(p, s) { return s.type === 'height' ? (p.height || '-') : (p[s.key] || 0); }
 
 const SILHOUETTE = 'data:image/svg+xml;utf8,' + encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="%2311161d"/><circle cx="50" cy="38" r="20" fill="%23394150"/><path d="M50 62c-20 0-34 14-34 34h68c0-20-14-34-34-34z" fill="%23394150"/></svg>'
@@ -925,7 +925,7 @@ const state = {
   career: null, draftTeamAb: null,
 };
 
-// Hard mode ("hide ratings") — set on the landing page, shared via localStorage.
+// Hard mode ("hide ratings") - set on the landing page, shared via localStorage.
 let hardMode = false;
 try { hardMode = localStorage.getItem('pl_hardMode') === '1'; } catch (e) {}
 let hardRevealed = false;
@@ -945,7 +945,7 @@ const SORT_OPTIONS = {
 function sortOptionsFor(game) { return SORT_OPTIONS[game === 'batter' ? 'batter' : 'pitcher']; }
 function fmtStat(v) { return lbSort === 'war' ? Number(v).toFixed(1) : Math.round(v); }
 
-// ---------- sound (synthesized via Web Audio — no asset files) ----------
+// ---------- sound (synthesized via Web Audio - no asset files) ----------
 const Sound = (() => {
   let ac, master, muted = false;
   function ctx() {
@@ -1104,7 +1104,7 @@ function renderAcct() {
       <button class="signout" id="signOutBtn">Sign out</button></div>`;
     const so = $('signOutBtn'); if (so) so.onclick = () => { clearAccount(); toast('Signed out'); };
   } else if (!googleConfigured()) {
-    slot.innerHTML = `<div class="acct-hint">🔒 Sign-in is coming soon — you'll be able to save your players to a personal Hall of Fame.</div>`;
+    slot.innerHTML = `<div class="acct-hint">🔒 Sign-in is coming soon - you'll be able to save your players to a personal Hall of Fame.</div>`;
   } else {
     slot.innerHTML = `<div id="gsiWrap"></div><div class="acct-hint">Sign in with Google to save your players to a personal Hall of Fame.</div>`;
     try { google.accounts.id.renderButton($('gsiWrap'), { theme: 'filled_black', size: 'large', shape: 'pill', text: 'signin_with' }); }
@@ -1273,7 +1273,7 @@ function stopIdleReel() {
   $('track').classList.remove('idle');
 }
 
-// Count one "play" per game session (first spin) — feeds the live PLAYS counter on the landing page.
+// Count one "play" per game session (first spin) - feeds the live PLAYS counter on the landing page.
 function logPlay() {
   if (window.__plLogged) return;
   window.__plLogged = true;
@@ -1440,7 +1440,7 @@ function boost() {
   state.boostedThisLand = true;
   Sound.prime();
   updatePowerups();
-  // Guard: a Boost should never lower a rating — keep the better of Live vs Prime per stat.
+  // Guard: a Boost should never lower a rating - keep the better of Live vs Prime per stat.
   const merged = { ...primeCard };
   for (const s of SLOTS) {
     if (s.type === 'height') {
@@ -1606,7 +1606,7 @@ function updateOvr() {
   updateProgress(filledKeys.length);
   const ring = $('ovrRing'), num = $('ovrNum');
   if (!filledKeys.length) {
-    num.textContent = '—'; num.className = ''; ovrShown = 0;
+    num.textContent = '-'; num.className = ''; ovrShown = 0;
     ring.style.setProperty('--p', 0); ring.style.setProperty('--g', 'rgba(255,255,255,.12)');
     return;
   }
@@ -1795,7 +1795,7 @@ function simulateCareer(filled, finalOvr, draftTeamAb) {
   const hofScore = Math.max(0, round(warPts + hPts + hrPts + avgPts + hardware, 1));
   const slamDunk = totals.war >= 64 || totals.mvp >= 3 || (totals.hr >= 500 && totals.war >= 46) || (totals.h >= 3000 && totals.war >= 50);
   const hallOfFame = hofScore >= 112 || slamDunk;
-  // Hall of Fame status pays out beyond the field — endorsements, legacy deals, appearances.
+  // Hall of Fame status pays out beyond the field - endorsements, legacy deals, appearances.
   const hofBonus = hallOfFame ? Math.round(totals.earnings * 0.15) : 0;
   const careerEarnings = totals.earnings + hofBonus;
   const highlight = bestCareerHighlight(totals, peak);
@@ -1956,14 +1956,14 @@ function seasonHeadlines(s, idx, total, P, fallbackTeam) {
   if (s.hurt && !s.mvp) h.push({ text: `${P} battles injury, limited to ${s.pa} plate appearances.` });
   if (s.struggling && !s.exit) h.push({ text: `${P} slumps to a ${s.ops.toFixed(3).replace(/^0\./, '.')} OPS and is fighting to keep his roster spot.` });
   if (idx === total - 1) {
-    if (s.exit === 'released') h.push({ text: `${P} is <b>released</b> after a ${s.ops.toFixed(3).replace(/^0\./, '.')}-OPS season and can't catch on elsewhere — career over.`, big: true });
+    if (s.exit === 'released') h.push({ text: `${P} is <b>released</b> after a ${s.ops.toFixed(3).replace(/^0\./, '.')}-OPS season and can't catch on elsewhere - career over.`, big: true });
     else if (s.exit === 'pushed-out') h.push({ text: `${P} loses his job to a younger bat and <b>walks away</b> after ${total} seasons.`, big: true });
     else h.push({ text: `${P} announces his <b>retirement</b> after ${total} seasons.`, big: true });
   }
   return h;
 }
 
-// Play the career out season by season — log, headlines, live ticker — then the verdict + card.
+// Play the career out season by season - log, headlines, live ticker - then the verdict + card.
 function runCareerPlaythrough() {
   if (state.career) return;
   $('simBtn').disabled = true;
@@ -2225,7 +2225,7 @@ function lbRow(rank, entry, cls) {
   const sorted = lbSort !== 'ovr' && lbSort !== 'ovrAsc';
   const sub = sorted ? ` <span class="nm-ovr">${entry.ovr} OVR</span>` : '';
   const right = sorted
-    ? `<div class="ov lb-stat">${entry.stat == null ? '—' : fmtStat(entry.stat)}</div>`
+    ? `<div class="ov lb-stat">${entry.stat == null ? '-' : fmtStat(entry.stat)}</div>`
     : `<div class="ov c-${tier(entry.ovr)}">${entry.ovr}</div>`;
   return `<div class="lb-row ${cls}" role="button" tabindex="0" data-entry-id="${entry.id}"><div class="rank">${rank}</div>
     <div class="nm">${escapeHTML(entry.name)}${sub}</div>
@@ -2253,7 +2253,7 @@ function headshotByName(name) {
   return HEADSHOTS.get(name) || null;
 }
 const TIER_LABELS = { grey: 'Common', bronze: 'Bronze', silver: 'Silver', gold: 'Gold', diamond: 'Diamond', legend: 'Legend' };
-// Mini team-colored figure for a leaderboard build — per game, keyed by slot label (works for either board).
+// Mini team-colored figure for a leaderboard build - per game, keyed by slot label (works for either board).
 const FIG_CONFIG = {
   pitcher: { base: 'pitcher-figure.png', masks: { 'Velocity': 'seg-pitch_velocity.png', 'Break': 'seg-pitch_movement.png', 'Strikeout': 'seg-k_per_bf.png', 'Ground Ball': 'seg-hr_per_bf.png', 'Command': 'seg-pitch_control.png', 'Clutch': 'seg-pitching_clutch.png', 'Defense': 'seg-fielding_ability.png', 'Frame': 'seg-frame.png', 'Stamina': 'seg-stamina.png' } },
   batter: { base: 'batter-figure.png', masks: { 'Vision': 'bat-seg-plate_vision.png', 'Power': 'bat-seg-power.png', 'Contact': 'bat-seg-contact.png', 'Speed': 'bat-seg-speed.png', 'Clutch': 'bat-seg-batting_clutch.png', 'Discipline': 'bat-seg-plate_discipline.png', 'Frame': 'bat-seg-frame.png', 'Defense': 'bat-seg-fielding_ability.svg' } },
@@ -2272,7 +2272,7 @@ function miniFigureHTML(entry, slots) {
 function shareBuild(entry) {
   const kind = (entry.game === 'batter') ? 'batter' : 'pitcher';
   const url = 'https://goat-lab.app';
-  const txt = `I built a ${entry.ovr} OVR ${kind}${entry.name ? ` — "${entry.name}"` : ''} on GoatLab. Think you can do better?`;
+  const txt = `I built a ${entry.ovr} OVR ${kind}${entry.name ? ` - "${entry.name}"` : ''} on GoatLab. Think you can do better?`;
   window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(txt)}&url=${encodeURIComponent(url)}`, '_blank', 'noopener');
 }
 function openBuildDetails(entryId) {
@@ -2282,7 +2282,7 @@ function openBuildDetails(entryId) {
   const t = tier(entry.ovr);
   const name = (entry.name || 'Build').replace(/\s*\(you\)\s*$/, '');
   $('buildDetailHead').innerHTML = `
-    <div class="bd-rank c-${t}">${entry._rank ? '#' + entry._rank : '—'}</div>
+    <div class="bd-rank c-${t}">${entry._rank ? '#' + entry._rank : '-'}</div>
     ${miniFigureHTML(entry, slots)}
     <div class="bd-id">
       <div class="bd-name">${escapeHTML(name)}</div>
@@ -2291,7 +2291,7 @@ function openBuildDetails(entryId) {
     <div class="bd-ovr"><span>OVR</span><b class="c-${t}">${entry.ovr}</b></div>`;
   $('buildDetailList').innerHTML = slots.length ? slots.map(s => {
     const st = tier(Number(s.value) || 0);
-    const val = s.display != null ? s.display : (s.value != null ? s.value : '—');
+    const val = s.display != null ? s.display : (s.value != null ? s.value : '-');
     return `<div class="build-slot">
       <img class="c-${st}" src="${s.img || headshotByName(s.player) || SILHOUETTE}" alt="" onerror="this.onerror=null;this.src='${SILHOUETTE}'">
       <div>
@@ -2327,7 +2327,7 @@ async function loadLeaderboard(scope = lbScope, game = lbGame, sort = lbSort) {
       html += `<div class="lb-pin">${lbRow('#' + data.me.rank, { ...data.me, name: data.me.name + ' (you)' }, 'mine pinned')}</div>`;
     }
     if (!data.rows.length) {
-      html += '<div class="lb-empty">No entries yet — be the first!</div>';
+      html += '<div class="lb-empty">No entries yet - be the first!</div>';
     } else {
       html += data.rows.map((r, i) => {
         const rank = i + 1;
