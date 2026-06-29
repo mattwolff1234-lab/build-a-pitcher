@@ -568,17 +568,6 @@
   .hof-card .hc-money { font-family:'Oswald',sans-serif; font-size:14px; font-weight:700; color:var(--gold); margin-top:3px; }
   .hof-card .hc-del { position:absolute; top:8px; right:10px; background:rgba(0,0,0,.32); border:none; color:rgba(255,255,255,.7); font-size:13px; cursor:pointer; width:24px; height:24px; border-radius:50%; line-height:22px; padding:0; }
   .hof-card .hc-del:hover { background:rgba(220,60,60,.75); color:#fff; }
-  /* social-proof stat banner */
-  .stat-bar { display:flex; align-items:center; gap:10px; justify-content:center; flex-wrap:wrap;
-    max-width:640px; margin:12px auto 0; padding:7px 14px; border-radius:999px; text-align:center;
-    background:linear-gradient(180deg,rgba(20,31,48,.72),rgba(9,15,25,.82)); border:1px solid var(--line); }
-  .stat-bar .sb-plays { font-family:'Oswald',sans-serif; font-weight:700; font-size:12.5px; letter-spacing:.5px;
-    color:var(--accent); background:rgba(255,122,24,.12); border:1px solid rgba(255,122,24,.4);
-    padding:3px 11px; border-radius:999px; white-space:nowrap; }
-  .stat-bar .sb-plays::before { content:'🔥 '; }
-  .stat-bar .sb-msg { color:var(--ink); font-size:13.5px; font-weight:500; }
-  .stat-bar .sb-msg b { font-family:'Oswald',sans-serif; letter-spacing:.5px; }
-  .stat-bar .sb-goat { color:var(--gold); }
 </style>
 </head>
 <body>
@@ -601,26 +590,6 @@
     <button id="menuBtn" class="mute" title="Menu">☰</button>
   </div>
 </header>
-
-<div id="statBar" class="stat-bar" style="display:none">
-  <span class="sb-plays" style="display:none"></span>
-  <span class="sb-msg">Can you build the <b class="sb-goat">GOAT</b> (99 OVR)?</span>
-</div>
-<script>
-(function(){
-  var bar = document.getElementById('statBar'); if (!bar) return;
-  bar.style.display = 'flex'; // show immediately with the teaser; upgrade when stats load
-  fetch('/api/score?action=stats&game=pitcher').then(function(r){ return r.json(); }).then(function(d){
-    if (!d || !d.ok || !d.total) return;
-    var plays = bar.querySelector('.sb-plays'), msg = bar.querySelector('.sb-msg');
-    plays.textContent = d.total.toLocaleString() + ' BUILDS'; plays.style.display = '';
-    if (d.total >= 25) {
-      var p = d.pct, t = p >= 10 ? Math.round(p) + '%' : (p > 0 ? p.toFixed(1) + '%' : '<0.1%');
-      msg.innerHTML = 'Only <b>' + t + '</b> build the <b class="sb-goat">GOAT</b> (99 OVR) — can you?';
-    }
-  }).catch(function(){});
-})();
-</script>
 
 <div class="wrap">
   <div id="loading" class="loading">Loading pitchers…</div>
