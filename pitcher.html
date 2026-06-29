@@ -18,6 +18,7 @@
 <meta name="twitter:card" content="summary">
 <meta name="twitter:image" content="/icon-512.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="/achievements.js" defer></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-TVL2XEQ2Q7"></script>
@@ -680,6 +681,7 @@
       <a class="menu-item" href="/versus">⚔️ 1v1 Live · Face Off</a>
       <a class="menu-item" href="/versus#stats">📊 1v1 Stats</a>
       <button class="menu-item" id="miHof">🏛️ My Hall of Fame</button>
+      <button class="menu-item" id="miAch">🏅 Achievements<span class="mi-chev" data-ach-count style="margin-left:auto;font-family:'Oswald',sans-serif;font-size:12px;color:var(--gold)">0/0</span></button>
       <button class="menu-item" id="miLb">🏆 Leaderboard</button>
       <button class="menu-item" id="miHow">📖 How to Play</button>
       <button class="menu-item" id="miInstall">📲 Install App<span class="mi-chev" id="installChev">⌄</span></button>
@@ -991,13 +993,14 @@ async function init() {
   renderNodes();
   initTilt();
   startIdleReel();
-  $('spinBtn').onclick = spin;
+  $('spinBtn').onclick = () => { state.turnPowers = new Set(); state.snaggedThisLand = false; spin(); };
   $('respinBtn').onclick = respin;
   $('boostBtn').onclick = boost;
   $('snagLeftBtn').onclick = () => snag(-1);
   $('snagRightBtn').onclick = () => snag(1);
   $('resetBtn').onclick = reset;
-  $('muteBtn').onclick = () => { const m = !Sound.isMuted(); Sound.setMuted(m); $('muteBtn').textContent = m ? '🔇' : '🔊'; };
+  $('muteBtn').onclick = () => { const m = !Sound.isMuted(); Sound.setMuted(m); if (window.Ach) Ach.muted = m; $('muteBtn').textContent = m ? '🔇' : '🔊'; };
+  if (window.Ach) Ach.muted = Sound.isMuted();
   $('simBtn').onclick = runCareerPlaythrough;
   $('buildTab').onclick = () => Sound.click();
   $('submitBtn').onclick = submitScore;
@@ -1019,6 +1022,7 @@ async function init() {
   // menu + overlays
   $('menuBtn').onclick = () => { Sound.click(); openOverlay('menu'); };
   $('miHof').onclick = () => { closeOverlay('menu'); openHof(); };
+  $('miAch').onclick = () => { closeOverlay('menu'); Sound.click(); window.Ach && Ach.open(); };
   $('saveHofBtn').onclick = () => saveToHof($('saveHofBtn'));
   $('miLb').onclick = () => { closeOverlay('menu'); openLeaderboard('global'); };
   $('miHow').onclick = () => { closeOverlay('menu'); openOverlay('howModal'); };
@@ -1048,6 +1052,7 @@ async function init() {
   if (h === 'hof') openHof();
   else if (h === 'leaderboard' || h === 'lb') openLeaderboard('global');
   else if (h === 'how' || h === 'howtoplay') openOverlay('howModal');
+  else if (h === 'achievements' || h === 'ach') { const o = () => (window.Ach ? Ach.open() : setTimeout(o, 120)); o(); }
 }
 
 function toast(msg) {
@@ -1414,6 +1419,7 @@ function updateProgress(n) {
 function respin() {
   if (state.respinUsed || state.spinning) return;
   state.respinUsed = true;
+  (state.turnPowers || (state.turnPowers = new Set())).add('respin');
   Sound.whoosh();
   updatePowerups();
   spin();
@@ -1425,6 +1431,7 @@ function boost() {
   if (!primeCard) return;
   state.boostUsed = true;
   state.boostedThisLand = true;
+  (state.turnPowers || (state.turnPowers = new Set())).add('boost');
   Sound.prime();
   updatePowerups();
   land(primeCard);
@@ -1436,6 +1443,8 @@ function snag(dir) {
   const neighbor = state.strip[idx];
   if (!neighbor) return;
   state.snagUsed = true;
+  (state.turnPowers || (state.turnPowers = new Set())).add('snag');
+  state.snaggedThisLand = true;
   state.targetIndex = idx;
   state.boostedThisLand = false;
   state.spinning = true;
@@ -1459,6 +1468,11 @@ function assign(slotKey) {
     ovr: p.ovr, legend: !!p.legend, team: p.team, img: headshot(p),
   };
   state.used.add(p.name);
+  if (window.Ach) {
+    if (state.turnPowers && state.turnPowers.size >= 3) Ach.unlock('triple2');   // all 3 power-ups this turn
+    if (state.snaggedThisLand && state.boostedThisLand) Ach.unlock('heist');     // snagged then boosted same card
+  }
+  state.turnPowers = new Set(); state.snaggedThisLand = false;
   state.landed = null;
   state.boostedThisLand = false;
   Sound.assign();
@@ -1927,6 +1941,7 @@ function getDraftSlot(ovr, rng) {
 
 function runDraftAnimation({ round, pick, teamAbbr, teamName, tColor, pitcher, ovr, archetype }, onDone) {
   const overlay = $('draftOverlay');
+  if (round === 1 && pick === 1 && window.Ach) Ach.unlock('first_overall');
   const pickOrd = ordinal(pick);
   const bColor = brightColor(tColor); // readable version on dark backdrop
   $('draftRoundTag').textContent = `Round ${round} · Pick ${pick}`;
@@ -2145,18 +2160,65 @@ function careerTier(t, ovr) {
   return { txt: 'Hall of Not Good', cls: 'low' };
 }
 
+function parseHeightIn(s) {
+  const m = String(s || '').match(/(\d+)\s*'\s*(\d+)/);
+  return m ? (+m[1]) * 12 + (+m[2]) : 0;
+}
+
+// Fires when all 9 slots are filled (called from finish()).
+function checkBuildAchievements() {
+  if (!window.Ach) return;
+  const f = state.filled, ovr = state.finalOvr;
+  Ach.unlock('draft_root');                                   // first/any completed build
+  if (ovr >= 90) Ach.unlock('builder1');
+  if (ovr >= 95) Ach.unlock('builder2');
+  if (ovr === 99) Ach.unlock('the_goat');
+  if (ovr > 99) Ach.unlock('beyond');
+  if (ovr < 60) Ach.unlock('bargain');
+  if (state.respinUsed && state.boostUsed && state.snagUsed) Ach.unlock('triple1');
+  if (SLOTS.some(s => Number(f[s.key].value) >= 125)) Ach.unlock('offcharts');
+  const hi = parseHeightIn(f['frame'] && f['frame'].display);
+  if (hi && hi <= 71) Ach.unlock('short_king');
+  if (hi >= 81) Ach.unlock('tall_tale');
+  if (Number(f['k_per_bf'].value) >= 95 && Number(f['stamina'].value) <= 64) Ach.unlock('glass_cannon');
+  const teams = SLOTS.map(s => f[s.key].team);
+  if (teams[0] && teams.every(t => t === teams[0])) Ach.unlock('one_team');
+  if ((f['fielding_ability'] && f['fielding_ability'].ovr >= 99) || (f['frame'] && f['frame'].ovr >= 99)) Ach.unlock('nepo');
+}
+
+// Fires after a simulated career (called from finishPlaythrough()).
+function checkCareerAchievements(t, verdict, votePct) {
+  if (!window.Ach) return;
+  Ach.unlock('sim_root');
+  if (t.k >= 1000) Ach.unlock('k1');
+  if (t.k >= 3000) Ach.unlock('k2');
+  if (t.k >= 5000) Ach.unlock('k3');
+  if (t.wins >= 100) Ach.unlock('w1');
+  if (t.wins >= 200) Ach.unlock('w2');
+  if (t.wins >= 300) Ach.unlock('w3');
+  if (t.rings >= 1) Ach.unlock('ring1');
+  if (t.rings >= 3) Ach.unlock('ring2');
+  if (t.rings >= 5) Ach.unlock('ring3');
+  if (t.hallOfFame) Ach.unlock('cooperstown');
+  if (votePct >= 99) Ach.unlock('unanimous');
+  if (verdict.cls === 'no') Ach.unlock('hopg');
+  if (verdict.cls === 'low') Ach.unlock('hall_not_good');
+}
+
 function finishPlaythrough(career) {
   const t = career.totals;
   const verdict = careerTier(t, state.finalOvr);
 
   // HOF vote reveal
-  let voteLine = '';
+  let voteLine = '', votePct = 0;
   if (t.hallOfFame) {
     const pct = clamp(round(75 + (t.hofScore - 112) * 0.16 + t.cyYoung * 1.2, 1), 75, 99.6);
+    votePct = pct;
     const firstBallot = pct >= 90 || t.cyYoung >= 3;
     const goat = state.finalOvr >= 99;
     voteLine = `${goat ? 'Hall of Fame · ' : ''}${firstBallot ? 'First ballot · ' : ''}${pct}% of the vote`;
   }
+  checkCareerAchievements(t, verdict, votePct);
 
   const v = $('careerVerdict');
   v.textContent = verdict.txt;
@@ -2237,6 +2299,7 @@ function finish() {
   const role = roleVals.stamina >= 52 ? 'Starter' : 'Bullpen Ace';
   state.archetype = getArchetype(state.filled, role);
   state.career = null;
+  checkBuildAchievements();
   myEntryId = null;
   $('doneOvr').className = 'total c-' + tier(avg);
   $('doneArch').textContent = state.archetype.name;

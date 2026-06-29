@@ -6,6 +6,7 @@
 <title>Face Off · GoatLab 1v1</title>
 <meta name="theme-color" content="#0a1320">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="/achievements.js" defer></script>
 <script src="https://cdn.ably.com/lib/ably.min-2.js"></script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <!-- Google tag (gtag.js) -->
@@ -480,6 +481,7 @@
       </div>
       <div style="margin-top:16px;" id="statsWrap">
         <button class="btn ghost" id="statsBtn" style="font-size:13px; padding:9px 18px;">📊 My Stats</button>
+        <button class="btn ghost" id="achBtn" style="font-size:13px; padding:9px 18px;">🏅 Achievements</button>
       </div>
     </div>
   </div>
@@ -945,6 +947,16 @@ function renderRatingResult(r){
     + streakLine
     + `<div class="prompt">${r.wins}W · ${r.losses}L${isGuest() ? ' · saved on this device' : ''}</div>`;
   gsap.fromTo(el.querySelector('.delta'), { y:8, opacity:0 }, { y:0, opacity:1, duration:.5, ease:'power2.out' });
+
+  if (window.Ach) {
+    if (r.elo >= 1200) Ach.unlock('elo1');
+    if (r.elo >= 1400) Ach.unlock('elo2');
+    if (r.elo >= 1600) Ach.unlock('elo3');
+    const st = r.streak || 0;
+    if (st >= 3) Ach.unlock('streak1');
+    if (st >= 5) Ach.unlock('streak2');
+    if (st >= 10) Ach.unlock('streak3');
+  }
 
   // tier change animations
   if (tierChanged) {
@@ -1731,6 +1743,7 @@ function showForfeitResult(iWon, filled, data={}){
     ? `${oppName} forfeited after ${filled} slot${filled===1?'':'s'} filled.`
     : `You forfeited after ${filled} slot${filled===1?'':'s'} filled.`;
   $('resultSub').textContent = iWon ? 'Timeout win. Run it back?' : 'Fill at least 4 slots before time expires.';
+  if (window.Ach) Ach.unlock('versus_root');                       // played a 1v1 (forfeit result)
   iWon ? Sound.win() : Sound.lose();
   gsap.fromTo(card,{ y:24, opacity:0, scale:.92 },{ y:0, opacity:1, scale:1, duration:.5, ease:'back.out(1.5)' });
 
@@ -2029,6 +2042,18 @@ function showResult(iWon, pitcher, batter, winnerRole, script){
   iWon ? Sound.win() : Sound.lose();
   gsap.fromTo(card,{ y:24, opacity:0, scale:.92 },{ y:0, opacity:1, scale:1, duration:.5, ease:'back.out(1.5)' });
 
+  if (window.Ach) {
+    Ach.unlock('versus_root');                                    // played a 1v1
+    const myOvr = myBuild ? myBuild.ovr : 0, opp = oppBuild ? oppBuild.ovr : 0;
+    if (iWon && myOvr) {
+      const diff = myOvr - opp;
+      if (diff >= 10) Ach.unlock('mismatch1');
+      if (diff >= 15) Ach.unlock('mismatch2');
+      if (diff >= 20) Ach.unlock('mismatch3');
+      if (myOvr < opp) Ach.unlock('underdog');
+    }
+  }
+
   const oppElo = (oppBuild && typeof oppBuild.elo === 'number') ? oppBuild.elo : 1000;
   if (friendlyMode) {
     $('ratingResult').innerHTML = '<div class="prompt" style="color:var(--accent2);font-size:14px;margin-top:4px">⚔️ Friendly Match · No Elo Change</div>';
@@ -2124,12 +2149,15 @@ async function loadStats(){
 $('findBtn').onclick = () => { Sound.click(); findMatch(); };
 $('cancelBtn').onclick = () => cancelSearch();
 $('statsBtn').onclick = () => { Sound.click(); openStats(); };
+$('achBtn').onclick = () => { Sound.click(); window.Ach && Ach.open(); };
+if ($('resultStatsBtn')) { /* result-screen achievements shortcut added below */ }
 $('resultStatsBtn').onclick = () => { Sound.click(); openStats(); };
 $('statsBack').onclick = () => { showScreen('mmScreen'); updateRatingChip(); };
 $('tabStats').onclick = () => switchStatsTab('stats');
 $('tabHistory').onclick = () => { switchStatsTab('history'); };
 // deep-link: /versus#stats opens the stats page straight away (from the hamburger menus)
 if (location.hash === '#stats') openStats();
+if (location.hash === '#achievements' || location.hash === '#ach') { const o = () => (window.Ach ? Ach.open() : setTimeout(o, 120)); o(); }
 $('newMatchBtn').onclick = () => { Sound.click(); findMatch(); };
 $('rematchBtn').onclick = () => {
   Sound.click();
