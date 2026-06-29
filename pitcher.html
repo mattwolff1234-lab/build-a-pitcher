@@ -170,6 +170,29 @@
   .dres-row > span:first-child { width:20px; color:var(--muted); font-family:'Oswald',sans-serif; }
   .dres-row .dres-nm { flex:1; text-align:left; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .dres-row .dres-rov { font-family:'Oswald',sans-serif; font-weight:700; }
+  /* streak calendar / timeline */
+  .sk-stats { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+  .sk-stat { background:rgba(255,122,24,.1); border:1px solid rgba(255,122,24,.32); border-radius:11px; padding:9px 16px; text-align:center; min-width:74px; }
+  .sk-stat b { display:block; font-family:'Oswald',sans-serif; font-size:24px; font-weight:700; color:var(--gold); line-height:1; }
+  .sk-stat span { font-size:9px; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); }
+  .sk-next { text-align:center; font-family:'Oswald',sans-serif; font-size:12.5px; color:var(--accent2); margin:12px 0 6px; letter-spacing:.4px; }
+  #streakModal .overlay-card { max-width:560px; }
+  .sk-timeline { display:flex; gap:0; overflow-x:auto; -webkit-overflow-scrolling:touch; overscroll-behavior-x:contain; padding:34px 8px 10px; }
+  .sk-day { position:relative; flex:0 0 auto; width:60px; text-align:center; }
+  .sk-day .sk-dow { font-size:10.5px; color:var(--dim); text-transform:uppercase; letter-spacing:.5px; }
+  .sk-day .sk-dot { width:46px; height:46px; margin:6px auto 4px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-size:23px; border:2px solid var(--line); background:rgba(255,255,255,.03); position:relative; z-index:1; }
+  .sk-day .sk-dom { font-family:'Oswald',sans-serif; font-size:16px; color:var(--muted); line-height:1; }
+  .sk-day .sk-mon { font-size:9px; color:var(--dim); text-transform:uppercase; letter-spacing:1px; height:12px; }
+  .sk-day.played .sk-dot { border-color:var(--gold); background:rgba(255,206,58,.18); box-shadow:0 0 14px rgba(255,206,58,.3); }
+  .sk-day.played .sk-dom { color:var(--ink); }
+  .sk-day.today .sk-dot { border-color:var(--accent2); background:rgba(25,198,255,.16); }
+  .sk-day.today .sk-dom { color:var(--accent2); }
+  .sk-day.future { opacity:.4; }
+  .sk-day.missed .sk-dot { opacity:.5; color:var(--dim); }
+  .sk-day.ll::before { content:''; position:absolute; left:-30px; top:39px; width:60px; height:4px; background:var(--gold); opacity:.55; z-index:0; }
+  .sk-badge { position:absolute; top:-24px; left:50%; transform:translateX(-50%); font-size:19px; z-index:3; filter:drop-shadow(0 0 4px rgba(255,206,58,.6)); }
+  .sk-legend { text-align:center; font-size:11px; color:var(--dim); margin-top:12px; letter-spacing:.3px; }
   .toast { position:fixed; bottom:26px; left:50%; transform:translateX(-50%); z-index:200; display:none;
     background:#10202e; border:1px solid var(--line); color:var(--ink); padding:11px 18px; border-radius:10px;
     font-size:13px; box-shadow:0 10px 30px rgba(0,0,0,.55); }
@@ -774,6 +797,7 @@
       <div class="menu-sec">Play</div>
       <a class="menu-item" href="/">🏠 Home</a>
       <button class="menu-item" id="miDaily">🎯 Daily Challenge</button>
+      <button class="menu-item" id="miStreak">🔥 Streak Calendar</button>
       <a class="menu-item" href="/versus">⚔️ 1v1 Live · Face Off</a>
       <div class="menu-sec">Your Stuff</div>
       <button class="menu-item" id="miHof">🏛️ My Hall of Fame</button>
@@ -844,6 +868,22 @@
       </div>
       <button id="bdShare" class="bd-share">𝕏  Share on X</button>
       <div class="bd-hint">📸 Screenshot the card above to post your build</div>
+    </div>
+  </div>
+</div>
+
+<div id="streakModal" class="overlay">
+  <div class="overlay-card panel">
+    <div class="overlay-head"><span class="overlay-title">🔥 Your Streak</span><button class="overlay-close" data-close="streakModal">✕</button></div>
+    <div class="overlay-body">
+      <div class="sk-stats">
+        <div class="sk-stat"><b id="skCount">0</b><span>Current 🔥</span></div>
+        <div class="sk-stat"><b id="skBest">0</b><span>Best Ever</span></div>
+        <div class="sk-stat" id="skFreezeWrap" style="display:none"><b id="skFreeze">0</b><span>Freezes 🧊</span></div>
+      </div>
+      <div class="sk-next" id="skNext"></div>
+      <div class="sk-timeline" id="skTimeline"></div>
+      <div class="sk-legend">🔥 played · 🎯 today · 🧊 freeze earned · 🏆/🐐 milestone</div>
     </div>
   </div>
 </div>
@@ -1167,6 +1207,7 @@ async function init() {
   $('dailyReveal').addEventListener('click', e => { if (e.target.id === 'dailyReveal') closeDailyReveal(); });
   $('dResSim').onclick = () => { Sound.click(); closeDailyResults(false); };
   $('miDaily').onclick = () => { Sound.click(); startDailyChallenge(); };
+  $('miStreak').onclick = () => { Sound.click(); openStreak(); };
   $('miHof').onclick = () => { closeOverlay('menu'); openHof(); };
   $('miAch').onclick = () => { closeOverlay('menu'); Sound.click(); window.Ach && Ach.open(); };
   $('saveHofBtn').onclick = () => saveToHof($('saveHofBtn'));
@@ -1202,6 +1243,7 @@ async function init() {
   else if (h === 'how' || h === 'howtoplay') openOverlay('howModal');
   else if (h === 'achievements' || h === 'ach') { const o = () => (window.Ach ? Ach.open() : setTimeout(o, 120)); o(); }
   else if (h === 'daily') setTimeout(startDailyChallenge, 350);
+  else if (h === 'streak') setTimeout(openStreak, 200);
 }
 
 function toast(msg) {
@@ -1414,6 +1456,60 @@ let freezeTokens = 0;
 try { freezeTokens = Number(localStorage.getItem('pl_freeze') || '0') || 0; } catch (e) {}
 function saveStreak() { try { localStorage.setItem('pl_streak', JSON.stringify(streak)); } catch (e) {} }
 function saveFreeze() { try { localStorage.setItem('pl_freeze', String(freezeTokens)); } catch (e) {} }
+// Per-day history for the streak timeline (set of 'YYYY-MM-DD').
+function addDays(dateStr, n) { const d = new Date(dateStr + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
+function getPlayedDates() {
+  let arr = [];
+  try { arr = JSON.parse(localStorage.getItem('pl_played') || '[]'); } catch (e) {}
+  if (!Array.isArray(arr)) arr = [];
+  if (!arr.length && streak.count > 0 && streak.lastDate) {   // backfill current streak once
+    for (let i = 0; i < streak.count; i++) arr.push(addDays(streak.lastDate, -i));
+    try { localStorage.setItem('pl_played', JSON.stringify(arr)); } catch (e) {}
+  }
+  return new Set(arr);
+}
+function recordPlayedDate(dateStr) {
+  const s = getPlayedDates(); if (s.has(dateStr)) return;
+  s.add(dateStr);
+  try { localStorage.setItem('pl_played', JSON.stringify([...s].sort())); } catch (e) {}
+}
+// Scrollable day-by-day streak timeline with milestone markers.
+function openStreak() {
+  closeOverlay('menu');
+  const played = getPlayedDates();
+  const today = todayUTC();
+  let start = played.size ? [...played].sort()[0] : addDays(today, -6);
+  const cap = addDays(today, -44);
+  if (start < cap) start = cap;
+  const end = addDays(today, 2);
+  $('skCount').textContent = streak.count;
+  $('skBest').textContent = streak.best;
+  $('skFreeze').textContent = freezeTokens;
+  $('skFreezeWrap').style.display = freezeTokens > 0 ? 'block' : 'none';
+  const next = STREAK_MILESTONES.find(m => m > streak.count);
+  $('skNext').textContent = next
+    ? `${next - streak.count} day${next - streak.count === 1 ? '' : 's'} to a 🔥 ${next}-day streak${FREEZE_MILESTONES.includes(next) ? ' + 🧊 Freeze' : ''}`
+    : "You've hit every milestone. Legend. 🐐";
+  const MS_BADGE = { 3: '🔥', 7: '🧊', 14: '🧊', 30: '🏆', 100: '🐐' };
+  const DOW = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+  const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const cells = [];
+  let run = 0;
+  for (let d = start; d <= end; d = addDays(d, 1)) {
+    const isFuture = d > today, isToday = d === today, p = played.has(d);
+    run = p ? run + 1 : 0;
+    const ll = p && played.has(addDays(d, -1));
+    const badge = (p && MS_BADGE[run]) ? `<div class="sk-badge">${MS_BADGE[run]}</div>` : '';
+    const cls = p ? 'played' : (isToday ? 'today' : (isFuture ? 'future' : 'missed'));
+    const dt = new Date(d + 'T00:00:00Z'), dom = dt.getUTCDate();
+    const showMon = dom === 1 || d === start;
+    const icon = p ? '🔥' : (isToday ? '🎯' : (isFuture ? '' : '·'));
+    cells.push(`<div class="sk-day ${cls}${ll ? ' ll' : ''}" title="${MON[dt.getUTCMonth()]} ${dom}">${badge}<div class="sk-dow">${DOW[dt.getUTCDay()]}</div><div class="sk-dot">${icon}</div><div class="sk-dom">${dom}</div><div class="sk-mon">${showMon ? MON[dt.getUTCMonth()] : ''}</div></div>`);
+  }
+  $('skTimeline').innerHTML = cells.join('');
+  openOverlay('streakModal');
+  const tl = $('skTimeline'); requestAnimationFrame(() => { tl.scrollLeft = tl.scrollWidth; });   // jump to today
+}
 // Returns { firstToday, frozeUsed }. A Streak Freeze 🧊 covers exactly one missed day.
 function markPlayedToday() {
   const today = todayUTC();
@@ -1427,7 +1523,7 @@ function markPlayedToday() {
   else if (streak.lastDate === dby && freezeTokens > 0) { freezeTokens--; saveFreeze(); streak.count++; frozeUsed = true; }
   else streak.count = 1;
   streak.best = Math.max(streak.best, streak.count);
-  streak.lastDate = today; saveStreak(); renderStreakChip();
+  streak.lastDate = today; saveStreak(); recordPlayedDate(today); renderStreakChip();
   return { firstToday: true, frozeUsed };
 }
 function renderStreakChip() {
