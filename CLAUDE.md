@@ -248,9 +248,19 @@ each **quick-builds** their guy under a shot clock; a seeded GSAP **at-bat** pla
 **higher Overall always wins** (tie → seeded coin). Entry points: a banner + ☰ item on `index.html`,
 a `⚔️ 1v1 Live` ☰ item in both games, and the `/versus` route.
 
-> **Real balance (88 matches, 2026-06-27): pitcher ~54% / batter ~46%; avg build OVR 89.5 vs 88.6.**
-> Considered healthy — left as-is. (Earlier sims overestimated the pitcher edge; real builds land
-> near-identical OVRs at the top.)
+> **Real balance (22,959 matches, 2026-06-29): BATTER-favored ~53% / pitcher ~47%; avg build OVR
+> pitcher 89.6 vs batter 90.2.** The old "pitcher ~54%" note (88 matches) was small-sample noise —
+> the large sample shows batters win ~6 pts more because they build ~0.6 OVR higher. Check live via
+> the `pvpMatchStats` curl below.
+>
+> **2026-06-29 pitcher-Defense fix (versus only):** pitcher `fielding_ability` was uniquely
+> compressed/low (median 48 vs 60s–80s for every other slot), a guaranteed dead anchor. In
+> `versus.html` we now (1) curve it onto the others' scale via `curvePitchDef` (median→~62, elite
+> raw-70+ gloves → curved 95+) and (2) weight it via `defWeightP` (0.3 for average, ramps to ~1.2
+> only for elite curved D). Applies to the **pitcher role only** — batter Defense is already the
+> highest batter slot (median 70, well spread), so it's untouched. Sim: +0.9 avg pitcher OVR, which
+> *helps* the underdog pitcher side. **Re-check `pvpMatchStats`** after post-fix games accumulate; if
+> pitchers jump past ~53%, shave the `curvePitchDef`/`defWeightP` constants down.
 
 ### ⚙️ Setup REQUIRED for a fresh deploy
 - **`ABLY_API_KEY`** env var in Vercel (format `appId.keyId:keySecret`, mark **Sensitive**). Without
