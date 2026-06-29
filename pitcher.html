@@ -1635,7 +1635,7 @@ function renderDailyResults(res, best, rows, name) {
   $('dResBoard').innerHTML = rows.length
     ? rows.map((r, i) => `<div class="dres-row${(i + 1) === res.rank && r.name === name ? ' me' : ''}"><span>${i + 1}</span><span class="dres-nm">${escapeHTML(r.name)}</span><span class="dres-rov c-${tier(r.ovr)}">${r.ovr}</span></div>`).join('')
     : '<div class="dr-field" style="padding:6px">Be the first on today\'s board!</div>';
-  ov.classList.add('show');   // (already shown upfront in showDailyResults; safe to re-assert)
+  if (!ov.classList.contains('show')) return;   // user already hit Continue → don't reopen / animate
   gsap.from($('dResBoard').children, { x: 30, opacity: 0, duration: .4, stagger: .05, delay: .05, ease: 'power2.out' });
   const rk = { v: Math.min(res.total, Math.max(res.rank, Math.round(res.total * 0.6))) }, pc = { v: 0 };
   gsap.to(rk, { v: res.rank, duration: 1.2, ease: 'power2.out', onUpdate: () => { $('dResRank').textContent = '#' + Math.round(rk.v).toLocaleString(); } });
@@ -2816,7 +2816,6 @@ function finish() {
   gsap.to(o, { v: avg, duration: 1.0, ease: 'power2.out', onUpdate: () => { $('doneOvr').textContent = Math.round(o.v); } });
   gsap.fromTo($('doneArch'), { opacity: 0 }, { opacity: 1, duration: .6, delay: .8 });
   // Daily: the results leaderboard pops up automatically once the build is done.
-  console.log('[DAILY] finish: dailyMode =', dailyMode);
   if (dailyMode) setTimeout(showDailyResults, 900);
 }
 
