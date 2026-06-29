@@ -1376,10 +1376,13 @@ let _poolCache = {};
 function pool(){
   const cacheKey = myRole + ':' + gameMode;
   if (!_poolCache[cacheKey]){
-    let f = DATA[myRole].pool;
-    if (gameMode === 'legends') f = f.filter(p => !!p.legend);
-    else f = f.filter(p => p.ovr >= MIN_VERSUS_OVR);
-    _poolCache[cacheKey] = f.length >= 4 ? f : DATA[myRole].pool.filter(p => !!p.legend);
+    // Legends are a SEPARATE array (DATA[role].legends), not in the regular pool - so Legends mode
+    // must draw from there, otherwise the reel pool is empty and the spin throws.
+    let f = (gameMode === 'legends')
+      ? (DATA[myRole].legends || []).slice()
+      : DATA[myRole].pool.filter(p => p.ovr >= MIN_VERSUS_OVR);
+    if (f.length < 4) f = DATA[myRole].pool.filter(p => p.ovr >= MIN_VERSUS_OVR);   // safety: never an empty reel
+    _poolCache[cacheKey] = f;
   }
   return _poolCache[cacheKey];
 }
