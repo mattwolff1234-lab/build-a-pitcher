@@ -552,6 +552,33 @@
     line-height:1.4; pointer-events:none; }
   .dc-header-tag { background:rgba(255,206,58,.12); border-color:rgba(255,206,58,.4) !important;
     color:var(--gold) !important; }
+
+  /* ---- Achievements ---- */
+  .ach-toast { position:fixed; bottom:28px; right:16px; z-index:202; display:none;
+    flex-direction:row; align-items:center; gap:12px;
+    background:linear-gradient(135deg,#101e2e,#0a1520); border:1.5px solid rgba(255,206,58,.45);
+    color:var(--ink); padding:12px 18px; border-radius:14px;
+    box-shadow:0 8px 30px rgba(0,0,0,.6),0 0 20px rgba(255,206,58,.08); max-width:270px; }
+  .ach-toast .at-icon { font-size:26px; flex:0 0 auto; line-height:1; }
+  .ach-toast .at-label { font-size:10px; color:var(--gold); text-transform:uppercase;
+    letter-spacing:1.5px; font-weight:700; margin-bottom:1px; }
+  .ach-toast .at-name { font-family:'Oswald',sans-serif; font-size:16px; font-weight:700; letter-spacing:.5px; }
+  @media (max-width:560px) { .ach-toast { right:10px; left:10px; max-width:none; bottom:20px; } }
+  .mi-ach-count { margin-left:auto; font-size:11px; color:var(--accent2);
+    font-family:'Oswald',sans-serif; letter-spacing:.5px; }
+  .ach-list { display:flex; flex-direction:column; gap:9px; }
+  .ach-item { display:flex; align-items:center; gap:12px; padding:11px 13px; border-radius:12px;
+    background:rgba(0,0,0,.28); border:1px solid var(--line); opacity:.5; }
+  .ach-item.done { opacity:1; border-color:rgba(255,206,58,.22); background:rgba(255,206,58,.04); }
+  .ach-ico { font-size:22px; flex:0 0 auto; width:32px; text-align:center; }
+  .ach-info { flex:1; min-width:0; }
+  .ach-n { font-family:'Oswald',sans-serif; font-size:14px; font-weight:700; color:var(--muted); }
+  .ach-item.done .ach-n { color:var(--ink); }
+  .ach-d { font-size:11px; color:var(--dim); margin-top:2px; line-height:1.4; }
+  .ach-date { font-size:10px; color:var(--accent2); margin-top:3px; }
+  .ach-check { color:var(--gold); font-size:17px; font-weight:700; flex:0 0 auto; }
+  .ach-progress { font-family:'Oswald',sans-serif; font-size:12px; color:var(--muted);
+    text-align:center; padding:6px 0 2px; letter-spacing:1px; }
 </style>
 </head>
 <body>
@@ -694,6 +721,7 @@
       <a class="menu-item" href="/versus">⚔️ 1v1 Live · Face Off</a>
       <a class="menu-item" href="/versus#stats">📊 1v1 Stats</a>
       <button class="menu-item" id="miDaily">🎯 Daily Challenge</button>
+      <button class="menu-item" id="miAch">🏅 Achievements <span id="miAchCount" class="mi-ach-count"></span></button>
       <button class="menu-item" id="miHof">🏛️ My Hall of Fame</button>
       <button class="menu-item" id="miLb">🏆 Leaderboard</button>
       <button class="menu-item" id="miHow">📖 How to Play</button>
@@ -739,6 +767,16 @@
     <div class="overlay-body">
       <div class="lb-tabs lb-sort-tabs" id="hofSortTabs"></div>
       <div id="hofList" class="hof-list"></div>
+    </div>
+  </div>
+</div>
+
+<div id="achModal" class="overlay">
+  <div class="overlay-card panel">
+    <div class="overlay-head"><span class="overlay-title">🏅 Achievements</span><button class="overlay-close" data-close="achModal">✕</button></div>
+    <div class="overlay-body">
+      <div id="achProgress" class="ach-progress"></div>
+      <div id="achList" class="ach-list"></div>
     </div>
   </div>
 </div>
@@ -1045,6 +1083,7 @@ async function init() {
   $('menuBtn').onclick = () => { Sound.click(); openOverlay('menu'); };
   $('miDaily').onclick = () => startDailyChallenge();
   $('dailyBtn').onclick = () => startDailyChallenge();
+  $('miAch').onclick = () => { closeOverlay('menu'); openAch(); };
   $('miHof').onclick = () => { closeOverlay('menu'); openHof(); };
   $('saveHofBtn').onclick = () => saveToHof($('saveHofBtn'));
   $('miLb').onclick = () => { closeOverlay('menu'); openLeaderboard('global'); };
@@ -1071,6 +1110,7 @@ async function init() {
   initGoogle();
   renderStreakChip();
   updateDailyBtn();
+  updateAchCount();
 
   // deep-link from the home-page menu, e.g. /pitching#leaderboard → open that panel on load
   const h = (location.hash || '').replace('#', '').toLowerCase();
@@ -1369,6 +1409,7 @@ async function finishDailyChallenge(ovr, name, build) {
   } catch(e) {}
 
   setDailyDone({ ovr, rank, total });
+  incrementDailyCount();
   updateDailyBtn();
   const pct = total > 1 ? Math.round((1 - (rank - 1) / total) * 100) : 100;
   dayToast(`🎯 Daily done! ${ovr} OVR · #${rank} of ${total} today (top ${pct}%)`);
@@ -1384,6 +1425,100 @@ async function onGameComplete() {
         body: JSON.stringify({ action: 'updateStreak', sub: account.sub, sessionToken: account.sessionToken }) });
     } catch(e) {}
   }
+}
+
+/* ===== Achievements ===== */
+const ACHIEVEMENTS = [
+  { id: 'prime_time',    icon: '⚡', name: 'Prime Time',       desc: 'Use the Boost power-up on any pitcher.' },
+  { id: 'legend_tamer',  icon: '★',  name: 'Legend Tamer',     desc: 'Assign a Legend card to any slot.' },
+  { id: 'triple_threat', icon: '🎰', name: 'Triple Threat',    desc: 'Use all 3 power-ups (Re-spin, Snag, Boost) in one build.' },
+  { id: 'architect',     icon: '🏗️', name: 'The Architect',    desc: 'Build a pitcher with a weighted OVR of 90 or higher.' },
+  { id: 'diamond_nine',  icon: '💎', name: 'Diamond Nine',     desc: 'Fill all 9 slots with Diamond or Legend pitchers (85+ OVR each).' },
+  { id: 'the_goat',      icon: '🐐', name: 'The G.O.A.T.',     desc: 'Build a pitcher with a perfect 99 OVR.' },
+  { id: 'k_3000',        icon: '⚾', name: '3,000 Club',       desc: 'Simulate a career with 3,000 or more strikeouts.' },
+  { id: 'first_ballot',  icon: '🏆', name: 'First Ballot',     desc: 'Simulate a career that earns Hall of Fame induction.' },
+  { id: 'dynasty',       icon: '💍', name: 'Dynasty Builder',  desc: 'Win 3 or more World Series rings in a simulated career.' },
+  { id: 'daily_7',       icon: '🎯', name: 'Daily Grind',      desc: 'Complete 7 daily challenges.' },
+];
+
+let achUnlocked = {};
+try { achUnlocked = JSON.parse(localStorage.getItem('pl_achievements') || '{}'); } catch(e) {}
+
+function unlockAchievement(id) {
+  if (achUnlocked[id]) return;
+  const a = ACHIEVEMENTS.find(x => x.id === id);
+  if (!a) return;
+  achUnlocked[id] = new Date().toISOString();
+  try { localStorage.setItem('pl_achievements', JSON.stringify(achUnlocked)); } catch(e) {}
+  showAchToast(a);
+  updateAchCount();
+}
+
+function showAchToast(a) {
+  let t = $('achToast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'achToast';
+    t.className = 'ach-toast';
+    document.body.appendChild(t);
+  }
+  t.innerHTML = `<span class="at-icon">${a.icon}</span><div><div class="at-label">Achievement Unlocked!</div><div class="at-name">${a.name}</div></div>`;
+  t.style.display = 'flex';
+  gsap.killTweensOf(t);
+  gsap.fromTo(t, { x: 80, opacity: 0 }, { x: 0, opacity: 1, duration: .4, ease: 'back.out(1.5)' });
+  clearTimeout(t._tmr);
+  t._tmr = setTimeout(() => gsap.to(t, { x: 80, opacity: 0, duration: .35, onComplete: () => { t.style.display = 'none'; } }), 4000);
+}
+
+function updateAchCount() {
+  const el = $('miAchCount');
+  if (!el) return;
+  const n = Object.keys(achUnlocked).length;
+  el.textContent = `${n}/${ACHIEVEMENTS.length}`;
+}
+
+function checkBuildAchievements() {
+  const ovr = state.finalOvr;
+  if (ovr >= 90) unlockAchievement('architect');
+  if (ovr >= 99) unlockAchievement('the_goat');
+  if (SLOTS.every(s => state.filled[s.key] && state.filled[s.key].ovr >= 85)) unlockAchievement('diamond_nine');
+  if (state.respinUsed && state.boostUsed && state.snagUsed) unlockAchievement('triple_threat');
+}
+
+function checkCareerAchievements(career) {
+  const t = career.totals;
+  if (t.k >= 3000) unlockAchievement('k_3000');
+  if (t.hallOfFame) unlockAchievement('first_ballot');
+  if (t.rings >= 3) unlockAchievement('dynasty');
+}
+
+function incrementDailyCount() {
+  let n = 0;
+  try { n = Number(localStorage.getItem('pl_dc_count') || '0'); } catch(e) {}
+  n++;
+  try { localStorage.setItem('pl_dc_count', String(n)); } catch(e) {}
+  if (n >= 7) unlockAchievement('daily_7');
+}
+
+function openAch() {
+  const unlocked = Object.keys(achUnlocked).length;
+  const prog = $('achProgress');
+  if (prog) prog.textContent = `${unlocked} of ${ACHIEVEMENTS.length} unlocked`;
+  const list = $('achList');
+  list.innerHTML = ACHIEVEMENTS.map(a => {
+    const done = achUnlocked[a.id];
+    const dateStr = done ? new Date(done).toLocaleDateString() : '';
+    return `<div class="ach-item${done ? ' done' : ''}">
+      <div class="ach-ico">${a.icon}</div>
+      <div class="ach-info">
+        <div class="ach-n">${done ? a.name : '??? — ' + a.name}</div>
+        <div class="ach-d">${a.desc}</div>
+        ${done ? `<div class="ach-date">Unlocked ${dateStr}</div>` : ''}
+      </div>
+      ${done ? '<div class="ach-check">✓</div>' : ''}
+    </div>`;
+  }).join('');
+  openOverlay('achModal');
 }
 
 const TIER_ODDS = { diamond: 0.10, gold: 0.20, silver: 0.24, bronze: 0.28, grey: 0.18 };
@@ -1614,6 +1749,7 @@ function boost() {
   Sound.prime();
   updatePowerups();
   land(primeCard);
+  unlockAchievement('prime_time');
 }
 
 function snag(dir) {
@@ -1645,6 +1781,7 @@ function assign(slotKey) {
     ovr: p.ovr, legend: !!p.legend, team: p.team, img: headshot(p),
   };
   state.used.add(p.name);
+  if (p.legend) unlockAchievement('legend_tamer');
   state.landed = null;
   state.boostedThisLand = false;
   Sound.assign();
@@ -2332,6 +2469,7 @@ function careerTier(t, ovr) {
 }
 
 function finishPlaythrough(career) {
+  checkCareerAchievements(career);
   const t = career.totals;
   const verdict = careerTier(t, state.finalOvr);
 
@@ -2419,6 +2557,7 @@ function finish() {
   renderNodes();
   const avg = weightedOvr(SLOTS.map(s => s.key));
   state.finalOvr = avg;
+  checkBuildAchievements();
   state.build = SLOTS.map(s => {
     const f = state.filled[s.key];
     return { slot: s.label, value: f.value, display: String(f.display), player: f.name, team: f.team, legend: !!f.legend, img: f.img, ovr: f.ovr };
