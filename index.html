@@ -173,6 +173,29 @@
   .tip-item .ti-text { display:flex; flex-direction:column; gap:3px; line-height:1.32; }
   .tip-item .ti-text b { font-weight:600; }
   .tip-item .ti-text small { color:var(--muted); font-size:12px; }
+  .menu-sec { font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:2px; text-transform:uppercase;
+    color:var(--muted); margin:14px 2px 7px; padding-top:12px; border-top:1px solid var(--line); }
+  .menu-sec:first-of-type { margin-top:4px; padding-top:0; border-top:0; }
+  .social-row { display:flex; gap:10px; margin:2px 0; }
+  .soc-tile { width:46px; height:46px; border-radius:12px; display:flex; align-items:center; justify-content:center;
+    color:#fff; border:1px solid var(--line); transition:transform .1s ease, box-shadow .15s ease; }
+  .soc-tile:hover { transform:translateY(-2px); }
+  .soc-tile svg { width:22px; height:22px; }
+  .soc-discord { background:#5865F2; }
+  .soc-discord:hover { box-shadow:0 6px 16px rgba(88,101,242,.45); }
+  .soc-x { background:#000; }
+  .soc-x:hover { box-shadow:0 6px 16px rgba(0,0,0,.5); border-color:rgba(255,255,255,.3); }
+  /* social-proof stat banner (hero) */
+  .stat-bar { display:inline-flex; align-items:center; gap:10px; justify-content:center; flex-wrap:wrap;
+    margin-top:18px; padding:7px 14px; border-radius:999px; text-align:left;
+    background:linear-gradient(180deg,rgba(20,31,48,.72),rgba(9,15,25,.82)); border:1px solid var(--line); }
+  .stat-bar .sb-plays { font-family:'Oswald',sans-serif; font-weight:700; font-size:12.5px; letter-spacing:.5px;
+    color:var(--accent); background:rgba(255,122,24,.12); border:1px solid rgba(255,122,24,.4);
+    padding:3px 11px; border-radius:999px; white-space:nowrap; }
+  .stat-bar .sb-plays::before { content:'🔥 '; }
+  .stat-bar .sb-msg { color:var(--ink); font-size:13.5px; font-weight:500; }
+  .stat-bar .sb-msg b { font-family:'Oswald',sans-serif; letter-spacing:.5px; }
+  .stat-bar .sb-goat { color:var(--gold); }
   #acctSlot { padding:4px 2px 8px; display:flex; flex-direction:column; align-items:center; gap:8px; }
   #acctSlot .acct { display:flex; align-items:center; gap:11px; width:100%; border:1px solid var(--line); border-radius:12px; padding:11px 13px; background:rgba(255,255,255,.03); }
   #acctSlot .acct img { width:38px; height:38px; border-radius:50%; }
@@ -253,10 +276,13 @@
     <div class="menu-head"><span class="mt">Menu</span><button class="x" data-close>✕</button></div>
     <div class="menu-body">
       <div id="acctSlot"></div>
-      <a class="menu-item" href="/versus#stats">📊 1v1 Stats</a>
+      <div class="menu-sec">Your Stuff</div>
       <a class="menu-item" href="/pitching#hof">🏛️ My Hall of Fame</a>
       <a class="menu-item" href="/pitching#achievements">🏅 Achievements</a>
+      <div class="menu-sec">Compete</div>
       <a class="menu-item" href="/pitching#leaderboard">🏆 Leaderboard</a>
+      <a class="menu-item" href="/versus#stats">📊 1v1 Stats</a>
+      <div class="menu-sec">Help</div>
       <a class="menu-item" href="/pitching#how">📖 How to Play</a>
       <button class="menu-item" id="miInstall">📲 Install App<span class="mi-chev" id="installChev" style="margin-left:auto;color:var(--muted)">⌄</span></button>
       <div id="installSteps" class="install-steps" style="display:none">
@@ -269,8 +295,13 @@
         <div class="step"><span class="step-n">2</span><div><b>Tap Share</b><p>Tap the Share button at the bottom of the screen (the box with an arrow pointing up).</p></div></div>
         <div class="step"><span class="step-n">3</span><div><b>Add to Home Screen</b><p>Scroll down, tap "Add to Home Screen," then tap "Add."</p></div></div>
       </div>
-      <a class="menu-item tip-item" href="https://buymeacoffee.com/mattwolff1d" target="_blank" rel="noopener">☕<span class="ti-text"><b>Buy me a coffee</b><small>I'm a solo dev paying for the servers out of pocket so it stays free for everyone. Anything's hugely appreciated! ↗</small></span></a>
+      <div class="menu-sec">Community</div>
+      <div class="social-row">
+        <a class="soc-tile soc-discord" href="https://discord.gg/bMVX2zJp49" target="_blank" rel="noopener" title="Join our Discord" aria-label="Discord"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M20.317 4.369A19.79 19.79 0 0 0 15.432 3a.07.07 0 0 0-.074.036c-.211.375-.444.864-.608 1.249a18.27 18.27 0 0 0-5.487 0 12.6 12.6 0 0 0-.617-1.25.07.07 0 0 0-.073-.035A19.736 19.736 0 0 0 3.677 4.37a.064.064 0 0 0-.03.025C.533 9.046-.32 13.58.099 18.057a.08.08 0 0 0 .031.055 19.9 19.9 0 0 0 5.993 3.03.07.07 0 0 0 .076-.027c.462-.63.873-1.295 1.226-1.994a.07.07 0 0 0-.038-.098 13.1 13.1 0 0 1-1.872-.892.07.07 0 0 1-.007-.117c.126-.094.252-.192.372-.291a.07.07 0 0 1 .073-.01c3.927 1.793 8.18 1.793 12.061 0a.07.07 0 0 1 .074.009c.12.099.246.198.373.292a.07.07 0 0 1-.006.117c-.598.349-1.224.645-1.873.891a.07.07 0 0 0-.038.099c.36.698.772 1.362 1.225 1.993a.07.07 0 0 0 .076.028 19.84 19.84 0 0 0 6.002-3.03.07.07 0 0 0 .032-.054c.5-5.177-.838-9.673-3.549-13.66a.06.06 0 0 0-.031-.027zM8.02 15.331c-1.182 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg></a>
+        <a class="soc-tile soc-x" href="https://x.com/GoatLabApp" target="_blank" rel="noopener" title="Follow on X" aria-label="X"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24h-6.66l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zM17.083 19.77h1.833L7.084 4.126H5.117z"/></svg></a>
+      </div>
       <a class="menu-item" href="https://pitchergami.com" target="_blank" rel="noopener">⚾ PitcherGami ↗</a>
+      <a class="menu-item tip-item" href="https://buymeacoffee.com/mattwolff1d" target="_blank" rel="noopener">☕<span class="ti-text"><b>Buy me a coffee</b><small>I'm a solo dev paying for the servers out of pocket so it stays free for everyone. Anything's hugely appreciated! ↗</small></span></a>
     </div>
   </div>
 </div>
@@ -280,7 +311,26 @@
     <div class="kick">A Pitchergami Game</div>
     <h1>Goat<i>Lab</i></h1>
     <p>Spin the reel, draft a real MLB player into nine attribute slots, then simulate their entire career.</p>
+    <div id="statBar" class="stat-bar" style="display:none">
+      <span class="sb-plays" style="display:none"></span>
+      <span class="sb-msg">Can you build the <b class="sb-goat">GOAT</b> (99 OVR)?</span>
+    </div>
   </div>
+  <script>
+  (function(){
+    var bar = document.getElementById('statBar'); if (!bar) return;
+    bar.style.display = 'inline-flex'; // show teaser immediately; upgrade when stats load
+    fetch('/api/score?action=stats&game=all').then(function(r){ return r.json(); }).then(function(d){
+      if (!d || !d.ok || !d.total) return;
+      var plays = bar.querySelector('.sb-plays'), msg = bar.querySelector('.sb-msg');
+      plays.textContent = d.total.toLocaleString() + ' BUILDS'; plays.style.display = '';
+      if (d.total >= 25) {
+        var p = d.pct, t = p >= 10 ? Math.round(p) + '%' : (p > 0 ? p.toFixed(1) + '%' : '<0.1%');
+        msg.innerHTML = 'Only <b>' + t + '</b> build the <b class="sb-goat">GOAT</b> (99 OVR) — can you?';
+      }
+    }).catch(function(){});
+  })();
+  </script>
 
   <a class="versus" href="/versus">
     <span class="vbadge">NEW</span>

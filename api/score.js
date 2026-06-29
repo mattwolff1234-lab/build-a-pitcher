@@ -44,6 +44,16 @@ module.exports = async (req, res) => {
   try {
     await ensure();
 
+    // GET ?action=stats[&game=pitcher|batter|all] — total builds + how many hit the GOAT (99 OVR).
+    if (req.method !== 'POST' && (req.query && req.query.action) === 'stats') {
+      const g = req.query && req.query.game;
+      const [{ total, goat }] = (g === 'all')
+        ? await sql`SELECT count(*)::int AS total, count(*) FILTER (WHERE ovr >= 99)::int AS goat FROM scores`
+        : await sql`SELECT count(*)::int AS total, count(*) FILTER (WHERE ovr >= 99)::int AS goat FROM scores WHERE game = ${gameOf(g)}`;
+      const t = Number(total), gt = Number(goat);
+      return res.status(200).json({ ok: true, total: t, goat: gt, pct: t > 0 ? (gt / t) * 100 : 0 });
+    }
+
     if (req.method === 'POST') {
       const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
       let name = String(body.name == null ? '' : body.name).trim().slice(0, 20);
