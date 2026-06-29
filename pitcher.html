@@ -1485,19 +1485,20 @@ function recordPlayedDate(dateStr) {
 // Pull this account's daily-play history from the server (so the calendar follows the signed-in
 // account across devices, not just this device's localStorage).
 async function syncAccountDates() {
-  if (!account) return;
+  if (!account) return null;
   try {
     const r = await fetch(`/api/score?action=dailyDates&game=${LEADERBOARD_GAME}&sub=${encodeURIComponent(account.sub)}`);
     const j = await r.json();
-    if (!j.ok) return;
+    if (!j.ok) return null;
     if (Array.isArray(j.dates) && j.dates.length) {
       const s = getPlayedDates();
       j.dates.forEach(d => s.add(d));
       try { localStorage.setItem('pl_played', JSON.stringify([...s].sort())); } catch (e) {}
     }
     // account-scoped one-per-day gate: refresh today's lock + result straight from the account
-    if (j.today) { setDailyDone({ ovr: j.today.ovr, rank: j.today.rank, total: j.today.total }); updateDailyBtn(); }
-  } catch (e) {}
+    if (j.today) { setDailyDone({ ovr: j.today.ovr, rank: j.today.rank, total: j.today.total }); updateDailyBtn(); return j.today; }
+    return null;
+  } catch (e) { return null; }
 }
 function openStreak() {
   closeOverlay('menu');
@@ -1639,8 +1640,9 @@ function showDailyInfo() {
 function hideDailyInfo() { const el = $('dailyInfo'); if (el) el.style.display = 'none'; }
 async function startDailyChallenge() {
   closeOverlay('menu');
-  if (account) await syncAccountDates();   // always pull the account's true daily status first
-  const done = getDailyStatus();
+  let serverToday = null;
+  if (account) serverToday = await syncAccountDates();   // fresh account result, authoritative
+  const done = serverToday || getDailyStatus();
   if (done) { rankReveal(done.ovr, done.rank, done.total, false, true); return; }
   reset();                          // reset() clears dailyMode/lucky, so set them right after
   dailyMode = true;
@@ -1793,6 +1795,10 @@ function rankReveal(ovr, rank, total, isPB, replay, frozeUsed) {
   $('drFroze').style.display = frozeUsed ? 'block' : 'none';
   $('drStreak').textContent = streak.count >= 2 ? `🔥 ${streak.count}-day streak${freezeTokens > 0 ? ` · 🧊${freezeTokens}` : ''}` : '';
   if (replay) startDailyCountdown($('drReplay')); else { stopDailyCountdown(); $('drReplay').textContent = ''; }
+  // Already-played view: send them home instead of leaving them on the playable reel.
+  const closeBtn = $('drClose');
+  if (replay) { closeBtn.textContent = '← Back to Home'; closeBtn.onclick = () => { Sound.click(); stopDailyCountdown(); location.href = '/'; }; }
+  else { closeBtn.textContent = 'Nice 🔥'; closeBtn.onclick = () => { Sound.click(); closeDailyReveal(); }; }
   ov.classList.add('show');
   gsap.fromTo($('drCard'), { y: 18, opacity: 0, scale: .94 }, { y: 0, opacity: 1, scale: 1, duration: .5, ease: 'back.out(1.6)' });
   const rk = { v: Math.min(total, Math.max(rank, Math.round(total * 0.6))) }, pc = { v: 0 };
