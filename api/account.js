@@ -438,6 +438,78 @@ module.exports = async (req, res) => {
       return res.status(400).json({ ok: false, error: 'Unknown action' });
     }
 
+    // GET ?action=pvpAuditPlayer&token=...&name=... — shows times beaten vs losses reported for a player
+    if ((req.query && req.query.action) === 'pvpAuditPlayer') {
+      if (req.query.token !== STATS_TOKEN) {
+        return res.status(403).send('<h2 style="font-family:sans-serif;color:red">Forbidden</h2>');
+      }
+      await ensure();
+      const name = String(req.query.name || '').trim();
+      if (!name) return res.status(400).send('<h2 style="font-family:sans-serif">Missing ?name=</h2>');
+
+      // Current user row(s) matching this name
+      const users = await sql`SELECT google_sub, name, pvp_elo, pvp_wins, pvp_losses, pvp_streak FROM users WHERE lower(name) = lower(${name})`;
+
+      // Every pvp_history row where someone reported beating a player with this name
+      const timesBeaten = await sql`
+        SELECT h.match_id, h.player_key AS winner_key, h.created_at,
+          EXISTS (
+            SELECT 1 FROM pvp_results pr
+            JOIN users u ON u.google_sub = pr.google_sub
+            WHERE pr.match_id = h.match_id AND lower(u.name) = lower(${name})
+          ) AS loss_reported
+        FROM pvp_history h
+        WHERE lower(h.opp_name) = lower(${name}) AND h.won = true
+        ORDER BY h.created_at DESC`;
+
+      const total = timesBeaten.length;
+      const reported = timesBeaten.filter(r => r.loss_reported).length;
+      const dodged = total - reported;
+
+      const beatRows = timesBeaten.map(r => `<tr>
+        <td style="color:#aaa;font-size:11px">${new Date(r.created_at).toLocaleDateString()}</td>
+        <td style="font-size:12px;word-break:break-all">${r.winner_key}</td>
+        <td style="text-align:center">${r.loss_reported ? '<span style="color:#4c4">✓</span>' : '<span style="color:#e55">✗ DODGED</span>'}</td>
+      </tr>`).join('');
+
+      const userRows = users.map(u => `<tr>
+        <td><b>${u.name}</b></td>
+        <td style="text-align:center">${u.pvp_wins}</td>
+        <td style="text-align:center">${u.pvp_losses}</td>
+        <td style="text-align:center">${u.pvp_elo}</td>
+      </tr>`).join('');
+
+      const html = `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Audit: ${name}</title>
+<style>
+  body{font-family:system-ui,sans-serif;background:#111;color:#eee;padding:16px;max-width:600px;margin:0 auto}
+  h1{font-size:20px}h2{font-size:15px;color:#aaa;margin:20px 0 8px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;color:#aaa;padding:5px 6px;border-bottom:1px solid #333}
+  td{padding:5px 6px;border-bottom:1px solid #1e1e1e}
+  .stat{display:inline-block;background:#1e1e1e;border-radius:8px;padding:10px 16px;margin:4px;text-align:center}
+  .stat b{display:block;font-size:22px}
+  .stat span{font-size:11px;color:#aaa;text-transform:uppercase}
+  .red{color:#e55}.grn{color:#4c4}
+</style></head><body>
+<h1>Player Audit: ${name}</h1>
+<div>
+  <div class="stat"><b>${total}</b><span>Times beaten (recorded)</span></div>
+  <div class="stat grn"><b>${reported}</b><span>Losses submitted</span></div>
+  <div class="stat red"><b>${dodged}</b><span>Dodged losses</span></div>
+</div>
+<h2>Current account(s)</h2>
+<table><tr><th>Name</th><th>W</th><th>L</th><th>Elo</th></tr>
+  ${userRows || '<tr><td colspan="4" style="color:#888">No user found with this exact name</td></tr>'}
+</table>
+<h2>Match log (times beaten)</h2>
+<table><tr><th>Date</th><th>Winner key</th><th style="text-align:center">Loss filed?</th></tr>
+  ${beatRows || '<tr><td colspan="3" style="color:#888">No recorded losses found — name may have changed</td></tr>'}
+</table>
+</body></html>`;
+      return res.status(200).setHeader('content-type', 'text/html').send(html);
+    }
+
     // GET ?action=pvpBackfillPreview&token=... — browser-friendly admin page for the loss backfill
     if ((req.query && req.query.action) === 'pvpBackfillPreview') {
       if (req.query.token !== STATS_TOKEN) {
