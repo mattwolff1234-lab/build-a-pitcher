@@ -1584,6 +1584,7 @@ function bestPossibleOvr(cards) {
 
 // The daily flow inserts this between finishing the build and simulating the career.
 async function showDailyResults() {
+  if (dailyResultsShown) return;                     // guard: only show once per build
   dailyResultsShown = true;                          // marks the daily as submitted
   const ov = $('dailyResults');
   const name = $('nameInput').value.trim() || (account && account.name) || 'Anonymous';
@@ -2529,6 +2530,8 @@ function seasonHeadlines(s, idx, total, P, fallbackTeam) {
 // Shows draft animation first, then runs the career sim.
 function runCareerPlaythrough() {
   if (state.career) return;
+  // Daily: if the auto-popup hasn't fired yet, show the results panel first (fallback path).
+  if (dailyMode && !dailyResultsShown) { showDailyResults(); return; }
   $('simBtn').disabled = true;
 
   // Compute archetype (role uses same logic as simulateCareer)
