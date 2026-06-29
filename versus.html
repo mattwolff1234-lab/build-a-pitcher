@@ -1068,17 +1068,44 @@ function checkChallengeURL(){
 }
 
 async function sendChallengeRequest(){
-  if (!ably || !_incomingChalId) return;
+  if (!_incomingChalId) return;
   $('chalAcceptBtn').disabled = true;
-  $('chalStatus').textContent = 'Contacting challenger…';
-  try {
-    const ch = ably.channels.get('versus:challenge:' + _incomingChalId);
-    await ch.publish({ type:'request', replyId: personId(), clientId, name: displayName() });
-    $('chalStatus').innerHTML = 'Waiting for challenger to accept… <span id="chalCancelTxt" style="cursor:pointer;color:var(--accent2);font-size:11px;letter-spacing:.3px;text-decoration:underline;margin-left:4px">cancel</span>';
-    const cancelTxt = $('chalCancelTxt');
-    if (cancelTxt) cancelTxt.onclick = () => { if(chalWaitTimeout){clearTimeout(chalWaitTimeout);chalWaitTimeout=null;} showScreen('mmScreen'); };
-    chalWaitTimeout = setTimeout(() => { $('chalStatus').textContent = 'No response. They may be offline.'; $('chalAcceptBtn').disabled=false; }, 60000);
-  } catch(e){ $('chalStatus').textContent = 'Could not reach challenger. Check your connection.'; $('chalAcceptBtn').disabled=false; }
+  $('chalStatus').textContent = 'Connecting…';
+  try { await connectAbly(); } catch(e){
+    $('chalStatus').textContent = 'Connection error — check your network.';
+    $('chalAcceptBtn').disabled = false; return;
+  }
+
+  const MAX_TRIES = 5, RETRY_MS = 12000;
+  let tries = 0, chalGaveUp = false;
+
+  function setChalStatus(txt){
+    $('chalStatus').innerHTML = txt + ' <span id="chalCancelTxt" style="cursor:pointer;color:var(--accent2);font-size:11px;letter-spacing:.3px;text-decoration:underline;margin-left:4px">cancel</span>';
+    const c = $('chalCancelTxt');
+    if (c) c.onclick = () => { chalGaveUp=true; if(chalWaitTimeout){clearTimeout(chalWaitTimeout);chalWaitTimeout=null;} showScreen('mmScreen'); updateRatingChip(); };
+  }
+
+  async function attempt(){
+    if (chalGaveUp) return;
+    tries++;
+    setChalStatus(tries === 1 ? 'Contacting challenger…' : `Pinging… (attempt ${tries}/${MAX_TRIES})`);
+    try {
+      const ch = ably.channels.get('versus:challenge:' + _incomingChalId);
+      await ch.publish({ type:'request', replyId: personId(), clientId, name: displayName() });
+    } catch(e){}
+    if (chalGaveUp) return;
+    if (tries < MAX_TRIES){
+      chalWaitTimeout = setTimeout(attempt, RETRY_MS);
+    } else {
+      chalWaitTimeout = setTimeout(() => {
+        if (chalGaveUp) return;
+        $('chalStatus').innerHTML = 'No response — they may be offline. <span id="chalCancelTxt" style="cursor:pointer;color:var(--accent2);font-size:11px;text-decoration:underline;margin-left:4px">go back</span>';
+        const c=$('chalCancelTxt'); if(c) c.onclick=()=>{ showScreen('mmScreen'); updateRatingChip(); };
+        $('chalAcceptBtn').disabled = false;
+      }, RETRY_MS);
+    }
+  }
+  await attempt();
 }
 
 async function acceptChallengeNotif(){
