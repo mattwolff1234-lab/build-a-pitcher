@@ -114,7 +114,7 @@
   .ach-ov{ position:fixed; inset:0; z-index:300; display:none; align-items:center; justify-content:center; padding:14px;
     background:rgba(2,5,10,.72); backdrop-filter:blur(3px); }
   .ach-ov.show{ display:flex; }
-  .ach-card{ width:100%; max-width:780px; max-height:90dvh; display:flex; flex-direction:column;
+  .ach-card{ position:relative; width:100%; max-width:780px; max-height:90dvh; display:flex; flex-direction:column;
     border:1px solid var(--line,rgba(120,150,190,.16)); border-radius:16px;
     background:linear-gradient(180deg, rgba(20,31,48,.78), rgba(9,15,25,.92)); backdrop-filter:blur(6px);
     box-shadow:0 18px 60px rgba(0,0,0,.6); overflow:hidden; }
@@ -133,18 +133,23 @@
   .ach-tab .tc{ font-size:10px; color:var(--gold,#ffce3a); }
   .ach-tab.active{ color:var(--ink,#eaf2fb); border-color:var(--accent2,#19c6ff); background:rgba(25,198,255,.1); }
   .ach-wrap{ position:relative; margin:0 14px 14px; border:1px solid var(--line,rgba(120,150,190,.16)); border-radius:0 12px 12px 12px;
-    overflow:auto; -webkit-overflow-scrolling:touch; touch-action:pan-x pan-y; flex:1; min-height:0;
+    overflow:auto; -webkit-overflow-scrolling:touch; touch-action:pan-x pan-y; overscroll-behavior:contain; flex:1; min-height:0;
     background:linear-gradient(180deg, rgba(9,15,25,.7), rgba(4,7,13,.85)); }
   .ach-canvas{ position:relative; overflow:hidden; }
+  .ach-zoom{ position:absolute; right:12px; bottom:12px; z-index:20; display:flex; flex-direction:column; gap:6px; }
+  .ach-zoom button{ width:40px; height:40px; font-size:18px; line-height:1; color:var(--ink,#eaf2fb); cursor:pointer;
+    border:1px solid var(--accent2,#19c6ff); border-radius:10px; background:rgba(16,32,46,.92); backdrop-filter:blur(4px);
+    box-shadow:0 6px 18px rgba(0,0,0,.5); display:flex; align-items:center; justify-content:center; }
+  .ach-zoom button:active{ transform:scale(.92); }
   .ach-hs{ position:absolute; width:80px; height:80px; border-radius:8px; object-fit:cover; opacity:.05; filter:grayscale(1) contrast(.8); pointer-events:none; }
   .ach-vig{ position:absolute; inset:0; pointer-events:none; background:radial-gradient(120% 100% at 50% 40%, transparent 55%, rgba(4,7,13,.7) 100%); }
   .ach-links{ position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:1; }
   .ach-link{ fill:none; stroke:rgba(126,141,163,.35); stroke-width:3; }
   .ach-link.lit{ stroke:rgba(255,206,58,.55); }
-  .ach-node{ position:absolute; width:80px; height:80px; z-index:2; cursor:pointer; display:flex; align-items:center; justify-content:center;
+  .ach-node{ position:absolute; width:var(--asz,80px); height:var(--asz,80px); z-index:2; cursor:pointer; display:flex; align-items:center; justify-content:center;
     border:2px solid #2c3447; border-radius:12px; background:linear-gradient(180deg, rgba(28,38,56,.95), rgba(10,16,26,.95));
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.05), 0 6px 18px rgba(0,0,0,.5); transition:transform .12s, box-shadow .25s, border-color .25s; }
-  .ach-node .ai{ font-size:32px; line-height:1; filter:grayscale(1) brightness(.5); transition:filter .35s; }
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.05), 0 6px 18px rgba(0,0,0,.5); transition:box-shadow .25s, border-color .25s; }
+  .ach-node .ai{ font-size:calc(var(--asz,80px)*.4); line-height:1; filter:grayscale(1) brightness(.5); transition:filter .35s; }
   .ach-node:hover{ transform:translateY(-2px) scale(1.05); z-index:9; }
   .ach-node.chal::before{ content:''; position:absolute; inset:-5px; border-radius:15px; z-index:-1;
     background:conic-gradient(from 0deg, #5a4a12, #2c3447, #5a4a12, #2c3447, #5a4a12); opacity:.55; }
@@ -179,17 +184,31 @@
   .ach-toast .tnm{ font-family:'Oswald',sans-serif; font-size:18px; font-weight:700; letter-spacing:.5px; margin-top:1px; color:var(--ink,#eaf2fb); }
   .ach-toast .tds{ font-size:11px; color:var(--muted,#7e8da3); margin-top:3px; line-height:1.35; max-width:230px; }
   .ach-toast .tds:empty{ display:none; }
+  body.ach-open{ overflow:hidden; }
   @media (max-width:680px){
-    .ach-tabs{ flex-wrap:nowrap; overflow-x:auto; }
+    /* full-page on mobile so it scrolls in isolation (no scroll-behind) and nothing is cut off */
+    .ach-ov{ padding:0; align-items:stretch; justify-content:stretch; }
+    .ach-card{ max-width:none; width:100%; height:100dvh; max-height:100dvh; border-radius:0; border:none; }
+    .ach-head{ padding:12px 14px; }
+    .ach-head .at{ font-size:14px; }
+    .ach-tabs{ flex-wrap:nowrap; overflow-x:auto; padding:8px 10px 0; }
     .ach-tab{ flex:0 0 auto; }
     .ach-tab .tc{ display:none; }
+    .ach-wrap{ margin:0 8px 8px; }
+    .ach-zoom button{ width:46px; height:46px; font-size:20px; }
     .ach-toast{ left:10px; right:10px; min-width:0; top:12px; }
   }`;
 
-  // ---- layout constants ----
-  const CW = 160, CH = 92, X0 = 40, Y0 = 30, SZ = 80;
+  // ---- layout (zoom-driven: effective sizes = base × zoom, re-laid-out on zoom change) ----
+  const BASE = { CW: 160, CH: 92, X0: 40, Y0: 30, SZ: 80 };
+  let CW, CH, X0, Y0, SZ;
+  const isMobile = () => window.matchMedia && window.matchMedia('(max-width:680px)').matches;
+  let zoom = isMobile() ? 0.62 : 1;
+  const ZMIN = 0.4, ZMAX = 1.8;
+  function applyZoom() { CW = BASE.CW * zoom; CH = BASE.CH * zoom; X0 = BASE.X0 * zoom; Y0 = BASE.Y0 * zoom; SZ = BASE.SZ * zoom; }
+  applyZoom();
   let ACTIVE = 'all', OFFSET = 0, built = false;
-  let ov, canvas, svg, tabsEl, tip, toast, progEl;
+  let ov, canvas, svg, tabsEl, tip, toast, progEl, wrap;
 
   let chromeReady = false;
   function ensureChrome() {
@@ -244,8 +263,30 @@
         canvas.appendChild(img);
       }
     }
+
+    // zoom controls (magnifying glass) — pinned to the card corner, don't scroll away
+    wrap = ov.querySelector('.ach-wrap');
+    const zc = document.createElement('div'); zc.className = 'ach-zoom';
+    zc.innerHTML = '<button data-z="in" aria-label="Zoom in">🔍+</button><button data-z="out" aria-label="Zoom out">🔍−</button>';
+    ov.querySelector('.ach-card').appendChild(zc);
+    zc.querySelector('[data-z="in"]').onclick = () => setZoom(zoom * 1.25);
+    zc.querySelector('[data-z="out"]').onclick = () => setZoom(zoom / 1.25);
+
+    // pinch-to-zoom on the scroll area
+    let pinchPrev = 0;
+    const tdist = t => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+    wrap.addEventListener('touchstart', e => { if (e.touches.length === 2) pinchPrev = tdist(e.touches); }, { passive: true });
+    wrap.addEventListener('touchmove', e => {
+      if (e.touches.length === 2 && pinchPrev) { e.preventDefault(); const d = tdist(e.touches); if (d) { setZoom(zoom * d / pinchPrev); pinchPrev = d; } }
+    }, { passive: false });
+    wrap.addEventListener('touchend', e => { if (e.touches.length < 2) pinchPrev = 0; });
+
     built = true;
   }
+
+  let rafPending = false;
+  function scheduleRender() { if (rafPending) return; rafPending = true; requestAnimationFrame(() => { rafPending = false; render(); }); }
+  function setZoom(z) { zoom = Math.max(ZMIN, Math.min(ZMAX, z)); scheduleRender(); }
 
   const px = a => ({ x: X0 + a.col * CW, y: Y0 + (a.row - OFFSET) * CH });
   const visible = a => ACTIVE === 'all' || a.cat === ACTIVE;
@@ -276,6 +317,7 @@
   }
 
   function render() {
+    applyZoom();
     renderTabs();
     const vis = ACHIEVEMENTS.filter(visible);
     OFFSET = ACTIVE === 'all' ? 0 : Math.min(...vis.map(a => a.row));
@@ -287,7 +329,7 @@
       const p = px(a);
       const el = document.createElement('div');
       el.className = 'ach-node' + (isDone(a.id) ? ' done' : '') + (a.chal ? ' chal' : '') + (a.future ? ' future' : '');
-      el.style.left = p.x + 'px'; el.style.top = p.y + 'px'; el.dataset.id = a.id;
+      el.style.left = p.x + 'px'; el.style.top = p.y + 'px'; el.style.setProperty('--asz', SZ + 'px'); el.dataset.id = a.id;
       el.innerHTML = `<span class="ai">${a.icon}</span>${isDone(a.id) ? '' : `<span class="alk">${a.future ? '✨' : '🔒'}</span>`}`;
       el.addEventListener('mousemove', e => showTip(e, a));
       el.addEventListener('mouseleave', () => { if (!('ontouchstart' in window)) hideTip(); });
@@ -396,9 +438,10 @@
     serverSync();
     ACTIVE = 'all'; render();
     ov.classList.add('show');
+    document.body.classList.add('ach-open');
     if (window.gsap) gsap.fromTo(ov.querySelector('.ach-card'), { y: 14, opacity: 0 }, { y: 0, opacity: 1, duration: .3, ease: 'power3.out' });
   }
-  function close() { hideTip(); if (ov) ov.classList.remove('show'); }
+  function close() { hideTip(); document.body.classList.remove('ach-open'); if (ov) ov.classList.remove('show'); }
 
   const Ach = {
     muted: false,
