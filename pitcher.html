@@ -1235,7 +1235,7 @@ async function init() {
   initGoogle();
   renderStreakChip();
   updateDailyBtn();
-  if (account) syncAccountDates();   // pull this account's daily status (locks today if already played)
+  syncAccountDates();   // pull this device/account's daily status from the server (locks today if already played)
 
   // deep-link from the home-page menu, e.g. /pitching#leaderboard → open that panel on load
   const h = (location.hash || '').replace('#', '').toLowerCase();
@@ -1484,9 +1484,11 @@ function recordPlayedDate(dateStr) {
 // Pull this account's daily-play history from the server (so the calendar follows the signed-in
 // account across devices, not just this device's localStorage).
 async function syncAccountDates() {
-  if (!account) return null;
+  // Works for guests too (by device guestId) so the result/lock comes from the server, never a
+  // stale local value - that was the "0 OVR" bug when signed out.
+  const q = account ? `sub=${encodeURIComponent(account.sub)}` : `guestId=${encodeURIComponent(getOrCreateGuestId())}`;
   try {
-    const r = await fetch(`/api/score?action=dailyDates&game=${LEADERBOARD_GAME}&sub=${encodeURIComponent(account.sub)}`);
+    const r = await fetch(`/api/score?action=dailyDates&game=${LEADERBOARD_GAME}&${q}`);
     const j = await r.json();
     if (!j.ok) return null;
     if (Array.isArray(j.dates) && j.dates.length) {
@@ -1494,7 +1496,7 @@ async function syncAccountDates() {
       j.dates.forEach(d => s.add(d));
       try { localStorage.setItem('pl_played', JSON.stringify([...s].sort())); } catch (e) {}
     }
-    // account-scoped one-per-day gate: refresh today's lock + result straight from the account
+    // one-per-day gate: refresh today's lock + result straight from the server (account or guest)
     if (j.today) { setDailyDone({ ovr: j.today.ovr, rank: j.today.rank, total: j.today.total }); updateDailyBtn(); return j.today; }
     return null;
   } catch (e) { return null; }
@@ -1639,8 +1641,7 @@ function showDailyInfo() {
 function hideDailyInfo() { const el = $('dailyInfo'); if (el) el.style.display = 'none'; }
 async function startDailyChallenge() {
   closeOverlay('menu');
-  let serverToday = null;
-  if (account) serverToday = await syncAccountDates();   // fresh account result, authoritative
+  const serverToday = await syncAccountDates();   // fresh server result (account or guest), authoritative
   const done = serverToday || getDailyStatus();
   if (done) { rankReveal(done.ovr, done.rank, done.total, false, true); return; }
   reset();                          // reset() clears dailyMode/lucky, so set them right after
