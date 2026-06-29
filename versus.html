@@ -94,13 +94,21 @@
     border-top-color:var(--accent); margin:18px auto 0; animation:spin 0.8s linear infinite; display:none; }
   @keyframes spin { to { transform:rotate(360deg); } }
 
-  /* ---------- mode picker ---------- */
-  .mode-picker { display:flex; gap:7px; justify-content:center; margin-bottom:10px; }
-  .mp-btn { font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:1.5px; text-transform:uppercase;
-    padding:7px 13px; border-radius:20px; border:1px solid var(--line); background:transparent;
-    color:var(--muted); cursor:pointer; transition:border-color .18s,background .18s,color .18s; }
-  .mp-btn.active { border-color:var(--accent2); background:rgba(25,198,255,.12); color:var(--ink); }
-  .mp-btn:hover:not(.active){ border-color:rgba(120,160,210,.35); color:var(--ink); }
+  /* ---------- challenge lobby ---------- */
+  .lobby-modes { display:grid; grid-template-columns:repeat(3,1fr); gap:9px; margin-bottom:20px; }
+  .lmode { background:rgba(255,255,255,.04); border:1.5px solid var(--line); border-radius:13px;
+    padding:14px 8px 12px; cursor:pointer; text-align:center; transition:all .18s; color:var(--ink); }
+  .lmode.active { border-color:var(--accent2); background:rgba(25,198,255,.1); }
+  .lmode:hover:not(.active){ border-color:rgba(120,160,210,.38); background:rgba(255,255,255,.06); }
+  .lmode .lm-icon { font-size:22px; margin-bottom:6px; }
+  .lmode .lm-name { font-family:'Oswald',sans-serif; font-size:13px; font-weight:700; letter-spacing:1.5px;
+    text-transform:uppercase; margin-bottom:3px; }
+  .lmode .lm-desc { font-size:10.5px; color:var(--muted); letter-spacing:.2px; line-height:1.3; }
+  .lmode.active .lm-desc { color:rgba(25,198,255,.8); }
+  .lobby-link-box { border:1px solid var(--line); border-radius:11px; background:rgba(0,0,0,.3);
+    padding:13px 14px; margin-bottom:18px; }
+  .lobby-link-url { font-size:11.5px; color:var(--dim); word-break:break-all; line-height:1.5;
+    font-family:monospace; margin-bottom:10px; }
 
   /* ---------- stats ---------- */
   .stat-top { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
@@ -450,29 +458,13 @@
     <div class="vs-card">
       <div id="ratingChip" class="rating-chip"></div>
       <button class="btn" id="findBtn">⚔️ Find Match</button>
-      <div id="mmFriendSection">
-        <div style="display:flex;align-items:center;gap:10px;margin:18px 0 14px;">
-          <div style="flex:1;height:1px;background:var(--line)"></div>
-          <span style="font-size:11px;letter-spacing:1.5px;color:var(--dim);text-transform:uppercase;white-space:nowrap">or play a friend</span>
-          <div style="flex:1;height:1px;background:var(--line)"></div>
-        </div>
-        <div class="mode-picker" id="modePicker">
-          <button class="mp-btn active" data-mode="classic">⚔️ Classic</button>
-          <button class="mp-btn" data-mode="legends">🟣 Legends</button>
-          <button class="mp-btn" data-mode="hard">🔒 Hard</button>
-        </div>
-        <div id="modeDesc" style="font-size:11.5px;color:var(--dim);text-align:center;margin-bottom:12px;letter-spacing:.2px;">Standard draft · all tiers</div>
-        <button class="btn ghost" id="mmChalBtn" style="width:100%;font-size:13px;padding:11px 20px;letter-spacing:1.5px;">🔗 Copy Challenge Link</button>
-        <div style="color:var(--dim);font-size:11.5px;margin-top:7px;letter-spacing:.2px;text-align:center;">Play 1v1 with a friend · No Elo change</div>
-        <div id="mmChalCopied" style="display:none;color:var(--accent2);font-size:12px;margin-top:6px;letter-spacing:.3px;text-align:center;">✓ Link copied! Share it with a friend.</div>
+      <div style="display:flex;align-items:center;gap:10px;margin:18px 0 14px;">
+        <div style="flex:1;height:1px;background:var(--line)"></div>
+        <span style="font-size:11px;letter-spacing:1.5px;color:var(--dim);text-transform:uppercase;white-space:nowrap">or play a friend</span>
+        <div style="flex:1;height:1px;background:var(--line)"></div>
       </div>
-      <div id="mmLobby" style="display:none;text-align:center;padding-top:6px;">
-        <div style="font-family:'Oswald',sans-serif;font-size:15px;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;">Waiting in Lobby</div>
-        <div id="mmLobbyMode" style="display:inline-block;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent2);border:1px solid rgba(25,198,255,.4);background:rgba(25,198,255,.07);border-radius:20px;padding:5px 13px 4px;margin-bottom:14px;">⚔️ Classic</div>
-        <div class="spinner" style="display:block;width:28px;height:28px;border-width:3px;margin:0 auto 14px;"></div>
-        <div style="color:var(--muted);font-size:13px;margin-bottom:16px;line-height:1.5;">Share the link — the match starts automatically when your friend joins.</div>
-        <button class="btn ghost" id="mmLobbyCancel" style="font-size:13px;padding:9px 18px;">Cancel</button>
-      </div>
+      <button class="btn ghost" id="mmChalBtn" style="width:100%;font-size:13px;padding:11px 20px;letter-spacing:1.5px;">🔗 Challenge a Friend</button>
+      <div style="color:var(--dim);font-size:11.5px;margin-top:7px;letter-spacing:.2px;text-align:center;">Pick a mode · Share a link · No Elo change</div>
       <div class="spinner" id="mmSpin"></div>
       <div class="status" id="mmStatus"></div>
       <div style="margin-top:18px; display:none;" id="cancelWrap">
@@ -480,6 +472,48 @@
       </div>
       <div style="margin-top:16px;" id="statsWrap">
         <button class="btn ghost" id="statsBtn" style="font-size:13px; padding:9px 18px;">📊 My Stats</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Challenge Lobby -->
+  <div class="screen" id="lobbyScreen">
+    <div class="hero" style="margin:24px 0 20px">
+      <div class="kick">Private Match</div>
+      <h1>Challenge <i>Lobby</i></h1>
+      <p>Pick a mode, copy the link, and wait for your friend to join.</p>
+    </div>
+    <div class="vs-card" style="max-width:460px">
+      <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;text-align:center;">Select Mode</div>
+      <div class="lobby-modes" id="lobbyModePicker">
+        <button class="lmode active" data-mode="classic">
+          <div class="lm-icon">⚔️</div>
+          <div class="lm-name">Classic</div>
+          <div class="lm-desc">Standard draft · all tiers</div>
+        </button>
+        <button class="lmode" data-mode="legends">
+          <div class="lm-icon">🟣</div>
+          <div class="lm-name">Legends</div>
+          <div class="lm-desc">Purple legends only</div>
+        </button>
+        <button class="lmode" data-mode="hard">
+          <div class="lm-icon">🔒</div>
+          <div class="lm-name">Hard</div>
+          <div class="lm-desc">Ratings hidden</div>
+        </button>
+      </div>
+      <div class="lobby-link-box">
+        <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Challenge Link</div>
+        <div class="lobby-link-url" id="lobbyLinkUrl">—</div>
+        <button class="btn" id="lobbyCopyBtn" style="width:100%;font-size:13px;padding:10px 20px;letter-spacing:1.5px;">🔗 Copy Link</button>
+        <div id="lobbyCopied" style="display:none;color:var(--accent2);font-size:12px;margin-top:8px;text-align:center;letter-spacing:.3px;">✓ Copied! Share it with your friend.</div>
+      </div>
+      <div id="lobbyWaitState" style="text-align:center;padding:4px 0 6px;">
+        <div class="spinner" style="display:block;width:26px;height:26px;border-width:3px;margin:0 auto 12px;"></div>
+        <div style="color:var(--muted);font-size:13px;line-height:1.5;">Waiting for your friend to open the link and accept…<br><span style="font-size:11.5px;color:var(--dim);">The match starts automatically when they join.</span></div>
+      </div>
+      <div style="text-align:center;margin-top:20px;">
+        <button class="btn ghost" id="lobbyCancelBtn" style="font-size:13px;padding:10px 22px;">‹ Back</button>
       </div>
     </div>
   </div>
@@ -997,7 +1031,7 @@ function handleChallengeMsg(msg){
     if (atBatStarted && !matchResolved) return; // mid-match, ignore
     pendingChallenge = { replyId: d.replyId, replyClientId: d.clientId, name: d.name || 'Challenger' };
     if (lobbyWaiting){
-      cancelLobby();
+      lobbyWaiting = false;
       acceptChallengeNotif();
     } else {
       showChallengeNotif(d.name || 'Challenger');
@@ -1082,23 +1116,30 @@ function hideChallengeNotif(){
 
 function copyChallengeLinkFn(){
   const link = location.origin + '/versus?ch=' + encodeURIComponent(personId()) + '&cn=' + encodeURIComponent(displayName()) + '&mode=' + gameMode;
-  const onCopied = () => {
-    ['chalCopied','mmChalCopied'].forEach(id => { const c=$(id); if(c){ c.style.display=''; setTimeout(()=>{ if(c) c.style.display='none'; },2000); } });
-    showLobby();
-  };
-  if (navigator.clipboard) { navigator.clipboard.writeText(link).then(onCopied).catch(()=>{ prompt('Copy this link:', link); onCopied(); }); }
-  else { try { prompt('Copy this link:', link); onCopied(); } catch(e){} }
+  const done = () => { const c=$('chalCopied'); if(c){ c.style.display=''; setTimeout(()=>{ if(c) c.style.display='none'; },3000); } };
+  if (navigator.clipboard) { navigator.clipboard.writeText(link).then(done).catch(()=>{ prompt('Copy this link:', link); }); }
+  else { try { prompt('Copy this link:', link); done(); } catch(e){} }
 }
-function showLobby(){
+function challengeLink(){
+  return location.origin + '/versus?ch=' + encodeURIComponent(personId()) + '&cn=' + encodeURIComponent(displayName()) + '&mode=' + gameMode;
+}
+function updateLobbyLink(){
+  const link = challengeLink();
+  const el = $('lobbyLinkUrl'); if (el) el.textContent = link;
+  document.querySelectorAll('#lobbyModePicker .lmode').forEach(b => b.classList.toggle('active', b.dataset.mode === gameMode));
+  return link;
+}
+function openLobby(){
   lobbyWaiting = true;
-  if ($('mmLobbyMode')) $('mmLobbyMode').textContent = MODE_LABEL[gameMode] || '⚔️ Classic';
-  if ($('mmFriendSection')) $('mmFriendSection').style.display = 'none';
-  if ($('mmLobby')) $('mmLobby').style.display = '';
+  gameMode = 'classic'; // reset to default each time
+  updateLobbyLink();
+  const copied=$('lobbyCopied'); if(copied) copied.style.display='none';
+  showScreen('lobbyScreen');
 }
 function cancelLobby(){
   lobbyWaiting = false;
-  if ($('mmLobby')) $('mmLobby').style.display = 'none';
-  if ($('mmFriendSection')) $('mmFriendSection').style.display = '';
+  showScreen('mmScreen');
+  updateRatingChip();
 }
 async function setOnlineStatus(s){
   myOnlineStatus = s;
@@ -1181,8 +1222,6 @@ async function cancelSearch(){
 function resetMatch(){
   stopSearch();
   lobbyWaiting=false; _poolCache={};
-  if ($('mmLobby')) $('mmLobby').style.display='none';
-  if ($('mmFriendSection')) $('mmFriendSection').style.display='';
   friendlyMode=false; pendingChallenge=null;
   if ($('challengeNotif')) { gsap.killTweensOf($('challengeNotif')); $('challengeNotif').style.display='none'; }
   myBuild=null; oppBuild=null; atBatStarted=false; matchResolved=false; oppPresent=false; waitingArena=false;
@@ -2068,13 +2107,19 @@ $('chalDeclineBtn').onclick = () => { showScreen('mmScreen'); _incomingChalId=nu
 $('chalNotifAccept').onclick = () => { Sound.click(); acceptChallengeNotif(); };
 $('chalNotifDecline').onclick = () => { Sound.click(); declineChallengeNotif(); };
 $('challengeLinkBtn').onclick = () => { Sound.click(); copyChallengeLinkFn(); };
-$('mmChalBtn').onclick = () => { Sound.click(); copyChallengeLinkFn(); };
-$('mmLobbyCancel').onclick = () => { Sound.click(); cancelLobby(); };
-document.querySelectorAll('#modePicker .mp-btn').forEach(btn => {
+$('mmChalBtn').onclick = () => { Sound.click(); openLobby(); };
+$('lobbyCancelBtn').onclick = () => { Sound.click(); cancelLobby(); };
+$('lobbyCopyBtn').onclick = () => {
+  Sound.click();
+  const link = updateLobbyLink();
+  const done = () => { const c=$('lobbyCopied'); if(c){ c.style.display=''; setTimeout(()=>{ if(c)c.style.display='none'; },3000); } };
+  if (navigator.clipboard){ navigator.clipboard.writeText(link).then(done).catch(()=>{ prompt('Copy this link:',link); done(); }); }
+  else { try{ prompt('Copy this link:',link); done(); }catch(e){} }
+};
+document.querySelectorAll('#lobbyModePicker .lmode').forEach(btn => {
   btn.onclick = () => {
     gameMode = btn.dataset.mode;
-    document.querySelectorAll('#modePicker .mp-btn').forEach(b => b.classList.toggle('active', b===btn));
-    const desc = $('modeDesc'); if (desc) desc.textContent = MODE_DESC[gameMode] || '';
+    updateLobbyLink();
   };
 });
 // sign-in + rating on load
