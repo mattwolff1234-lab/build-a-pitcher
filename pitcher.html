@@ -640,8 +640,10 @@
   <div class="brand">
     <span class="mark">Pitching <i>Lab</i></span>
     <span class="tag">Draft Mode</span>
+    <span id="streakChip" class="streak-chip" title="Your daily streak" style="display:none">🔥 0</span>
     <span class="brand-rule"></span>
     <button id="muteBtn" class="mute" title="Toggle sound">🔊</button>
+    <button id="dailyBtn" class="coming-tab live dc-btn" title="Daily Challenge - same pitchers for everyone!">🎯 Daily</button>
     <a id="buildTab" class="coming-tab live" href="/batting" title="Build a Batter">🛠️ Build a Batter</a>
     <button id="menuBtn" class="mute" title="Menu">☰</button>
   </div>
@@ -766,6 +768,7 @@
       <div id="acctSlot"></div>
       <div class="menu-sec">Play</div>
       <a class="menu-item" href="/">🏠 Home</a>
+      <button class="menu-item" id="miDaily">🎯 Daily Challenge</button>
       <a class="menu-item" href="/versus">⚔️ 1v1 Live · Face Off</a>
       <div class="menu-sec">Your Stuff</div>
       <button class="menu-item" id="miHof">🏛️ My Hall of Fame</button>
@@ -808,6 +811,7 @@
       <div class="lb-tabs">
         <button class="lb-tab lb-scope-tab active" data-scope="global">All-Time</button>
         <button class="lb-tab lb-scope-tab" data-scope="daily">Today</button>
+        <button class="lb-tab lb-scope-tab" data-scope="challenge">🎯 Daily Challenge</button>
       </div>
       <div class="lb-tabs lb-sort-tabs" id="lbSortTabs"></div>
       <div id="lbList" class="lb-list"></div>
@@ -1183,6 +1187,8 @@ async function init() {
   document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.overlay.show').forEach(o => closeOverlay(o.id)); });
   renderAcct();
   initGoogle();
+  renderStreakChip();
+  updateDailyBtn();
 
   // deep-link from the home-page menu, e.g. /pitching#leaderboard → open that panel on load
   const h = (location.hash || '').replace('#', '').toLowerCase();
@@ -1190,6 +1196,7 @@ async function init() {
   else if (h === 'leaderboard' || h === 'lb') openLeaderboard('global');
   else if (h === 'how' || h === 'howtoplay') openOverlay('howModal');
   else if (h === 'achievements' || h === 'ach') { const o = () => (window.Ach ? Ach.open() : setTimeout(o, 120)); o(); }
+  else if (h === 'daily') setTimeout(startDailyChallenge, 350);
 }
 
 function toast(msg) {
@@ -1227,7 +1234,11 @@ async function onGoogleCredential(resp) {
     const r = await fetch('/api/account', { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'login', idToken: resp.credential }) });
     const j = await r.json();
-    if (j.ok) { saveAccount({ sub: j.sub, email: j.email, name: j.name, picture: j.picture, sessionToken: j.sessionToken }); toast('Signed in as ' + (j.name || j.email)); }
+    if (j.ok) {
+      saveAccount({ sub: j.sub, email: j.email, name: j.name, picture: j.picture, sessionToken: j.sessionToken });
+      if (typeof j.streak === 'number' && j.streak >= streak.count) { streak.count = j.streak; streak.best = Math.max(streak.best, j.bestStreak || j.streak); saveStreak(); renderStreakChip(); }
+      toast('Signed in as ' + (j.name || j.email));
+    }
     else toast('Sign-in failed');
   } catch (e) { toast('Sign-in failed'); }
 }
@@ -1359,21 +1370,23 @@ function buildWeights() {
     cumWeights.push(totalWeight);
   }
 }
-function pickWeighted() {
-  const r = Math.random() * totalWeight;
+function pickWeighted(rng) {
+  const rand = rng || Math.random;
+  const r = rand() * totalWeight;
   let lo = 0, hi = cumWeights.length - 1;
   while (lo < hi) { const mid = (lo + hi) >> 1; if (cumWeights[mid] < r) lo = mid + 1; else hi = mid; }
   return DATA.pool[lo];
 }
 const LEGEND_ODDS = 0.03;
-function randPitcher() {
+function randPitcher(rng) {
+  const rand = rng || Math.random;
   const legs = DATA.legends || [];
-  if (legs.length && Math.random() < LEGEND_ODDS) {
+  if (legs.length && rand() < LEGEND_ODDS) {
     const avail = legs.filter(p => !state.used.has(p.name));
-    if (avail.length) return avail[Math.floor(Math.random() * avail.length)];
+    if (avail.length) return avail[Math.floor(rand() * avail.length)];
   }
   let p, tries = 0;
-  do { p = pickWeighted(); } while (state.used.has(p.name) && ++tries < 50);
+  do { p = pickWeighted(rng); } while (state.used.has(p.name) && ++tries < 50);
   return p;
 }
 
@@ -2905,12 +2918,30 @@ function openBuildDetails(entryId) {
   $('bdShare').onclick = () => shareBuild(entry);
   openOverlay('buildModal');
 }
+async function loadChallengeBoard() {
+  const list = $('lbList');
+  $('lbSortTabs').innerHTML = '';   // daily board has no sort options
+  list.innerHTML = '<div class="lb-empty">Loading…</div>';
+  try {
+    const res = await fetch(`/api/score?action=challengeLeaderboard&game=${lbGame}&limit=200`);
+    const data = await res.json();
+    if (!data.ok) throw new Error();
+    let html = `<div class="lb-empty" style="color:var(--accent2);border-color:rgba(25,198,255,.25)">🎯 Today's Daily Challenge · ${data.total} player${data.total === 1 ? '' : 's'} played</div>`;
+    if (!data.rows.length) html += '<div class="lb-empty">No one has played today yet - be the first!</div>';
+    else html += data.rows.map((r, i) => {
+      const rank = i + 1, cls = rank <= 3 ? 'top' + rank : '';
+      return `<div class="lb-row ${cls}"><div class="rank">${rank}</div><div class="nm">${escapeHTML(r.name)}</div><div class="ov c-${tier(r.ovr)}">${r.ovr}</div></div>`;
+    }).join('');
+    list.innerHTML = html;
+  } catch (e) { list.innerHTML = '<div class="lb-empty">Couldn\'t load the daily board.</div>'; }
+}
 async function loadLeaderboard(scope = lbScope, game = lbGame, sort = lbSort) {
-  lbScope = scope === 'daily' ? 'daily' : 'global';
+  lbScope = (scope === 'daily' || scope === 'challenge') ? scope : 'global';
   lbGame = game === 'batter' ? 'batter' : 'pitcher';
   lbSort = sortOptionsFor(lbGame).some(o => o.key === sort) ? sort : 'ovr';
   document.querySelectorAll('.lb-scope-tab').forEach(t => t.classList.toggle('active', t.dataset.scope === lbScope));
   document.querySelectorAll('.lb-game-tab').forEach(t => t.classList.toggle('active', t.dataset.game === lbGame));
+  if (lbScope === 'challenge') return loadChallengeBoard();
   renderSortTabs(lbGame);
   const list = $('lbList');
   list.innerHTML = '<div class="lb-empty">Loading…</div>';
