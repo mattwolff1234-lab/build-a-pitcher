@@ -533,6 +533,25 @@
   .hof-card .hc-money { font-family:'Oswald',sans-serif; font-size:14px; font-weight:700; color:var(--gold); margin-top:3px; }
   .hof-card .hc-del { position:absolute; top:8px; right:10px; background:rgba(0,0,0,.32); border:none; color:rgba(255,255,255,.7); font-size:13px; cursor:pointer; width:24px; height:24px; border-radius:50%; line-height:22px; padding:0; }
   .hof-card .hc-del:hover { background:rgba(220,60,60,.75); color:#fff; }
+
+  /* ---- Daily Habit Loop ---- */
+  .streak-chip { display:inline-flex; align-items:center; gap:4px; padding:5px 9px; border-radius:8px;
+    font-family:'Oswald',sans-serif; font-size:13px; font-weight:600; letter-spacing:.5px;
+    background:rgba(255,122,24,.10); border:1px solid rgba(255,122,24,.30); color:var(--ink);
+    cursor:default; white-space:nowrap; }
+  .dc-btn { color:var(--gold) !important; border-color:rgba(255,206,58,.35) !important;
+    background:rgba(255,206,58,.07) !important; }
+  .dc-btn.done { color:var(--muted) !important; border-color:var(--line) !important;
+    background:rgba(255,255,255,.03) !important; }
+  @media (max-width:560px) { .streak-chip { font-size:11px; padding:4px 7px; } }
+  .day-toast { position:fixed; bottom:80px; left:50%; transform:translateX(-50%); z-index:201;
+    display:none; flex-direction:column; align-items:center; text-align:center;
+    background:linear-gradient(135deg,#101e2e,#0a1520); border:1.5px solid rgba(255,206,58,.45);
+    color:var(--ink); padding:15px 22px; border-radius:14px; font-size:14px; font-weight:600;
+    box-shadow:0 12px 40px rgba(0,0,0,.65),0 0 30px rgba(255,206,58,.08); max-width:320px;
+    line-height:1.4; pointer-events:none; }
+  .dc-header-tag { background:rgba(255,206,58,.12); border-color:rgba(255,206,58,.4) !important;
+    color:var(--gold) !important; }
 </style>
 </head>
 <body>
@@ -550,6 +569,8 @@
     <span class="brand-rule"></span>
     <button id="muteBtn" class="mute" title="Toggle sound">🔊</button>
     <a id="buildTab" class="coming-tab live" href="/batting" title="Build a Batter">🛠️ Build a Batter</a>
+    <button id="dailyBtn" class="coming-tab live dc-btn" title="Daily Challenge — same pitchers for everyone!">🎯 Daily</button>
+    <span id="streakChip" class="streak-chip" title="Your daily streak" style="display:none">🔥 0</span>
     <button id="menuBtn" class="mute" title="Menu">☰</button>
   </div>
 </header>
@@ -672,6 +693,7 @@
       <a class="menu-item" href="/">🏠 Home</a>
       <a class="menu-item" href="/versus">⚔️ 1v1 Live · Face Off</a>
       <a class="menu-item" href="/versus#stats">📊 1v1 Stats</a>
+      <button class="menu-item" id="miDaily">🎯 Daily Challenge</button>
       <button class="menu-item" id="miHof">🏛️ My Hall of Fame</button>
       <button class="menu-item" id="miLb">🏆 Leaderboard</button>
       <button class="menu-item" id="miHow">📖 How to Play</button>
@@ -703,6 +725,7 @@
       <div class="lb-tabs">
         <button class="lb-tab lb-scope-tab active" data-scope="global">All-Time</button>
         <button class="lb-tab lb-scope-tab" data-scope="daily">Today</button>
+        <button class="lb-tab lb-scope-tab" data-scope="challenge">🎯 Daily Challenge</button>
       </div>
       <div class="lb-tabs lb-sort-tabs" id="lbSortTabs"></div>
       <div id="lbList" class="lb-list"></div>
@@ -989,7 +1012,16 @@ async function init() {
   $('boostBtn').onclick = boost;
   $('snagLeftBtn').onclick = () => snag(-1);
   $('snagRightBtn').onclick = () => snag(1);
-  $('resetBtn').onclick = reset;
+  $('resetBtn').onclick = () => {
+    if (dailyMode) {
+      dailyMode = false;
+      dailyRng = null;
+      const tagEl = document.querySelector('header .tag');
+      if (tagEl) { tagEl.textContent = 'Draft Mode'; tagEl.classList.remove('dc-header-tag'); }
+      updateDailyBtn();
+    }
+    reset();
+  };
   $('muteBtn').onclick = () => { const m = !Sound.isMuted(); Sound.setMuted(m); $('muteBtn').textContent = m ? '🔇' : '🔊'; };
   $('simBtn').onclick = runCareerPlaythrough;
   $('buildTab').onclick = () => Sound.click();
@@ -1011,6 +1043,8 @@ async function init() {
 
   // menu + overlays
   $('menuBtn').onclick = () => { Sound.click(); openOverlay('menu'); };
+  $('miDaily').onclick = () => startDailyChallenge();
+  $('dailyBtn').onclick = () => startDailyChallenge();
   $('miHof').onclick = () => { closeOverlay('menu'); openHof(); };
   $('saveHofBtn').onclick = () => saveToHof($('saveHofBtn'));
   $('miLb').onclick = () => { closeOverlay('menu'); openLeaderboard('global'); };
@@ -1035,12 +1069,15 @@ async function init() {
   document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.overlay.show').forEach(o => closeOverlay(o.id)); });
   renderAcct();
   initGoogle();
+  renderStreakChip();
+  updateDailyBtn();
 
   // deep-link from the home-page menu, e.g. /pitching#leaderboard → open that panel on load
   const h = (location.hash || '').replace('#', '').toLowerCase();
   if (h === 'hof') openHof();
   else if (h === 'leaderboard' || h === 'lb') openLeaderboard('global');
   else if (h === 'how' || h === 'howtoplay') openOverlay('howModal');
+  else if (h === 'daily') setTimeout(startDailyChallenge, 300);
 }
 
 function toast(msg) {
@@ -1196,6 +1233,159 @@ async function deleteSave(id) {
   renderHof();
 }
 
+/* ===== Daily Habit Loop ===== */
+function todayUTC() {
+  const d = new Date();
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
+}
+
+function getOrCreateGuestId() {
+  let gid = null;
+  try { gid = localStorage.getItem('pl_guestId'); } catch(e) {}
+  if (!gid) {
+    gid = (Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)).slice(0, 36);
+    try { localStorage.setItem('pl_guestId', gid); } catch(e) {}
+  }
+  return gid;
+}
+
+let streak = { count: 0, best: 0, lastDate: null };
+try { const _s = JSON.parse(localStorage.getItem('pl_streak') || 'null'); if (_s && typeof _s === 'object') streak = _s; } catch(e) {}
+streak.count = Number(streak.count) || 0;
+streak.best = Number(streak.best) || 0;
+
+function markPlayedToday() {
+  const today = todayUTC();
+  if (streak.lastDate === today) return false;
+  const d = new Date(today + 'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate() - 1);
+  const yd = d.toISOString().slice(0, 10);
+  streak.count = (streak.lastDate === yd) ? (streak.count + 1) : 1;
+  streak.best = Math.max(streak.best, streak.count);
+  streak.lastDate = today;
+  try { localStorage.setItem('pl_streak', JSON.stringify(streak)); } catch(e) {}
+  renderStreakChip();
+  return true;
+}
+
+function renderStreakChip() {
+  const chip = $('streakChip');
+  if (!chip) return;
+  if (streak.count >= 2) {
+    chip.textContent = `🔥 ${streak.count}`;
+    chip.style.display = 'inline-flex';
+  } else {
+    chip.style.display = 'none';
+  }
+}
+
+const STREAK_MILESTONES = [3, 7, 14, 30, 100];
+function checkStreakMilestone(n) {
+  if (!STREAK_MILESTONES.includes(n)) return;
+  const msgs = {
+    3: '3-day streak! You\'re on a roll. 🔥',
+    7: 'One full week! See you tomorrow? 🔥🔥',
+    14: 'Two weeks straight. You\'re hooked. 🔥🔥🔥',
+    30: '30 days! That\'s legendary dedication. 🏆',
+    100: '100 days. You are the absolute GOAT. 🐐',
+  };
+  dayToast(msgs[n] || `${n}-day streak!`);
+  Sound.legend();
+}
+
+function dayToast(msg) {
+  let t = $('dayToast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'dayToast';
+    t.className = 'day-toast';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.display = 'flex';
+  gsap.killTweensOf(t);
+  gsap.fromTo(t, { y: 14, opacity: 0, scale: .94 }, { y: 0, opacity: 1, scale: 1, duration: .45, ease: 'back.out(1.5)' });
+  clearTimeout(t._tmr);
+  t._tmr = setTimeout(() => gsap.to(t, { opacity: 0, y: -10, duration: .4, onComplete: () => { t.style.display = 'none'; } }), 4500);
+}
+
+let dailyMode = false;
+let dailyRng = null;
+
+function dcKey() { return `pl_dc_${todayUTC()}`; }
+function getDailyStatus() {
+  try { return JSON.parse(localStorage.getItem(dcKey()) || 'null'); } catch(e) { return null; }
+}
+function setDailyDone(data) {
+  try { localStorage.setItem(dcKey(), JSON.stringify(data)); } catch(e) {}
+}
+
+function updateDailyBtn() {
+  const btn = $('dailyBtn');
+  if (!btn) return;
+  const done = getDailyStatus();
+  if (done) {
+    btn.textContent = `✅ Done`;
+    btn.classList.add('done');
+    btn.title = `Today: ${done.ovr} OVR · #${done.rank} of ${done.total}`;
+  } else {
+    btn.textContent = `🎯 Daily`;
+    btn.classList.remove('done');
+    btn.title = 'Daily Challenge — same pitchers for everyone today!';
+  }
+}
+
+function startDailyChallenge() {
+  closeOverlay('menu');
+  const done = getDailyStatus();
+  if (done) {
+    const pct = done.total > 1 ? Math.round((1 - (done.rank - 1) / done.total) * 100) : 100;
+    dayToast(`Today: ${done.ovr} OVR · #${done.rank} of ${done.total} players (top ${pct}%) 🎯\nCome back tomorrow!`);
+    return;
+  }
+  dailyMode = true;
+  dailyRng = seededRandom(`pl-daily-${todayUTC()}-pitcher-v1`);
+  reset();
+  const tagEl = document.querySelector('header .tag');
+  if (tagEl) { tagEl.textContent = '🎯 Daily Challenge'; tagEl.classList.add('dc-header-tag'); }
+  dayToast('Daily Challenge started! Same pitchers for everyone today.');
+}
+
+async function finishDailyChallenge(ovr, name, build) {
+  if (!dailyMode) return;
+  dailyMode = false;
+  dailyRng = null;
+  const tagEl = document.querySelector('header .tag');
+  if (tagEl) { tagEl.textContent = 'Draft Mode'; tagEl.classList.remove('dc-header-tag'); }
+
+  let rank = 1, total = 1;
+  try {
+    const body = { action: 'challengeSubmit', game: HOF_GAME, ovr, name, build };
+    if (account) { body.sub = account.sub; body.sessionToken = account.sessionToken; }
+    else body.guestId = getOrCreateGuestId();
+    const r = await fetch('/api/account', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const j = await r.json();
+    if (j.ok) { rank = j.rank; total = j.total; }
+  } catch(e) {}
+
+  setDailyDone({ ovr, rank, total });
+  updateDailyBtn();
+  const pct = total > 1 ? Math.round((1 - (rank - 1) / total) * 100) : 100;
+  dayToast(`🎯 Daily done! ${ovr} OVR · #${rank} of ${total} today (top ${pct}%)`);
+}
+
+async function onGameComplete() {
+  const wasFirst = markPlayedToday();
+  if (!wasFirst) return;
+  checkStreakMilestone(streak.count);
+  if (account) {
+    try {
+      await fetch('/api/account', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'updateStreak', sub: account.sub, sessionToken: account.sessionToken }) });
+    } catch(e) {}
+  }
+}
+
 const TIER_ODDS = { diamond: 0.10, gold: 0.20, silver: 0.24, bronze: 0.28, grey: 0.18 };
 let cumWeights = [], totalWeight = 0;
 function buildWeights() {
@@ -1208,21 +1398,23 @@ function buildWeights() {
     cumWeights.push(totalWeight);
   }
 }
-function pickWeighted() {
-  const r = Math.random() * totalWeight;
+function pickWeighted(rng) {
+  rng = rng || Math.random;
+  const r = rng() * totalWeight;
   let lo = 0, hi = cumWeights.length - 1;
   while (lo < hi) { const mid = (lo + hi) >> 1; if (cumWeights[mid] < r) lo = mid + 1; else hi = mid; }
   return DATA.pool[lo];
 }
 const LEGEND_ODDS = 0.03;
-function randPitcher() {
+function randPitcher(rng) {
+  rng = rng || Math.random;
   const legs = DATA.legends || [];
-  if (legs.length && Math.random() < LEGEND_ODDS) {
+  if (legs.length && rng() < LEGEND_ODDS) {
     const avail = legs.filter(p => !state.used.has(p.name));
-    if (avail.length) return avail[Math.floor(Math.random() * avail.length)];
+    if (avail.length) return avail[Math.floor(rng() * avail.length)];
   }
   let p, tries = 0;
-  do { p = pickWeighted(); } while (state.used.has(p.name) && ++tries < 50);
+  do { p = pickWeighted(rng); } while (state.used.has(p.name) && ++tries < 50);
   return p;
 }
 
@@ -1271,11 +1463,12 @@ function spin() {
   $('spinBtn').disabled = true;
   $('landed').classList.remove('show');
 
-  const target = randPitcher();
+  const rng = dailyMode ? dailyRng : undefined;
+  const target = randPitcher(rng);
   const strip = [];
   const STRIP_LEN = 45;
   const targetIndex = STRIP_LEN - 6;
-  for (let i = 0; i < STRIP_LEN; i++) strip.push(i === targetIndex ? target : randPitcher());
+  for (let i = 0; i < STRIP_LEN; i++) strip.push(i === targetIndex ? target : randPitcher(rng));
 
   const track = $('track');
   gsap.set(track, { x: 0, filter: 'none' });
@@ -2164,12 +2357,18 @@ function finishPlaythrough(career) {
   }
 
   buildCard(career, verdict, voteLine);
+  const _isDailyOnFinish = dailyMode;
   setTimeout(() => {
     $('careerCard').style.display = 'block';
     gsap.fromTo($('careerCard'), { y: 14, opacity: 0, scale: .97 }, { y: 0, opacity: 1, scale: 1, duration: .55, ease: 'back.out(1.5)' });
     $('submitRow').style.display = 'flex';
     const shb = $('saveHofBtn'); shb.disabled = false; shb.textContent = '💾 Save to my Hall of Fame';
     gsap.fromTo($('submitRow'), { y: 8, opacity: 0 }, { y: 0, opacity: 1, duration: .4, delay: .2 });
+    // Streak + daily challenge completion
+    onGameComplete();
+    if (_isDailyOnFinish) {
+      finishDailyChallenge(state.finalOvr, state.simName || 'Anonymous', { slots: state.build, career: state.career });
+    }
   }, 550);
 }
 
@@ -2360,14 +2559,48 @@ function openBuildDetails(entryId) {
   openOverlay('buildModal');
 }
 async function loadLeaderboard(scope = lbScope, game = lbGame, sort = lbSort) {
-  lbScope = scope === 'daily' ? 'daily' : 'global';
+  lbScope = (scope === 'daily' || scope === 'challenge') ? scope : 'global';
   lbGame = game === 'batter' ? 'batter' : 'pitcher';
   lbSort = sortOptionsFor(lbGame).some(o => o.key === sort) ? sort : 'ovr';
   document.querySelectorAll('.lb-scope-tab').forEach(t => t.classList.toggle('active', t.dataset.scope === lbScope));
   document.querySelectorAll('.lb-game-tab').forEach(t => t.classList.toggle('active', t.dataset.game === lbGame));
-  renderSortTabs(lbGame);
   const list = $('lbList');
   list.innerHTML = '<div class="lb-empty">Loading…</div>';
+
+  if (lbScope === 'challenge') {
+    // Daily challenge leaderboard — always OVR-sorted, one entry per player per day
+    $('lbSortTabs').innerHTML = '';
+    try {
+      const res = await fetch(`/api/account?action=challengeLeaderboard&game=${lbGame}&limit=50`);
+      const data = await res.json();
+      if (!data.ok) throw new Error();
+      const myStatus = getDailyStatus();
+      let html = '';
+      if (myStatus) {
+        const pct = data.total > 1 ? Math.round((1 - (myStatus.rank - 1) / data.total) * 100) : 100;
+        html += `<div class="lb-sub" style="text-align:center;font-size:12px;color:var(--accent2);padding:4px 0 10px">✅ You: ${myStatus.ovr} OVR · #${myStatus.rank} of ${data.total} (top ${pct}%)</div>`;
+      } else {
+        html += `<div class="lb-sub" style="text-align:center;font-size:12px;color:var(--gold);padding:4px 0 10px;cursor:pointer" id="lbDcPrompt">🎯 Play today's challenge!</div>`;
+      }
+      if (!data.rows.length) {
+        html += '<div class="lb-empty">No entries yet — be the first today!</div>';
+      } else {
+        html += data.rows.map((r, i) => {
+          const rank = i + 1;
+          const cls = rank <= 3 ? 'top' + rank : '';
+          return `<div class="lb-row ${cls}"><div class="rank">${rank}</div><div class="nm">${escapeHTML(r.name)}</div><div class="ov c-${tier(r.ovr)}">${r.ovr}</div><div class="chev"></div></div>`;
+        }).join('');
+      }
+      list.innerHTML = html;
+      const prompt = $('lbDcPrompt');
+      if (prompt) prompt.onclick = () => { closeOverlay('lbModal'); startDailyChallenge(); };
+    } catch(e) {
+      list.innerHTML = '<div class="lb-empty">Couldn\'t load challenge leaderboard.</div>';
+    }
+    return;
+  }
+
+  renderSortTabs(lbGame);
   try {
     const meParam = myEntryId ? `&me=${myEntryId}` : '';
     const res = await fetch(`/api/score?scope=${lbScope}&limit=200&game=${lbGame}&sort=${lbSort}${meParam}`);

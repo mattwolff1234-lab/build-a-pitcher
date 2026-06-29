@@ -93,6 +93,22 @@ function ensure() {
       await sql`ALTER TABLE pvp_history ADD COLUMN IF NOT EXISTS opp_key text`;
       await sql`CREATE INDEX IF NOT EXISTS idx_pvp_history_player ON pvp_history (player_key, created_at DESC)`;
       await sql`CREATE INDEX IF NOT EXISTS idx_pvp_history_opp_key ON pvp_history (opp_key) WHERE opp_key IS NOT NULL`;
+      // Daily habit loop: streak tracking + daily challenge results
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS current_streak INT NOT NULL DEFAULT 0`;
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS best_streak INT NOT NULL DEFAULT 0`;
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_active_date DATE`;
+      await sql`CREATE TABLE IF NOT EXISTS daily_scores (
+        id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+        player_key TEXT NOT NULL,
+        game TEXT NOT NULL DEFAULT 'pitcher',
+        challenge_date DATE NOT NULL DEFAULT CURRENT_DATE,
+        name TEXT,
+        ovr INT NOT NULL,
+        build JSONB,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        UNIQUE (player_key, game, challenge_date)
+      )`;
+      await sql`CREATE INDEX IF NOT EXISTS idx_daily_scores_date ON daily_scores (game, challenge_date, ovr DESC)`;
     })();
   }
   return ready;
@@ -437,6 +453,42 @@ module.exports = async (req, res) => {
         });
       }
 
+      if (action === 'updateStreak') {
+        const key = await pvpKey(body);
+        if (!key) return res.status(401).json({ ok: false, error: 'Not signed in' });
+        const [u] = await sql`SELECT last_active_date, current_streak, best_streak FROM users WHERE google_sub = ${key}`;
+        if (!u) return res.status(401).json({ ok: false, error: 'User not found' });
+        const now = new Date();
+        const today = now.toISOString().slice(0, 10);
+        const lastDate = u.last_active_date ? String(u.last_active_date).slice(0, 10) : null;
+        if (lastDate === today) {
+          return res.status(200).json({ ok: true, streak: u.current_streak, best: u.best_streak, firstToday: false });
+        }
+        const yesterdayD = new Date(now); yesterdayD.setUTCDate(yesterdayD.getUTCDate() - 1);
+        const yd = yesterdayD.toISOString().slice(0, 10);
+        const streak = lastDate === yd ? (u.current_streak || 0) + 1 : 1;
+        const best = Math.max(u.best_streak || 0, streak);
+        await sql`UPDATE users SET current_streak = ${streak}, best_streak = ${best}, last_active_date = ${today} WHERE google_sub = ${key}`;
+        return res.status(200).json({ ok: true, streak, best, firstToday: true });
+      }
+
+      if (action === 'challengeSubmit') {
+        const key = await pvpKey(body);
+        if (!key) return res.status(401).json({ ok: false, error: 'Not signed in' });
+        const game = gameOf(body.game);
+        const ovr = Math.max(1, Math.min(120, Math.round(Number(body.ovr) || 0)));
+        const name = String(body.name == null ? '' : body.name).trim().slice(0, 40) || 'Anonymous';
+        const build = body.build && typeof body.build === 'object' ? JSON.stringify(body.build) : null;
+        await sql`INSERT INTO daily_scores (player_key, game, name, ovr, build)
+          VALUES (${key}, ${game}, ${name}, ${ovr}, ${build}::jsonb)
+          ON CONFLICT (player_key, game, challenge_date) DO NOTHING`;
+        const [{ rank }] = await sql`SELECT count(*)::int + 1 AS rank FROM daily_scores
+          WHERE game = ${game} AND challenge_date = CURRENT_DATE AND ovr > ${ovr}`;
+        const [{ total }] = await sql`SELECT count(*)::int AS total FROM daily_scores
+          WHERE game = ${game} AND challenge_date = CURRENT_DATE`;
+        return res.status(200).json({ ok: true, rank: Number(rank), total: Number(total) });
+      }
+
       return res.status(400).json({ ok: false, error: 'Unknown action' });
     }
 
@@ -613,6 +665,19 @@ ${applying
 </body></html>`;
 
       return res.status(200).setHeader('content-type', 'text/html').send(html);
+    }
+
+    // GET ?action=challengeLeaderboard
+    if ((req.query && req.query.action) === 'challengeLeaderboard') {
+      await ensure();
+      const game = gameOf(req.query.game);
+      const limit = Math.max(1, Math.min(100, parseInt(req.query.limit, 10) || 50));
+      const rows = await sql`SELECT name, ovr FROM daily_scores
+        WHERE game = ${game} AND challenge_date = CURRENT_DATE
+        ORDER BY ovr DESC LIMIT ${limit}`;
+      const [{ total }] = await sql`SELECT count(*)::int AS total FROM daily_scores
+        WHERE game = ${game} AND challenge_date = CURRENT_DATE`;
+      return res.status(200).json({ ok: true, rows, total: Number(total) });
     }
 
     // GET ?action=list
