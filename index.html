@@ -569,21 +569,31 @@ $('installNowBtn').onclick = async () => {
 })();
 </script>
 <script>
+/* One-time "Join the Discord" invite popup (shows once per device). */
 (function(){
-  if (localStorage.getItem('gl_rebrand_seen')) return;
-  localStorage.setItem('gl_rebrand_seen', '1');
-  const ov = document.createElement('div');
-  ov.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.85);padding:24px';
-  ov.innerHTML = `
-    <div style="background:#111820;border:1px solid rgba(0,200,255,.25);border-radius:14px;padding:32px 28px;max-width:380px;text-align:center;font-family:Inter,sans-serif;color:#e8edf3">
-      <div style="font-family:Oswald,sans-serif;font-size:28px;font-weight:700;letter-spacing:1px;margin-bottom:6px">Welcome to GoatLab</div>
-      <div style="font-size:14px;color:#8fa4b8;margin-bottom:18px">Formerly Pitching Lab</div>
-      <div style="font-size:15px;line-height:1.6;margin-bottom:24px">
-        Same games you know, brand new name. More games are coming soon. Stay tuned!
-      </div>
-      <button onclick="this.closest('div[style*=fixed]').remove()" style="background:linear-gradient(135deg,#00c8ff,#0080ff);color:#fff;border:none;border-radius:8px;padding:10px 32px;font-size:15px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif">Got it</button>
-    </div>`;
-  document.body.appendChild(ov);
+  if (localStorage.getItem('gl_discord_seen')) return;
+  function show(){
+    localStorage.setItem('gl_discord_seen', '1');
+    const ov = document.createElement('div');
+    ov.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(2,5,10,.82);backdrop-filter:blur(4px);padding:22px;opacity:0;transition:opacity .35s';
+    ov.innerHTML = `
+      <div style="background:linear-gradient(180deg,#141f30,#0a111d);border:1px solid rgba(88,101,242,.45);border-radius:18px;padding:30px 26px;max-width:380px;width:100%;text-align:center;font-family:Inter,sans-serif;color:#eaf2fb;box-shadow:0 24px 70px rgba(0,0,0,.6),0 0 40px rgba(88,101,242,.25)">
+        <div style="font-size:46px;line-height:1;margin-bottom:6px">💬</div>
+        <div style="font-family:Oswald,sans-serif;font-size:26px;font-weight:700;letter-spacing:1px">Join the <span style="color:#7c8cff">GoatLab</span> Discord</div>
+        <div style="font-size:14px;line-height:1.6;color:#9fb0c4;margin:12px 0 22px">
+          Post your builds, challenge players to live 1v1s, and talk ball with other fans. New games drop here first.
+        </div>
+        <a href="https://discord.gg/bMVX2zJp49" target="_blank" rel="noopener" style="display:block;background:#5865F2;color:#fff;text-decoration:none;border-radius:10px;padding:13px;font-size:15px;font-weight:700;font-family:Oswald,sans-serif;letter-spacing:1.5px;box-shadow:0 8px 22px rgba(88,101,242,.4)">JOIN THE DISCORD</a>
+        <button class="dcLater" style="margin-top:12px;background:none;border:none;color:#6b7a8d;font-size:13px;cursor:pointer;font-family:Inter,sans-serif">Maybe later</button>
+      </div>`;
+    document.body.appendChild(ov);
+    requestAnimationFrame(function(){ ov.style.opacity = '1'; });
+    function close(){ ov.style.opacity = '0'; setTimeout(function(){ ov.remove(); }, 350); }
+    ov.querySelector('.dcLater').onclick = close;
+    ov.querySelector('a').addEventListener('click', close);
+    ov.addEventListener('click', function(e){ if (e.target === ov) close(); });
+  }
+  setTimeout(show, 2200);   // let the page settle first
 })();
 </script>
 
