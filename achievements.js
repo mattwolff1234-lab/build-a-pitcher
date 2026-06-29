@@ -386,23 +386,33 @@
     } catch (e) {}
   }
 
-  function showToast(a) {
+  // Toasts queue so several unlocks in one build play one after another (instead of overwriting
+  // a single element and only showing the last). The chime fires as each toast appears.
+  const toastQ = [];
+  let toastBusy = false;
+  function showToast(a) { toastQ.push(a); pumpToast(); }
+  function pumpToast() {
     ensureChrome();
-    if (!toast) return;
+    if (toastBusy || !toastQ.length || !toast) return;
+    toastBusy = true;
+    const a = toastQ.shift();
     toast.querySelector('.ti').textContent = a.icon;
     toast.querySelector('.tnm').textContent = a.name;
     toast.querySelector('.tds').textContent = a.desc || '';
     toast.style.display = 'flex';
+    chime(!!a.chal);
     if (window.gsap) {
       gsap.killTweensOf(toast);
       gsap.fromTo(toast, { x: 90, opacity: 0 }, { x: 0, opacity: 1, duration: .5, ease: 'back.out(1.6)' });
       gsap.fromTo(toast.querySelector('.ti'), { scale: 0, rotate: -25 }, { scale: 1, rotate: 0, duration: .55, delay: .08, ease: 'back.out(3)' });
     }
+    const HOLD = toastQ.length ? 1900 : 3000;   // move quicker when more are waiting
     clearTimeout(toast._t);
     toast._t = setTimeout(() => {
-      if (window.gsap) gsap.to(toast, { x: 90, opacity: 0, duration: .38, ease: 'power2.in', onComplete: () => toast.style.display = 'none' });
-      else toast.style.display = 'none';
-    }, 4200);
+      const done2 = () => { toast.style.display = 'none'; toastBusy = false; pumpToast(); };
+      if (window.gsap) gsap.to(toast, { x: 90, opacity: 0, duration: .35, ease: 'power2.in', onComplete: done2 });
+      else done2();
+    }, HOLD);
   }
 
   // ---- public unlock ----
@@ -413,7 +423,6 @@
     save();
     queueSync();
     showToast(a);
-    chime(!!a.chal);
     refreshBadges();
     if (built && ov.classList.contains('show')) {
       render();

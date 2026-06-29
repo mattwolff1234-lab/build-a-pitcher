@@ -1471,6 +1471,7 @@ function assign(slotKey) {
   if (window.Ach) {
     if (state.turnPowers && state.turnPowers.size >= 3) Ach.unlock('triple2');   // all 3 power-ups this turn
     if (state.snaggedThisLand && state.boostedThisLand) Ach.unlock('heist');     // snagged then boosted same card
+    checkSlotAchievements(slotKey, p, s);                                        // real-time per-slot unlocks
   }
   state.turnPowers = new Set(); state.snaggedThisLand = false;
   state.landed = null;
@@ -2163,6 +2164,20 @@ function careerTier(t, ovr) {
 function parseHeightIn(s) {
   const m = String(s || '').match(/(\d+)\s*'\s*(\d+)/);
   return m ? (+m[1]) * 12 + (+m[2]) : 0;
+}
+
+// Fires the instant a slot is assigned (called from assign()) — real-time, not at build end.
+function checkSlotAchievements(slotKey, p, s) {
+  if (!window.Ach) return;
+  if (Number(slotNumeric(p, s)) >= 125) Ach.unlock('offcharts');
+  if (slotKey === 'frame') {
+    if (p.heightIn && p.heightIn <= 71) Ach.unlock('short_king');   // 5'11" or shorter
+    if (p.heightIn >= 81) Ach.unlock('tall_tale');                  // 6'9" or taller
+  }
+  if ((slotKey === 'fielding_ability' || slotKey === 'frame') && p.ovr >= 99) Ach.unlock('nepo');
+  if (state.respinUsed && state.boostUsed && state.snagUsed) Ach.unlock('triple1');
+  const k = state.filled['k_per_bf'], st = state.filled['stamina'];
+  if (k && st && Number(k.value) >= 95 && Number(st.value) <= 64) Ach.unlock('glass_cannon');
 }
 
 // Fires when all 9 slots are filled (called from finish()).
