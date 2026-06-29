@@ -843,7 +843,7 @@ let account=null; try { account = JSON.parse(localStorage.getItem('pl_account') 
 let myStats=null;            // {elo,wins,losses} — set for guests AND signed-in users
 let pendingResult=null;      // {matchId, won, oppElo} captured at game end
 function myElo(){ return myStats ? myStats.elo : 1000; }
-function saveAccount(a){ account=a; try{ localStorage.setItem('pl_account', JSON.stringify(a)); }catch(e){} }
+function saveAccount(a){ account=a; try{ localStorage.setItem('pl_account', JSON.stringify(a)); }catch(e){} if(window.Ach) Ach.sync(); }
 
 // device-guest identity
 let guestId, guestName;

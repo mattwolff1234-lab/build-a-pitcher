@@ -80,9 +80,34 @@
   const META_IDS = ['completionist', 'shiny'];
 
   // ---- persistent state ----
+  // Local cache. ACH_VER bumps wipe any pre-launch local data so everyone starts fresh; the
+  // signed-in account (below) is the source of truth and follows the user's email across devices.
+  const ACH_VER = '2026-06-29';
   let done = {};
-  try { done = JSON.parse(localStorage.getItem('pl_achievements') || '{}'); } catch (e) { done = {}; }
+  try {
+    if (localStorage.getItem('pl_ach_ver') === ACH_VER) done = JSON.parse(localStorage.getItem('pl_achievements') || '{}');
+    else { localStorage.setItem('pl_ach_ver', ACH_VER); localStorage.removeItem('pl_achievements'); done = {}; }
+  } catch (e) { done = {}; }
   const save = () => { try { localStorage.setItem('pl_achievements', JSON.stringify(done)); } catch (e) {} };
+
+  // ---- account sync (linked to the Google account / email via api/account.js) ----
+  function acct() { try { return JSON.parse(localStorage.getItem('pl_account') || 'null'); } catch (e) { return null; } }
+  let syncTimer = null;
+  async function serverSync() {
+    const a = acct();
+    if (!a || !a.sub || !a.sessionToken) return;
+    try {
+      const r = await fetch('/api/account', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ action: 'achSync', sub: a.sub, sessionToken: a.sessionToken, achievements: done }),
+      }).then(x => x.json());
+      if (r && r.ok && r.achievements) {
+        done = r.achievements; save(); refreshBadges();
+        if (chromeReady && built && ov && ov.classList.contains('show')) render();
+      }
+    } catch (e) {}
+  }
+  function queueSync() { clearTimeout(syncTimer); syncTimer = setTimeout(serverSync, 400); }
 
   // ---- styles (injected so this file is fully drop-in) ----
   const css = `
@@ -344,6 +369,7 @@
     if (!a || done[id]) return false;
     done[id] = new Date().toISOString();
     save();
+    queueSync();
     showToast(a);
     chime(!!a.chal);
     refreshBadges();
@@ -367,6 +393,7 @@
 
   function open() {
     if (!built) buildDom();
+    serverSync();
     ACTIVE = 'all'; render();
     ov.classList.add('show');
     if (window.gsap) gsap.fromTo(ov.querySelector('.ach-card'), { y: 14, opacity: 0 }, { y: 0, opacity: 1, duration: .3, ease: 'power3.out' });
@@ -381,12 +408,17 @@
     total: ACHIEVEMENTS.length,
     open, close,
     refreshBadges,
+    sync: serverSync,
     all: ACHIEVEMENTS,
   };
   window.Ach = Ach;
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', refreshBadges);
   else refreshBadges();
+  // pull the account's achievements shortly after load (give Google auto-sign-in time to set pl_account)
+  setTimeout(serverSync, 1500);
+  // re-sync if the user signs in/out in another tab or via the menu
+  window.addEventListener('storage', e => { if (e.key === 'pl_account') serverSync(); });
 
   // ---- local-only test bar (never appears on the live site) ----
   if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) {

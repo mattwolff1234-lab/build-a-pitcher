@@ -91,6 +91,7 @@ function ensure() {
         created_at timestamptz NOT NULL DEFAULT now()
       )`;
       await sql`ALTER TABLE pvp_history ADD COLUMN IF NOT EXISTS opp_key text`;
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS achievements jsonb NOT NULL DEFAULT '{}'::jsonb`;
       await sql`CREATE INDEX IF NOT EXISTS idx_pvp_history_player ON pvp_history (player_key, created_at DESC)`;
       await sql`CREATE INDEX IF NOT EXISTS idx_pvp_history_opp_key ON pvp_history (opp_key) WHERE opp_key IS NOT NULL`;
     })();
@@ -187,6 +188,24 @@ module.exports = async (req, res) => {
         if (!(await authed(body.sub, body.sessionToken))) return res.status(401).json({ ok: false, error: 'Not signed in' });
         await sql`DELETE FROM saves WHERE id = ${Number(body.id)} AND google_sub = ${body.sub}`;
         return res.status(200).json({ ok: true });
+      }
+
+      // Merge the caller's achievements with what's stored on their account (union, keeping the
+      // earliest unlock time per id) so progress follows their email across devices.
+      if (action === 'achSync') {
+        if (!(await authed(body.sub, body.sessionToken))) return res.status(401).json({ ok: false, error: 'Not signed in' });
+        const incoming = (body.achievements && typeof body.achievements === 'object') ? body.achievements : {};
+        const [u] = await sql`SELECT achievements FROM users WHERE google_sub = ${body.sub}`;
+        const merged = Object.assign({}, (u && u.achievements) || {});
+        let n = 0;
+        for (const k in incoming) {
+          if (n++ > 200) break;
+          if (typeof k !== 'string' || !k || k.length > 40) continue;
+          const t = String(incoming[k] || '').slice(0, 40);
+          if (!merged[k] || (t && t < merged[k])) merged[k] = t || merged[k] || new Date().toISOString();
+        }
+        await sql`UPDATE users SET achievements = ${JSON.stringify(merged)}::jsonb WHERE google_sub = ${body.sub}`;
+        return res.status(200).json({ ok: true, achievements: merged });
       }
 
       if (action === 'pvpStats') {
