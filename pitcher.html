@@ -916,7 +916,7 @@
     <div class="dres-board-label">Today's top builds</div>
     <div class="dres-board" id="dResBoard"></div>
     <div id="dResStreak" class="dr-streak"></div>
-    <button id="dResSim" class="primary" style="margin-top:14px;width:100%">▶ Simulate Career</button>
+    <button id="dResSim" class="primary" style="margin-top:14px;width:100%">Continue → name &amp; simulate</button>
   </div>
 </div>
 
@@ -1156,7 +1156,7 @@ async function init() {
   $('dailyBtn').onclick = () => { Sound.click(); startDailyChallenge(); };
   $('drClose').onclick = () => { Sound.click(); closeDailyReveal(); };
   $('dailyReveal').addEventListener('click', e => { if (e.target.id === 'dailyReveal') closeDailyReveal(); });
-  $('dResSim').onclick = () => { Sound.click(); closeDailyResults(true); };
+  $('dResSim').onclick = () => { Sound.click(); closeDailyResults(false); };
   $('miDaily').onclick = () => { Sound.click(); startDailyChallenge(); };
   $('miHof').onclick = () => { closeOverlay('menu'); openHof(); };
   $('miAch').onclick = () => { closeOverlay('menu'); Sound.click(); window.Ach && Ach.open(); };
@@ -1571,8 +1571,7 @@ function bestPossibleOvr(cards) {
 
 // The daily flow inserts this between finishing the build and simulating the career.
 async function showDailyResults() {
-  $('simBtn').disabled = true;                        // block double-clicks while results load
-  dailyResultsShown = true;                          // gate so the re-entry runs the real sim
+  dailyResultsShown = true;                          // marks the daily as submitted
   const ov = $('dailyResults');
   const name = $('nameInput').value.trim() || (account && account.name) || 'Anonymous';
   if (name !== 'Anonymous') { try { localStorage.setItem('pl_lastName', name); } catch (e) {} }
@@ -2517,8 +2516,6 @@ function seasonHeadlines(s, idx, total, P, fallbackTeam) {
 // Shows draft animation first, then runs the career sim.
 function runCareerPlaythrough() {
   if (state.career) return;
-  // Daily flow: show the puzzle results (rank + best-possible build) before simulating.
-  if (dailyMode && !dailyResultsShown) { showDailyResults(); return; }
   $('simBtn').disabled = true;
 
   // Compute archetype (role uses same logic as simulateCareer)
@@ -2790,6 +2787,8 @@ function finish() {
   const o = { v: 0 };
   gsap.to(o, { v: avg, duration: 1.0, ease: 'power2.out', onUpdate: () => { $('doneOvr').textContent = Math.round(o.v); } });
   gsap.fromTo($('doneArch'), { opacity: 0 }, { opacity: 1, duration: .6, delay: .8 });
+  // Daily: the results leaderboard pops up automatically once the build is done.
+  if (dailyMode) setTimeout(showDailyResults, 900);
 }
 
 function escapeHTML(s) {
