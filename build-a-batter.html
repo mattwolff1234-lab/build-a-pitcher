@@ -427,7 +427,7 @@
   .lb-row.top1 .rank { color:var(--gold); } .lb-row.top2 .rank { color:var(--silver); } .lb-row.top3 .rank { color:var(--bronze); }
   .lb-empty { color:var(--muted); font-size:13px; padding:18px; }
   .build-summary { color:var(--muted); font-size:12px; margin:-2px 0 12px; letter-spacing:.4px; text-transform:uppercase; }
-  /* shareable build breakdown — vertical slot list with ringed headshots */
+  /* shareable build breakdown - vertical slot list with ringed headshots */
   .bd-card { border:1px solid var(--line); border-radius:14px; padding:14px 15px 6px;
     background:linear-gradient(180deg,rgba(16,25,38,.6),rgba(7,12,20,.7)); }
   .bd-head { display:grid; grid-template-columns:auto auto 1fr auto; align-items:center; gap:11px;
@@ -476,16 +476,38 @@
     background:rgba(255,255,255,.05); border:1px solid var(--line); }
   .overlay-close:hover { border-color:var(--accent); }
   .overlay-body { padding:16px; overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; }
-  .menu-item { display:flex; align-items:center; gap:10px; width:100%; text-align:left; padding:15px 16px; margin-bottom:9px;
-    font-family:'Oswald',sans-serif; font-size:15px; letter-spacing:1px; text-transform:uppercase; text-decoration:none;
+  .menu-item { display:flex; align-items:center; gap:10px; width:100%; text-align:left; padding:11px 14px; margin-bottom:6px;
+    font-family:'Oswald',sans-serif; font-size:14px; letter-spacing:1px; text-transform:uppercase; text-decoration:none;
     border-radius:10px; color:var(--ink); background:linear-gradient(180deg,#1b2535,#121a27); border:1px solid var(--line); }
   .menu-item:last-child { margin-bottom:0; }
+  .menu-sec { font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:2px; text-transform:uppercase;
+    color:var(--muted); margin:15px 4px 7px; padding-top:13px; border-top:1px solid var(--line); }
+  .menu-sec:first-of-type { margin-top:6px; padding-top:0; border-top:0; }
   .menu-item:hover { border-color:var(--accent2); box-shadow:0 0 14px rgba(25,198,255,.25); }
   .tip-item { align-items:flex-start; border-color:rgba(255,122,24,.4); }
   .tip-item:hover { border-color:var(--accent); box-shadow:0 0 14px rgba(255,122,24,.3); }
   .tip-item .ti-text { display:flex; flex-direction:column; gap:3px; }
   .tip-item .ti-text small { text-transform:none; letter-spacing:0; font-family:'Inter',sans-serif; font-size:12px; color:var(--muted); line-height:1.35; }
   .mi-chev { margin-left:auto; font-size:14px; color:var(--muted); }
+  .disc-item { border-color:rgba(88,101,242,.5); }
+  .disc-item:hover { border-color:#5865F2; box-shadow:0 0 14px rgba(88,101,242,.4); }
+  .social-row { display:flex; gap:10px; margin:2px 0 6px; }
+  .soc-tile { width:46px; height:46px; border-radius:12px; display:flex; align-items:center; justify-content:center;
+    color:#fff; border:1px solid var(--line); transition:transform .1s ease, box-shadow .15s ease; }
+  .soc-tile:hover { transform:translateY(-2px); }
+  .soc-tile svg { width:22px; height:22px; }
+  .soc-discord { background:#5865F2; }
+  .soc-discord:hover { box-shadow:0 6px 16px rgba(88,101,242,.45); }
+  .soc-x { background:#000; }
+  .soc-x:hover { box-shadow:0 6px 16px rgba(0,0,0,.5); border-color:rgba(255,255,255,.3); }
+  .discord-cta { display:flex; align-items:flex-start; gap:12px; width:100%; box-sizing:border-box;
+    margin-top:14px; padding:15px 16px; border-radius:12px; text-decoration:none; color:var(--ink);
+    background:linear-gradient(180deg,rgba(88,101,242,.16),rgba(88,101,242,.05)); border:1px solid rgba(88,101,242,.55); }
+  .discord-cta:hover { border-color:#5865F2; box-shadow:0 0 16px rgba(88,101,242,.4); }
+  .discord-cta .dc-emoji { font-size:26px; line-height:1; }
+  .discord-cta .dc-text { display:flex; flex-direction:column; gap:3px; }
+  .discord-cta .dc-text b { font-family:'Oswald',sans-serif; font-size:16px; letter-spacing:.5px; text-transform:uppercase; }
+  .discord-cta .dc-text small { font-family:'Inter',sans-serif; font-size:12.5px; color:var(--muted); line-height:1.4; }
   .install-steps { margin:-2px 0 9px; padding:13px; border-radius:10px; background:rgba(0,0,0,.28); border:1px solid var(--line); }
   .install-steps .inst-label { font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:1.5px; text-transform:uppercase;
     color:var(--accent2); margin:10px 0 9px; }
@@ -580,9 +602,9 @@
       <div class="landed-top">
         <img id="landedImg" src="" alt="">
         <div class="landed-info">
-          <h2 id="landedName">—<span id="primeBadge" class="prime-badge" style="display:none">PRIME</span></h2>
-          <div class="sub" id="landedSub">—</div>
-          <div class="big-ov" id="landedOvr">—</div>
+          <h2 id="landedName">-<span id="primeBadge" class="prime-badge" style="display:none">PRIME</span></h2>
+          <div class="sub" id="landedSub">-</div>
+          <div class="big-ov" id="landedOvr">-</div>
         </div>
       </div>
       <div class="hint">Tap a glowing body part to lock this hitter's rating into that slot.</div>
@@ -604,7 +626,7 @@
           <div class="t">Overall</div>
           <div class="n" id="slotsLeft">8 slots left</div>
         </div>
-        <div class="ring" id="ovrRing"><span id="ovrNum">—</span></div>
+        <div class="ring" id="ovrRing"><span id="ovrNum">-</span></div>
       </div>
     </div>
 
@@ -621,7 +643,7 @@
 
     <div id="done" class="done panel">
       <h2>Hitter Complete</h2>
-      <div class="total" id="doneOvr">—</div>
+      <div class="total" id="doneOvr">-</div>
       <div class="done-sub">Weighted overall rating</div>
 
       <div id="preSim" class="pre-sim">
@@ -633,7 +655,7 @@
         <div class="career-top">
           <div>
             <div class="career-title">Career Simulation</div>
-            <div id="careerSpan" class="done-sub" style="margin:3px 0 0">—</div>
+            <div id="careerSpan" class="done-sub" style="margin:3px 0 0">-</div>
           </div>
           <div id="careerVerdict" class="career-verdict">…</div>
           <div id="careerNote" class="career-note" style="display:none"></div>
@@ -657,6 +679,7 @@
         <button id="submitBtn" class="primary">Submit to Leaderboard</button>
       </div>
       <div id="submitMsg" class="submit-msg"></div>
+      <a class="discord-cta" href="https://discord.gg/bMVX2zJp49" target="_blank" rel="noopener"><span class="dc-emoji">💬</span><span class="dc-text"><b>Share this build in our Discord</b><small>Talk shop, post your builds, and challenge players to live 1v1s ↗</small></span></a>
 
       <button id="resetBtn" class="ghost-btn">Build Another</button>
     </div>
@@ -668,26 +691,35 @@
     <div class="overlay-head"><span class="overlay-title">Menu</span><button class="overlay-close" data-close="menu">✕</button></div>
     <div class="overlay-body">
       <div id="acctSlot"></div>
+      <div class="menu-sec">Play</div>
       <a class="menu-item" href="/">🏠 Home</a>
       <a class="menu-item" href="/versus">⚔️ 1v1 Live · Face Off</a>
-      <a class="menu-item" href="/versus#stats">📊 1v1 Stats</a>
+      <div class="menu-sec">Your Stuff</div>
       <button class="menu-item" id="miHof">🏛️ My Hall of Fame</button>
       <a class="menu-item" href="/pitching#achievements">🏅 Achievements</a>
+      <div class="menu-sec">Compete</div>
       <button class="menu-item" id="miLb">🏆 Leaderboard</button>
+      <a class="menu-item" href="/versus#stats">📊 1v1 Stats</a>
+      <div class="menu-sec">Help</div>
       <button class="menu-item" id="miHow">📖 How to Play</button>
       <button class="menu-item" id="miInstall">📲 Install App<span class="mi-chev" id="installChev">⌄</span></button>
       <div id="installSteps" class="install-steps" style="display:none">
         <button id="installNowBtn" class="primary" style="display:none;width:100%;margin-bottom:12px">⬇ Install GoatLab</button>
         <div class="inst-label">On Desktop / Android (Chrome · Edge)</div>
         <div class="step"><span class="step-n">1</span><div><b>Look for the install icon</b><p>Click the install icon (a screen with a ⊕) on the right side of the address bar.</p></div></div>
-        <div class="step"><span class="step-n">2</span><div><b>Click Install</b><p>Confirm in the prompt — the app opens in its own window with a home-screen icon.</p></div></div>
+        <div class="step"><span class="step-n">2</span><div><b>Click Install</b><p>Confirm in the prompt - the app opens in its own window with a home-screen icon.</p></div></div>
         <div class="inst-label">On iPhone / iPad (Safari)</div>
-        <div class="step"><span class="step-n">1</span><div><b>Open in Safari</b><p>Make sure you're in Safari — not Chrome or another browser.</p></div></div>
+        <div class="step"><span class="step-n">1</span><div><b>Open in Safari</b><p>Make sure you're in Safari - not Chrome or another browser.</p></div></div>
         <div class="step"><span class="step-n">2</span><div><b>Tap Share</b><p>Tap the Share button at the bottom of the screen (the box with an arrow pointing up).</p></div></div>
         <div class="step"><span class="step-n">3</span><div><b>Add to Home Screen</b><p>Scroll down, tap "Add to Home Screen," then tap "Add."</p></div></div>
       </div>
-      <a class="menu-item tip-item" href="https://buymeacoffee.com/mattwolff1d" target="_blank" rel="noopener">☕<span class="ti-text"><b>Buy me a coffee</b><small>I'm a solo dev paying for the servers out of pocket so it stays free for everyone. Anything's hugely appreciated! ↗</small></span></a>
+      <div class="menu-sec">Community</div>
+      <div class="social-row">
+        <a class="soc-tile soc-discord" href="https://discord.gg/bMVX2zJp49" target="_blank" rel="noopener" title="Join our Discord" aria-label="Discord"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M20.317 4.369A19.79 19.79 0 0 0 15.432 3a.07.07 0 0 0-.074.036c-.211.375-.444.864-.608 1.249a18.27 18.27 0 0 0-5.487 0 12.6 12.6 0 0 0-.617-1.25.07.07 0 0 0-.073-.035A19.736 19.736 0 0 0 3.677 4.37a.064.064 0 0 0-.03.025C.533 9.046-.32 13.58.099 18.057a.08.08 0 0 0 .031.055 19.9 19.9 0 0 0 5.993 3.03.07.07 0 0 0 .076-.027c.462-.63.873-1.295 1.226-1.994a.07.07 0 0 0-.038-.098 13.1 13.1 0 0 1-1.872-.892.07.07 0 0 1-.007-.117c.126-.094.252-.192.372-.291a.07.07 0 0 1 .073-.01c3.927 1.793 8.18 1.793 12.061 0a.07.07 0 0 1 .074.009c.12.099.246.198.373.292a.07.07 0 0 1-.006.117c-.598.349-1.224.645-1.873.891a.07.07 0 0 0-.038.099c.36.698.772 1.362 1.225 1.993a.07.07 0 0 0 .076.028 19.84 19.84 0 0 0 6.002-3.03.07.07 0 0 0 .032-.054c.5-5.177-.838-9.673-3.549-13.66a.06.06 0 0 0-.031-.027zM8.02 15.331c-1.182 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg></a>
+        <a class="soc-tile soc-x" href="https://x.com/GoatLabApp" target="_blank" rel="noopener" title="Follow on X" aria-label="X"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24h-6.66l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zM17.083 19.77h1.833L7.084 4.126H5.117z"/></svg></a>
+      </div>
       <a class="menu-item" href="https://pitchergami.com" target="_blank" rel="noopener">⚾ PitcherGami ↗</a>
+      <a class="menu-item tip-item" href="https://buymeacoffee.com/mattwolff1d" target="_blank" rel="noopener">☕<span class="ti-text"><b>Buy me a coffee</b><small>I'm a solo dev paying for the servers out of pocket so it stays free for everyone. Anything's hugely appreciated! ↗</small></span></a>
     </div>
   </div>
 </div>
@@ -779,7 +811,7 @@
 
 <div id="toast" class="toast"></div>
 
-<div class="footer-note">Ratings from MLB The Show — Live series only. Not affiliated with MLB or Sony.</div>
+<div class="footer-note">Ratings from MLB The Show - Live series only. Not affiliated with MLB or Sony.</div>
 
 <script>
 // Each slot maps an attribute to a body part. ax/ay = anchor point on the figure (%),
@@ -875,7 +907,7 @@ function heightToRating(inches) {
   return clamp(Math.round(82 + (inches - 72) * 1.5), 76, 93);
 }
 function slotNumeric(p, s) { return s.type === 'height' ? heightToRating(p.heightIn) : (p[s.key] || 0); }
-function slotDisplay(p, s) { return s.type === 'height' ? (p.height || '—') : (p[s.key] || 0); }
+function slotDisplay(p, s) { return s.type === 'height' ? (p.height || '-') : (p[s.key] || 0); }
 
 const SILHOUETTE = 'data:image/svg+xml;utf8,' + encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="%2311161d"/><circle cx="50" cy="38" r="20" fill="%23394150"/><path d="M50 62c-20 0-34 14-34 34h68c0-20-14-34-34-34z" fill="%23394150"/></svg>'
@@ -893,7 +925,7 @@ const state = {
   career: null, draftTeamAb: null,
 };
 
-// Hard mode ("hide ratings") — set on the landing page, shared via localStorage.
+// Hard mode ("hide ratings") - set on the landing page, shared via localStorage.
 let hardMode = false;
 try { hardMode = localStorage.getItem('pl_hardMode') === '1'; } catch (e) {}
 let hardRevealed = false;
@@ -913,7 +945,7 @@ const SORT_OPTIONS = {
 function sortOptionsFor(game) { return SORT_OPTIONS[game === 'batter' ? 'batter' : 'pitcher']; }
 function fmtStat(v) { return lbSort === 'war' ? Number(v).toFixed(1) : Math.round(v); }
 
-// ---------- sound (synthesized via Web Audio — no asset files) ----------
+// ---------- sound (synthesized via Web Audio - no asset files) ----------
 const Sound = (() => {
   let ac, master, muted = false;
   function ctx() {
@@ -1072,7 +1104,7 @@ function renderAcct() {
       <button class="signout" id="signOutBtn">Sign out</button></div>`;
     const so = $('signOutBtn'); if (so) so.onclick = () => { clearAccount(); toast('Signed out'); };
   } else if (!googleConfigured()) {
-    slot.innerHTML = `<div class="acct-hint">🔒 Sign-in is coming soon — you'll be able to save your players to a personal Hall of Fame.</div>`;
+    slot.innerHTML = `<div class="acct-hint">🔒 Sign-in is coming soon - you'll be able to save your players to a personal Hall of Fame.</div>`;
   } else {
     slot.innerHTML = `<div id="gsiWrap"></div><div class="acct-hint">Sign in with Google to save your players to a personal Hall of Fame.</div>`;
     try { google.accounts.id.renderButton($('gsiWrap'), { theme: 'filled_black', size: 'large', shape: 'pill', text: 'signin_with' }); }
@@ -1087,14 +1119,16 @@ async function saveToHof(btn) {
   const teamAb = (state.simTeam && state.simTeam.abbr) || state.draftTeamAb || (state.career && state.career.finalTeam);
   const reset = () => { if (btn) { btn.disabled = false; btn.textContent = '💾 Save to my Hall of Fame'; } };
   try {
+    const slimSlots = state.build.map(({ img: _img, ...s }) => s);
+    const slimCareer = { totals: state.career.totals, role: state.career.role, finalTeam: state.career.finalTeam };
     const r = await fetch('/api/account', { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'save', sub: account.sub, sessionToken: account.sessionToken, game: HOF_GAME,
         name: state.simName || 'My Player', ovr: state.finalOvr,
-        build: { slots: state.build, career: state.career, team: teamAb } }) });
+        build: { slots: slimSlots, career: slimCareer, team: teamAb } }) });
     const j = await r.json();
     if (j.ok) { if (btn) btn.textContent = '✓ Saved'; toast('Saved to your Hall of Fame'); if (Sound.complete) Sound.complete(); }
     else if (r.status === 401) { clearAccount(); toast('Please sign in again'); reset(); }
-    else { toast('Save failed'); reset(); }
+    else { toast(j.error || 'Save failed'); reset(); }
   } catch (e) { toast('Save failed'); reset(); }
 }
 
@@ -1241,9 +1275,17 @@ function stopIdleReel() {
   $('track').classList.remove('idle');
 }
 
+// Count one "play" per game session (first spin) - feeds the live PLAYS counter on the landing page.
+function logPlay() {
+  if (window.__plLogged) return;
+  window.__plLogged = true;
+  try { gtag('event', 'game_start', { game: 'batter' }); } catch (e) {}
+  fetch('/api/score', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'play', game: 'batter' }) }).catch(function(){});
+}
 function spin() {
   if (state.spinning) return;
   if (openSlots().length === 0) return;
+  logPlay();
   state.spinning = true;
   state.boostedThisLand = false;
   Sound.click();
@@ -1400,7 +1442,7 @@ function boost() {
   state.boostedThisLand = true;
   Sound.prime();
   updatePowerups();
-  // Guard: a Boost should never lower a rating — keep the better of Live vs Prime per stat.
+  // Guard: a Boost should never lower a rating - keep the better of Live vs Prime per stat.
   const merged = { ...primeCard };
   for (const s of SLOTS) {
     if (s.type === 'height') {
@@ -1566,7 +1608,7 @@ function updateOvr() {
   updateProgress(filledKeys.length);
   const ring = $('ovrRing'), num = $('ovrNum');
   if (!filledKeys.length) {
-    num.textContent = '—'; num.className = ''; ovrShown = 0;
+    num.textContent = '-'; num.className = ''; ovrShown = 0;
     ring.style.setProperty('--p', 0); ring.style.setProperty('--g', 'rgba(255,255,255,.12)');
     return;
   }
@@ -1755,7 +1797,7 @@ function simulateCareer(filled, finalOvr, draftTeamAb) {
   const hofScore = Math.max(0, round(warPts + hPts + hrPts + avgPts + hardware, 1));
   const slamDunk = totals.war >= 64 || totals.mvp >= 3 || (totals.hr >= 500 && totals.war >= 46) || (totals.h >= 3000 && totals.war >= 50);
   const hallOfFame = hofScore >= 112 || slamDunk;
-  // Hall of Fame status pays out beyond the field — endorsements, legacy deals, appearances.
+  // Hall of Fame status pays out beyond the field - endorsements, legacy deals, appearances.
   const hofBonus = hallOfFame ? Math.round(totals.earnings * 0.15) : 0;
   const careerEarnings = totals.earnings + hofBonus;
   const highlight = bestCareerHighlight(totals, peak);
@@ -1916,14 +1958,14 @@ function seasonHeadlines(s, idx, total, P, fallbackTeam) {
   if (s.hurt && !s.mvp) h.push({ text: `${P} battles injury, limited to ${s.pa} plate appearances.` });
   if (s.struggling && !s.exit) h.push({ text: `${P} slumps to a ${s.ops.toFixed(3).replace(/^0\./, '.')} OPS and is fighting to keep his roster spot.` });
   if (idx === total - 1) {
-    if (s.exit === 'released') h.push({ text: `${P} is <b>released</b> after a ${s.ops.toFixed(3).replace(/^0\./, '.')}-OPS season and can't catch on elsewhere — career over.`, big: true });
+    if (s.exit === 'released') h.push({ text: `${P} is <b>released</b> after a ${s.ops.toFixed(3).replace(/^0\./, '.')}-OPS season and can't catch on elsewhere - career over.`, big: true });
     else if (s.exit === 'pushed-out') h.push({ text: `${P} loses his job to a younger bat and <b>walks away</b> after ${total} seasons.`, big: true });
     else h.push({ text: `${P} announces his <b>retirement</b> after ${total} seasons.`, big: true });
   }
   return h;
 }
 
-// Play the career out season by season — log, headlines, live ticker — then the verdict + card.
+// Play the career out season by season - log, headlines, live ticker - then the verdict + card.
 function runCareerPlaythrough() {
   if (state.career) return;
   $('simBtn').disabled = true;
@@ -2185,7 +2227,7 @@ function lbRow(rank, entry, cls) {
   const sorted = lbSort !== 'ovr' && lbSort !== 'ovrAsc';
   const sub = sorted ? ` <span class="nm-ovr">${entry.ovr} OVR</span>` : '';
   const right = sorted
-    ? `<div class="ov lb-stat">${entry.stat == null ? '—' : fmtStat(entry.stat)}</div>`
+    ? `<div class="ov lb-stat">${entry.stat == null ? '-' : fmtStat(entry.stat)}</div>`
     : `<div class="ov c-${tier(entry.ovr)}">${entry.ovr}</div>`;
   return `<div class="lb-row ${cls}" role="button" tabindex="0" data-entry-id="${entry.id}"><div class="rank">${rank}</div>
     <div class="nm">${escapeHTML(entry.name)}${sub}</div>
@@ -2213,7 +2255,7 @@ function headshotByName(name) {
   return HEADSHOTS.get(name) || null;
 }
 const TIER_LABELS = { grey: 'Common', bronze: 'Bronze', silver: 'Silver', gold: 'Gold', diamond: 'Diamond', legend: 'Legend' };
-// Mini team-colored figure for a leaderboard build — per game, keyed by slot label (works for either board).
+// Mini team-colored figure for a leaderboard build - per game, keyed by slot label (works for either board).
 const FIG_CONFIG = {
   pitcher: { base: 'pitcher-figure.png', masks: { 'Velocity': 'seg-pitch_velocity.png', 'Break': 'seg-pitch_movement.png', 'Strikeout': 'seg-k_per_bf.png', 'Ground Ball': 'seg-hr_per_bf.png', 'Command': 'seg-pitch_control.png', 'Clutch': 'seg-pitching_clutch.png', 'Defense': 'seg-fielding_ability.png', 'Frame': 'seg-frame.png', 'Stamina': 'seg-stamina.png' } },
   batter: { base: 'batter-figure.png', masks: { 'Vision': 'bat-seg-plate_vision.png', 'Power': 'bat-seg-power.png', 'Contact': 'bat-seg-contact.png', 'Speed': 'bat-seg-speed.png', 'Clutch': 'bat-seg-batting_clutch.png', 'Discipline': 'bat-seg-plate_discipline.png', 'Frame': 'bat-seg-frame.png', 'Defense': 'bat-seg-fielding_ability.svg' } },
@@ -2232,7 +2274,7 @@ function miniFigureHTML(entry, slots) {
 function shareBuild(entry) {
   const kind = (entry.game === 'batter') ? 'batter' : 'pitcher';
   const url = 'https://goat-lab.app';
-  const txt = `I built a ${entry.ovr} OVR ${kind}${entry.name ? ` — "${entry.name}"` : ''} on GoatLab. Think you can do better?`;
+  const txt = `I built a ${entry.ovr} OVR ${kind}${entry.name ? ` - "${entry.name}"` : ''} on GoatLab. Think you can do better?`;
   window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(txt)}&url=${encodeURIComponent(url)}`, '_blank', 'noopener');
 }
 function openBuildDetails(entryId) {
@@ -2242,7 +2284,7 @@ function openBuildDetails(entryId) {
   const t = tier(entry.ovr);
   const name = (entry.name || 'Build').replace(/\s*\(you\)\s*$/, '');
   $('buildDetailHead').innerHTML = `
-    <div class="bd-rank c-${t}">${entry._rank ? '#' + entry._rank : '—'}</div>
+    <div class="bd-rank c-${t}">${entry._rank ? '#' + entry._rank : '-'}</div>
     ${miniFigureHTML(entry, slots)}
     <div class="bd-id">
       <div class="bd-name">${escapeHTML(name)}</div>
@@ -2251,7 +2293,7 @@ function openBuildDetails(entryId) {
     <div class="bd-ovr"><span>OVR</span><b class="c-${t}">${entry.ovr}</b></div>`;
   $('buildDetailList').innerHTML = slots.length ? slots.map(s => {
     const st = tier(Number(s.value) || 0);
-    const val = s.display != null ? s.display : (s.value != null ? s.value : '—');
+    const val = s.display != null ? s.display : (s.value != null ? s.value : '-');
     return `<div class="build-slot">
       <img class="c-${st}" src="${s.img || headshotByName(s.player) || SILHOUETTE}" alt="" onerror="this.onerror=null;this.src='${SILHOUETTE}'">
       <div>
@@ -2287,7 +2329,7 @@ async function loadLeaderboard(scope = lbScope, game = lbGame, sort = lbSort) {
       html += `<div class="lb-pin">${lbRow('#' + data.me.rank, { ...data.me, name: data.me.name + ' (you)' }, 'mine pinned')}</div>`;
     }
     if (!data.rows.length) {
-      html += '<div class="lb-empty">No entries yet — be the first!</div>';
+      html += '<div class="lb-empty">No entries yet - be the first!</div>';
     } else {
       html += data.rows.map((r, i) => {
         const rank = i + 1;

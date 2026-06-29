@@ -498,7 +498,7 @@
   .lb-row.top1 .rank { color:var(--gold); } .lb-row.top2 .rank { color:var(--silver); } .lb-row.top3 .rank { color:var(--bronze); }
   .lb-empty { color:var(--muted); font-size:13px; padding:18px; }
   .build-summary { color:var(--muted); font-size:12px; margin:-2px 0 12px; letter-spacing:.4px; text-transform:uppercase; }
-  /* shareable build breakdown — vertical slot list with ringed headshots */
+  /* shareable build breakdown - vertical slot list with ringed headshots */
   .bd-card { border:1px solid var(--line); border-radius:14px; padding:14px 15px 6px;
     background:linear-gradient(180deg,rgba(16,25,38,.6),rgba(7,12,20,.7)); }
   .bd-head { display:grid; grid-template-columns:auto auto 1fr auto; align-items:center; gap:11px;
@@ -640,10 +640,8 @@
   <div class="brand">
     <span class="mark">Pitching <i>Lab</i></span>
     <span class="tag">Draft Mode</span>
-    <span id="streakChip" class="streak-chip" title="Your daily streak" style="display:none">🔥 0</span>
     <span class="brand-rule"></span>
     <button id="muteBtn" class="mute" title="Toggle sound">🔊</button>
-    <button id="dailyBtn" class="coming-tab live dc-btn" title="Daily Challenge — same pitchers for everyone!">🎯 Daily</button>
     <a id="buildTab" class="coming-tab live" href="/batting" title="Build a Batter">🛠️ Build a Batter</a>
     <button id="menuBtn" class="mute" title="Menu">☰</button>
   </div>
@@ -676,9 +674,9 @@
       <div class="landed-top">
         <img id="landedImg" src="" alt="">
         <div class="landed-info">
-          <h2 id="landedName">—<span id="primeBadge" class="prime-badge" style="display:none">PRIME</span></h2>
-          <div class="sub" id="landedSub">—</div>
-          <div class="big-ov" id="landedOvr">—</div>
+          <h2 id="landedName">-<span id="primeBadge" class="prime-badge" style="display:none">PRIME</span></h2>
+          <div class="sub" id="landedSub">-</div>
+          <div class="big-ov" id="landedOvr">-</div>
         </div>
       </div>
       <div class="hint">Tap a glowing body part to lock this pitcher's rating into that slot.</div>
@@ -700,7 +698,7 @@
           <div class="t">Overall</div>
           <div class="n" id="slotsLeft">8 slots left</div>
         </div>
-        <div class="ring" id="ovrRing"><span id="ovrNum">—</span></div>
+        <div class="ring" id="ovrRing"><span id="ovrNum">-</span></div>
       </div>
     </div>
 
@@ -717,7 +715,7 @@
 
     <div id="done" class="done panel">
       <h2>Pitcher Complete</h2>
-      <div class="total" id="doneOvr">—</div>
+      <div class="total" id="doneOvr">-</div>
       <div class="done-sub">Weighted overall rating</div>
       <div id="doneArch" class="done-arch"></div>
 
@@ -730,7 +728,7 @@
         <div class="career-top">
           <div>
             <div class="career-title">Career Simulation</div>
-            <div id="careerSpan" class="done-sub" style="margin:3px 0 0">—</div>
+            <div id="careerSpan" class="done-sub" style="margin:3px 0 0">-</div>
             <div id="careerArchetype" class="career-arch"></div>
           </div>
           <div id="careerVerdict" class="career-verdict">…</div>
@@ -768,7 +766,6 @@
       <div id="acctSlot"></div>
       <div class="menu-sec">Play</div>
       <a class="menu-item" href="/">🏠 Home</a>
-      <button class="menu-item" id="miDaily">🎯 Daily Challenge</button>
       <a class="menu-item" href="/versus">⚔️ 1v1 Live · Face Off</a>
       <div class="menu-sec">Your Stuff</div>
       <button class="menu-item" id="miHof">🏛️ My Hall of Fame</button>
@@ -783,9 +780,9 @@
         <button id="installNowBtn" class="primary" style="display:none;width:100%;margin-bottom:12px">⬇ Install GoatLab</button>
         <div class="inst-label">On Desktop / Android (Chrome · Edge)</div>
         <div class="step"><span class="step-n">1</span><div><b>Look for the install icon</b><p>Click the install icon (a screen with a ⊕) on the right side of the address bar.</p></div></div>
-        <div class="step"><span class="step-n">2</span><div><b>Click Install</b><p>Confirm in the prompt — the app opens in its own window with a home-screen icon.</p></div></div>
+        <div class="step"><span class="step-n">2</span><div><b>Click Install</b><p>Confirm in the prompt - the app opens in its own window with a home-screen icon.</p></div></div>
         <div class="inst-label">On iPhone / iPad (Safari)</div>
-        <div class="step"><span class="step-n">1</span><div><b>Open in Safari</b><p>Make sure you're in Safari — not Chrome or another browser.</p></div></div>
+        <div class="step"><span class="step-n">1</span><div><b>Open in Safari</b><p>Make sure you're in Safari - not Chrome or another browser.</p></div></div>
         <div class="step"><span class="step-n">2</span><div><b>Tap Share</b><p>Tap the Share button at the bottom of the screen (the box with an arrow pointing up).</p></div></div>
         <div class="step"><span class="step-n">3</span><div><b>Add to Home Screen</b><p>Scroll down, tap "Add to Home Screen," then tap "Add."</p></div></div>
       </div>
@@ -811,7 +808,6 @@
       <div class="lb-tabs">
         <button class="lb-tab lb-scope-tab active" data-scope="global">All-Time</button>
         <button class="lb-tab lb-scope-tab" data-scope="daily">Today</button>
-        <button class="lb-tab lb-scope-tab" data-scope="challenge">🎯 Daily Challenge</button>
       </div>
       <div class="lb-tabs lb-sort-tabs" id="lbSortTabs"></div>
       <div id="lbList" class="lb-list"></div>
@@ -893,8 +889,8 @@
     <div class="dr-eyebrow">🎯 Daily Challenge</div>
     <div class="dr-ovr"><span id="drOvr">0</span><small>OVR</small></div>
     <div id="drPB" class="dr-pb" style="display:none">🏆 NEW PERSONAL BEST!</div>
-    <div id="drFroze" class="dr-froze" style="display:none">🧊 Streak Freeze used — your streak is safe!</div>
-    <div class="dr-rank"><span id="drRankNum">—</span></div>
+    <div id="drFroze" class="dr-froze" style="display:none">🧊 Streak Freeze used - your streak is safe!</div>
+    <div class="dr-rank"><span id="drRankNum">-</span></div>
     <div class="dr-pct">Top <span id="drPctNum">0</span>%</div>
     <div id="drField" class="dr-field"></div>
     <div id="drStreak" class="dr-streak"></div>
@@ -909,13 +905,13 @@
     <div class="dres-you">
       <div class="dres-ovrbox"><span id="dResOvr">0</span><small>YOUR OVR</small></div>
       <div class="dres-rankbox">
-        <div class="dres-rank"><span id="dResRank">—</span></div>
+        <div class="dres-rank"><span id="dResRank">-</span></div>
         <div class="dres-pct">Top <span id="dResPct">0</span>%</div>
         <div id="dResField" class="dr-field"></div>
       </div>
     </div>
     <div id="dResPB" class="dr-pb" style="display:none">🏆 NEW PERSONAL BEST!</div>
-    <div id="dResFroze" class="dr-froze" style="display:none">🧊 Streak Freeze used — your streak is safe!</div>
+    <div id="dResFroze" class="dr-froze" style="display:none">🧊 Streak Freeze used - your streak is safe!</div>
     <div class="dres-best" id="dResBest"></div>
     <div class="dres-board-label">Today's top builds</div>
     <div class="dres-board" id="dResBoard"></div>
@@ -924,7 +920,7 @@
   </div>
 </div>
 
-<div class="footer-note">Ratings from MLB The Show — Live series only. Not affiliated with MLB or Sony.</div>
+<div class="footer-note">Ratings from MLB The Show - Live series only. Not affiliated with MLB or Sony.</div>
 
 <script>
 // Each slot maps an attribute to a body part. ax/ay = anchor point on the figure (%),
@@ -1022,7 +1018,7 @@ function heightToRating(inches) {
   return Math.max(1, Math.min(99, Math.round(50 + (inches - 67) * 3.5)));
 }
 function slotNumeric(p, s) { return s.type === 'height' ? heightToRating(p.heightIn) : p[s.key]; }
-function slotDisplay(p, s) { return s.type === 'height' ? (p.height || '—') : p[s.key]; }
+function slotDisplay(p, s) { return s.type === 'height' ? (p.height || '-') : p[s.key]; }
 
 const SILHOUETTE = 'data:image/svg+xml;utf8,' + encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="%2311161d"/><circle cx="50" cy="38" r="20" fill="%23394150"/><path d="M50 62c-20 0-34 14-34 34h68c0-20-14-34-34-34z" fill="%23394150"/></svg>'
@@ -1040,7 +1036,7 @@ const state = {
   career: null, archetype: null, draftTeamAb: null,
 };
 
-// Hard mode ("hide ratings") — set on the landing page, shared via localStorage.
+// Hard mode ("hide ratings") - set on the landing page, shared via localStorage.
 let hardMode = false;
 try { hardMode = localStorage.getItem('pl_hardMode') === '1'; } catch (e) {}
 let hardRevealed = false;
@@ -1060,7 +1056,7 @@ const SORT_OPTIONS = {
 function sortOptionsFor(game) { return SORT_OPTIONS[game === 'batter' ? 'batter' : 'pitcher']; }
 function fmtStat(v) { return lbSort === 'war' ? Number(v).toFixed(1) : Math.round(v); }
 
-// ---------- sound (synthesized via Web Audio — no asset files) ----------
+// ---------- sound (synthesized via Web Audio - no asset files) ----------
 const Sound = (() => {
   let ac, master, muted = false;
   function ctx() {
@@ -1187,8 +1183,6 @@ async function init() {
   document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.overlay.show').forEach(o => closeOverlay(o.id)); });
   renderAcct();
   initGoogle();
-  renderStreakChip();
-  updateDailyBtn();
 
   // deep-link from the home-page menu, e.g. /pitching#leaderboard → open that panel on load
   const h = (location.hash || '').replace('#', '').toLowerCase();
@@ -1196,7 +1190,6 @@ async function init() {
   else if (h === 'leaderboard' || h === 'lb') openLeaderboard('global');
   else if (h === 'how' || h === 'howtoplay') openOverlay('howModal');
   else if (h === 'achievements' || h === 'ach') { const o = () => (window.Ach ? Ach.open() : setTimeout(o, 120)); o(); }
-  else if (h === 'daily') setTimeout(startDailyChallenge, 350);
 }
 
 function toast(msg) {
@@ -1234,12 +1227,7 @@ async function onGoogleCredential(resp) {
     const r = await fetch('/api/account', { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'login', idToken: resp.credential }) });
     const j = await r.json();
-    if (j.ok) {
-      saveAccount({ sub: j.sub, email: j.email, name: j.name, picture: j.picture, sessionToken: j.sessionToken });
-      // adopt the account's streak across devices (keep the higher of local vs server)
-      if (typeof j.streak === 'number' && j.streak >= streak.count) { streak.count = j.streak; streak.best = Math.max(streak.best, j.bestStreak || j.streak); saveStreak(); renderStreakChip(); }
-      toast('Signed in as ' + (j.name || j.email));
-    }
+    if (j.ok) { saveAccount({ sub: j.sub, email: j.email, name: j.name, picture: j.picture, sessionToken: j.sessionToken }); toast('Signed in as ' + (j.name || j.email)); }
     else toast('Sign-in failed');
   } catch (e) { toast('Sign-in failed'); }
 }
@@ -1253,7 +1241,7 @@ function renderAcct() {
       <button class="signout" id="signOutBtn">Sign out</button></div>`;
     const so = $('signOutBtn'); if (so) so.onclick = () => { clearAccount(); toast('Signed out'); };
   } else if (!googleConfigured()) {
-    slot.innerHTML = `<div class="acct-hint">🔒 Sign-in is coming soon — you'll be able to save your players to a personal Hall of Fame.</div>`;
+    slot.innerHTML = `<div class="acct-hint">🔒 Sign-in is coming soon - you'll be able to save your players to a personal Hall of Fame.</div>`;
   } else {
     slot.innerHTML = `<div id="gsiWrap"></div><div class="acct-hint">Sign in with Google to save your players to a personal Hall of Fame.</div>`;
     try { google.accounts.id.renderButton($('gsiWrap'), { theme: 'filled_black', size: 'large', shape: 'pill', text: 'signin_with' }); }
@@ -1268,14 +1256,16 @@ async function saveToHof(btn) {
   const teamAb = (state.simTeam && state.simTeam.abbr) || state.draftTeamAb || (state.career && state.career.finalTeam);
   const reset = () => { if (btn) { btn.disabled = false; btn.textContent = '💾 Save to my Hall of Fame'; } };
   try {
+    const slimSlots = state.build.map(({ img: _img, ...s }) => s);
+    const slimCareer = { totals: state.career.totals, role: state.career.role, finalTeam: state.career.finalTeam };
     const r = await fetch('/api/account', { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'save', sub: account.sub, sessionToken: account.sessionToken, game: HOF_GAME,
         name: state.simName || 'My Player', ovr: state.finalOvr,
-        build: { slots: state.build, career: state.career, team: teamAb } }) });
+        build: { slots: slimSlots, career: slimCareer, team: teamAb } }) });
     const j = await r.json();
     if (j.ok) { if (btn) btn.textContent = '✓ Saved'; toast('Saved to your Hall of Fame'); if (Sound.complete) Sound.complete(); }
     else if (r.status === 401) { clearAccount(); toast('Please sign in again'); reset(); }
-    else { toast('Save failed'); reset(); }
+    else { toast(j.error || 'Save failed'); reset(); }
   } catch (e) { toast('Save failed'); reset(); }
 }
 
@@ -1369,27 +1359,25 @@ function buildWeights() {
     cumWeights.push(totalWeight);
   }
 }
-function pickWeighted(rng) {
-  const rand = rng || Math.random;
-  const r = rand() * totalWeight;
+function pickWeighted() {
+  const r = Math.random() * totalWeight;
   let lo = 0, hi = cumWeights.length - 1;
   while (lo < hi) { const mid = (lo + hi) >> 1; if (cumWeights[mid] < r) lo = mid + 1; else hi = mid; }
   return DATA.pool[lo];
 }
 const LEGEND_ODDS = 0.03;
-function randPitcher(rng) {
-  const rand = rng || Math.random;
+function randPitcher() {
   const legs = DATA.legends || [];
-  if (legs.length && rand() < LEGEND_ODDS) {
+  if (legs.length && Math.random() < LEGEND_ODDS) {
     const avail = legs.filter(p => !state.used.has(p.name));
-    if (avail.length) return avail[Math.floor(rand() * avail.length)];
+    if (avail.length) return avail[Math.floor(Math.random() * avail.length)];
   }
   let p, tries = 0;
-  do { p = pickWeighted(rng); } while (state.used.has(p.name) && ++tries < 50);
+  do { p = pickWeighted(); } while (state.used.has(p.name) && ++tries < 50);
   return p;
 }
 
-/* ===== Daily Challenge + streak (habit loop — phase 1 foundation) ===== */
+/* ===== Daily Challenge + streak (habit loop - phase 1 foundation) ===== */
 function todayUTC() {
   const d = new Date();
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
@@ -1439,7 +1427,7 @@ function checkStreakMilestone(n) {
   if (!STREAK_MILESTONES.includes(n)) return;
   const msgs = { 3: "3-day streak! You're on a roll. 🔥", 7: 'One full week! 🔥🔥', 14: "Two weeks straight. You're hooked. 🔥🔥🔥", 30: '30 days! Legendary dedication. 🏆', 100: '100 days. You are the absolute GOAT. 🐐' };
   let m = msgs[n] || `${n}-day streak!`;
-  if (gotFreeze) m += '\n🧊 Earned a Streak Freeze — protects one missed day!';
+  if (gotFreeze) m += '\n🧊 Earned a Streak Freeze - protects one missed day!';
   dayToast(m); Sound.legend();
 }
 function nextMilestonePreview() {
@@ -1466,7 +1454,7 @@ function dayToast(msg) {
   clearTimeout(t._tmr); t._tmr = setTimeout(() => gsap.to(t, { opacity: 0, y: -10, duration: .4, onComplete: () => { t.style.display = 'none'; } }), 4800);
 }
 
-// personal best (best daily OVR ever) — the craving target + the satisfying "new best" flash
+// personal best (best daily OVR ever) - the craving target + the satisfying "new best" flash
 function dailyBest() { try { return Number(localStorage.getItem('pl_dc_best') || '0') || 0; } catch (e) { return 0; } }
 function setDailyBest(v) { try { localStorage.setItem('pl_dc_best', String(v)); } catch (e) {} }
 
@@ -1491,7 +1479,7 @@ function updateDailyBtn() {
   const done = getDailyStatus();
   if (done) { btn.textContent = '✅ Done'; btn.classList.add('done'); btn.classList.remove('pulse'); btn.title = `Today: ${done.ovr} OVR · #${done.rank} of ${done.total}`; }
   else {
-    btn.textContent = '🎯 Daily'; btn.classList.remove('done'); btn.classList.add('pulse'); btn.title = 'Daily Challenge — same pitchers for everyone today!';
+    btn.textContent = '🎯 Daily'; btn.classList.remove('done'); btn.classList.add('pulse'); btn.title = 'Daily Challenge - same pitchers for everyone today!';
     fetchPlayedToday().then(n => { if (n != null && n > 0 && !getDailyStatus()) { btn.textContent = `🎯 Daily · ${n}`; btn.title = `${n} played today`; } });
   }
 }
@@ -1499,10 +1487,10 @@ function showDailyInfo() {
   const el = $('dailyInfo'); if (!el) return;
   const best = dailyBest(), preview = nextMilestonePreview();
   let html = '';
-  if (luckyToday) html += `<span class="di-lucky">✨ LUCKY SPIN — a 💎 Diamond is locked into your first card!</span>`;
-  if (best > 0) html += `<span class="di-best">🏆 Your best daily: <b>${best}</b> OVR — beat it!</span>`;
+  if (luckyToday) html += `<span class="di-lucky">✨ LUCKY SPIN - a 💎 Diamond is locked into your first card!</span>`;
+  if (best > 0) html += `<span class="di-best">🏆 Your best daily: <b>${best}</b> OVR - beat it!</span>`;
   if (preview) html += `<span class="di-prev">${preview}</span>`;
-  el.innerHTML = html || `<span class="di-prev">🎯 Same pitchers for everyone today. One shot — make it count.</span>`;
+  el.innerHTML = html || `<span class="di-prev">🎯 Same pitchers for everyone today. One shot - make it count.</span>`;
   el.style.display = 'flex';
 }
 function hideDailyInfo() { const el = $('dailyInfo'); if (el) el.style.display = 'none'; }
@@ -1603,7 +1591,7 @@ function renderDailyResults(res, best, rows, name) {
   const ov = $('dailyResults');
   const pct = res.total > 1 ? Math.max(1, Math.round((1 - (res.rank - 1) / res.total) * 100)) : 100;
   $('dResOvr').textContent = res.ovr;
-  $('dResRank').textContent = '—';
+  $('dResRank').textContent = '-';
   $('dResPct').textContent = '0';
   $('dResField').textContent = `of ${res.total.toLocaleString()} player${res.total === 1 ? '' : 's'} today`;
   $('dResPB').style.display = res.isPB ? 'block' : 'none';
@@ -1613,7 +1601,7 @@ function renderDailyResults(res, best, rows, name) {
   if (best != null) {
     const gap = best - res.ovr;
     $('dResBest').innerHTML = gap <= 0
-      ? `💎 <b>Optimal!</b> You placed your cards perfectly — best possible was <b>${best}</b> OVR.`
+      ? `💎 <b>Optimal!</b> You placed your cards perfectly - best possible was <b>${best}</b> OVR.`
       : `💎 Best possible with your cards: <b>${best}</b> OVR <span class="dres-gap">(+${gap} with smarter slotting)</span>`;
   } else $('dResBest').innerHTML = '';
   // today's top board, highlighting the player's own row if it's up there
@@ -1637,13 +1625,13 @@ function closeDailyResults(thenSim) {
   if (thenSim) runCareerPlaythrough();
 }
 
-// Satisfying: animated rank reveal — rank + percentile count up, tier sound, PB / freeze flash.
+// Satisfying: animated rank reveal - rank + percentile count up, tier sound, PB / freeze flash.
 function rankReveal(ovr, rank, total, isPB, replay, frozeUsed) {
   const ov = $('dailyReveal'); if (!ov) return;
   const pct = total > 1 ? Math.max(1, Math.round((1 - (rank - 1) / total) * 100)) : 100;
   $('drOvr').textContent = ovr;
   $('drPctNum').textContent = '0';
-  $('drRankNum').textContent = '—';
+  $('drRankNum').textContent = '-';
   $('drField').textContent = `of ${total.toLocaleString()} player${total === 1 ? '' : 's'} today`;
   $('drPB').style.display = isPB ? 'block' : 'none';
   $('drFroze').style.display = frozeUsed ? 'block' : 'none';
@@ -1705,9 +1693,17 @@ function stopIdleReel() {
   $('track').classList.remove('idle');
 }
 
+// Count one "play" per game session (first spin) - feeds the live PLAYS counter on the landing page.
+function logPlay() {
+  if (window.__plLogged) return;
+  window.__plLogged = true;
+  try { gtag('event', 'game_start', { game: 'pitcher' }); } catch (e) {}
+  fetch('/api/score', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'play', game: 'pitcher' }) }).catch(function(){});
+}
 function spin() {
   if (state.spinning) return;
   if (openSlots().length === 0) return;
+  logPlay();
   state.spinning = true;
   state.boostedThisLand = false;
   Sound.click();
@@ -1729,7 +1725,7 @@ function spin() {
   const strip = [];
   const STRIP_LEN = 45;
   const targetIndex = STRIP_LEN - 6;
-  for (let i = 0; i < STRIP_LEN; i++) strip.push(i === targetIndex ? target : randPitcher(rng));
+  for (let i = 0; i < STRIP_LEN; i++) strip.push(i === targetIndex ? target : randPitcher());
 
   const track = $('track');
   gsap.set(track, { x: 0, filter: 'none' });
@@ -1880,7 +1876,7 @@ function boost() {
   land(boostedCard(base, primeCard));
 }
 
-// Boost should never leave an attribute flat or worse than the card you landed — guarantee every
+// Boost should never leave an attribute flat or worse than the card you landed - guarantee every
 // rating attribute is at least +5 over the original (Prime keeps the higher value when it's bigger).
 // Frame is the player's real height, so it's left unchanged.
 function boostedCard(base, prime) {
@@ -2086,7 +2082,7 @@ function updateOvr() {
   updateProgress(filledKeys.length);
   const ring = $('ovrRing'), num = $('ovrNum');
   if (!filledKeys.length) {
-    num.textContent = '—'; num.className = ''; ovrShown = 0;
+    num.textContent = '-'; num.className = ''; ovrShown = 0;
     ring.style.setProperty('--p', 0); ring.style.setProperty('--g', 'rgba(255,255,255,.12)');
     return;
   }
@@ -2197,7 +2193,7 @@ function simulateCareer(filled, finalOvr, draftTeamAb) {
     const injuryPenalty = hurt ? randRange(rng, 0.55, 0.86) : 1;
     if (hurt && age > 30) declineDebt += randRange(rng, 0.006, 0.018);
 
-    // attribute linkages — cranked so the extremes really pop
+    // attribute linkages - cranked so the extremes really pop
     // Strikeout rate is tightly tied to the Strikeout rating: ~97 => ~13.5 K/9 (1.5 K per inning).
     const k9 = clamp(-0.5 + strikeout * 0.145 + (velocity - 50) * 0.008 + (breakVal - 50) * 0.008, 2.5, 16.5);
     const bb9 = clamp(7.4 - command * 0.062 + bell(rng, 0.18), 0.9, 7.0);
@@ -2231,7 +2227,7 @@ function simulateCareer(filled, finalOvr, draftTeamAb) {
     const wins = Math.round(decisions * winPct);
     const losses = Math.max(0, Math.round(decisions - wins));
 
-    // Cy Young: you have to beat the whole league — even ace seasons usually lose.
+    // Cy Young: you have to beat the whole league - even ace seasons usually lose.
     // Elite builds (93+ OVR) get a real shot at MULTIPLE Cy Youngs (but not absurd).
     const cyElite = Math.max(0, finalOvr - 92) * 0.55;
     const cyDom = (role === 'Starter'
@@ -2307,13 +2303,13 @@ function simulateCareer(filled, finalOvr, draftTeamAb) {
   const hardware = totals.cyYoung * 14 + totals.rings * 2.5 + totals.allStar * 0.8
     + (totals.eraTitles + totals.strikeoutTitles) * 1.6 + totals.noHitters * 2 + totals.perfectGames * 5;
   const hofScore = Math.max(0, round(totals.war * 0.82 + kPts + wPts + eraPts + hardware, 1));
-  // A clearly Cooperstown résumé is ALWAYS in — but counting stats need real VALUE
+  // A clearly Cooperstown résumé is ALWAYS in - but counting stats need real VALUE
   // behind them (WAR), so a high-K / high-inning compiler with a bad ERA doesn't sneak in.
   const slamDunk = totals.war >= 64 || totals.cyYoung >= 3
     || (totals.k >= 4000 && totals.war >= 50)
     || (totals.k >= 3000 && totals.rings >= 2 && totals.war >= 46);
   const hallOfFame = hofScore >= 112 || slamDunk;
-  // Hall of Fame status pays out beyond the field — endorsements, legacy deals, appearances.
+  // Hall of Fame status pays out beyond the field - endorsements, legacy deals, appearances.
   const hofBonus = hallOfFame ? Math.round(totals.earnings * 0.15) : 0;
   const careerEarnings = totals.earnings + hofBonus;
   const highlight = bestCareerHighlight(totals, peak);
@@ -2510,14 +2506,14 @@ function seasonHeadlines(s, idx, total, P, fallbackTeam) {
   if (s.hurt && !s.cyYoung) h.push({ text: `${P} fights through injury, limited to ${Math.round(s.ip)} innings.` });
   if (s.struggling && !s.exit) h.push({ text: `${P} struggles to a ${s.era.toFixed(2)} ERA and is fighting to keep his roster spot.` });
   if (idx === total - 1) {
-    if (s.exit === 'released') h.push({ text: `${P} is <b>released</b> after a ${s.era.toFixed(2)}-ERA season and can't catch on elsewhere — career over.`, big: true });
+    if (s.exit === 'released') h.push({ text: `${P} is <b>released</b> after a ${s.era.toFixed(2)}-ERA season and can't catch on elsewhere - career over.`, big: true });
     else if (s.exit === 'pushed-out') h.push({ text: `${P} loses his job to a younger arm and <b>walks away</b> after ${total} seasons.`, big: true });
     else h.push({ text: `${P} announces his <b>retirement</b> after ${total} seasons.`, big: true });
   }
   return h;
 }
 
-// Play the career out season by season — log, headlines, live ticker — then the verdict + card.
+// Play the career out season by season - log, headlines, live ticker - then the verdict + card.
 // Shows draft animation first, then runs the career sim.
 function runCareerPlaythrough() {
   if (state.career) return;
@@ -2627,7 +2623,7 @@ function parseHeightIn(s) {
   return m ? (+m[1]) * 12 + (+m[2]) : 0;
 }
 
-// Fires the instant a slot is assigned (called from assign()) — real-time, not at build end.
+// Fires the instant a slot is assigned (called from assign()) - real-time, not at build end.
 function checkSlotAchievements(slotKey, p, s) {
   if (!window.Ach) return;
   if (Number(slotNumeric(p, s)) >= 125) Ach.unlock('offcharts');
@@ -2831,7 +2827,7 @@ function lbRow(rank, entry, cls) {
   const sorted = lbSort !== 'ovr' && lbSort !== 'ovrAsc';
   const sub = sorted ? ` <span class="nm-ovr">${entry.ovr} OVR</span>` : '';
   const right = sorted
-    ? `<div class="ov lb-stat">${entry.stat == null ? '—' : fmtStat(entry.stat)}</div>`
+    ? `<div class="ov lb-stat">${entry.stat == null ? '-' : fmtStat(entry.stat)}</div>`
     : `<div class="ov c-${tier(entry.ovr)}">${entry.ovr}</div>`;
   return `<div class="lb-row ${cls}" role="button" tabindex="0" data-entry-id="${entry.id}"><div class="rank">${rank}</div>
     <div class="nm">${escapeHTML(entry.name)}${sub}</div>
@@ -2859,7 +2855,7 @@ function headshotByName(name) {
   return HEADSHOTS.get(name) || null;
 }
 const TIER_LABELS = { grey: 'Common', bronze: 'Bronze', silver: 'Silver', gold: 'Gold', diamond: 'Diamond', legend: 'Legend' };
-// Mini team-colored figure for a leaderboard build — per game, keyed by slot label (works for either board).
+// Mini team-colored figure for a leaderboard build - per game, keyed by slot label (works for either board).
 const FIG_CONFIG = {
   pitcher: { base: 'pitcher-figure.png', masks: { 'Velocity': 'seg-pitch_velocity.png', 'Break': 'seg-pitch_movement.png', 'Strikeout': 'seg-k_per_bf.png', 'Ground Ball': 'seg-hr_per_bf.png', 'Command': 'seg-pitch_control.png', 'Clutch': 'seg-pitching_clutch.png', 'Defense': 'seg-fielding_ability.png', 'Frame': 'seg-frame.png', 'Stamina': 'seg-stamina.png' } },
   batter: { base: 'batter-figure.png', masks: { 'Vision': 'bat-seg-plate_vision.png', 'Power': 'bat-seg-power.png', 'Contact': 'bat-seg-contact.png', 'Speed': 'bat-seg-speed.png', 'Clutch': 'bat-seg-batting_clutch.png', 'Discipline': 'bat-seg-plate_discipline.png', 'Frame': 'bat-seg-frame.png', 'Defense': 'bat-seg-fielding_ability.svg' } },
@@ -2878,7 +2874,7 @@ function miniFigureHTML(entry, slots) {
 function shareBuild(entry) {
   const kind = (entry.game === 'batter') ? 'batter' : 'pitcher';
   const url = 'https://goat-lab.app';
-  const txt = `I built a ${entry.ovr} OVR ${kind}${entry.name ? ` — "${entry.name}"` : ''} on GoatLab. Think you can do better?`;
+  const txt = `I built a ${entry.ovr} OVR ${kind}${entry.name ? ` - "${entry.name}"` : ''} on GoatLab. Think you can do better?`;
   window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(txt)}&url=${encodeURIComponent(url)}`, '_blank', 'noopener');
 }
 function openBuildDetails(entryId) {
@@ -2888,7 +2884,7 @@ function openBuildDetails(entryId) {
   const t = tier(entry.ovr);
   const name = (entry.name || 'Build').replace(/\s*\(you\)\s*$/, '');
   $('buildDetailHead').innerHTML = `
-    <div class="bd-rank c-${t}">${entry._rank ? '#' + entry._rank : '—'}</div>
+    <div class="bd-rank c-${t}">${entry._rank ? '#' + entry._rank : '-'}</div>
     ${miniFigureHTML(entry, slots)}
     <div class="bd-id">
       <div class="bd-name">${escapeHTML(name)}</div>
@@ -2897,7 +2893,7 @@ function openBuildDetails(entryId) {
     <div class="bd-ovr"><span>OVR</span><b class="c-${t}">${entry.ovr}</b></div>`;
   $('buildDetailList').innerHTML = slots.length ? slots.map(s => {
     const st = tier(Number(s.value) || 0);
-    const val = s.display != null ? s.display : (s.value != null ? s.value : '—');
+    const val = s.display != null ? s.display : (s.value != null ? s.value : '-');
     return `<div class="build-slot">
       <img class="c-${st}" src="${s.img || headshotByName(s.player) || SILHOUETTE}" alt="" onerror="this.onerror=null;this.src='${SILHOUETTE}'">
       <div>
@@ -2910,30 +2906,12 @@ function openBuildDetails(entryId) {
   $('bdShare').onclick = () => shareBuild(entry);
   openOverlay('buildModal');
 }
-async function loadChallengeBoard() {
-  const list = $('lbList');
-  $('lbSortTabs').innerHTML = '';   // daily board has no sort options
-  list.innerHTML = '<div class="lb-empty">Loading…</div>';
-  try {
-    const res = await fetch(`/api/score?action=challengeLeaderboard&game=${lbGame}&limit=200`);
-    const data = await res.json();
-    if (!data.ok) throw new Error();
-    let html = `<div class="lb-empty" style="color:var(--accent2);border-color:rgba(25,198,255,.25)">🎯 Today's Daily Challenge · ${data.total} player${data.total === 1 ? '' : 's'} played</div>`;
-    if (!data.rows.length) html += '<div class="lb-empty">No one has played today yet — be the first!</div>';
-    else html += data.rows.map((r, i) => {
-      const rank = i + 1, cls = rank <= 3 ? 'top' + rank : '';
-      return `<div class="lb-row ${cls}"><div class="rank">${rank}</div><div class="nm">${escapeHTML(r.name)}</div><div class="ov c-${tier(r.ovr)}">${r.ovr}</div></div>`;
-    }).join('');
-    list.innerHTML = html;
-  } catch (e) { list.innerHTML = '<div class="lb-empty">Couldn\'t load the daily board.</div>'; }
-}
 async function loadLeaderboard(scope = lbScope, game = lbGame, sort = lbSort) {
-  lbScope = (scope === 'daily' || scope === 'challenge') ? scope : 'global';
+  lbScope = scope === 'daily' ? 'daily' : 'global';
   lbGame = game === 'batter' ? 'batter' : 'pitcher';
   lbSort = sortOptionsFor(lbGame).some(o => o.key === sort) ? sort : 'ovr';
   document.querySelectorAll('.lb-scope-tab').forEach(t => t.classList.toggle('active', t.dataset.scope === lbScope));
   document.querySelectorAll('.lb-game-tab').forEach(t => t.classList.toggle('active', t.dataset.game === lbGame));
-  if (lbScope === 'challenge') return loadChallengeBoard();
   renderSortTabs(lbGame);
   const list = $('lbList');
   list.innerHTML = '<div class="lb-empty">Loading…</div>';
@@ -2951,7 +2929,7 @@ async function loadLeaderboard(scope = lbScope, game = lbGame, sort = lbSort) {
       html += `<div class="lb-pin">${lbRow('#' + data.me.rank, { ...data.me, name: data.me.name + ' (you)' }, 'mine pinned')}</div>`;
     }
     if (!data.rows.length) {
-      html += '<div class="lb-empty">No entries yet — be the first!</div>';
+      html += '<div class="lb-empty">No entries yet - be the first!</div>';
     } else {
       html += data.rows.map((r, i) => {
         const rank = i + 1;
