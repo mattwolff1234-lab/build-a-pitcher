@@ -1115,10 +1115,13 @@ async function acceptChallengeNotif(){
   const newId = rid(), newSeed = (Math.random() * 0xFFFFFFFF)|0;
   const myNewRole = Math.random() < 0.5 ? 'pitcher' : 'batter';
   const theirRole = myNewRole === 'pitcher' ? 'batter' : 'pitcher';
-  try {
-    const ch = ably.channels.get('versus:challenge:' + pr.replyId);
-    await ch.publish({ type:'accept', matchId:newId, seed:newSeed, yourRole:theirRole, chalClientId:clientId, mode:gameMode });
-  } catch(e){}
+  // Retry the accept publish up to 3 times — if this fails silently, the acceptor
+  // never gets the green light and times out even though the challenger is ready.
+  const ch = ably.channels.get('versus:challenge:' + pr.replyId);
+  const payload = { type:'accept', matchId:newId, seed:newSeed, yourRole:theirRole, chalClientId:clientId, mode:gameMode };
+  for (let i = 0; i < 3; i++){
+    try { await ch.publish(payload); break; } catch(e){ if (i < 2) await new Promise(r => setTimeout(r, 800)); }
+  }
   startMatch(newId, myNewRole, newSeed, pr.replyClientId, false, true);
 }
 
