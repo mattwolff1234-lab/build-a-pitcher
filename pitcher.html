@@ -102,6 +102,20 @@
   .coming-tab.live:hover { border-color:var(--accent2); box-shadow:0 0 14px rgba(25,198,255,.25); }
   .coming-tab .soon { font-size:8.5px; font-weight:700; padding:1px 6px; border-radius:10px; letter-spacing:1px;
     color:var(--accent); background:rgba(255,122,24,.14); border:1px solid rgba(255,122,24,.32); }
+  /* Daily Challenge button + streak chip (habit-loop cues) */
+  .dc-btn.pulse { color:var(--gold); border-color:rgba(255,206,58,.5); animation:dcPulse 1.8s ease-in-out infinite; }
+  .dc-btn.done { color:var(--accent2); border-color:rgba(25,198,255,.4); opacity:.9; }
+  @keyframes dcPulse { 0%,100%{ box-shadow:0 0 0 rgba(255,206,58,0); } 50%{ box-shadow:0 0 16px rgba(255,206,58,.55); } }
+  .streak-chip { display:inline-flex; align-items:center; gap:4px; padding:5px 9px; border-radius:8px;
+    font-family:'Oswald',sans-serif; font-size:13px; font-weight:600; letter-spacing:.5px; color:var(--gold);
+    background:rgba(255,122,24,.12); border:1px solid rgba(255,122,24,.35); white-space:nowrap; }
+  @media (max-width:560px){ .streak-chip { font-size:11px; padding:4px 7px; } }
+  .dc-header-tag { color:var(--gold)!important; border-color:rgba(255,206,58,.5)!important; }
+  .day-toast { position:fixed; bottom:26px; left:50%; transform:translateX(-50%); z-index:210; display:none;
+    max-width:340px; text-align:center; white-space:pre-line; background:linear-gradient(180deg,rgba(20,31,48,.96),rgba(9,15,25,.97));
+    border:1px solid rgba(255,206,58,.4); color:var(--ink); padding:13px 20px; border-radius:13px; font-size:14px; line-height:1.4;
+    box-shadow:0 14px 44px rgba(0,0,0,.55), 0 0 26px rgba(255,206,58,.16); align-items:center; justify-content:center; }
+  @media (max-width:560px){ .day-toast { left:12px; right:12px; transform:none; max-width:none; } }
   .toast { position:fixed; bottom:26px; left:50%; transform:translateX(-50%); z-index:200; display:none;
     background:#10202e; border:1px solid var(--line); color:var(--ink); padding:11px 18px; border-radius:10px;
     font-size:13px; box-shadow:0 10px 30px rgba(0,0,0,.55); }
@@ -484,16 +498,29 @@
     background:rgba(255,255,255,.05); border:1px solid var(--line); }
   .overlay-close:hover { border-color:var(--accent); }
   .overlay-body { padding:16px; overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; }
-  .menu-item { display:flex; align-items:center; gap:10px; width:100%; text-align:left; padding:15px 16px; margin-bottom:9px;
-    font-family:'Oswald',sans-serif; font-size:15px; letter-spacing:1px; text-transform:uppercase; text-decoration:none;
+  .menu-item { display:flex; align-items:center; gap:10px; width:100%; text-align:left; padding:11px 14px; margin-bottom:6px;
+    font-family:'Oswald',sans-serif; font-size:14px; letter-spacing:1px; text-transform:uppercase; text-decoration:none;
     border-radius:10px; color:var(--ink); background:linear-gradient(180deg,#1b2535,#121a27); border:1px solid var(--line); }
   .menu-item:last-child { margin-bottom:0; }
+  .menu-sec { font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:2px; text-transform:uppercase;
+    color:var(--muted); margin:15px 4px 7px; padding-top:13px; border-top:1px solid var(--line); }
+  .menu-sec:first-of-type { margin-top:6px; padding-top:0; border-top:0; }
   .menu-item:hover { border-color:var(--accent2); box-shadow:0 0 14px rgba(25,198,255,.25); }
   .tip-item { align-items:flex-start; border-color:rgba(255,122,24,.4); }
   .tip-item:hover { border-color:var(--accent); box-shadow:0 0 14px rgba(255,122,24,.3); }
   .tip-item .ti-text { display:flex; flex-direction:column; gap:3px; }
   .tip-item .ti-text small { text-transform:none; letter-spacing:0; font-family:'Inter',sans-serif; font-size:12px; color:var(--muted); line-height:1.35; }
   .mi-chev { margin-left:auto; font-size:14px; color:var(--muted); }
+  .disc-item { border-color:rgba(88,101,242,.5); }
+  .disc-item:hover { border-color:#5865F2; box-shadow:0 0 14px rgba(88,101,242,.4); }
+  .discord-cta { display:flex; align-items:flex-start; gap:12px; width:100%; box-sizing:border-box;
+    margin-top:14px; padding:15px 16px; border-radius:12px; text-decoration:none; color:var(--ink);
+    background:linear-gradient(180deg,rgba(88,101,242,.16),rgba(88,101,242,.05)); border:1px solid rgba(88,101,242,.55); }
+  .discord-cta:hover { border-color:#5865F2; box-shadow:0 0 16px rgba(88,101,242,.4); }
+  .discord-cta .dc-emoji { font-size:26px; line-height:1; }
+  .discord-cta .dc-text { display:flex; flex-direction:column; gap:3px; }
+  .discord-cta .dc-text b { font-family:'Oswald',sans-serif; font-size:16px; letter-spacing:.5px; text-transform:uppercase; }
+  .discord-cta .dc-text small { font-family:'Inter',sans-serif; font-size:12.5px; color:var(--muted); line-height:1.4; }
   .install-steps { margin:-2px 0 9px; padding:13px; border-radius:10px; background:rgba(0,0,0,.28); border:1px solid var(--line); }
   .install-steps .inst-label { font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:1.5px; text-transform:uppercase;
     color:var(--accent2); margin:10px 0 9px; }
@@ -541,6 +568,17 @@
   .hof-card .hc-money { font-family:'Oswald',sans-serif; font-size:14px; font-weight:700; color:var(--gold); margin-top:3px; }
   .hof-card .hc-del { position:absolute; top:8px; right:10px; background:rgba(0,0,0,.32); border:none; color:rgba(255,255,255,.7); font-size:13px; cursor:pointer; width:24px; height:24px; border-radius:50%; line-height:22px; padding:0; }
   .hof-card .hc-del:hover { background:rgba(220,60,60,.75); color:#fff; }
+  /* social-proof stat banner */
+  .stat-bar { display:flex; align-items:center; gap:10px; justify-content:center; flex-wrap:wrap;
+    max-width:640px; margin:12px auto 0; padding:7px 14px; border-radius:999px; text-align:center;
+    background:linear-gradient(180deg,rgba(20,31,48,.72),rgba(9,15,25,.82)); border:1px solid var(--line); }
+  .stat-bar .sb-plays { font-family:'Oswald',sans-serif; font-weight:700; font-size:12.5px; letter-spacing:.5px;
+    color:var(--accent); background:rgba(255,122,24,.12); border:1px solid rgba(255,122,24,.4);
+    padding:3px 11px; border-radius:999px; white-space:nowrap; }
+  .stat-bar .sb-plays::before { content:'🔥 '; }
+  .stat-bar .sb-msg { color:var(--ink); font-size:13.5px; font-weight:500; }
+  .stat-bar .sb-msg b { font-family:'Oswald',sans-serif; letter-spacing:.5px; }
+  .stat-bar .sb-goat { color:var(--gold); }
 </style>
 </head>
 <body>
@@ -555,12 +593,34 @@
   <div class="brand">
     <span class="mark">Pitching <i>Lab</i></span>
     <span class="tag">Draft Mode</span>
+    <span id="streakChip" class="streak-chip" title="Your daily streak" style="display:none">🔥 0</span>
     <span class="brand-rule"></span>
     <button id="muteBtn" class="mute" title="Toggle sound">🔊</button>
+    <button id="dailyBtn" class="coming-tab live dc-btn" title="Daily Challenge — same pitchers for everyone!">🎯 Daily</button>
     <a id="buildTab" class="coming-tab live" href="/batting" title="Build a Batter">🛠️ Build a Batter</a>
     <button id="menuBtn" class="mute" title="Menu">☰</button>
   </div>
 </header>
+
+<div id="statBar" class="stat-bar" style="display:none">
+  <span class="sb-plays" style="display:none"></span>
+  <span class="sb-msg">Can you build the <b class="sb-goat">GOAT</b> (99 OVR)?</span>
+</div>
+<script>
+(function(){
+  var bar = document.getElementById('statBar'); if (!bar) return;
+  bar.style.display = 'flex'; // show immediately with the teaser; upgrade when stats load
+  fetch('/api/score?action=stats&game=pitcher').then(function(r){ return r.json(); }).then(function(d){
+    if (!d || !d.ok || !d.total) return;
+    var plays = bar.querySelector('.sb-plays'), msg = bar.querySelector('.sb-msg');
+    plays.textContent = d.total.toLocaleString() + ' BUILDS'; plays.style.display = '';
+    if (d.total >= 25) {
+      var p = d.pct, t = p >= 10 ? Math.round(p) + '%' : (p > 0 ? p.toFixed(1) + '%' : '<0.1%');
+      msg.innerHTML = 'Only <b>' + t + '</b> build the <b class="sb-goat">GOAT</b> (99 OVR) — can you?';
+    }
+  }).catch(function(){});
+})();
+</script>
 
 <div class="wrap">
   <div id="loading" class="loading">Loading pitchers…</div>
@@ -666,6 +726,7 @@
         <button id="submitBtn" class="primary">Submit to Leaderboard</button>
       </div>
       <div id="submitMsg" class="submit-msg"></div>
+      <a class="discord-cta" href="https://discord.gg/bMVX2zJp49" target="_blank" rel="noopener"><span class="dc-emoji">💬</span><span class="dc-text"><b>Share this build in our Discord</b><small>Talk shop, post your builds, and challenge players to live 1v1s ↗</small></span></a>
 
       <button id="resetBtn" class="ghost-btn">Build Another</button>
     </div>
@@ -677,12 +738,17 @@
     <div class="overlay-head"><span class="overlay-title">Menu</span><button class="overlay-close" data-close="menu">✕</button></div>
     <div class="overlay-body">
       <div id="acctSlot"></div>
+      <div class="menu-sec">Play</div>
       <a class="menu-item" href="/">🏠 Home</a>
+      <button class="menu-item" id="miDaily">🎯 Daily Challenge</button>
       <a class="menu-item" href="/versus">⚔️ 1v1 Live · Face Off</a>
-      <a class="menu-item" href="/versus#stats">📊 1v1 Stats</a>
+      <div class="menu-sec">Your Stuff</div>
       <button class="menu-item" id="miHof">🏛️ My Hall of Fame</button>
       <button class="menu-item" id="miAch">🏅 Achievements<span class="mi-chev" data-ach-count style="margin-left:auto;font-family:'Oswald',sans-serif;font-size:12px;color:var(--gold)">0/0</span></button>
+      <div class="menu-sec">Compete</div>
       <button class="menu-item" id="miLb">🏆 Leaderboard</button>
+      <a class="menu-item" href="/versus#stats">📊 1v1 Stats</a>
+      <div class="menu-sec">Help</div>
       <button class="menu-item" id="miHow">📖 How to Play</button>
       <button class="menu-item" id="miInstall">📲 Install App<span class="mi-chev" id="installChev">⌄</span></button>
       <div id="installSteps" class="install-steps" style="display:none">
@@ -695,8 +761,10 @@
         <div class="step"><span class="step-n">2</span><div><b>Tap Share</b><p>Tap the Share button at the bottom of the screen (the box with an arrow pointing up).</p></div></div>
         <div class="step"><span class="step-n">3</span><div><b>Add to Home Screen</b><p>Scroll down, tap "Add to Home Screen," then tap "Add."</p></div></div>
       </div>
-      <a class="menu-item tip-item" href="https://buymeacoffee.com/mattwolff1d" target="_blank" rel="noopener">☕<span class="ti-text"><b>Buy me a coffee</b><small>I'm a solo dev paying for the servers out of pocket so it stays free for everyone. Anything's hugely appreciated! ↗</small></span></a>
+      <div class="menu-sec">Community</div>
+      <a class="menu-item disc-item" href="https://discord.gg/bMVX2zJp49" target="_blank" rel="noopener">💬 Join our Discord ↗</a>
       <a class="menu-item" href="https://pitchergami.com" target="_blank" rel="noopener">⚾ PitcherGami ↗</a>
+      <a class="menu-item tip-item" href="https://buymeacoffee.com/mattwolff1d" target="_blank" rel="noopener">☕<span class="ti-text"><b>Buy me a coffee</b><small>I'm a solo dev paying for the servers out of pocket so it stays free for everyone. Anything's hugely appreciated! ↗</small></span></a>
     </div>
   </div>
 </div>
@@ -712,6 +780,7 @@
       <div class="lb-tabs">
         <button class="lb-tab lb-scope-tab active" data-scope="global">All-Time</button>
         <button class="lb-tab lb-scope-tab" data-scope="daily">Today</button>
+        <button class="lb-tab lb-scope-tab" data-scope="challenge">🎯 Daily Challenge</button>
       </div>
       <div class="lb-tabs lb-sort-tabs" id="lbSortTabs"></div>
       <div id="lbList" class="lb-list"></div>
@@ -1021,6 +1090,8 @@ async function init() {
 
   // menu + overlays
   $('menuBtn').onclick = () => { Sound.click(); openOverlay('menu'); };
+  $('dailyBtn').onclick = () => { Sound.click(); startDailyChallenge(); };
+  $('miDaily').onclick = () => { Sound.click(); startDailyChallenge(); };
   $('miHof').onclick = () => { closeOverlay('menu'); openHof(); };
   $('miAch').onclick = () => { closeOverlay('menu'); Sound.click(); window.Ach && Ach.open(); };
   $('saveHofBtn').onclick = () => saveToHof($('saveHofBtn'));
@@ -1046,6 +1117,8 @@ async function init() {
   document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.overlay.show').forEach(o => closeOverlay(o.id)); });
   renderAcct();
   initGoogle();
+  renderStreakChip();
+  updateDailyBtn();
 
   // deep-link from the home-page menu, e.g. /pitching#leaderboard → open that panel on load
   const h = (location.hash || '').replace('#', '').toLowerCase();
@@ -1053,6 +1126,7 @@ async function init() {
   else if (h === 'leaderboard' || h === 'lb') openLeaderboard('global');
   else if (h === 'how' || h === 'howtoplay') openOverlay('howModal');
   else if (h === 'achievements' || h === 'ach') { const o = () => (window.Ach ? Ach.open() : setTimeout(o, 120)); o(); }
+  else if (h === 'daily') setTimeout(startDailyChallenge, 350);
 }
 
 function toast(msg) {
@@ -1090,7 +1164,12 @@ async function onGoogleCredential(resp) {
     const r = await fetch('/api/account', { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'login', idToken: resp.credential }) });
     const j = await r.json();
-    if (j.ok) { saveAccount({ sub: j.sub, email: j.email, name: j.name, picture: j.picture, sessionToken: j.sessionToken }); toast('Signed in as ' + (j.name || j.email)); }
+    if (j.ok) {
+      saveAccount({ sub: j.sub, email: j.email, name: j.name, picture: j.picture, sessionToken: j.sessionToken });
+      // adopt the account's streak across devices (keep the higher of local vs server)
+      if (typeof j.streak === 'number' && j.streak >= streak.count) { streak.count = j.streak; streak.best = Math.max(streak.best, j.bestStreak || j.streak); saveStreak(); renderStreakChip(); }
+      toast('Signed in as ' + (j.name || j.email));
+    }
     else toast('Sign-in failed');
   } catch (e) { toast('Sign-in failed'); }
 }
@@ -1220,22 +1299,134 @@ function buildWeights() {
     cumWeights.push(totalWeight);
   }
 }
-function pickWeighted() {
-  const r = Math.random() * totalWeight;
+function pickWeighted(rng) {
+  const rand = rng || Math.random;
+  const r = rand() * totalWeight;
   let lo = 0, hi = cumWeights.length - 1;
   while (lo < hi) { const mid = (lo + hi) >> 1; if (cumWeights[mid] < r) lo = mid + 1; else hi = mid; }
   return DATA.pool[lo];
 }
 const LEGEND_ODDS = 0.03;
-function randPitcher() {
+function randPitcher(rng) {
+  const rand = rng || Math.random;
   const legs = DATA.legends || [];
-  if (legs.length && Math.random() < LEGEND_ODDS) {
+  if (legs.length && rand() < LEGEND_ODDS) {
     const avail = legs.filter(p => !state.used.has(p.name));
-    if (avail.length) return avail[Math.floor(Math.random() * avail.length)];
+    if (avail.length) return avail[Math.floor(rand() * avail.length)];
   }
   let p, tries = 0;
-  do { p = pickWeighted(); } while (state.used.has(p.name) && ++tries < 50);
+  do { p = pickWeighted(rng); } while (state.used.has(p.name) && ++tries < 50);
   return p;
+}
+
+/* ===== Daily Challenge + streak (habit loop — phase 1 foundation) ===== */
+function todayUTC() {
+  const d = new Date();
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+}
+function getOrCreateGuestId() {
+  let gid = null;
+  try { gid = localStorage.getItem('pl_guestId'); } catch (e) {}
+  if (!gid) { gid = (Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)).slice(0, 36); try { localStorage.setItem('pl_guestId', gid); } catch (e) {} }
+  return gid;
+}
+
+let streak = { count: 0, best: 0, lastDate: null };
+try { const _s = JSON.parse(localStorage.getItem('pl_streak') || 'null'); if (_s && typeof _s === 'object') streak = _s; } catch (e) {}
+streak.count = Number(streak.count) || 0; streak.best = Number(streak.best) || 0;
+function saveStreak() { try { localStorage.setItem('pl_streak', JSON.stringify(streak)); } catch (e) {} }
+function markPlayedToday() {
+  const today = todayUTC();
+  if (streak.lastDate === today) return false;
+  const d = new Date(today + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() - 1);
+  const yd = d.toISOString().slice(0, 10);
+  streak.count = (streak.lastDate === yd) ? (streak.count + 1) : 1;
+  streak.best = Math.max(streak.best, streak.count);
+  streak.lastDate = today; saveStreak(); renderStreakChip();
+  return true;
+}
+function renderStreakChip() {
+  const chip = $('streakChip'); if (!chip) return;
+  if (streak.count >= 2) { chip.textContent = `🔥 ${streak.count}`; chip.style.display = 'inline-flex'; }
+  else chip.style.display = 'none';
+}
+const STREAK_MILESTONES = [3, 7, 14, 30, 100];
+function checkStreakMilestone(n) {
+  if (!STREAK_MILESTONES.includes(n)) return;
+  const msgs = { 3: "3-day streak! You're on a roll. 🔥", 7: 'One full week! See you tomorrow? 🔥🔥', 14: "Two weeks straight. You're hooked. 🔥🔥🔥", 30: '30 days! Legendary dedication. 🏆', 100: '100 days. You are the absolute GOAT. 🐐' };
+  dayToast(msgs[n] || `${n}-day streak!`); Sound.legend();
+}
+function dayToast(msg) {
+  let t = $('dayToast');
+  if (!t) { t = document.createElement('div'); t.id = 'dayToast'; t.className = 'day-toast'; document.body.appendChild(t); }
+  t.textContent = msg; t.style.display = 'flex'; gsap.killTweensOf(t);
+  gsap.fromTo(t, { y: 14, opacity: 0, scale: .94 }, { y: 0, opacity: 1, scale: 1, duration: .45, ease: 'back.out(1.5)' });
+  clearTimeout(t._tmr); t._tmr = setTimeout(() => gsap.to(t, { opacity: 0, y: -10, duration: .4, onComplete: () => { t.style.display = 'none'; } }), 4500);
+}
+
+let dailyMode = false, dailyRng = null;
+function dcKey() { return `pl_dc_${todayUTC()}`; }
+function getDailyStatus() { try { return JSON.parse(localStorage.getItem(dcKey()) || 'null'); } catch (e) { return null; } }
+function setDailyDone(data) { try { localStorage.setItem(dcKey(), JSON.stringify(data)); } catch (e) {} }
+function updateDailyBtn() {
+  const btn = $('dailyBtn'); if (!btn) return;
+  const done = getDailyStatus();
+  if (done) { btn.textContent = '✅ Done'; btn.classList.add('done'); btn.classList.remove('pulse'); btn.title = `Today: ${done.ovr} OVR · #${done.rank} of ${done.total}`; }
+  else { btn.textContent = '🎯 Daily'; btn.classList.remove('done'); btn.classList.add('pulse'); btn.title = 'Daily Challenge — same pitchers for everyone today!'; }
+}
+function startDailyChallenge() {
+  closeOverlay('menu');
+  const done = getDailyStatus();
+  if (done) {
+    const pct = done.total > 1 ? Math.round((1 - (done.rank - 1) / done.total) * 100) : 100;
+    dayToast(`Today: ${done.ovr} OVR · #${done.rank} of ${done.total} (top ${pct}%) 🎯 Come back tomorrow!`);
+    return;
+  }
+  reset();                          // reset() clears dailyMode, so set it right after
+  dailyMode = true;
+  dailyRng = seededRandom(`pl-daily-${todayUTC()}-pitcher-v1`);
+  const tagEl = document.querySelector('header .tag');
+  if (tagEl) { tagEl.textContent = '🎯 Daily Challenge'; tagEl.classList.add('dc-header-tag'); }
+  dayToast('🎯 Daily Challenge — same pitchers for everyone today. One shot!');
+  if (window.matchMedia('(max-width: 720px)').matches) $('spinBtn').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+async function finishDailyChallenge(ovr, name, build) {
+  if (!dailyMode) return;
+  dailyMode = false; dailyRng = null;
+  const tagEl = document.querySelector('header .tag');
+  if (tagEl) { tagEl.textContent = 'Draft Mode'; tagEl.classList.remove('dc-header-tag'); }
+  let rank = 1, total = 1;
+  try {
+    const body = { action: 'challengeSubmit', game: LEADERBOARD_GAME, ovr, name, build };
+    if (account) body.sub = account.sub; else body.guestId = getOrCreateGuestId();
+    const r = await fetch('/api/score', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const j = await r.json(); if (j.ok) { rank = j.rank; total = j.total; }
+  } catch (e) {}
+  setDailyDone({ ovr, rank, total });
+  updateDailyBtn();
+  // streak bump (first daily play of the day) + daily achievements
+  if (markPlayedToday()) {
+    checkStreakMilestone(streak.count);
+    if (account) {
+      try {
+        const r = await fetch('/api/account', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'updateStreak', sub: account.sub, sessionToken: account.sessionToken }) });
+        const j = await r.json(); if (j.ok) { streak.count = j.streak; streak.best = j.best; saveStreak(); renderStreakChip(); }
+      } catch (e) {}
+    }
+  }
+  bumpDailyAch();
+  const pct = total > 1 ? Math.round((1 - (rank - 1) / total) * 100) : 100;
+  dayToast(`🎯 Daily done! ${ovr} OVR · #${rank} of ${total} today (top ${pct}%)`);
+}
+// Daily achievements on the live board: Show Up + Daily Grind I/II/III (7/30/100).
+function bumpDailyAch() {
+  if (!window.Ach) return;
+  Ach.unlock('daily_root');
+  let n = 0; try { n = Number(localStorage.getItem('pl_dc_count') || '0'); } catch (e) {}
+  n++; try { localStorage.setItem('pl_dc_count', String(n)); } catch (e) {}
+  if (n >= 7) Ach.unlock('grind1');
+  if (n >= 30) Ach.unlock('grind2');
+  if (n >= 100) Ach.unlock('grind3');
 }
 
 function borderTier(p) { return p.legend ? 'legend' : tier(p.ovr); }
@@ -1283,11 +1474,12 @@ function spin() {
   $('spinBtn').disabled = true;
   $('landed').classList.remove('show');
 
-  const target = randPitcher();
+  const rng = dailyMode ? dailyRng : undefined;       // seeded reel on Daily Challenge days
+  const target = randPitcher(rng);
   const strip = [];
   const STRIP_LEN = 45;
   const targetIndex = STRIP_LEN - 6;
-  for (let i = 0; i < STRIP_LEN; i++) strip.push(i === targetIndex ? target : randPitcher());
+  for (let i = 0; i < STRIP_LEN; i++) strip.push(i === targetIndex ? target : randPitcher(rng));
 
   const track = $('track');
   gsap.set(track, { x: 0, filter: 'none' });
@@ -2370,7 +2562,12 @@ async function submitScore() {
     myEntryId = data.id;
     $('submitRow').style.display = 'none';
     $('submitMsg').textContent = `You're #${data.globalRank} all-time. Open the menu anytime to see the board.`;
-    openLeaderboard('global', LEADERBOARD_GAME);
+    if (dailyMode) {
+      await finishDailyChallenge(state.finalOvr, name, { slots: state.build, career: state.career });
+      openLeaderboard('challenge', LEADERBOARD_GAME);
+    } else {
+      openLeaderboard('global', LEADERBOARD_GAME);
+    }
   } catch (e) {
     $('submitBtn').disabled = false;
     $('submitMsg').textContent = 'Leaderboard not reachable yet (goes live once deployed with the database).';
@@ -2460,12 +2657,30 @@ function openBuildDetails(entryId) {
   $('bdShare').onclick = () => shareBuild(entry);
   openOverlay('buildModal');
 }
+async function loadChallengeBoard() {
+  const list = $('lbList');
+  $('lbSortTabs').innerHTML = '';   // daily board has no sort options
+  list.innerHTML = '<div class="lb-empty">Loading…</div>';
+  try {
+    const res = await fetch(`/api/score?action=challengeLeaderboard&game=${lbGame}&limit=200`);
+    const data = await res.json();
+    if (!data.ok) throw new Error();
+    let html = `<div class="lb-empty" style="color:var(--accent2);border-color:rgba(25,198,255,.25)">🎯 Today's Daily Challenge · ${data.total} player${data.total === 1 ? '' : 's'} played</div>`;
+    if (!data.rows.length) html += '<div class="lb-empty">No one has played today yet — be the first!</div>';
+    else html += data.rows.map((r, i) => {
+      const rank = i + 1, cls = rank <= 3 ? 'top' + rank : '';
+      return `<div class="lb-row ${cls}"><div class="rank">${rank}</div><div class="nm">${escapeHTML(r.name)}</div><div class="ov c-${tier(r.ovr)}">${r.ovr}</div></div>`;
+    }).join('');
+    list.innerHTML = html;
+  } catch (e) { list.innerHTML = '<div class="lb-empty">Couldn\'t load the daily board.</div>'; }
+}
 async function loadLeaderboard(scope = lbScope, game = lbGame, sort = lbSort) {
-  lbScope = scope === 'daily' ? 'daily' : 'global';
+  lbScope = (scope === 'daily' || scope === 'challenge') ? scope : 'global';
   lbGame = game === 'batter' ? 'batter' : 'pitcher';
   lbSort = sortOptionsFor(lbGame).some(o => o.key === sort) ? sort : 'ovr';
   document.querySelectorAll('.lb-scope-tab').forEach(t => t.classList.toggle('active', t.dataset.scope === lbScope));
   document.querySelectorAll('.lb-game-tab').forEach(t => t.classList.toggle('active', t.dataset.game === lbGame));
+  if (lbScope === 'challenge') return loadChallengeBoard();
   renderSortTabs(lbGame);
   const list = $('lbList');
   list.innerHTML = '<div class="lb-empty">Loading…</div>';
@@ -2513,6 +2728,9 @@ function initTilt() {
 }
 
 function reset() {
+  dailyMode = false; dailyRng = null;   // a fresh game is never a daily until startDailyChallenge says so
+  const _tag = document.querySelector('header .tag');
+  if (_tag && _tag.classList.contains('dc-header-tag')) { _tag.textContent = 'Draft Mode'; _tag.classList.remove('dc-header-tag'); }
   hardRevealed = false;  // re-hide ratings if hard mode is on
   state.filled = {};
   state.used = new Set();

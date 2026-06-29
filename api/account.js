@@ -92,6 +92,9 @@ function ensure() {
       )`;
       await sql`ALTER TABLE pvp_history ADD COLUMN IF NOT EXISTS opp_key text`;
       await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS achievements jsonb NOT NULL DEFAULT '{}'::jsonb`;
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS current_streak int NOT NULL DEFAULT 0`;
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS best_streak int NOT NULL DEFAULT 0`;
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_active_date date`;
       await sql`CREATE INDEX IF NOT EXISTS idx_pvp_history_player ON pvp_history (player_key, created_at DESC)`;
       await sql`CREATE INDEX IF NOT EXISTS idx_pvp_history_opp_key ON pvp_history (opp_key) WHERE opp_key IS NOT NULL`;
     })();
@@ -169,8 +172,9 @@ module.exports = async (req, res) => {
           ON CONFLICT (google_sub) DO UPDATE SET
             email = EXCLUDED.email, name = EXCLUDED.name, picture = EXCLUDED.picture,
             session_token = COALESCE(users.session_token, EXCLUDED.session_token)
-          RETURNING session_token`;
-        return res.status(200).json({ ok: true, sub: profile.sub, email: profile.email, name: profile.name, picture: profile.picture, sessionToken: row.session_token });
+          RETURNING session_token, current_streak, best_streak`;
+        return res.status(200).json({ ok: true, sub: profile.sub, email: profile.email, name: profile.name, picture: profile.picture, sessionToken: row.session_token,
+          streak: Number(row.current_streak) || 0, bestStreak: Number(row.best_streak) || 0 });
       }
 
       if (action === 'save') {
@@ -188,6 +192,23 @@ module.exports = async (req, res) => {
         if (!(await authed(body.sub, body.sessionToken))) return res.status(401).json({ ok: false, error: 'Not signed in' });
         await sql`DELETE FROM saves WHERE id = ${Number(body.id)} AND google_sub = ${body.sub}`;
         return res.status(200).json({ ok: true });
+      }
+
+      // Bump the signed-in user's daily streak (UTC). Increments if they last played yesterday,
+      // resets to 1 on a gap, no-ops if already counted today. Returns the authoritative streak.
+      if (action === 'updateStreak') {
+        if (!(await authed(body.sub, body.sessionToken))) return res.status(401).json({ ok: false, error: 'Not signed in' });
+        const now = new Date();
+        const today = now.toISOString().slice(0, 10);
+        const y = new Date(now); y.setUTCDate(y.getUTCDate() - 1);
+        const yd = y.toISOString().slice(0, 10);
+        const [u] = await sql`SELECT last_active_date, current_streak, best_streak FROM users WHERE google_sub = ${body.sub}`;
+        const last = u && u.last_active_date ? String(u.last_active_date).slice(0, 10) : null;
+        if (last === today) return res.status(200).json({ ok: true, streak: (u && u.current_streak) || 0, best: (u && u.best_streak) || 0, firstToday: false });
+        const streak = last === yd ? (((u && u.current_streak) || 0) + 1) : 1;
+        const best = Math.max((u && u.best_streak) || 0, streak);
+        await sql`UPDATE users SET current_streak = ${streak}, best_streak = ${best}, last_active_date = ${today} WHERE google_sub = ${body.sub}`;
+        return res.status(200).json({ ok: true, streak, best, firstToday: true });
       }
 
       // Merge the caller's achievements with what's stored on their account (union, keeping the

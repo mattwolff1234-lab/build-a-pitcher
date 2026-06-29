@@ -19,6 +19,9 @@ function findConn() {
 const CONN = findConn();
 const sql = CONN ? neon(CONN) : null;
 const gameOf = g => (g === 'batter' ? 'batter' : 'pitcher');
+// Per-player key for daily dedup: signed-in account, else device guest id. Trust-the-client, same
+// posture as the rest of the leaderboard — the UNIQUE constraint is what enforces one attempt/day.
+const playerKey = b => (b && b.sub ? 'acct:' + String(b.sub).slice(0, 80) : (b && b.guestId ? 'guest:' + String(b.guestId).slice(0, 80) : null));
 
 let ready;
 function ensure() {
@@ -34,6 +37,19 @@ function ensure() {
       await sql`ALTER TABLE scores ADD COLUMN IF NOT EXISTS game text NOT NULL DEFAULT 'pitcher'`;
       await sql`CREATE INDEX IF NOT EXISTS idx_scores_game_ovr ON scores (game, ovr DESC, created_at ASC)`;
       await sql`CREATE INDEX IF NOT EXISTS idx_scores_created ON scores (created_at)`;
+      // Daily Challenge: one seeded puzzle per day, one attempt per player (enforced by the UNIQUE).
+      await sql`CREATE TABLE IF NOT EXISTS daily_scores (
+        id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+        player_key text NOT NULL,
+        game text NOT NULL DEFAULT 'pitcher',
+        name text NOT NULL,
+        ovr int NOT NULL,
+        build jsonb,
+        challenge_date date NOT NULL DEFAULT CURRENT_DATE,
+        created_at timestamptz NOT NULL DEFAULT now(),
+        UNIQUE (player_key, game, challenge_date)
+      )`;
+      await sql`CREATE INDEX IF NOT EXISTS idx_daily_scores_date ON daily_scores (game, challenge_date, ovr DESC)`;
     })();
   }
   return ready;
@@ -44,8 +60,46 @@ module.exports = async (req, res) => {
   try {
     await ensure();
 
+    // GET ?action=challengeLeaderboard — today's daily board + how many have played today.
+    if (req.method !== 'POST' && (req.query && req.query.action) === 'challengeLeaderboard') {
+      const game = gameOf(req.query && req.query.game);
+      const limit = Math.max(1, Math.min(200, parseInt(req.query && req.query.limit, 10) || 50));
+      const rows = await sql`SELECT name, ovr FROM daily_scores
+        WHERE game = ${game} AND challenge_date = CURRENT_DATE ORDER BY ovr DESC, created_at ASC LIMIT ${limit}`;
+      const [{ total }] = await sql`SELECT count(*)::int AS total FROM daily_scores WHERE game = ${game} AND challenge_date = CURRENT_DATE`;
+      return res.status(200).json({ ok: true, rows, total: Number(total) });
+    }
+
+    // GET ?action=stats — total builds + how many hit the GOAT (99 OVR), for the social-proof banner.
+    if (req.method !== 'POST' && (req.query && req.query.action) === 'stats') {
+      const game = gameOf(req.query && req.query.game);
+      const [{ total, goat }] = await sql`SELECT count(*)::int AS total,
+        count(*) FILTER (WHERE ovr >= 99)::int AS goat FROM scores WHERE game = ${game}`;
+      const t = Number(total), g = Number(goat);
+      return res.status(200).json({ ok: true, total: t, goat: g, pct: t > 0 ? (g / t) * 100 : 0 });
+    }
+
     if (req.method === 'POST') {
       const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
+
+      // Daily Challenge submission — one row per player per day; returns today's rank + field size.
+      if (body.action === 'challengeSubmit') {
+        const key = playerKey(body);
+        if (!key) return res.status(400).json({ ok: false, error: 'No player key' });
+        const game = gameOf(body.game);
+        const ovr = Math.max(1, Math.min(120, Math.round(Number(body.ovr) || 0)));
+        const cname = String(body.name == null ? '' : body.name).trim().slice(0, 40) || 'Anonymous';
+        const cbuild = body.build && typeof body.build === 'object' ? JSON.stringify(body.build) : null;
+        await sql`INSERT INTO daily_scores (player_key, game, name, ovr, build)
+          VALUES (${key}, ${game}, ${cname}, ${ovr}, ${cbuild}::jsonb)
+          ON CONFLICT (player_key, game, challenge_date) DO NOTHING`;
+        const [{ rank }] = await sql`SELECT count(*)::int + 1 AS rank FROM daily_scores
+          WHERE game = ${game} AND challenge_date = CURRENT_DATE AND ovr > ${ovr}`;
+        const [{ total }] = await sql`SELECT count(*)::int AS total FROM daily_scores
+          WHERE game = ${game} AND challenge_date = CURRENT_DATE`;
+        return res.status(200).json({ ok: true, rank: Number(rank), total: Number(total) });
+      }
+
       let name = String(body.name == null ? '' : body.name).trim().slice(0, 20);
       if (!name) name = 'Anonymous';
       const ovr = Math.max(1, Math.min(99, Math.round(Number(body.ovr) || 0)));
