@@ -1151,14 +1151,16 @@ async function saveToHof(btn) {
   const teamAb = (state.simTeam && state.simTeam.abbr) || state.draftTeamAb || (state.career && state.career.finalTeam);
   const reset = () => { if (btn) { btn.disabled = false; btn.textContent = '💾 Save to my Hall of Fame'; } };
   try {
+    const slimSlots = state.build.map(({ img: _img, ...s }) => s);
+    const slimCareer = { totals: state.career.totals, role: state.career.role, finalTeam: state.career.finalTeam };
     const r = await fetch('/api/account', { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'save', sub: account.sub, sessionToken: account.sessionToken, game: HOF_GAME,
         name: state.simName || 'My Player', ovr: state.finalOvr,
-        build: { slots: state.build, career: state.career, team: teamAb } }) });
+        build: { slots: slimSlots, career: slimCareer, team: teamAb } }) });
     const j = await r.json();
     if (j.ok) { if (btn) btn.textContent = '✓ Saved'; toast('Saved to your Hall of Fame'); if (Sound.complete) Sound.complete(); }
     else if (r.status === 401) { clearAccount(); toast('Please sign in again'); reset(); }
-    else { toast('Save failed'); reset(); }
+    else { toast(j.error || 'Save failed'); reset(); }
   } catch (e) { toast('Save failed'); reset(); }
 }
 
