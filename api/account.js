@@ -179,6 +179,9 @@ module.exports = async (req, res) => {
         const ovr = Math.max(1, Math.min(120, Math.round(Number(body.ovr) || 0)));
         const build = body.build && typeof body.build === 'object' ? JSON.stringify(body.build) : null;
         const game = gameOf(body.game);
+        const MAX_HOF_SAVES = 50;
+        const [{ count: saveCount }] = await sql`SELECT count(*)::int AS count FROM saves WHERE google_sub = ${body.sub} AND game = ${game}`;
+        if (saveCount >= MAX_HOF_SAVES) return res.status(400).json({ ok: false, error: `Hall of Fame full (${MAX_HOF_SAVES} max). Delete some to save new ones.` });
         const [row] = await sql`INSERT INTO saves (google_sub, game, name, ovr, build)
           VALUES (${body.sub}, ${game}, ${name}, ${ovr}, ${build}::jsonb) RETURNING id`;
         return res.status(200).json({ ok: true, id: Number(row.id) });
