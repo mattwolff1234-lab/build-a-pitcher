@@ -322,12 +322,12 @@
     bar.style.display = 'inline-flex'; // show teaser immediately; fill in live stats below
     var playsEl = bar.querySelector('.sb-plays'), msg = bar.querySelector('.sb-msg');
     function load(){
-      fetch('/api/score?action=stats&game=pitcher').then(function(r){ return r.json(); }).then(function(d){
+      fetch('/api/score?action=stats&game=all').then(function(r){ return r.json(); }).then(function(d){
         if (!d || !d.ok) return;
         if (d.plays) { playsEl.textContent = Number(d.plays).toLocaleString() + ' PLAYS'; playsEl.style.display = ''; }
-        if (d.total >= 25) {
-          var p = d.pct, t = p >= 10 ? Math.round(p) + '%' : (p > 0 ? p.toFixed(1) + '%' : '<0.1%');
-          msg.innerHTML = 'Only <b>' + t + '</b> build the <b class="sb-goat">GOAT</b> (99 OVR) — can you?';
+        if (d.goat && d.plays) {
+          var p = (d.goat / d.plays) * 100, t = p >= 10 ? Math.round(p) + '%' : (p > 0 ? p.toFixed(1) + '%' : '<0.1%');
+          msg.innerHTML = 'Only <b>' + t + '</b> build the <b class="sb-goat">GOAT</b> (99 OVR). Can you?';
         }
       }).catch(function(){});
     }
