@@ -1273,9 +1273,17 @@ function stopIdleReel() {
   $('track').classList.remove('idle');
 }
 
+// Count one "play" per game session (first spin) — feeds the live PLAYS counter on the landing page.
+function logPlay() {
+  if (window.__plLogged) return;
+  window.__plLogged = true;
+  try { gtag('event', 'game_start', { game: 'batter' }); } catch (e) {}
+  fetch('/api/score', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'play', game: 'batter' }) }).catch(function(){});
+}
 function spin() {
   if (state.spinning) return;
   if (openSlots().length === 0) return;
+  logPlay();
   state.spinning = true;
   state.boostedThisLand = false;
   Sound.click();
