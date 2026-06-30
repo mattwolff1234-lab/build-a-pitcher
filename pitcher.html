@@ -139,8 +139,8 @@
     border:1px solid rgba(255,206,58,.4); background:linear-gradient(180deg,rgba(20,31,48,.96),rgba(9,15,25,.98));
     box-shadow:0 24px 70px rgba(0,0,0,.6), 0 0 40px rgba(255,206,58,.16); }
   .dr-eyebrow { font-family:'Oswald',sans-serif; font-size:12px; letter-spacing:3px; text-transform:uppercase; color:var(--gold); }
-  .dr-ovr { font-family:'Oswald',sans-serif; font-weight:700; font-size:62px; line-height:1; margin:6px 0 2px; color:var(--ink); }
-  .dr-ovr small { font-size:15px; color:var(--muted); letter-spacing:2px; margin-left:6px; }
+  .daily-reveal .dr-ovr { font-family:'Oswald',sans-serif; font-weight:700; font-size:62px; line-height:1; margin:6px 0 2px; color:var(--ink); }
+  .daily-reveal .dr-ovr small { font-size:15px; color:var(--muted); letter-spacing:2px; margin-left:6px; }
   .dr-pb { font-family:'Oswald',sans-serif; font-weight:700; letter-spacing:1px; color:var(--gold); margin:6px 0; animation:pbFlash 1s ease-in-out infinite; }
   @keyframes pbFlash { 0%,100%{ opacity:1; transform:scale(1); } 50%{ opacity:.6; transform:scale(1.05); } }
   .dr-froze { color:var(--diamond); font-size:13px; margin:4px 0; }
@@ -1453,6 +1453,12 @@ function todayUTC() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
+// The Daily Challenge alternates between this game and Build a Batter each day (date-seeded so
+// everyone worldwide gets the same one). Returns 'pitcher' or 'batter' for a given local date.
+function dailyGameFor(dateStr) {
+  const days = Math.floor(Date.parse(dateStr + 'T00:00:00Z') / 86400000);
+  return (days % 2 === 1) ? 'pitcher' : 'batter';
+}
 function getOrCreateGuestId() {
   let gid = null;
   try { gid = localStorage.getItem('pl_guestId'); } catch (e) {}
@@ -1644,6 +1650,8 @@ function showDailyInfo() {
 }
 function hideDailyInfo() { const el = $('dailyInfo'); if (el) el.style.display = 'none'; }
 async function startDailyChallenge() {
+  // Off-day: today's daily is the other game — hand off to it.
+  if (dailyGameFor(todayUTC()) !== LEADERBOARD_GAME) { location.href = (LEADERBOARD_GAME === 'pitcher' ? '/batting' : '/pitching') + '#daily'; return; }
   closeOverlay('menu');
   const serverToday = await syncAccountDates();   // fresh server result (account or guest), authoritative
   const done = serverToday || getDailyStatus();

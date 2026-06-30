@@ -18,6 +18,7 @@
 <meta name="twitter:card" content="summary">
 <meta name="twitter:image" content="/icon-512.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="/achievements.js" defer></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-TVL2XEQ2Q7"></script>
@@ -561,6 +562,89 @@
   .hof-card .hc-money { font-family:'Oswald',sans-serif; font-size:14px; font-weight:700; color:var(--gold); margin-top:3px; }
   .hof-card .hc-del { position:absolute; top:8px; right:10px; background:rgba(0,0,0,.32); border:none; color:rgba(255,255,255,.7); font-size:13px; cursor:pointer; width:24px; height:24px; border-radius:50%; line-height:22px; padding:0; }
   .hof-card .hc-del:hover { background:rgba(220,60,60,.75); color:#fff; }
+  /* ---------- Daily Challenge + streak (ported from the pitcher game) ---------- */
+  .dc-btn.pulse { color:var(--gold); border-color:rgba(255,206,58,.5); animation:dcPulse 1.8s ease-in-out infinite; }
+  .dc-btn.done { color:var(--accent2); border-color:rgba(25,198,255,.4); opacity:.9; }
+  @keyframes dcPulse { 0%,100%{ box-shadow:0 0 0 rgba(255,206,58,0); } 50%{ box-shadow:0 0 16px rgba(255,206,58,.55); } }
+  .streak-chip { display:inline-flex; align-items:center; gap:4px; padding:5px 9px; border-radius:8px;
+    font-family:'Oswald',sans-serif; font-size:13px; font-weight:600; letter-spacing:.5px; color:var(--gold);
+    background:rgba(255,122,24,.12); border:1px solid rgba(255,122,24,.35); white-space:nowrap; }
+  @media (max-width:560px){ .streak-chip { font-size:11px; padding:4px 7px; } }
+  .dc-header-tag { color:var(--gold)!important; border-color:rgba(255,206,58,.5)!important; }
+  .day-toast { position:fixed; bottom:26px; left:50%; transform:translateX(-50%); z-index:210; display:none;
+    max-width:340px; text-align:center; white-space:pre-line; background:linear-gradient(180deg,rgba(20,31,48,.96),rgba(9,15,25,.97));
+    border:1px solid rgba(255,206,58,.4); color:var(--ink); padding:13px 20px; border-radius:13px; font-size:14px; line-height:1.4;
+    box-shadow:0 14px 44px rgba(0,0,0,.55), 0 0 26px rgba(255,206,58,.16); align-items:center; justify-content:center; }
+  @media (max-width:560px){ .day-toast { left:12px; right:12px; transform:none; max-width:none; } }
+  .streak-chip .freeze { color:var(--diamond); }
+  .daily-info { display:none; flex-wrap:wrap; gap:8px 14px; justify-content:center; align-items:center; margin:0 0 12px;
+    padding:10px 14px; border:1px solid rgba(255,206,58,.3); border-radius:12px; background:rgba(255,206,58,.06);
+    font-family:'Oswald',sans-serif; font-size:12.5px; letter-spacing:.4px; }
+  .daily-info .di-best b { color:var(--gold); }
+  .daily-info .di-lucky { color:var(--gold); font-weight:600; }
+  .daily-info .di-prev { color:var(--accent2); }
+  .reel-frame.lucky { box-shadow:0 0 0 2px rgba(255,206,58,.5), 0 0 34px rgba(255,206,58,.4) !important; animation:luckyGlow 1.6s ease-in-out infinite; }
+  @keyframes luckyGlow { 0%,100%{ box-shadow:0 0 0 2px rgba(255,206,58,.45), 0 0 22px rgba(255,206,58,.3); } 50%{ box-shadow:0 0 0 2px rgba(255,206,58,.7), 0 0 40px rgba(255,206,58,.55); } }
+  .daily-reveal { position:fixed; inset:0; z-index:260; display:none; align-items:center; justify-content:center; padding:16px;
+    background:rgba(2,5,10,.78); backdrop-filter:blur(4px); }
+  .daily-reveal.show { display:flex; }
+  .dr-card { width:100%; max-width:380px; text-align:center; padding:26px 24px; border-radius:18px;
+    border:1px solid rgba(255,206,58,.4); background:linear-gradient(180deg,rgba(20,31,48,.96),rgba(9,15,25,.98));
+    box-shadow:0 24px 70px rgba(0,0,0,.6), 0 0 40px rgba(255,206,58,.16); }
+  .dr-eyebrow { font-family:'Oswald',sans-serif; font-size:12px; letter-spacing:3px; text-transform:uppercase; color:var(--gold); }
+  /* scoped so it doesn't collide with the draft-overlay's own .dr-ovr */
+  .daily-reveal .dr-ovr { font-family:'Oswald',sans-serif; font-weight:700; font-size:62px; line-height:1; margin:6px 0 2px; color:var(--ink); }
+  .daily-reveal .dr-ovr small { font-size:15px; color:var(--muted); letter-spacing:2px; margin-left:6px; }
+  .dr-pb { font-family:'Oswald',sans-serif; font-weight:700; letter-spacing:1px; color:var(--gold); margin:6px 0; animation:pbFlash 1s ease-in-out infinite; }
+  @keyframes pbFlash { 0%,100%{ opacity:1; transform:scale(1); } 50%{ opacity:.6; transform:scale(1.05); } }
+  .dr-froze { color:var(--diamond); font-size:13px; margin:4px 0; }
+  .dr-rank { font-family:'Oswald',sans-serif; font-weight:700; font-size:40px; line-height:1; margin-top:10px; color:var(--accent2); }
+  .dr-pct { font-family:'Oswald',sans-serif; font-size:18px; letter-spacing:1px; color:var(--gold); margin-top:2px; }
+  .dr-field { color:var(--muted); font-size:12.5px; margin-top:4px; }
+  .dr-streak { color:var(--accent); font-family:'Oswald',sans-serif; font-size:14px; letter-spacing:.5px; margin-top:12px; }
+  .dr-replay { color:var(--gold); font-family:'Oswald',sans-serif; font-size:15px; letter-spacing:.5px; margin-top:8px; }
+  .dr-replay:empty { display:none; }
+  .dres-card { max-width:420px; }
+  .dres-you { display:flex; align-items:center; gap:16px; justify-content:center; margin:8px 0 2px; }
+  .dres-ovrbox { display:flex; flex-direction:column; align-items:center; }
+  .dres-ovrbox span { font-family:'Oswald',sans-serif; font-weight:700; font-size:52px; line-height:1; color:var(--ink); }
+  .dres-ovrbox small, .dres-rankbox small { font-size:10px; letter-spacing:1.5px; color:var(--muted); }
+  .dres-rankbox { text-align:left; }
+  .dres-rank { font-family:'Oswald',sans-serif; font-weight:700; font-size:34px; line-height:1; color:var(--accent2); }
+  .dres-pct { font-family:'Oswald',sans-serif; font-size:15px; letter-spacing:1px; color:var(--gold); }
+  .dres-best { margin:12px 0 4px; padding:10px 12px; border-radius:10px; font-size:13px; line-height:1.45;
+    border:1px solid rgba(84,199,255,.3); background:rgba(84,199,255,.07); color:var(--ink); }
+  .dres-best b { color:var(--diamond); }
+  .dres-best .dres-gap { color:var(--muted); font-size:12px; }
+  .dres-board-label { font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); text-align:left; margin:10px 0 6px; }
+  .dres-board { display:flex; flex-direction:column; gap:4px; max-height:220px; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+  .dres-row { display:flex; align-items:center; gap:10px; padding:7px 10px; border-radius:8px; background:rgba(255,255,255,.03); border:1px solid var(--line); font-size:13px; }
+  .dres-row.me { border-color:var(--accent2); background:rgba(25,198,255,.1); }
+  .dres-row > span:first-child { width:20px; color:var(--muted); font-family:'Oswald',sans-serif; }
+  .dres-row .dres-nm { flex:1; text-align:left; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .dres-row .dres-rov { font-family:'Oswald',sans-serif; font-weight:700; }
+  .sk-stats { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+  .sk-stat { background:rgba(255,122,24,.1); border:1px solid rgba(255,122,24,.32); border-radius:11px; padding:9px 16px; text-align:center; min-width:74px; }
+  .sk-stat b { display:block; font-family:'Oswald',sans-serif; font-size:24px; font-weight:700; color:var(--gold); line-height:1; }
+  .sk-stat span { font-size:9px; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); }
+  .sk-next { text-align:center; font-family:'Oswald',sans-serif; font-size:12.5px; color:var(--accent2); margin:12px 0 6px; letter-spacing:.4px; }
+  #streakModal .overlay-card { max-width:560px; }
+  .sk-timeline { display:flex; gap:0; overflow-x:auto; -webkit-overflow-scrolling:touch; overscroll-behavior-x:contain; padding:34px 8px 10px; }
+  .sk-day { position:relative; flex:0 0 auto; width:60px; text-align:center; }
+  .sk-day .sk-dow { font-size:10.5px; color:var(--dim); text-transform:uppercase; letter-spacing:.5px; }
+  .sk-day .sk-dot { width:46px; height:46px; margin:6px auto 4px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-size:23px; border:2px solid var(--line); background:rgba(255,255,255,.03); position:relative; z-index:1; }
+  .sk-day .sk-dom { font-family:'Oswald',sans-serif; font-size:16px; color:var(--muted); line-height:1; }
+  .sk-day .sk-mon { font-size:9px; color:var(--dim); text-transform:uppercase; letter-spacing:1px; height:12px; }
+  .sk-day.played .sk-dot { border-color:var(--gold); background:rgba(255,206,58,.18); box-shadow:0 0 14px rgba(255,206,58,.3); }
+  .sk-day.played .sk-dom { color:var(--ink); }
+  .sk-day.today .sk-dot { border-color:var(--accent2); background:rgba(25,198,255,.16); }
+  .sk-day.today .sk-dom { color:var(--accent2); }
+  .sk-day.future { opacity:.4; }
+  .sk-day.missed .sk-dot { opacity:.5; color:var(--dim); }
+  .sk-day.ll::before { content:''; position:absolute; left:-30px; top:39px; width:60px; height:4px; background:var(--gold); opacity:.55; z-index:0; }
+  .sk-badge { position:absolute; top:-24px; left:50%; transform:translateX(-50%); font-size:19px; z-index:3; filter:drop-shadow(0 0 4px rgba(255,206,58,.6)); }
+  .sk-legend { text-align:center; font-size:11px; color:var(--dim); margin-top:12px; letter-spacing:.3px; }
 </style>
 </head>
 <body>
@@ -575,8 +659,10 @@
   <div class="brand">
     <span class="mark">Batting <i>Lab</i></span>
     <span class="tag">Draft Mode</span>
+    <span id="streakChip" class="streak-chip" title="Your daily streak" style="display:none">🔥 0</span>
     <span class="brand-rule"></span>
     <button id="muteBtn" class="mute" title="Toggle sound">🔊</button>
+    <button id="dailyBtn" class="coming-tab live dc-btn" title="Daily Challenge - same hitters for everyone!">🎯 Daily</button>
     <a id="buildTab" class="coming-tab live" href="/pitching" title="Build a Pitcher">🛠️ Build a Pitcher</a>
     <button id="menuBtn" class="mute" title="Menu">☰</button>
   </div>
@@ -586,6 +672,7 @@
   <div id="loading" class="loading">Loading hitters…</div>
 
   <div id="game" style="display:none">
+    <div id="dailyInfo" class="daily-info" style="display:none"></div>
     <div class="reel-frame panel">
       <div class="pointer"></div>
       <div class="pointer bottom"></div>
@@ -699,10 +786,12 @@
       <div id="acctSlot"></div>
       <div class="menu-sec">Play</div>
       <a class="menu-item" href="/">🏠 Home</a>
+      <button class="menu-item" id="miDaily">🎯 Daily Challenge</button>
+      <button class="menu-item" id="miStreak">🔥 Streak Calendar</button>
       <a class="menu-item" href="/versus">⚔️ 1v1 Live · Face Off</a>
       <div class="menu-sec">Your Stuff</div>
       <button class="menu-item" id="miHof">🏛️ My Hall of Fame</button>
-      <a class="menu-item" href="/pitching#achievements">🏅 Achievements</a>
+      <button class="menu-item" id="miAch">🏅 Achievements<span class="mi-chev" data-ach-count style="margin-left:auto;font-family:'Oswald',sans-serif;font-size:12px;color:var(--gold)">0/0</span></button>
       <div class="menu-sec">Compete</div>
       <button class="menu-item" id="miLb">🏆 Leaderboard</button>
       <a class="menu-item" href="/versus#stats">📊 1v1 Stats</a>
@@ -812,6 +901,58 @@
       <div class="dr-arch" id="drArch"></div>
     </div>
     <div class="draft-skip" id="draftSkip">Tap anywhere to continue -></div>
+  </div>
+</div>
+
+<div id="streakModal" class="overlay">
+  <div class="overlay-card panel">
+    <div class="overlay-head"><span class="overlay-title">🔥 Your Streak</span><button class="overlay-close" data-close="streakModal">✕</button></div>
+    <div class="overlay-body">
+      <div class="sk-stats">
+        <div class="sk-stat"><b id="skCount">0</b><span>Current 🔥</span></div>
+        <div class="sk-stat"><b id="skBest">0</b><span>Best Ever</span></div>
+        <div class="sk-stat" id="skFreezeWrap" style="display:none"><b id="skFreeze">0</b><span>Freezes 🧊</span></div>
+      </div>
+      <div class="sk-next" id="skNext"></div>
+      <div class="sk-timeline" id="skTimeline"></div>
+      <div class="sk-legend">🔥 played · 🎯 today · 🧊 freeze earned · 🏆/🐐 milestone</div>
+    </div>
+  </div>
+</div>
+
+<div id="dailyReveal" class="daily-reveal">
+  <div id="drCard" class="dr-card">
+    <div class="dr-eyebrow">🎯 Daily Challenge</div>
+    <div class="dr-ovr"><span id="drDailyOvr">0</span><small>OVR</small></div>
+    <div id="drPB" class="dr-pb" style="display:none">🏆 NEW PERSONAL BEST!</div>
+    <div id="drFroze" class="dr-froze" style="display:none">🧊 Streak Freeze used - your streak is safe!</div>
+    <div class="dr-rank"><span id="drRankNum">-</span></div>
+    <div class="dr-pct">Top <span id="drPctNum">0</span>%</div>
+    <div id="drField" class="dr-field"></div>
+    <div id="drStreak" class="dr-streak"></div>
+    <div id="drReplay" class="dr-replay"></div>
+    <button id="drClose" class="primary" style="margin-top:14px;width:100%">Nice 🔥</button>
+  </div>
+</div>
+
+<div id="dailyResults" class="daily-reveal">
+  <div id="dResCard" class="dr-card dres-card">
+    <div class="dr-eyebrow">🎯 Today's Daily · Results</div>
+    <div class="dres-you">
+      <div class="dres-ovrbox"><span id="dResOvr">0</span><small>YOUR OVR</small></div>
+      <div class="dres-rankbox">
+        <div class="dres-rank"><span id="dResRank">-</span></div>
+        <div class="dres-pct">Top <span id="dResPct">0</span>%</div>
+        <div id="dResField" class="dr-field"></div>
+      </div>
+    </div>
+    <div id="dResPB" class="dr-pb" style="display:none">🏆 NEW PERSONAL BEST!</div>
+    <div id="dResFroze" class="dr-froze" style="display:none">🧊 Streak Freeze used - your streak is safe!</div>
+    <div class="dres-best" id="dResBest"></div>
+    <div class="dres-board-label">Today's top builds</div>
+    <div class="dres-board" id="dResBoard"></div>
+    <div id="dResStreak" class="dr-streak"></div>
+    <button id="dResSim" class="primary" style="margin-top:14px;width:100%">Continue → name &amp; simulate</button>
   </div>
 </div>
 
@@ -1025,7 +1166,8 @@ async function init() {
   $('snagLeftBtn').onclick = () => snag(-1);
   $('snagRightBtn').onclick = () => snag(1);
   $('resetBtn').onclick = reset;
-  $('muteBtn').onclick = () => { const m = !Sound.isMuted(); Sound.setMuted(m); $('muteBtn').textContent = m ? '🔇' : '🔊'; };
+  $('muteBtn').onclick = () => { const m = !Sound.isMuted(); Sound.setMuted(m); if (window.Ach) Ach.muted = m; $('muteBtn').textContent = m ? '🔇' : '🔊'; };
+  if (window.Ach) Ach.muted = Sound.isMuted();
   $('buildTab').onclick = () => Sound.click();
   $('simBtn').onclick = runCareerPlaythrough;
   $('submitBtn').onclick = submitScore;
@@ -1059,6 +1201,24 @@ async function init() {
   document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.overlay.show').forEach(o => closeOverlay(o.id)); });
   renderAcct();
   initGoogle();
+
+  // Daily Challenge + streak wiring
+  $('dailyBtn').onclick = () => { Sound.click(); startDailyChallenge(); };
+  $('drClose').onclick = () => { Sound.click(); closeDailyReveal(); };
+  $('dailyReveal').addEventListener('click', e => { if (e.target.id === 'dailyReveal') closeDailyReveal(); });
+  $('dResSim').onclick = () => { Sound.click(); closeDailyResults(false); };
+  $('miDaily').onclick = () => { Sound.click(); startDailyChallenge(); };
+  $('miStreak').onclick = () => { Sound.click(); openStreak(); };
+  renderStreakChip();
+  updateDailyBtn();
+  syncAccountDates();   // pull this device/account's daily status from the server
+
+  // deep-link from the home-page menu, e.g. /batting#daily, /batting#streak
+  $('miAch').onclick = () => { closeOverlay('menu'); Sound.click(); window.Ach && Ach.open(); };
+  const h = (location.hash || '').replace('#', '').toLowerCase();
+  if (h === 'daily') setTimeout(startDailyChallenge, 350);
+  else if (h === 'streak') setTimeout(openStreak, 200);
+  else if (h === 'achievements' || h === 'ach') { const o = () => (window.Ach ? Ach.open() : setTimeout(o, 120)); o(); }
 }
 
 function toast(msg) {
@@ -1079,8 +1239,14 @@ const HOF_GAME = 'batter';
 let account = null;
 try { account = JSON.parse(localStorage.getItem('pl_account') || 'null'); } catch (e) {}
 
-function saveAccount(a) { account = a; try { localStorage.setItem('pl_account', JSON.stringify(a)); } catch (e) {} renderAcct(); }
-function clearAccount() { account = null; try { localStorage.removeItem('pl_account'); } catch (e) {} try { google.accounts.id.disableAutoSelect(); } catch (e) {} renderAcct(); if (window.Ach) Ach.signOut(); }
+function saveAccount(a) {
+  const changed = !account || account.sub !== a.sub;
+  account = a; try { localStorage.setItem('pl_account', JSON.stringify(a)); } catch (e) {} renderAcct();
+  if (window.Ach) Ach.sync();
+  if (changed) { try { localStorage.removeItem(dcKey()); } catch (e) {} updateDailyBtn(); }   // new identity -> reset device daily gate
+  syncAccountDates();   // pull this account's true daily status (re-locks if already played today)
+}
+function clearAccount() { account = null; try { localStorage.removeItem('pl_account'); } catch (e) {} try { localStorage.removeItem(dcKey()); } catch (e) {} try { google.accounts.id.disableAutoSelect(); } catch (e) {} renderAcct(); updateDailyBtn(); if (window.Ach) Ach.signOut(); }
 
 function googleConfigured() { return GOOGLE_CLIENT_ID && GOOGLE_CLIENT_ID.indexOf('REPLACE_WITH') !== 0; }
 function initGoogle(tries) {
@@ -1096,7 +1262,11 @@ async function onGoogleCredential(resp) {
     const r = await fetch('/api/account', { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'login', idToken: resp.credential }) });
     const j = await r.json();
-    if (j.ok) { saveAccount({ sub: j.sub, email: j.email, name: j.name, picture: j.picture, sessionToken: j.sessionToken }); toast('Signed in as ' + (j.name || j.email)); }
+    if (j.ok) {
+      saveAccount({ sub: j.sub, email: j.email, name: j.name, picture: j.picture, sessionToken: j.sessionToken });
+      if (typeof j.streak === 'number' && j.streak >= streak.count) { streak.count = j.streak; streak.best = Math.max(streak.best, j.bestStreak || j.streak); saveStreak(); renderStreakChip(); }
+      toast('Signed in as ' + (j.name || j.email));
+    }
     else toast('Sign-in failed');
   } catch (e) { toast('Sign-in failed'); }
 }
@@ -1228,21 +1398,23 @@ function buildWeights() {
     cumWeights.push(totalWeight);
   }
 }
-function pickWeighted() {
-  const r = Math.random() * totalWeight;
+function pickWeighted(rng) {
+  const rand = rng || Math.random;
+  const r = rand() * totalWeight;
   let lo = 0, hi = cumWeights.length - 1;
   while (lo < hi) { const mid = (lo + hi) >> 1; if (cumWeights[mid] < r) lo = mid + 1; else hi = mid; }
   return DATA.pool[lo];
 }
 const LEGEND_ODDS = 0.03;
-function randHitter() {
+function randHitter(rng) {
+  const rand = rng || Math.random;
   const legs = DATA.legends || [];
-  if (legs.length && Math.random() < LEGEND_ODDS) {
+  if (legs.length && rand() < LEGEND_ODDS) {
     const avail = legs.filter(p => !state.used.has(p.name));
-    if (avail.length) return avail[Math.floor(Math.random() * avail.length)];
+    if (avail.length) return avail[Math.floor(rand() * avail.length)];
   }
   let p, tries = 0;
-  do { p = pickWeighted(); } while (state.used.has(p.name) && ++tries < 50);
+  do { p = pickWeighted(rng); } while (state.used.has(p.name) && ++tries < 50);
   return p;
 }
 
@@ -1299,7 +1471,17 @@ function spin() {
   $('spinBtn').disabled = true;
   $('landed').classList.remove('show');
 
-  const target = randHitter();
+  const rng = dailyMode ? dailyRng : undefined;       // seeded reel on Daily Challenge days
+  let target;
+  if (dailyMode && luckyToday && !luckyConsumed && openSlots().length === SLOTS.length) {
+    // Lucky Spin: first card of a lucky daily is a guaranteed Diamond (seeded → same for everyone).
+    const dpool = DATA.pool.filter(p => p.ovr >= 85);
+    const lr = seededRandom(`pl-lucky-pick-${todayUTC()}`);
+    target = dpool.length ? dpool[Math.floor(lr() * dpool.length)] : randHitter(rng);
+    luckyConsumed = true;
+  } else {
+    target = randHitter(rng);
+  }
   const strip = [];
   const STRIP_LEN = 45;
   const targetIndex = STRIP_LEN - 6;
@@ -1491,6 +1673,7 @@ function assign(slotKey) {
     ovr: p.ovr, legend: !!p.legend, team: p.team, img: headshot(p),
   };
   state.used.add(p.name);
+  (state.dealtCards || (state.dealtCards = [])).push(p);   // for the daily "best possible build"
   state.landed = null;
   state.boostedThisLand = false;
   Sound.assign();
@@ -1666,6 +1849,424 @@ function seededRandom(seedText) {
 }
 function randRange(rng, lo, hi) { return lo + (hi - lo) * rng(); }
 function bell(rng, spread = 1) { return (rng() + rng() + rng() - 1.5) * spread; }
+
+/* ===== Daily Challenge + streak (ported from the pitcher game, batter-flavored) ===== */
+// "today" is the player's LOCAL calendar date (daily resets at local midnight).
+function todayUTC() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+// The Daily Challenge alternates between this game and Build a Pitcher each day (date-seeded so
+// everyone worldwide gets the same one). Returns 'pitcher' or 'batter' for a given local date.
+function dailyGameFor(dateStr) {
+  const days = Math.floor(Date.parse(dateStr + 'T00:00:00Z') / 86400000);
+  return (days % 2 === 1) ? 'pitcher' : 'batter';
+}
+function getOrCreateGuestId() {
+  let gid = null;
+  try { gid = localStorage.getItem('pl_guestId'); } catch (e) {}
+  if (!gid) { gid = (Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)).slice(0, 36); try { localStorage.setItem('pl_guestId', gid); } catch (e) {} }
+  return gid;
+}
+
+let streak = { count: 0, best: 0, lastDate: null };
+try { const _s = JSON.parse(localStorage.getItem('pl_streak') || 'null'); if (_s && typeof _s === 'object') streak = _s; } catch (e) {}
+streak.count = Number(streak.count) || 0; streak.best = Number(streak.best) || 0;
+let freezeTokens = 0;
+try { freezeTokens = Number(localStorage.getItem('pl_freeze') || '0') || 0; } catch (e) {}
+function saveStreak() { try { localStorage.setItem('pl_streak', JSON.stringify(streak)); } catch (e) {} }
+function saveFreeze() { try { localStorage.setItem('pl_freeze', String(freezeTokens)); } catch (e) {} }
+function addDays(dateStr, n) { const d = new Date(dateStr + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
+function getPlayedDates() {
+  let arr = [];
+  try { arr = JSON.parse(localStorage.getItem('pl_played') || '[]'); } catch (e) {}
+  if (!Array.isArray(arr)) arr = [];
+  if (!arr.length && streak.count > 0 && streak.lastDate) {
+    for (let i = 0; i < streak.count; i++) arr.push(addDays(streak.lastDate, -i));
+    try { localStorage.setItem('pl_played', JSON.stringify(arr)); } catch (e) {}
+  }
+  return new Set(arr);
+}
+function recordPlayedDate(dateStr) {
+  const s = getPlayedDates(); if (s.has(dateStr)) return;
+  s.add(dateStr);
+  try { localStorage.setItem('pl_played', JSON.stringify([...s].sort())); } catch (e) {}
+}
+async function syncAccountDates() {
+  const q = account ? `sub=${encodeURIComponent(account.sub)}` : `guestId=${encodeURIComponent(getOrCreateGuestId())}`;
+  try {
+    const r = await fetch(`/api/score?action=dailyDates&game=${LEADERBOARD_GAME}&date=${todayUTC()}&${q}`);
+    const j = await r.json();
+    if (!j.ok) return null;
+    if (Array.isArray(j.dates) && j.dates.length) {
+      const s = getPlayedDates();
+      j.dates.forEach(d => s.add(d));
+      try { localStorage.setItem('pl_played', JSON.stringify([...s].sort())); } catch (e) {}
+    }
+    if (j.today) { setDailyDone({ ovr: j.today.ovr, rank: j.today.rank, total: j.today.total }); updateDailyBtn(); return j.today; }
+    return null;
+  } catch (e) { return null; }
+}
+function openStreak() {
+  closeOverlay('menu');
+  renderStreakTimeline();
+  openOverlay('streakModal');
+  syncAccountDates().then(renderStreakTimeline);
+}
+function renderStreakTimeline() {
+  const played = getPlayedDates();
+  const today = todayUTC();
+  let start = played.size ? [...played].sort()[0] : addDays(today, -6);
+  const cap = addDays(today, -44);
+  if (start < cap) start = cap;
+  const end = addDays(today, 2);
+  $('skCount').textContent = streak.count;
+  $('skBest').textContent = streak.best;
+  $('skFreeze').textContent = freezeTokens;
+  $('skFreezeWrap').style.display = freezeTokens > 0 ? 'block' : 'none';
+  const next = STREAK_MILESTONES.find(m => m > streak.count);
+  $('skNext').textContent = next
+    ? `${next - streak.count} day${next - streak.count === 1 ? '' : 's'} to a 🔥 ${next}-day streak${FREEZE_MILESTONES.includes(next) ? ' + 🧊 Freeze' : ''}`
+    : "You've hit every milestone. Legend. 🐐";
+  const MS_BADGE = { 3: '🔥', 7: '🧊', 14: '🧊', 30: '🏆', 100: '🐐' };
+  const DOW = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+  const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const cells = [];
+  let run = 0;
+  for (let d = start; d <= end; d = addDays(d, 1)) {
+    const isFuture = d > today, isToday = d === today, p = played.has(d);
+    run = p ? run + 1 : 0;
+    const ll = p && played.has(addDays(d, -1));
+    const badge = (p && MS_BADGE[run]) ? `<div class="sk-badge">${MS_BADGE[run]}</div>` : '';
+    const cls = p ? 'played' : (isToday ? 'today' : (isFuture ? 'future' : 'missed'));
+    const dt = new Date(d + 'T00:00:00Z'), dom = dt.getUTCDate();
+    const showMon = dom === 1 || d === start;
+    const icon = p ? '🔥' : (isToday ? '🎯' : (isFuture ? '' : '·'));
+    cells.push(`<div class="sk-day ${cls}${ll ? ' ll' : ''}" title="${MON[dt.getUTCMonth()]} ${dom}">${badge}<div class="sk-dow">${DOW[dt.getUTCDay()]}</div><div class="sk-dot">${icon}</div><div class="sk-dom">${dom}</div><div class="sk-mon">${showMon ? MON[dt.getUTCMonth()] : ''}</div></div>`);
+  }
+  $('skTimeline').innerHTML = cells.join('');
+  const tl = $('skTimeline'); requestAnimationFrame(() => { tl.scrollLeft = tl.scrollWidth; });
+}
+function markPlayedToday() {
+  const today = todayUTC();
+  if (streak.lastDate === today) return { firstToday: false, frozeUsed: false };
+  const d = new Date(today + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() - 1);
+  const yd = d.toISOString().slice(0, 10);
+  d.setUTCDate(d.getUTCDate() - 1);
+  const dby = d.toISOString().slice(0, 10);
+  let frozeUsed = false;
+  if (streak.lastDate === yd) streak.count++;
+  else if (streak.lastDate === dby && freezeTokens > 0) { freezeTokens--; saveFreeze(); streak.count++; frozeUsed = true; }
+  else streak.count = 1;
+  streak.best = Math.max(streak.best, streak.count);
+  streak.lastDate = today; saveStreak(); recordPlayedDate(today); renderStreakChip();
+  return { firstToday: true, frozeUsed };
+}
+function renderStreakChip() {
+  const chip = $('streakChip'); if (!chip) return;
+  if (streak.count >= 2 || freezeTokens > 0) {
+    chip.innerHTML = `🔥 ${streak.count}` + (freezeTokens > 0 ? ` <span class="freeze">🧊${freezeTokens > 1 ? freezeTokens : ''}</span>` : '');
+    chip.style.display = 'inline-flex';
+  } else chip.style.display = 'none';
+}
+const STREAK_MILESTONES = [3, 7, 14, 30, 100];
+const FREEZE_MILESTONES = [7, 14, 30, 100];
+function checkStreakMilestone(n) {
+  let gotFreeze = false;
+  if (FREEZE_MILESTONES.includes(n)) { freezeTokens++; saveFreeze(); renderStreakChip(); gotFreeze = true; }
+  if (!STREAK_MILESTONES.includes(n)) return;
+  const msgs = { 3: "3-day streak! You're on a roll. 🔥", 7: 'One full week! 🔥🔥', 14: "Two weeks straight. You're hooked. 🔥🔥🔥", 30: '30 days! Legendary dedication. 🏆', 100: '100 days. You are the absolute GOAT. 🐐' };
+  let m = msgs[n] || `${n}-day streak!`;
+  if (gotFreeze) m += '\n🧊 Earned a Streak Freeze - protects one missed day!';
+  dayToast(m); Sound.legend();
+}
+function nextMilestonePreview() {
+  const today = todayUTC();
+  const d = new Date(today + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() - 1);
+  const yd = d.toISOString().slice(0, 10);
+  const projected = streak.lastDate === today ? streak.count : (streak.lastDate === yd ? streak.count + 1 : 1);
+  if (STREAK_MILESTONES.includes(projected)) {
+    const freeze = FREEZE_MILESTONES.includes(projected) ? ' + a 🧊 Freeze' : '';
+    return `Finish today for a 🔥 ${projected}-day streak${freeze}!`;
+  }
+  const next = STREAK_MILESTONES.find(m => m > projected);
+  if (!next) return '';
+  const left = next - projected;
+  const freeze = FREEZE_MILESTONES.includes(next) ? ' + 🧊 Freeze' : '';
+  return `${left} more day${left === 1 ? '' : 's'} → 🔥 ${next}-day streak${freeze}`;
+}
+function dayToast(msg) {
+  let t = $('dayToast');
+  if (!t) { t = document.createElement('div'); t.id = 'dayToast'; t.className = 'day-toast'; document.body.appendChild(t); }
+  t.textContent = msg; t.style.display = 'flex'; gsap.killTweensOf(t);
+  gsap.fromTo(t, { y: 14, opacity: 0, scale: .94 }, { y: 0, opacity: 1, scale: 1, duration: .45, ease: 'back.out(1.5)' });
+  clearTimeout(t._tmr); t._tmr = setTimeout(() => gsap.to(t, { opacity: 0, y: -10, duration: .4, onComplete: () => { t.style.display = 'none'; } }), 4800);
+}
+
+// personal best is split per game (the two OVR scales differ — batters can top 99).
+function dailyBest() { try { return Number(localStorage.getItem('pl_dc_best_batter') || '0') || 0; } catch (e) { return 0; } }
+function setDailyBest(v) { try { localStorage.setItem('pl_dc_best_batter', String(v)); } catch (e) {} }
+
+let dailyMode = false, dailyRng = null, luckyToday = false, luckyConsumed = false, dailyResultsShown = false;
+// The "played today" gate is shared across both games (only one runs per date).
+function dcKey() { return `pl_dc_${todayUTC()}`; }
+function getDailyStatus() { try { return JSON.parse(localStorage.getItem(dcKey()) || 'null'); } catch (e) { return null; } }
+function setDailyDone(data) { try { localStorage.setItem(dcKey(), JSON.stringify(data)); } catch (e) {} }
+function isLuckyToday() { return seededRandom(`pl-lucky-${todayUTC()}`)() < (1 / 7); }
+
+let _playedTodayCache = null;
+async function fetchPlayedToday() {
+  if (_playedTodayCache != null) return _playedTodayCache;
+  try {
+    const r = await fetch(`/api/score?action=challengeLeaderboard&game=${LEADERBOARD_GAME}&limit=1&date=${todayUTC()}`);
+    const j = await r.json(); if (j.ok) { _playedTodayCache = j.total; return j.total; }
+  } catch (e) {}
+  return null;
+}
+function updateDailyBtn() {
+  const btn = $('dailyBtn'); if (!btn) return;
+  const done = getDailyStatus();
+  if (done) { btn.textContent = '✅ Done'; btn.classList.add('done'); btn.classList.remove('pulse'); btn.title = `Today: ${done.ovr} OVR · #${done.rank} of ${done.total}`; }
+  else {
+    btn.textContent = '🎯 Daily'; btn.classList.remove('done'); btn.classList.add('pulse'); btn.title = 'Daily Challenge - same hitters for everyone today!';
+    fetchPlayedToday().then(n => { if (n != null && n > 0 && !getDailyStatus()) { btn.textContent = `🎯 Daily · ${n}`; btn.title = `${n} played today`; } });
+  }
+}
+function showDailyInfo() {
+  const el = $('dailyInfo'); if (!el) return;
+  const best = dailyBest(), preview = nextMilestonePreview();
+  let html = '';
+  if (luckyToday) html += `<span class="di-lucky">✨ LUCKY SPIN - a 💎 Diamond is locked into your first card!</span>`;
+  if (best > 0) html += `<span class="di-best">🏆 Your best daily: <b>${best}</b> OVR - beat it!</span>`;
+  if (preview) html += `<span class="di-prev">${preview}</span>`;
+  el.innerHTML = html || `<span class="di-prev">🎯 Same hitters for everyone today. One shot - make it count.</span>`;
+  el.style.display = 'flex';
+}
+function hideDailyInfo() { const el = $('dailyInfo'); if (el) el.style.display = 'none'; }
+async function startDailyChallenge() {
+  // Off-day: today's daily is the other game — hand off to it.
+  if (dailyGameFor(todayUTC()) !== LEADERBOARD_GAME) { location.href = (LEADERBOARD_GAME === 'batter' ? '/pitching' : '/batting') + '#daily'; return; }
+  closeOverlay('menu');
+  const serverToday = await syncAccountDates();
+  const done = serverToday || getDailyStatus();
+  if (done) { rankReveal(done.ovr, done.rank, done.total, false, true); return; }
+  reset();
+  dailyMode = true;
+  luckyConsumed = false;
+  dailyRng = seededRandom(`pl-daily-${todayUTC()}-batter-v1`);
+  luckyToday = isLuckyToday();
+  const tagEl = document.querySelector('header .tag');
+  if (tagEl) { tagEl.textContent = '🎯 Daily Challenge'; tagEl.classList.add('dc-header-tag'); }
+  const reel = document.querySelector('.reel-frame'); if (reel) reel.classList.toggle('lucky', luckyToday);
+  showDailyInfo();
+  if (luckyToday && Sound.gold) Sound.gold();
+  if (window.matchMedia('(max-width: 720px)').matches) $('spinBtn').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+async function finishDailyChallenge(ovr, name, build) {
+  if (!dailyMode) return null;
+  dailyMode = false; dailyRng = null; luckyToday = false;
+  hideDailyInfo();
+  const tagEl = document.querySelector('header .tag');
+  if (tagEl) { tagEl.textContent = 'Draft Mode'; tagEl.classList.remove('dc-header-tag'); }
+  const reel = document.querySelector('.reel-frame'); if (reel) reel.classList.remove('lucky');
+  let rank = 1, total = 1;
+  try {
+    const body = { action: 'challengeSubmit', game: LEADERBOARD_GAME, ovr, name, build, date: todayUTC() };
+    if (account) body.sub = account.sub; else body.guestId = getOrCreateGuestId();
+    const r = await fetch('/api/score', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const j = await r.json(); if (j.ok) { rank = j.rank; total = j.total; }
+  } catch (e) {}
+  setDailyDone({ ovr, rank, total });
+  _playedTodayCache = null;
+  updateDailyBtn();
+  const prevBest = dailyBest(); const isPB = ovr > prevBest; if (isPB) setDailyBest(ovr);
+  let frozeUsed = false;
+  const mp = markPlayedToday();
+  if (mp.firstToday) {
+    frozeUsed = mp.frozeUsed;
+    checkStreakMilestone(streak.count);
+    if (account) {
+      try {
+        const r = await fetch('/api/account', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'updateStreak', sub: account.sub, sessionToken: account.sessionToken }) });
+        const j = await r.json(); if (j.ok) { streak.count = j.streak; streak.best = j.best; saveStreak(); renderStreakChip(); }
+      } catch (e) {}
+    }
+  }
+  bumpDailyAch();
+  return { ovr, rank, total, isPB, frozeUsed };
+}
+
+function popcount(x) { let c = 0; while (x) { c += x & 1; x >>>= 1; } return c; }
+function bestPossibleOvr(cards) {
+  if (!cards || cards.length !== SLOTS.length) return null;
+  const n = SLOTS.length;
+  const val = cards.map(c => SLOTS.map(s => slotNumeric(c, s)));
+  const wt = SLOTS.map(s => WEIGHTS[s.key] || 1);   // batter weights are fixed per slot
+  const sc = cards.map((c, ci) => SLOTS.map((s, si) => val[ci][si] * wt[si]));
+  const FULL = (1 << n) - 1;
+  const dpScore = new Float64Array(1 << n).fill(-1), dpW = new Float64Array(1 << n);
+  dpScore[0] = 0;
+  for (let mask = 0; mask <= FULL; mask++) {
+    if (dpScore[mask] < 0) continue;
+    const i = popcount(mask); if (i >= n) continue;
+    for (let s = 0; s < n; s++) {
+      if (mask & (1 << s)) continue;
+      const nm = mask | (1 << s), ns = dpScore[mask] + sc[i][s];
+      if (ns > dpScore[nm]) { dpScore[nm] = ns; dpW[nm] = dpW[mask] + wt[s]; }
+    }
+  }
+  return dpW[FULL] ? Math.round(dpScore[FULL] / dpW[FULL]) : null;
+}
+
+async function showDailyResults() {
+  if (dailyResultsShown) return;
+  const ov = $('dailyResults');
+  if (!ov) { dailyResultsShown = true; runCareerPlaythrough(); return; }
+  dailyResultsShown = true;
+  $('dResOvr').textContent = state.finalOvr;
+  $('dResRank').textContent = '…'; $('dResPct').textContent = '…';
+  $('dResField').textContent = 'submitting…';
+  $('dResPB').style.display = 'none'; $('dResFroze').style.display = 'none';
+  $('dResBest').innerHTML = ''; $('dResBoard').innerHTML = ''; $('dResStreak').textContent = '';
+  ov.classList.add('show');
+  document.body.classList.add('ach-open');
+  gsap.fromTo($('dResCard'), { y: 26, opacity: 0, scale: .92 }, { y: 0, opacity: 1, scale: 1, duration: .55, ease: 'back.out(1.6)' });
+  try {
+    const name = $('nameInput').value.trim() || (account && account.name) || 'Anonymous';
+    if (name !== 'Anonymous') { try { localStorage.setItem('pl_lastName', name); } catch (e) {} }
+    const res = (await finishDailyChallenge(state.finalOvr, name, { slots: state.build, career: null })) || { ovr: state.finalOvr, rank: 1, total: 1, isPB: false, frozeUsed: false };
+    let best = null;
+    try { best = bestPossibleOvr(state.dealtCards); } catch (e) {}
+    let rows = [];
+    try {
+      const r = await fetch(`/api/score?action=challengeLeaderboard&game=${LEADERBOARD_GAME}&limit=8&date=${todayUTC()}`);
+      const j = await r.json(); if (j.ok) rows = j.rows || [];
+    } catch (e) {}
+    renderDailyResults(res, best, rows, name);
+  } catch (e) {
+    $('dResField').textContent = 'Tap Continue to simulate.';
+  }
+}
+function renderDailyResults(res, best, rows, name) {
+  const ov = $('dailyResults');
+  const pct = res.total > 1 ? Math.max(1, Math.round((1 - (res.rank - 1) / res.total) * 100)) : 100;
+  $('dResOvr').textContent = res.ovr;
+  $('dResRank').textContent = '-';
+  $('dResPct').textContent = '0';
+  $('dResField').textContent = `of ${res.total.toLocaleString()} player${res.total === 1 ? '' : 's'} today`;
+  $('dResPB').style.display = res.isPB ? 'block' : 'none';
+  $('dResFroze').style.display = res.frozeUsed ? 'block' : 'none';
+  $('dResStreak').textContent = streak.count >= 2 ? `🔥 ${streak.count}-day streak${freezeTokens > 0 ? ` · 🧊${freezeTokens}` : ''}` : '';
+  if (best != null) {
+    const gap = best - res.ovr;
+    $('dResBest').innerHTML = gap <= 0
+      ? `💎 <b>Optimal!</b> You placed your cards perfectly - best possible was <b>${best}</b> OVR.`
+      : `💎 Best possible with your cards: <b>${best}</b> OVR <span class="dres-gap">(+${gap} with smarter slotting)</span>`;
+  } else $('dResBest').innerHTML = '';
+  $('dResBoard').innerHTML = rows.length
+    ? rows.map((r, i) => `<div class="dres-row${(i + 1) === res.rank && r.name === name ? ' me' : ''}"><span>${i + 1}</span><span class="dres-nm">${escapeHTML(r.name)}</span><span class="dres-rov c-${tier(r.ovr)}">${r.ovr}</span></div>`).join('')
+    : '<div class="dr-field" style="padding:6px">Be the first on today\'s board!</div>';
+  if (!ov.classList.contains('show')) return;
+  gsap.from($('dResBoard').children, { x: 30, opacity: 0, duration: .4, stagger: .05, delay: .05, ease: 'power2.out' });
+  const rk = { v: Math.min(res.total, Math.max(res.rank, Math.round(res.total * 0.6))) }, pc = { v: 0 };
+  gsap.to(rk, { v: res.rank, duration: 1.2, ease: 'power2.out', onUpdate: () => { $('dResRank').textContent = '#' + Math.round(rk.v).toLocaleString(); } });
+  gsap.to(pc, {
+    v: pct, duration: 1.2, ease: 'power2.out', onUpdate: () => { $('dResPct').textContent = Math.round(pc.v); },
+    onComplete: () => { if (pct <= 5) Sound.legend(); else if (pct <= 25) (Sound.diamond || Sound.gold || Sound.complete)(); else Sound.complete(); if (res.isPB && Sound.gold) Sound.gold(); }
+  });
+}
+function closeDailyResults(thenSim) {
+  const ov = $('dailyResults'); if (ov) ov.classList.remove('show');
+  document.body.classList.remove('ach-open');
+  if (thenSim) runCareerPlaythrough();
+}
+
+function rankReveal(ovr, rank, total, isPB, replay, frozeUsed) {
+  const ov = $('dailyReveal'); if (!ov) return;
+  const pct = total > 1 ? Math.max(1, Math.round((1 - (rank - 1) / total) * 100)) : 100;
+  $('drDailyOvr').textContent = ovr;
+  $('drPctNum').textContent = '0';
+  $('drRankNum').textContent = '-';
+  $('drField').textContent = `of ${total.toLocaleString()} player${total === 1 ? '' : 's'} today`;
+  $('drPB').style.display = isPB ? 'block' : 'none';
+  $('drFroze').style.display = frozeUsed ? 'block' : 'none';
+  $('drStreak').textContent = streak.count >= 2 ? `🔥 ${streak.count}-day streak${freezeTokens > 0 ? ` · 🧊${freezeTokens}` : ''}` : '';
+  if (replay) startDailyCountdown($('drReplay')); else { stopDailyCountdown(); $('drReplay').textContent = ''; }
+  const closeBtn = $('drClose');
+  if (replay) { closeBtn.textContent = '← Back to Home'; closeBtn.onclick = () => { Sound.click(); stopDailyCountdown(); location.href = '/'; }; }
+  else { closeBtn.textContent = 'Nice 🔥'; closeBtn.onclick = () => { Sound.click(); closeDailyReveal(); }; }
+  ov.classList.add('show');
+  gsap.fromTo($('drCard'), { y: 18, opacity: 0, scale: .94 }, { y: 0, opacity: 1, scale: 1, duration: .5, ease: 'back.out(1.6)' });
+  const rk = { v: Math.min(total, Math.max(rank, Math.round(total * 0.6))) }, pc = { v: 0 };
+  gsap.to(rk, { v: rank, duration: 1.1, ease: 'power2.out', onUpdate: () => { $('drRankNum').textContent = '#' + Math.round(rk.v).toLocaleString(); } });
+  gsap.to(pc, {
+    v: pct, duration: 1.1, ease: 'power2.out', onUpdate: () => { $('drPctNum').textContent = Math.round(pc.v); },
+    onComplete: () => { if (pct <= 5) Sound.legend(); else if (pct <= 25) (Sound.diamond || Sound.gold || Sound.complete)(); else Sound.complete(); if (isPB && Sound.gold) Sound.gold(); }
+  });
+}
+function closeDailyReveal() { stopDailyCountdown(); const ov = $('dailyReveal'); if (ov) ov.classList.remove('show'); }
+let _dailyCountdown = null;
+function msToNextDaily() { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate() + 1, 0, 0, 0, 0).getTime() - n.getTime(); }
+function fmtCountdown(ms) { const s = Math.max(0, Math.floor(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = s % 60; return `${h}h ${String(m).padStart(2, '0')}m ${String(x).padStart(2, '0')}s`; }
+function startDailyCountdown(el) {
+  stopDailyCountdown();
+  const tick = () => {
+    const ms = msToNextDaily();
+    if (ms <= 0) { stopDailyCountdown(); el.textContent = '✨ New daily ready — refresh!'; return; }
+    el.textContent = '🔒 Next puzzle in ' + fmtCountdown(ms);
+  };
+  tick(); _dailyCountdown = setInterval(tick, 1000);
+}
+function stopDailyCountdown() { if (_dailyCountdown) { clearInterval(_dailyCountdown); _dailyCountdown = null; } }
+// Daily achievements + the shared cross-game play counter (achievements.js is loaded in this game too).
+function bumpDailyAch() {
+  let n = 0; try { n = Number(localStorage.getItem('pl_dc_count') || '0'); } catch (e) {}
+  n++; try { localStorage.setItem('pl_dc_count', String(n)); } catch (e) {}
+  if (!window.Ach) return;
+  Ach.unlock('daily_root');
+  if (n >= 7) Ach.unlock('grind1');
+  if (n >= 30) Ach.unlock('grind2');
+  if (n >= 100) Ach.unlock('grind3');
+}
+
+/* ===== Achievements (shared board across both games) =====
+   Only the achievements that map to the batter game are wired here — the pitcher-specific ones
+   (career strikeouts / wins, the K+stamina "Glass Cannon") simply never fire, which is correct. */
+function parseHeightIn(s) {
+  const m = String(s || '').match(/(\d+)\s*'\s*(\d+)/);
+  return m ? (+m[1]) * 12 + (+m[2]) : 0;
+}
+// Fires when all slots are filled (called from finish()).
+function checkBuildAchievements() {
+  if (!window.Ach) return;
+  const f = state.filled, ovr = state.finalOvr;
+  Ach.unlock('draft_root');                                   // first/any completed build
+  if (ovr >= 90) Ach.unlock('builder1');
+  if (ovr >= 95) Ach.unlock('builder2');
+  if (ovr === 99) Ach.unlock('the_goat');
+  if (ovr > 99) Ach.unlock('beyond');
+  if (ovr < 60) Ach.unlock('bargain');
+  if (state.respinUsed && state.boostUsed && state.snagUsed) Ach.unlock('triple1');
+  if (SLOTS.some(s => Number(f[s.key].value) >= 125)) Ach.unlock('offcharts');
+  const hi = parseHeightIn(f['frame'] && f['frame'].display);
+  if (hi && hi <= 71) Ach.unlock('short_king');
+  if (hi >= 81) Ach.unlock('tall_tale');
+  const teams = SLOTS.map(s => f[s.key].team);
+  if (teams[0] && teams.every(t => t === teams[0])) Ach.unlock('one_team');
+  if ((f['fielding_ability'] && f['fielding_ability'].ovr >= 99) || (f['frame'] && f['frame'].ovr >= 99)) Ach.unlock('nepo');
+}
+// Fires after a simulated career (called from finishPlaythrough()).
+function checkCareerAchievements(t, verdict, votePct) {
+  if (!window.Ach) return;
+  Ach.unlock('sim_root');
+  if (t.rings >= 1) Ach.unlock('ring1');
+  if (t.rings >= 3) Ach.unlock('ring2');
+  if (t.rings >= 5) Ach.unlock('ring3');
+  if (t.hallOfFame) Ach.unlock('cooperstown');
+  if (votePct >= 99) Ach.unlock('unanimous');
+  if (verdict.cls === 'no') Ach.unlock('hopg');
+  if (verdict.cls === 'low') Ach.unlock('hall_not_good');
+}
 
 function batterRole(vals) {
   return vals.power >= 80 ? 'Slugger' : vals.speed >= 80 ? 'Speedster' : vals.contact >= 82 ? 'Contact Hitter' : 'Everyday Bat';
@@ -1855,6 +2456,7 @@ function getDraftSlot(ovr, rng) {
 
 function runDraftAnimation({ round, pick, teamAbbr, teamName, tColor, hitter, ovr, role }, onDone) {
   const overlay = $('draftOverlay');
+  if (round === 1 && pick === 1 && window.Ach) Ach.unlock('first_overall');
   const pickOrd = ordinal(pick);
   const bColor = brightColor(tColor);
   $('draftRoundTag').textContent = `Round ${round} - Pick ${pick}`;
@@ -1974,6 +2576,8 @@ function seasonHeadlines(s, idx, total, P, fallbackTeam) {
 // Play the career out season by season - log, headlines, live ticker - then the verdict + card.
 function runCareerPlaythrough() {
   if (state.career) return;
+  // Daily: if the auto-popup hasn't fired yet, show the results panel first (fallback path).
+  if (dailyMode && !dailyResultsShown) { showDailyResults(); return; }
   $('simBtn').disabled = true;
 
   const vals = {};
@@ -2100,13 +2704,15 @@ function finishPlaythrough(career) {
   const verdict = careerTier(t, state.finalOvr);
 
   // HOF vote reveal
-  let voteLine = '';
+  let voteLine = '', votePct = 0;
   if (t.hallOfFame) {
     const pct = clamp(round(75 + (t.hofScore - 112) * 0.16 + t.mvp * 1.2, 1), 75, 99.6);
+    votePct = pct;
     const firstBallot = pct >= 90 || t.mvp >= 3;
     const goat = state.finalOvr >= 99;
     voteLine = `${goat ? 'Hall of Fame · ' : ''}${firstBallot ? 'First ballot · ' : ''}${pct}% of the vote`;
   }
+  checkCareerAchievements(t, verdict, votePct);
 
   const v = $('careerVerdict');
   v.textContent = verdict.txt;
@@ -2190,6 +2796,7 @@ function finish() {
   state.career = null;
   state.draftTeamAb = null;
   myEntryId = null;
+  checkBuildAchievements();
   $('doneOvr').className = 'total c-' + tier(avg);
   $('preSim').style.display = 'flex';
   $('simBtn').disabled = false;
@@ -2205,6 +2812,8 @@ function finish() {
   gsap.fromTo($('done'), { y: 16, opacity: 0, scale: .96 }, { y: 0, opacity: 1, scale: 1, duration: .5, ease: 'back.out(1.5)' });
   const o = { v: 0 };
   gsap.to(o, { v: avg, duration: 1.0, ease: 'power2.out', onUpdate: () => { $('doneOvr').textContent = Math.round(o.v); } });
+  // Daily: the results leaderboard pops up automatically once the build is done.
+  if (dailyMode) setTimeout(showDailyResults, 900);
 }
 
 function escapeHTML(s) {
@@ -2375,9 +2984,14 @@ function initTilt() {
 }
 
 function reset() {
+  dailyMode = false; dailyRng = null;   // a fresh game is never a daily until startDailyChallenge says so
+  const _tag = document.querySelector('header .tag');
+  if (_tag && _tag.classList.contains('dc-header-tag')) { _tag.textContent = 'Draft Mode'; _tag.classList.remove('dc-header-tag'); }
+  dailyResultsShown = false;
   hardRevealed = false;  // re-hide ratings if hard mode is on
   state.filled = {};
   state.used = new Set();
+  state.dealtCards = [];
   state.landed = null;
   state.respinUsed = false;
   state.boostUsed = false;

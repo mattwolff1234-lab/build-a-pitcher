@@ -549,7 +549,13 @@ $('installNowBtn').onclick = async () => {
 
 // Daily Challenge cues on the landing page (cue + easy path into the loop)
 (function dailyLanding() {
-  const todayUTC = () => { const d = new Date(); return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`; };
+  const todayUTC = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }; // LOCAL date — must match each game's local-midnight daily reset
+  // The daily alternates between the pitcher and batter games each day (date-seeded, same for
+  // everyone worldwide). Point every daily/streak link at today's game.
+  const dailyGameFor = (s) => { const days = Math.floor(Date.parse(s + 'T00:00:00Z') / 86400000); return (days % 2 === 1) ? 'pitcher' : 'batter'; };
+  const dg = dailyGameFor(todayUTC()), dgPath = dg === 'batter' ? '/batting' : '/pitching';
+  document.querySelectorAll('a[href="/pitching#daily"]').forEach(a => { a.href = dgPath + '#daily'; });
+  document.querySelectorAll('a[href="/pitching#streak"]').forEach(a => { a.href = dgPath + '#streak'; });
   let streak = null, playedToday = false;
   try { streak = JSON.parse(localStorage.getItem('pl_streak') || 'null'); } catch (e) {}
   try { playedToday = !!JSON.parse(localStorage.getItem('pl_dc_' + todayUTC()) || 'null'); } catch (e) {}
@@ -557,8 +563,11 @@ $('installNowBtn').onclick = async () => {
   // cue: at-risk streak banner
   if (count >= 2 && !playedToday) {
     const sb = $('streakBanner');
-    if (sb) { sb.innerHTML = `🔥 Your <b style="color:var(--gold)">${count}-day</b> streak resets tonight! <a href="/pitching#daily">Play today's challenge →</a>`; sb.style.display = 'flex'; }
+    if (sb) { sb.innerHTML = `🔥 Your <b style="color:var(--gold)">${count}-day</b> streak resets tonight! <a href="${dgPath}#daily">Play today's challenge →</a>`; sb.style.display = 'flex'; }
   }
+  // today's discipline on the CTA copy
+  const _dcDesc = $('dailyDesc');
+  if (_dcDesc && !playedToday) _dcDesc.textContent = `Everyone gets the same ${dg === 'batter' ? 'hitters' : 'pitchers'} today. One shot - climb the daily leaderboard.`;
   // already played → reflect "Done" on the CTA
   if (playedToday) {
     const cta = $('dailyCta'); if (cta) cta.classList.add('done');
@@ -566,7 +575,7 @@ $('installNowBtn').onclick = async () => {
     const go = $('dailyGo'); if (go) go.textContent = '✅ Done';
   }
   // social proof: how many played today
-  fetch('/api/score?action=challengeLeaderboard&game=pitcher&limit=1').then(r => r.json()).then(j => {
+  fetch(`/api/score?action=challengeLeaderboard&game=${dg}&limit=1&date=${todayUTC()}`).then(r => r.json()).then(j => {
     if (j && j.ok && j.total > 0) { const c = $('dailyCount'); if (c) { c.textContent = `${j.total} played today`; c.style.display = 'inline-block'; } }
   }).catch(() => {});
 })();

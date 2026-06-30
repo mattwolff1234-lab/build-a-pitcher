@@ -1230,6 +1230,7 @@ async function recomputeTicker(){
 let searching=false, retryTimer=null;
 async function findMatch(){
   resetMatch();
+  gameMode = 'classic';   // ranked is always Classic — clear any leftover friendly (Legends/Hard) mode
   showScreen('mmScreen');
   updateRatingChip();
   $('findBtn').style.display='none'; $('mmSpin').style.display='block'; $('cancelWrap').style.display='block'; $('statsWrap').style.display='none';
