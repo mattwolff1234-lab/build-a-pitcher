@@ -570,8 +570,10 @@ $('installNowBtn').onclick = async () => {
   const todayUTC = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }; // LOCAL date — must match each game's local-midnight daily reset
   // The daily alternates between the pitcher and batter games each day (date-seeded, same for
   // everyone worldwide). Point every daily/streak link at today's game.
-  const dailyGameFor = (s) => { const days = Math.floor(Date.parse(s + 'T00:00:00Z') / 86400000); return ['pitcher', 'batter', 'baller'][((days % 3) + 3) % 3]; };
-  const dg = dailyGameFor(todayUTC()), dgPath = dg === 'batter' ? '/batting' : dg === 'baller' ? '/hoops' : '/pitching';
+  // Featured daily rotates pitcher/batter only (the proven 2-way). Basketball has its OWN daily,
+  // always available at /hoops — intentionally NOT in this rotation.
+  const dailyGameFor = (s) => { const days = Math.floor(Date.parse(s + 'T00:00:00Z') / 86400000); return (days % 2 === 1) ? 'pitcher' : 'batter'; };
+  const dg = dailyGameFor(todayUTC()), dgPath = dg === 'batter' ? '/batting' : '/pitching';
   document.querySelectorAll('a[href="/pitching#daily"]').forEach(a => { a.href = dgPath + '#daily'; });
   document.querySelectorAll('a[href="/pitching#streak"]').forEach(a => { a.href = dgPath + '#streak'; });
   let streak = null, playedToday = false;
@@ -585,7 +587,7 @@ $('installNowBtn').onclick = async () => {
   }
   // today's discipline on the CTA copy
   const _dcDesc = $('dailyDesc');
-  if (_dcDesc && !playedToday) _dcDesc.textContent = `Everyone gets the same ${dg === 'batter' ? 'hitters' : dg === 'baller' ? 'players' : 'pitchers'} today. One shot - climb the daily leaderboard.`;
+  if (_dcDesc && !playedToday) _dcDesc.textContent = `Everyone gets the same ${dg === 'batter' ? 'hitters' : 'pitchers'} today. One shot - climb the daily leaderboard.`;
   // already played → reflect "Done" on the CTA
   if (playedToday) {
     const cta = $('dailyCta'); if (cta) cta.classList.add('done');

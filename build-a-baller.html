@@ -2055,9 +2055,7 @@ function showDailyInfo() {
 }
 function hideDailyInfo() { const el = $('dailyInfo'); if (el) el.style.display = 'none'; }
 async function startDailyChallenge() {
-  // Off-day: today's daily is the other game — hand off to it.
-  const _dg = dailyGameFor(todayUTC());
-  if (_dg !== LEADERBOARD_GAME) { location.href = (_dg === 'batter' ? '/batting' : _dg === 'baller' ? '/hoops' : '/pitching') + '#daily'; return; }
+  // Basketball has its OWN daily every day — not part of the pitcher/batter rotation, so no hand-off.
   closeOverlay('menu');
   const serverToday = await syncAccountDates();
   const done = serverToday || getDailyStatus();
