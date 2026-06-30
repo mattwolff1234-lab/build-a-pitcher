@@ -91,6 +91,13 @@ function ensure() {
         created_at timestamptz NOT NULL DEFAULT now()
       )`;
       await sql`ALTER TABLE pvp_history ADD COLUMN IF NOT EXISTS opp_key text`;
+      // Separate NBA-1v1 ("hoops") rating board, kept on the same user rows in dedicated columns
+      // so basketball ranking never mixes with baseball. (DEFAULT backfills existing rows at 1000.)
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS pvp_elo_hoops int NOT NULL DEFAULT 1000`;
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS pvp_wins_hoops int NOT NULL DEFAULT 0`;
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS pvp_losses_hoops int NOT NULL DEFAULT 0`;
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS pvp_streak_hoops int NOT NULL DEFAULT 0`;
+      await sql`ALTER TABLE pvp_history ADD COLUMN IF NOT EXISTS sport text`;
       await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS achievements jsonb NOT NULL DEFAULT '{}'::jsonb`;
       await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS current_streak int NOT NULL DEFAULT 0`;
       await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS best_streak int NOT NULL DEFAULT 0`;
@@ -123,6 +130,78 @@ function nextElo(elo, oppElo, won) {
 }
 // Small win-streak bonus: +2 Elo per consecutive win, stops growing at a 5-win streak (max +10).
 const STREAK_BONUS = 2, STREAK_CAP = 5;
+
+// ---- NBA 1v1 ("hoops") rating: a fully separate Elo board kept on the same user rows in dedicated
+// *_hoops columns. These run ONLY when the client sends sport:'hoops'; the baseball pvp* actions
+// below are byte-for-byte unchanged. Same Elo math, streak bonus, and opponent-loss apply. ----
+async function hoopsStats(key, res) {
+  const [u] = await sql`SELECT pvp_elo_hoops AS elo, pvp_wins_hoops AS wins, pvp_losses_hoops AS losses, pvp_streak_hoops AS streak FROM users WHERE google_sub = ${key}`;
+  if (!u) return res.status(401).json({ ok: false, error: 'Not signed in' });
+  return res.status(200).json({ ok: true, elo: u.elo, wins: u.wins, losses: u.losses, streak: u.streak });
+}
+async function hoopsResult(body, key, res) {
+  const matchId = String(body.matchId || '').slice(0, 80);
+  if (!matchId) return res.status(400).json({ ok: false, error: 'missing matchId' });
+  const won = !!body.won;
+  const oppElo = Math.max(100, Math.min(4000, Math.round(Number(body.oppElo) || 1000)));
+  const myOvr = Math.round(Number(body.ovr) || 0) || null;
+  const oppOvr = Math.round(Number(body.oppOvr) || 0) || null;
+  const oppName = String(body.oppName || '').trim().slice(0, 40) || null;
+  const [u] = await sql`SELECT pvp_elo_hoops AS elo, pvp_wins_hoops AS wins, pvp_losses_hoops AS losses, pvp_streak_hoops AS streak FROM users WHERE google_sub = ${key}`;
+  if (!u) return res.status(401).json({ ok: false, error: 'Not signed in' });
+  // namespaced dedup key so a hoops match never collides with a baseball one in the shared pvp_results
+  const dedup = 'h:' + matchId;
+  const ins = await sql`INSERT INTO pvp_results (match_id, google_sub) VALUES (${dedup}, ${key}) ON CONFLICT DO NOTHING RETURNING match_id`;
+  if (!ins.length) return res.status(200).json({ ok: true, counted: false, elo: u.elo, delta: 0, bonus: 0, streak: u.streak, wins: u.wins, losses: u.losses });
+  const { delta } = nextElo(u.elo, oppElo, won);
+  const streak = won ? (u.streak || 0) + 1 : 0;
+  const bonus = won ? Math.min(streak, STREAK_CAP) * STREAK_BONUS : 0;
+  const elo = Math.max(100, u.elo + delta + bonus);
+  const wins = u.wins + (won ? 1 : 0), losses = u.losses + (won ? 0 : 1);
+  await sql`UPDATE users SET pvp_elo_hoops = ${elo}, pvp_wins_hoops = ${wins}, pvp_losses_hoops = ${losses}, pvp_streak_hoops = ${streak} WHERE google_sub = ${key}`;
+  const oppKeyVal = body.oppKey ? String(body.oppKey).slice(0, 80) : null;
+  const validOppKey = oppKeyVal && /^(acct:|guest:)/.test(oppKeyVal) && oppKeyVal !== key ? oppKeyVal : null;
+  try {
+    await sql`INSERT INTO pvp_history (player_key, match_id, won, my_role, my_ovr, opp_name, opp_ovr, opp_key, elo_before, elo_after, sport)
+      VALUES (${key}, ${matchId}, ${won}, 'hooper', ${myOvr}, ${oppName}, ${oppOvr}, ${validOppKey}, ${u.elo}, ${elo}, 'hoops')`;
+  } catch (e) {}
+  if (won && validOppKey) {
+    try {
+      const oppIns = await sql`INSERT INTO pvp_results (match_id, google_sub) VALUES (${dedup}, ${validOppKey}) ON CONFLICT DO NOTHING RETURNING match_id`;
+      if (oppIns.length) {
+        const [opp] = await sql`SELECT pvp_elo_hoops AS elo, pvp_wins_hoops AS wins, pvp_losses_hoops AS losses FROM users WHERE google_sub = ${validOppKey}`;
+        if (opp) {
+          const { delta: oppDelta } = nextElo(opp.elo, u.elo, false);
+          const oppNewElo = Math.max(100, opp.elo + oppDelta);
+          await sql`UPDATE users SET pvp_elo_hoops = ${oppNewElo}, pvp_losses_hoops = ${opp.losses + 1}, pvp_streak_hoops = 0 WHERE google_sub = ${validOppKey}`;
+          const winnerName = String(body.name || '').slice(0, 40);
+          await sql`INSERT INTO pvp_history (player_key, match_id, won, my_role, my_ovr, opp_name, opp_ovr, opp_key, elo_before, elo_after, sport)
+            VALUES (${validOppKey}, ${matchId}, false, 'hooper', ${oppOvr}, ${winnerName}, ${myOvr}, ${key}, ${opp.elo}, ${oppNewElo}, 'hoops')`;
+        }
+      }
+    } catch (e) {}
+  }
+  return res.status(200).json({ ok: true, counted: true, elo, delta: delta + bonus, bonus, streak, wins, losses });
+}
+async function hoopsLeaderboard(body, res) {
+  const limit = Math.max(1, Math.min(100, parseInt(body.limit, 10) || 50));
+  const rows = await sql`SELECT name, pvp_elo_hoops AS elo, pvp_wins_hoops AS wins, pvp_losses_hoops AS losses
+    FROM users WHERE (pvp_wins_hoops + pvp_losses_hoops) > 0
+    ORDER BY pvp_elo_hoops DESC, (pvp_wins_hoops + pvp_losses_hoops) DESC LIMIT ${limit}`;
+  let me = null;
+  const key = await pvpKey(body);
+  if (key) {
+    const [u] = await sql`SELECT name, pvp_elo_hoops AS elo, pvp_wins_hoops AS wins, pvp_losses_hoops AS losses FROM users WHERE google_sub = ${key}`;
+    if (u && (u.wins + u.losses) > 0) {
+      const [{ ahead }] = await sql`SELECT count(*)::int AS ahead FROM users
+        WHERE (pvp_wins_hoops + pvp_losses_hoops) > 0 AND pvp_elo_hoops > ${u.elo}`;
+      me = { rank: ahead + 1, name: u.name, elo: u.elo, wins: u.wins, losses: u.losses };
+    } else if (u) {
+      me = { rank: null, name: u.name, elo: u.elo, wins: u.wins, losses: u.losses };
+    }
+  }
+  return res.status(200).json({ ok: true, rows, me });
+}
 
 async function authed(sub, sessionToken) {
   if (!sub || !sessionToken) return false;
@@ -237,6 +316,7 @@ module.exports = async (req, res) => {
       if (action === 'pvpStats') {
         const key = await pvpKey(body);
         if (!key) return res.status(401).json({ ok: false, error: 'Not signed in' });
+        if (body.sport === 'hoops') return hoopsStats(key, res);
         const [u] = await sql`SELECT pvp_elo AS elo, pvp_wins AS wins, pvp_losses AS losses, pvp_streak AS streak FROM users WHERE google_sub = ${key}`;
         if (!u) return res.status(401).json({ ok: false, error: 'Not signed in' });
         return res.status(200).json({ ok: true, elo: u.elo, wins: u.wins, losses: u.losses, streak: u.streak });
@@ -245,6 +325,7 @@ module.exports = async (req, res) => {
       if (action === 'pvpResult') {
         const key = await pvpKey(body);
         if (!key) return res.status(401).json({ ok: false, error: 'Not signed in' });
+        if (body.sport === 'hoops') return hoopsResult(body, key, res);
         const matchId = String(body.matchId || '').slice(0, 80);
         if (!matchId) return res.status(400).json({ ok: false, error: 'missing matchId' });
         const won = !!body.won;
@@ -307,8 +388,11 @@ module.exports = async (req, res) => {
       if (action === 'pvpHistory') {
         const key = await pvpKey(body);
         if (!key) return res.status(401).json({ ok: false, error: 'Not signed in' });
-        const rows = await sql`SELECT won, my_role, my_ovr, opp_name, opp_ovr, elo_before, elo_after, created_at
-          FROM pvp_history WHERE player_key = ${key} ORDER BY created_at DESC LIMIT 20`;
+        const rows = body.sport === 'hoops'
+          ? await sql`SELECT won, my_role, my_ovr, opp_name, opp_ovr, elo_before, elo_after, created_at
+              FROM pvp_history WHERE player_key = ${key} AND sport = 'hoops' ORDER BY created_at DESC LIMIT 20`
+          : await sql`SELECT won, my_role, my_ovr, opp_name, opp_ovr, elo_before, elo_after, created_at
+              FROM pvp_history WHERE player_key = ${key} AND sport IS DISTINCT FROM 'hoops' ORDER BY created_at DESC LIMIT 20`;
         return res.status(200).json({ ok: true, history: rows });
       }
 
@@ -330,6 +414,7 @@ module.exports = async (req, res) => {
       }
 
       if (action === 'pvpLeaderboard') {
+        if (body.sport === 'hoops') return hoopsLeaderboard(body, res);
         const limit = Math.max(1, Math.min(100, parseInt(body.limit, 10) || 50));
         const rows = await sql`SELECT name, pvp_elo AS elo, pvp_wins AS wins, pvp_losses AS losses
           FROM users WHERE (pvp_wins + pvp_losses) > 0

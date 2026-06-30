@@ -538,6 +538,10 @@
   <div class="screen" id="statsScreen">
     <div class="hero" style="margin:22px 0 14px"><h1 style="font-size:clamp(30px,7vw,48px)">My <i>Stats</i></h1></div>
     <div class="vs-card" style="max-width:520px; text-align:left">
+      <div class="stats-tabs" id="statsSportToggle" style="margin-bottom:9px">
+        <button class="stab active" data-sport="baseball">⚾ Baseball</button>
+        <button class="stab" data-sport="hoops">🏀 Hoops</button>
+      </div>
       <div class="stats-tabs">
         <button class="stab active" id="tabStats">My Stats</button>
         <button class="stab" id="tabHistory">History</button>
@@ -2119,14 +2123,15 @@ function openStats(tab='stats'){
   switchStatsTab(tab);
   loadStats();
 }
+let statsView = 'baseball';   // which sport's 1v1 board the stats screen is showing (toggle below)
 async function loadStats(){
   let data, hist;
   try {
     [data, hist] = await Promise.all([
       fetch('/api/account', { method:'POST', headers:{'content-type':'application/json'},
-        body: JSON.stringify(Object.assign({ action:'pvpLeaderboard', limit:50 }, principal())) }).then(x=>x.json()),
+        body: JSON.stringify(Object.assign({ action:'pvpLeaderboard', limit:50, sport:statsView }, principal())) }).then(x=>x.json()),
       fetch('/api/account', { method:'POST', headers:{'content-type':'application/json'},
-        body: JSON.stringify(Object.assign({ action:'pvpHistory' }, principal())) }).then(x=>x.json()).catch(()=>null)
+        body: JSON.stringify(Object.assign({ action:'pvpHistory', sport:statsView }, principal())) }).then(x=>x.json()).catch(()=>null)
     ]);
   } catch(e){ $('statsPersonal').innerHTML = '<div class="prompt">Could not load stats. Try again.</div>'; return; }
   if (!data || !data.ok){ $('statsPersonal').innerHTML = '<div class="prompt">Could not load stats.</div>'; return; }
@@ -2177,7 +2182,7 @@ async function loadStats(){
       const rt = getEloTier(r.elo, i + 1);
       return `<div class="lb-row${mine?' mine':''}"><span class="lr-rank">${i+1}</span><span class="lr-name">${escapeHTML(r.name||'Player')}</span><span class="lr-rec">${r.wins}-${r.losses}</span><span class="lr-elo">${batSVG(rt.color, rt.glow, 14)}<span style="color:${rt.color}">${r.elo}</span></span></div>`;
     }).join('');
-    $('statsBoard').innerHTML = `<div class="lb-head">🏆 Top Players</div><div class="lb-rows">${rowsHtml}</div>`;
+    $('statsBoard').innerHTML = `<div class="lb-head">${statsView==='hoops'?'🏀 Hoops':'⚾ Baseball'} · Top Players</div><div class="lb-rows">${rowsHtml}</div>`;
   } else {
     $('statsBoard').innerHTML = `<div class="prompt" style="margin-top:16px">No ranked players yet - be the first!</div>`;
   }
@@ -2193,6 +2198,17 @@ $('resultStatsBtn').onclick = () => { Sound.click(); openStats(); };
 $('statsBack').onclick = () => { showScreen('mmScreen'); updateRatingChip(); };
 $('tabStats').onclick = () => switchStatsTab('stats');
 $('tabHistory').onclick = () => { switchStatsTab('history'); };
+document.querySelectorAll('#statsSportToggle .stab').forEach(b => {
+  b.onclick = () => {
+    if (b.dataset.sport === statsView) return;
+    statsView = b.dataset.sport;
+    document.querySelectorAll('#statsSportToggle .stab').forEach(x => x.classList.toggle('active', x === b));
+    $('statsPersonal').innerHTML = '<div class="prompt">Loading…</div>';
+    $('statsHistory').innerHTML = '<div class="prompt">Loading…</div>';
+    $('statsBoard').innerHTML = '';
+    loadStats();
+  };
+});
 // deep-link: /versus#stats opens the stats page straight away (from the hamburger menus)
 if (location.hash === '#stats') openStats();
 if (location.hash === '#achievements' || location.hash === '#ach') { const o = () => (window.Ach ? Ach.open() : setTimeout(o, 120)); o(); }
