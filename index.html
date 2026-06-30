@@ -241,6 +241,10 @@
   .versus .vdesc { color:var(--muted); font-size:12.5px; margin-top:5px; line-height:1.45; max-width:540px; }
   .versus .vgo { flex-shrink:0; font-family:'Oswald',sans-serif; font-size:13px; letter-spacing:2px; text-transform:uppercase;
     padding:9px 20px; border-radius:9px; color:#06121d; font-weight:700; background:linear-gradient(180deg,#ffd23f,#e0640c); box-shadow:0 8px 20px rgba(255,122,24,.35); }
+  .versus .vbtns { flex-shrink:0; display:flex; flex-direction:column; gap:8px; }
+  .versus .vbtns .vgo { display:block; text-align:center; min-width:128px; }
+  .versus .vgo-baseball { background:linear-gradient(180deg,#5fd0ff,#0f9fd0); box-shadow:0 8px 20px rgba(25,198,255,.35); }
+  .versus .vgo-hoops { background:linear-gradient(180deg,#ffb15a,#e0640c); box-shadow:0 8px 20px rgba(255,138,60,.4); }
   /* Daily Challenge CTA + streak banner (habit-loop cues on the landing page) */
   .daily-cta { border-color:rgba(255,206,58,.4); }
   .daily-cta:hover { border-color:var(--gold); box-shadow:0 20px 50px rgba(0,0,0,.6), 0 0 28px rgba(255,206,58,.32); }
@@ -371,14 +375,17 @@
     <div class="vgo" id="dailyGo">▶ Play Today</div>
   </a>
 
-  <a class="versus" href="/versus">
+  <div class="versus">
     <span class="vbadge">NEW</span>
     <div class="vtxt">
       <div class="vtitle">⚔️ Face Off <b>1v1</b> <span class="vlive">● LIVE</span></div>
-      <div class="vdesc">Match up with a real player online. One pitches, one hits - highest Overall wins the at-bat.</div>
+      <div class="vdesc">Match up with a real player online — build fast, highest Overall wins. Pick your sport:</div>
     </div>
-    <div class="vgo">▶ Play</div>
-  </a>
+    <div class="vbtns">
+      <a class="vgo vgo-baseball" href="/versus">⚾ Baseball</a>
+      <a class="vgo vgo-hoops" href="/versus-hoops">🏀 Hoops</a>
+    </div>
+  </div>
 
   <div class="picks">
     <a class="pick pitch" href="/pitching">
