@@ -72,7 +72,7 @@ function slim(p, ids, isLegend) {
     dribble:    curve(p.ballHandle),
     playmaking: curve(avg(p.passAccuracy, p.passVision, p.passIQ)),
     defense:    curve(lean(p.perimeterDefense, p.interiorDefense)),
-    rebounding: curve(avg(p.offensiveRebound, p.defensiveRebound)),
+    rebounding: curve(lean(p.defensiveRebound, p.offensiveRebound)),
     speed:      curve(avg(p.speed, p.agility)),
     clutch:     curve(avg(p.intangibles, p.offensiveConsistency)),
     ...(isLegend ? { legend: true } : {}),
