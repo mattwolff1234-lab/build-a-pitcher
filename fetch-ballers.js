@@ -30,6 +30,11 @@ const lean = (a, b) => { a = +a; b = +b; if (isNaN(a) && isNaN(b)) return null; 
 const CURVE_T = 72, CURVE_K = 1.55;
 const curve = v => (v == null ? null : (v <= CURVE_T ? Math.round(v) : Math.round(CURVE_T + (v - CURVE_T) * CURVE_K)));
 
+// Iconic glass-cleaners whose 2K legend card undersells their real-life rebounding (e.g. Shaq's card
+// is only 86/87). Hand-set the FINAL rebounding value (bypasses the curve). Keyed by normalized name.
+const REB_OVERRIDE = {};
+[["Shaquille O'Neal", 125], ["Wilt Chamberlain", 125], ["David Robinson", 99]].forEach(([n, v]) => { REB_OVERRIDE[norm(n)] = v; });
+
 const TEAM_ABBR = {
   'atlanta hawks': 'ATL', 'boston celtics': 'BOS', 'brooklyn nets': 'BKN', 'charlotte hornets': 'CHA',
   'chicago bulls': 'CHI', 'cleveland cavaliers': 'CLE', 'dallas mavericks': 'DAL', 'denver nuggets': 'DEN',
@@ -72,7 +77,7 @@ function slim(p, ids, isLegend) {
     dribble:    curve(p.ballHandle),
     playmaking: curve(avg(p.passAccuracy, p.passVision, p.passIQ)),
     defense:    curve(lean(p.perimeterDefense, p.interiorDefense)),
-    rebounding: curve(lean(p.defensiveRebound, p.offensiveRebound)),
+    rebounding: REB_OVERRIDE[norm(name)] ?? curve(lean(p.defensiveRebound, p.offensiveRebound)),
     speed:      curve(avg(p.speed, p.agility)),
     clutch:     curve(avg(p.intangibles, p.offensiveConsistency)),
     ...(isLegend ? { legend: true } : {}),
