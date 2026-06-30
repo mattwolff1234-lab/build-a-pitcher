@@ -1280,6 +1280,7 @@ function resetMatch(){
   myBuild=null; oppBuild=null; atBatStarted=false; matchResolved=false; oppPresent=false; waitingArena=false;
   oppProg={filled:0,total:9}; oppPresenceName=''; oppPresenceElo=0;
   if ($('waitArena')) $('waitArena').classList.remove('show');
+  stopWaitClock();
   if (clockTimer){ clearInterval(clockTimer); clockTimer=null; }
   if (claimTimeout){ clearTimeout(claimTimeout); claimTimeout=null; }
   if (waitTimeout){ clearTimeout(waitTimeout); waitTimeout=null; }
@@ -1648,6 +1649,10 @@ function fmtClock(s){ s=Math.max(0,s); return Math.floor(s/60)+':'+String(s%60).
 function tickClock(){
   clockLeft--; $('clock').textContent=fmtClock(clockLeft);
   if(clockLeft<=15)$('clock').classList.add('warn');
+  // AFK guard: barely built (<=1 slot) with a minute to go and the opponent is already ready ->
+  // concede now so they get their win instead of waiting out the clock.
+  const filledCount = ROLE[myRole].slots.filter(s=>buildState.filled[s.key]).length;
+  if(clockLeft<=60 && filledCount<=1 && oppBuild && !buildState.finished && !matchResolved){ forfeitMatch(filledCount); return; }
   if(clockLeft<=0){ clearInterval(clockTimer); clockTimer=null; autoFill(); }
 }
 function autoFill(){
@@ -1685,7 +1690,8 @@ function finishBuild(){
   else showWaitArena();              // otherwise wait IN the arena, watching their progress
 }
 
-let waitingArena=false;
+let waitingArena=false, waClockTimer=null, waClockLeft=0;
+function stopWaitClock(){ if(waClockTimer){ clearInterval(waClockTimer); waClockTimer=null; } }
 // You finished first → sit in the arena (your fighter ready, opponent's spot greyed out) and
 // watch how close the opponent is to finishing.
 function showWaitArena(){
@@ -1705,20 +1711,23 @@ function showWaitArena(){
   $('pitchSeq').innerHTML=''; gsap.set('#pitchSeq', { opacity:0 });
   $('waTitle').textContent = 'Waiting for your opponent…';
   $('waitArena').classList.add('show');
+  waClockLeft = Math.max(0, clockLeft);   // shared shot clock was frozen at finish; count it down for display
+  stopWaitClock();
+  waClockTimer = setInterval(()=>{ waClockLeft=Math.max(0,waClockLeft-1); updateWaitArena(); if(waClockLeft<=0) stopWaitClock(); }, 1000);
   updateWaitArena();
 }
 function updateWaitArena(){
   if (!waitingArena) return;
-  const oppIsPitcher = myRole !== 'pitcher';
-  const total = oppProg.total || (oppIsPitcher ? 9 : 8);
+  const total = oppProg.total || 9;
   const filled = Math.min(oppProg.filled || 0, total);
   $('waFill').style.width = Math.round(100 * filled / total) + '%';
+  const clk = waClockLeft>0 ? ' · ' + fmtClock(waClockLeft) + ' left' : ' · time’s up';
   $('waCount').textContent = oppPresent
-    ? (oppIsPitcher ? 'Pitcher' : 'Batter') + ' building · ' + filled + '/' + total + ' slots filled'
+    ? 'Opponent building · ' + filled + '/' + total + ' slots' + clk
     : 'Connecting to opponent…';
 }
 function showNoContest(){
-  waitingArena=false; $('waitArena').classList.remove('show');
+  waitingArena=false; stopWaitClock(); $('waitArena').classList.remove('show');
   setOnlineStatus('idle');
   if (atBatStarted || oppBuild || matchResolved) return;
   matchResolved=true;
@@ -1745,7 +1754,7 @@ function handleOpponentForfeit(data){
   showForfeitResult(true, data.filled || 0, data);
 }
 function showForfeitResult(iWon, filled, data={}){
-  matchResolved=true; waitingArena=false;
+  matchResolved=true; waitingArena=false; stopWaitClock();
   if(clockTimer){ clearInterval(clockTimer); clockTimer=null; }
   if(idleTween)idleTween.kill();
   if(waitTimeout){ clearTimeout(waitTimeout); waitTimeout=null; }
@@ -1810,7 +1819,7 @@ function maybeStartAtBat(){
 function playAtBat(){
   if(matchResolved) return;
   showScreen('atbatScreen');
-  waitingArena=false; $('waitArena').classList.remove('show');
+  waitingArena=false; stopWaitClock(); $('waitArena').classList.remove('show');
   $('silhoP').classList.remove('dim'); $('silhoB').classList.remove('dim');
   const pitcher = myRole==='pitcher' ? myBuild : oppBuild;
   const batter  = myRole==='pitcher' ? oppBuild : myBuild;
