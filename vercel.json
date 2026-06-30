@@ -2,6 +2,8 @@
   "rewrites": [
     { "source": "/batting", "destination": "/build-a-batter.html" },
     { "source": "/pitching", "destination": "/pitcher.html" },
-    { "source": "/versus", "destination": "/versus.html" }
+    { "source": "/versus", "destination": "/versus.html" },
+    { "source": "/hoops", "destination": "/build-a-baller.html" },
+    { "source": "/versus-hoops", "destination": "/versus-hoops.html" }
   ]
 }

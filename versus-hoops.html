@@ -1,0 +1,2167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Hoops Face Off · GoatLab 1v1</title>
+<meta name="theme-color" content="#0a1320">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="/achievements.js" defer></script>
+<script src="https://cdn.ably.com/lib/ably.min-2.js"></script>
+<script src="https://accounts.google.com/gsi/client" async></script>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-TVL2XEQ2Q7"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-TVL2XEQ2Q7');
+</script>
+<!-- Vercel Web Analytics -->
+<script defer src="/_vercel/insights/script.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg0:#04070d; --bg1:#0a1320;
+    --panel-a: rgba(20,31,48,.72); --panel-b: rgba(9,15,25,.86);
+    --ink:#eaf2fb; --muted:#7e8da3; --dim:#56627a;
+    --line: rgba(120,160,210,.16);
+    --accent:#ff7a18; --accent2:#19c6ff;
+    --gold:#ffce3a; --diamond:#54c7ff; --legend:#a366ff;
+    --pitch:#ff7a18; --bat:#19c6ff;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; scrollbar-width: thin; scrollbar-color: rgba(120,160,210,.32) transparent; }
+  ::-webkit-scrollbar { width: 7px; height: 7px; }
+  ::-webkit-scrollbar-thumb { background: rgba(120,160,210,.28); border-radius: 8px; }
+  html,body { height:100%; margin:0; }
+  body {
+    background:var(--bg0); color:var(--ink); overflow-x:hidden;
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+    min-height:100vh; display:flex; flex-direction:column; align-items:center;
+  }
+  .disp { font-family:'Oswald',sans-serif; }
+  .bg { position:fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden; background:
+     radial-gradient(120% 90% at 50% -10%, #14253c 0%, var(--bg1) 38%, var(--bg0) 80%); }
+  .bg .glow { position:absolute; width:60vw; height:60vw; border-radius:50%; filter:blur(90px); opacity:.45; }
+  .bg .g1 { background:radial-gradient(circle,#ff7a1855,transparent 60%); top:-12%; left:-10%; animation:drift1 26s ease-in-out infinite; }
+  .bg .g2 { background:radial-gradient(circle,#19c6ff44,transparent 60%); bottom:-18%; right:-12%; animation:drift2 32s ease-in-out infinite; }
+  @keyframes drift1 { 0%,100%{ transform:translate(-6%,-4%);} 50%{ transform:translate(8%,6%);} }
+  @keyframes drift2 { 0%,100%{ transform:translate(6%,4%);} 50%{ transform:translate(-8%,-6%);} }
+  /* Battery/heat: animating a 90px blur (scale) + the scrolling grid pegs the mobile GPU. Drop the
+     scale (above) and go fully static on phones / reduced-motion so backdrop-filters composite once. */
+  @media (prefers-reduced-motion: reduce){ .bg .glow, .bg .grid{ animation:none!important; } }
+  @media (max-width:820px){ .bg .glow, .bg .grid{ animation:none; } .bg .glow{ filter:none; } }
+
+  header { position:relative; z-index:3; width:100%; max-width:920px; display:flex; align-items:center;
+    justify-content:space-between; padding:16px 18px 0; }
+  header .brand { font-family:'Oswald',sans-serif; font-weight:700; letter-spacing:3px; text-transform:uppercase;
+    font-size:18px; display:flex; align-items:center; gap:9px; }
+  header .brand i { color:var(--accent); font-style:normal; }
+  header a.back { color:var(--dim); font-size:12px; text-decoration:none; letter-spacing:.5px;
+    border:1px solid var(--line); padding:7px 13px; border-radius:8px; }
+  header a.back:hover { color:var(--ink); border-color:var(--accent2); }
+
+  .stage { position:relative; z-index:2; width:100%; max-width:920px; padding:18px 16px 50px;
+    display:flex; flex-direction:column; align-items:center; flex:1; }
+  .screen { display:none; width:100%; flex-direction:column; align-items:center; }
+  .screen.on { display:flex; }
+
+  /* ---------- matchmaking ---------- */
+  .hero { text-align:center; margin:30px 0 26px; }
+  .hero .kick { font-family:'Oswald',sans-serif; font-size:12px; letter-spacing:5px; text-transform:uppercase;
+    color:var(--accent2); border:1px solid rgba(25,198,255,.4); background:rgba(25,198,255,.07);
+    padding:5px 13px 4px; border-radius:5px; display:inline-block; margin-bottom:16px; }
+  .hero h1 { font-family:'Oswald',sans-serif; font-weight:700; letter-spacing:4px; text-transform:uppercase;
+    margin:0; font-size:clamp(38px,9vw,70px); line-height:.95;
+    background:linear-gradient(180deg,#fff,#aebfd6); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .hero h1 i { color:var(--accent); font-style:normal; }
+  .hero p { color:var(--muted); font-size:clamp(14px,2.4vw,16px); margin:14px auto 0; max-width:520px; line-height:1.5; }
+  .vs-card { width:100%; max-width:440px; border:1px solid var(--line); border-radius:18px; padding:26px 22px;
+    background:linear-gradient(180deg,var(--panel-a),var(--panel-b)); backdrop-filter:blur(6px);
+    box-shadow:0 16px 50px rgba(0,0,0,.5); text-align:center; }
+  .btn { font-family:'Oswald',sans-serif; font-size:16px; letter-spacing:2px; text-transform:uppercase;
+    padding:14px 30px; border-radius:11px; color:#06121d; font-weight:700; border:0; cursor:pointer;
+    background:linear-gradient(180deg,#ffd23f,#e0640c); box-shadow:0 10px 24px rgba(255,122,24,.35); }
+  .btn:disabled { opacity:.5; cursor:default; }
+  .btn.ghost { background:rgba(255,255,255,.05); color:var(--ink); border:1px solid var(--line); box-shadow:none; }
+  .status { color:var(--muted); font-size:14px; margin-top:18px; min-height:20px; letter-spacing:.4px; }
+  .live-ticker { display:inline-flex; align-items:center; gap:8px; margin:0 auto 20px; padding:7px 15px; border-radius:20px;
+    border:1px solid rgba(124,227,139,.3); background:rgba(124,227,139,.07); font-family:'Oswald',sans-serif; font-size:13px; letter-spacing:.6px; color:var(--ink); }
+  .live-ticker .lt-dot { width:8px; height:8px; border-radius:50%; background:#7CE38B; box-shadow:0 0 9px #7CE38B; animation:ltpulse 1.6s ease-in-out infinite; }
+  @keyframes ltpulse { 0%,100%{ opacity:1; } 50%{ opacity:.3; } }
+  .rating-chip { margin-bottom:18px; display:flex; flex-direction:column; align-items:center; gap:8px; }
+  .rating-chip .elo { font-family:'Oswald',sans-serif; font-size:15px; letter-spacing:1px; text-transform:uppercase; color:var(--ink);
+    border:1px solid rgba(255,206,58,.4); background:rgba(255,206,58,.08); border-radius:20px; padding:7px 16px; }
+  .rating-chip .elo b { color:var(--gold); font-size:18px; margin:0 4px; }
+  .rating-chip .rec { color:var(--muted); font-weight:400; margin-left:6px; }
+  .rating-chip .elo input { width:108px; font-family:'Oswald',sans-serif; font-size:14px; letter-spacing:.5px; color:var(--ink);
+    background:rgba(0,0,0,.25); border:1px solid var(--line); border-radius:7px; padding:3px 8px; margin:0 4px; text-align:center; text-transform:none; }
+  .rating-chip .elo input:focus { outline:none; border-color:var(--accent2); }
+  .rating-chip .guest { color:var(--dim); font-size:12.5px; }
+  .rating-result { margin-top:16px; display:flex; flex-direction:column; align-items:center; gap:10px; }
+  .rating-result .delta { font-family:'Oswald',sans-serif; font-size:17px; letter-spacing:.5px; }
+  .rating-result .delta b { font-size:26px; margin:0 5px; }
+  .rating-result .up { color:#7CE38B; } .rating-result .down { color:#ff6b6b; }
+  .rating-result .prompt { color:var(--muted); font-size:13px; line-height:1.4; }
+  .spinner { width:34px; height:34px; border-radius:50%; border:3px solid rgba(255,255,255,.12);
+    border-top-color:var(--accent); margin:18px auto 0; animation:spin 0.8s linear infinite; display:none; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  /* ---------- challenge lobby ---------- */
+  .lobby-modes { display:grid; grid-template-columns:repeat(3,1fr); gap:9px; margin-bottom:20px; }
+  .lmode { background:rgba(255,255,255,.04); border:1.5px solid var(--line); border-radius:13px;
+    padding:14px 8px 12px; cursor:pointer; text-align:center; transition:all .18s; color:var(--ink); }
+  .lmode.active { border-color:var(--accent2); background:rgba(25,198,255,.1); }
+  .lmode:hover:not(.active){ border-color:rgba(120,160,210,.38); background:rgba(255,255,255,.06); }
+  .lmode .lm-icon { font-size:22px; margin-bottom:6px; }
+  .lmode .lm-name { font-family:'Oswald',sans-serif; font-size:13px; font-weight:700; letter-spacing:1.5px;
+    text-transform:uppercase; margin-bottom:3px; }
+  .lmode .lm-desc { font-size:10.5px; color:var(--muted); letter-spacing:.2px; line-height:1.3; }
+  .lmode.active .lm-desc { color:rgba(25,198,255,.8); }
+  .lobby-link-box { border:1px solid var(--line); border-radius:11px; background:rgba(0,0,0,.3);
+    padding:13px 14px; margin-bottom:18px; }
+  .lobby-link-url { font-size:11.5px; color:var(--dim); word-break:break-all; line-height:1.5;
+    font-family:monospace; margin-bottom:10px; }
+
+  /* ---------- stats ---------- */
+  .stat-top { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
+    border-bottom:1px solid var(--line); padding-bottom:16px; margin-bottom:16px; }
+  .stat-top .stat-name { font-family:'Oswald',sans-serif; font-size:18px; letter-spacing:1px; }
+  .stat-top .stat-elo { font-family:'Oswald',sans-serif; text-align:center; }
+  .stat-top .stat-elo b { display:block; font-size:38px; line-height:1; color:var(--gold); }
+  .stat-top .stat-elo span { font-size:10px; letter-spacing:2px; color:var(--muted); }
+  .stat-top .stat-rank { font-family:'Oswald',sans-serif; font-size:24px; font-weight:700; color:var(--accent2); }
+  .stat-top .stat-rank span { font-size:10px; letter-spacing:1px; color:var(--muted); display:block; text-transform:uppercase; }
+  .stat-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+  .stat-grid .sbox { border:1px solid var(--line); border-radius:11px; padding:12px 6px; text-align:center; background:rgba(255,255,255,.02); }
+  .stat-grid .sbox b { font-family:'Oswald',sans-serif; font-size:24px; display:block; }
+  .stat-grid .sbox span { font-size:10px; letter-spacing:1px; color:var(--muted); text-transform:uppercase; }
+  .lb-head { font-family:'Oswald',sans-serif; font-size:13px; letter-spacing:2px; text-transform:uppercase; color:var(--muted);
+    margin:22px 0 10px; }
+  .lb-rows { display:flex; flex-direction:column; gap:4px; max-height:300px; overflow-y:auto; }
+  .lb-row { display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:9px; font-size:14px; }
+  .lb-row:nth-child(odd) { background:rgba(255,255,255,.025); }
+  .lb-row.mine { background:rgba(255,206,58,.12); border:1px solid rgba(255,206,58,.4); }
+  .lb-row .lr-rank { font-family:'Oswald',sans-serif; font-weight:700; color:var(--muted); width:30px; }
+  .lb-row .lr-name { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .lb-row .lr-rec { color:var(--muted); font-size:12px; }
+  .lb-row .lr-elo { font-family:'Oswald',sans-serif; font-weight:700; font-size:17px; width:68px; text-align:right; }
+  .prompt { color:var(--muted); font-size:13px; line-height:1.5; }
+  .tier-badge { display:inline-flex; align-items:center; gap:6px; }
+  .tier-name { font-family:'Oswald',sans-serif; font-weight:700; text-transform:uppercase; }
+  .lb-row .lr-elo { display:inline-flex; align-items:center; justify-content:flex-end; gap:5px; }
+  .stats-tabs { display:flex; gap:0; border-bottom:2px solid var(--line); margin-bottom:20px; }
+  .stab { font-family:'Oswald',sans-serif; font-size:13px; letter-spacing:1.5px; text-transform:uppercase;
+    padding:9px 20px; background:none; border:none; border-bottom:2px solid transparent; margin-bottom:-2px;
+    color:var(--muted); cursor:pointer; transition:color .15s; }
+  .stab.active { color:var(--accent2); border-bottom-color:var(--accent2); }
+  .stab:hover:not(.active) { color:var(--ink); }
+
+  /* ---------- role reveal ---------- */
+  #roleScreen { justify-content:center; align-items:center; min-height:74vh; text-align:center; }
+  .role-card { width:320px; border-radius:22px; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:18px; padding:34px 22px; border:2px solid; box-shadow:0 24px 70px rgba(0,0,0,.55);
+    background:radial-gradient(120% 80% at 50% 0%, color-mix(in srgb, var(--rc) 14%, transparent), transparent 60%), linear-gradient(180deg,var(--panel-a),var(--panel-b)); }
+  .role-card .role-fig { width:130px; height:180px; mask-size:contain; mask-repeat:no-repeat; mask-position:center bottom;
+    -webkit-mask-size:contain; -webkit-mask-repeat:no-repeat; -webkit-mask-position:center bottom;
+    background:var(--rc); animation:figGlow 2s ease-in-out infinite; }
+  @keyframes figGlow {
+    0%,100% { filter:drop-shadow(0 0 10px var(--rc)) drop-shadow(0 0 4px var(--rc)); }
+    50%     { filter:drop-shadow(0 0 26px var(--rc)) drop-shadow(0 0 46px var(--rc)); }
+  }
+  .role-card .rl { font-family:'Oswald',sans-serif; font-size:30px; font-weight:700; letter-spacing:2.5px; text-transform:uppercase; color:var(--rc); line-height:1.05; }
+  .role-card.pitcher { --rc:var(--pitch); border-color:var(--pitch); }
+  .role-card.pitcher .role-fig { -webkit-mask-image:url(baller-figure.png); mask-image:url(baller-figure.png); }
+  .role-card.batter { --rc:var(--bat); border-color:var(--bat); }
+  .role-card.batter .role-fig { -webkit-mask-image:url(baller-figure.png); mask-image:url(baller-figure.png); }
+  .role-sub { color:var(--muted); margin-top:18px; font-size:14px; max-width:340px; }
+  .hist-head { font-family:'Oswald',sans-serif; font-size:13px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin:22px 0 8px; }
+  .hist-row { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--line); }
+  .hist-row:last-child { border-bottom:none; }
+  .hist-wl { font-family:'Oswald',sans-serif; font-weight:700; font-size:15px; width:16px; flex-shrink:0; }
+  .hist-wl.w { color:#4ade80; } .hist-wl.l { color:#ff6b6b; }
+  .hist-role { font-size:15px; flex-shrink:0; }
+  .hist-info { flex:1; min-width:0; }
+  .hist-vs { font-size:13px; font-weight:600; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .hist-sub { font-size:11px; color:var(--muted); margin-top:1px; }
+  .hist-delta { font-family:'Oswald',sans-serif; font-size:15px; font-weight:700; flex-shrink:0; }
+  .hist-delta.pos { color:#4ade80; } .hist-delta.neg { color:#ff6b6b; }
+  .opp-chip { margin-top:20px; display:flex; flex-direction:column; align-items:center; gap:4px; }
+  .opp-chip .oc-vs { font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:4px; text-transform:uppercase; color:var(--accent2); }
+  .opp-chip .oc-name { font-family:'Oswald',sans-serif; font-size:22px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:#fff; }
+  .opp-chip .oc-elo { font-size:12px; color:var(--muted); letter-spacing:.5px; margin-top:1px; }
+
+  /* ---------- challenge ---------- */
+  .chal-notif { background:linear-gradient(180deg,var(--panel-a),var(--panel-b));
+    border:2px solid var(--accent2); border-radius:16px; padding:20px 22px;
+    box-shadow:0 16px 50px rgba(0,0,0,.6); text-align:center; }
+  .chal-notif .cn-tag { font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:3px;
+    text-transform:uppercase; color:var(--accent2); margin-bottom:8px; }
+  .chal-notif .cn-name { font-family:'Oswald',sans-serif; font-size:22px; font-weight:700;
+    letter-spacing:1.5px; color:#fff; margin-bottom:4px; }
+  .chal-notif .cn-sub { font-size:13px; color:var(--muted); margin-bottom:18px; }
+  .chal-notif .cn-btns { display:flex; gap:10px; justify-content:center; }
+  .chal-notif .cn-btns .btn { font-size:13px; padding:10px 22px; }
+
+  /* ---------- build screen ---------- */
+  /* desktop: figure on the left, controls (clock, reel, slots) stacked on the right */
+  #buildScreen.on { display:grid; grid-template-columns:390px minmax(0,1fr); column-gap:22px; row-gap:10px;
+    grid-template-areas:"fig top" "fig reel" "fig slots"; align-items:start; max-width:980px; width:100%; }
+  #buildScreen .figwrap { grid-area:fig; }
+  #buildScreen .build-top { grid-area:top; min-width:0; }
+  #buildScreen .reel-wrap { grid-area:reel; min-width:0; }
+  #buildScreen .slots { grid-area:slots; min-width:0; }
+  .build-top { width:100%; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .clock { font-family:'Oswald',sans-serif; font-size:30px; font-weight:700; letter-spacing:1px; }
+  .clock.warn { color:#ff5a5a; }
+  .pill { font-size:12px; color:var(--muted); border:1px solid var(--line); border-radius:20px; padding:6px 12px; letter-spacing:.4px; }
+  .ovr-badge { font-family:'Oswald',sans-serif; font-size:14px; color:var(--muted); }
+  .ovr-badge b { font-size:26px; color:var(--ink); margin-left:6px; }
+  .figwrap { position:relative; width:100%; aspect-ratio:823/711; border:1px solid var(--line); border-radius:16px; overflow:hidden;
+    background:radial-gradient(120% 100% at 50% 30%, #122236 0%, #060a12 76%);
+    box-shadow:inset 0 0 60px rgba(0,0,0,.58), 0 14px 44px rgba(0,0,0,.44); }
+  .figwrap::before, .figwrap::after { content:''; position:absolute; width:22px; height:22px; z-index:8; pointer-events:none; opacity:.68; }
+  .figwrap::before { top:10px; left:10px; border-top:2px solid var(--accent2); border-left:2px solid var(--accent2); }
+  .figwrap::after { bottom:10px; right:10px; border-bottom:2px solid var(--accent2); border-right:2px solid var(--accent2); }
+  .figwrap .base { position:absolute; inset:0; background-position:center; background-size:contain; background-repeat:no-repeat; opacity:.32; pointer-events:none; }
+  .figwrap .seg { position:absolute; inset:0; z-index:1; mask-position:center; mask-size:contain; mask-repeat:no-repeat;
+    -webkit-mask-position:center; -webkit-mask-size:contain; -webkit-mask-repeat:no-repeat; background:transparent; pointer-events:none; transition:background .25s; }
+  .figwrap .shade { position:absolute; inset:0; z-index:2; pointer-events:none; mix-blend-mode:soft-light;
+    background:linear-gradient(158deg,rgba(255,255,255,.30),rgba(255,255,255,0) 42%,rgba(0,0,0,.40)); }
+  .wires { position:absolute; inset:0; z-index:4; width:100%; height:100%; pointer-events:none; }
+  .wires line { stroke:rgba(120,160,210,.4); stroke-width:1; }
+  .wires line.hot { stroke:var(--accent2); stroke-width:1.6; filter:drop-shadow(0 0 3px rgba(25,198,255,.7)); }
+  .wires line.set { stroke:rgba(255,255,255,.4); }
+  .nodes { position:absolute; inset:0; z-index:5; }
+  .anchor { position:absolute; width:8px; height:8px; border-radius:50%; transform:translate(-50%,-50%);
+    background:var(--muted); border:2px solid #0a0f15; pointer-events:none; }
+  .anchor.hot { background:var(--accent2); box-shadow:0 0 9px var(--accent2); }
+  .anchor.set { background:#fff; }
+  .node { position:absolute; transform:translate(-50%,-50%); width:102px; padding:0 0 6px; border-radius:10px; overflow:hidden;
+    background:linear-gradient(180deg,rgba(18,27,41,.96),rgba(8,13,21,.96)); border:1px solid var(--line);
+    text-align:center; box-shadow:0 8px 18px rgba(0,0,0,.5); backdrop-filter:blur(3px); }
+  .node .accent { height:4px; background:var(--muted); }
+  .node .body { padding:5px 6px 0; }
+  .node .label { font-family:'Oswald',sans-serif; font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.8px; line-height:1.1; }
+  .node .part { font-size:9px; color:var(--dim); margin-top:2px; }
+  .node .row { display:flex; align-items:center; justify-content:center; gap:6px; margin-top:4px; }
+  .node .face { width:28px; height:28px; border-radius:50%; flex:0 0 auto; background:#0c131e center/cover no-repeat; border:1.5px solid var(--line); }
+  .node .val { font-family:'Oswald',sans-serif; font-size:22px; font-weight:700; line-height:1; }
+  .node .who { font-size:9px; color:var(--muted); line-height:1.15; word-break:break-word; margin-top:3px; }
+  .node .preview { font-family:'Oswald',sans-serif; font-size:19px; font-weight:700; color:var(--accent); line-height:1; margin-top:3px; }
+  .node.assignable { border-color:var(--accent); cursor:pointer; box-shadow:0 0 14px rgba(255,122,24,.45); }
+  .node.assignable .accent { background:var(--accent); }
+  .node.assignable:hover { background:linear-gradient(180deg,#1d2a3d,#101824); }
+  .fly { position:fixed; z-index:100; border-radius:50%; background-size:cover; background-position:center top; pointer-events:none;
+    box-shadow:0 10px 24px rgba(0,0,0,.45), 0 0 18px rgba(25,198,255,.35); }
+  .slots { display:flex; flex-direction:column; gap:8px; }
+  .slot { display:flex; align-items:center; gap:10px; border:1px solid var(--line); border-radius:11px; padding:9px 11px;
+    background:rgba(255,255,255,.02); transition:border-color .15s, background .15s; }
+  .slot.open.armed { cursor:pointer; border-color:var(--accent2); box-shadow:0 0 0 1px rgba(25,198,255,.4), 0 0 18px rgba(25,198,255,.25); }
+  .slot.open.armed:hover { background:rgba(25,198,255,.08); }
+  .slot .sname { font-family:'Oswald',sans-serif; font-size:13px; letter-spacing:1px; text-transform:uppercase; flex:1; color:var(--muted); }
+  .slot.filled .sname { color:var(--ink); }
+  .slot .spart { font-size:11px; color:var(--dim); }
+  .slot .sval { font-family:'Oswald',sans-serif; font-size:20px; font-weight:700; min-width:34px; text-align:right; }
+  .slot .shot { width:26px; height:26px; border-radius:6px; object-fit:cover; background:#11161d; }
+
+  .reel-wrap { width:100%; }
+  /* full-size reel - identical layout to the Build a Pitcher game */
+  .reel { position:relative; height:226px; overflow:hidden; border-radius:14px; margin-top:6px; }
+  .reel .pointer { position:absolute; top:0; left:50%; transform:translateX(-50%); width:0; height:0;
+    border-left:9px solid transparent; border-right:9px solid transparent; border-top:13px solid var(--accent);
+    z-index:5; filter:drop-shadow(0 0 6px rgba(255,122,24,.8)); pointer-events:none; }
+  .reel .pointer.bottom { top:auto; bottom:0; border-top:none; border-bottom:13px solid var(--accent); }
+  .reel-fade { position:absolute; top:0; bottom:0; width:80px; z-index:3; pointer-events:none; }
+  .reel-fade.l { left:0; background:linear-gradient(90deg,#0a121e,transparent); }
+  .reel-fade.r { right:0; background:linear-gradient(270deg,#0a121e,transparent); }
+  .sweep { position:absolute; top:0; bottom:0; left:30%; width:42%; z-index:4; pointer-events:none; opacity:0;
+    background:linear-gradient(100deg,transparent,rgba(255,255,255,.4),transparent); mix-blend-mode:screen; }
+  .track { display:flex; gap:12px; padding:16px 14px; will-change:transform; }
+  .rcard { flex:0 0 150px; height:194px; border-radius:10px; border:2px solid #9aa6b8;
+    background:linear-gradient(180deg,#0c1420,#070b12); overflow:hidden; display:flex; flex-direction:column;
+    align-items:center; box-shadow:0 6px 16px rgba(0,0,0,.4); }
+  .rcard img { width:100%; height:108px; object-fit:cover; object-position:top center; background:#0c131e; }
+  .rcard .nm { font-size:12px; font-weight:600; margin-top:6px; text-align:center; padding:0 6px; line-height:1.15;
+    max-width:100%; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .rcard .ov { font-family:'Oswald',sans-serif; font-size:24px; font-weight:700; margin-top:2px; line-height:1; color:var(--tc,#c8d0da); }
+  .rcard .pos { font-size:10px; color:var(--muted); margin-top:2px; letter-spacing:.5px; }
+  .rcard .yr { font-family:'Oswald',sans-serif; font-size:11px; color:var(--accent); font-weight:600; }
+  .rcard .legend-tag { font-family:'Oswald',sans-serif; font-size:11px; font-weight:600; color:var(--legend); letter-spacing:1px; }
+  .rcard.win { border-color:#fff; box-shadow:0 0 0 2px rgba(255,255,255,.5),0 0 26px rgba(25,198,255,.55); }
+  /* tier coloring - border + OVR + a faint glow, like the main game */
+  .rcard.t-grey    { --tc:#9aa6b8; border-color:#9aa6b8; }
+  .rcard.t-bronze  { --tc:#d28b4e; border-color:#d08a3e; box-shadow:0 0 12px rgba(208,138,62,.4); }
+  .rcard.t-silver  { --tc:#cdd6e2; border-color:#c8d0da; box-shadow:0 0 12px rgba(200,208,218,.4); }
+  .rcard.t-gold    { --tc:var(--gold); border-color:var(--gold); box-shadow:0 0 14px rgba(255,206,58,.5); }
+  .rcard.t-diamond { --tc:var(--diamond); border-color:var(--diamond); box-shadow:0 0 16px rgba(84,199,255,.6); }
+  .rcard.t-legend  { --tc:var(--legend); border-color:var(--legend);
+    box-shadow:0 0 18px rgba(163,102,255,.8), inset 0 0 14px rgba(163,102,255,.28);
+    background:linear-gradient(180deg,#281842,#0c1420); animation:legendPulse 1.8s ease-in-out infinite; }
+  @keyframes legendPulse{0%,100%{box-shadow:0 0 12px rgba(163,102,255,.65),inset 0 0 10px rgba(163,102,255,.22);}
+    50%{box-shadow:0 0 24px rgba(163,102,255,1),inset 0 0 16px rgba(163,102,255,.4);}}
+  .landed-bar { display:flex; align-items:center; gap:12px; margin-top:14px; flex-wrap:wrap; justify-content:center; }
+  .landed-bar .li { display:none; align-items:center; gap:10px; border:1px solid var(--line); border-radius:12px; padding:8px 12px; }
+  .landed-bar .li.show { display:flex; }
+  .landed-bar .li img { width:40px; height:40px; border-radius:8px; object-fit:cover; }
+  .landed-bar .li .lnm { font-size:13px; } .landed-bar .li .lov { font-family:'Oswald',sans-serif; font-weight:700; font-size:22px; }
+  .powerups { display:none; gap:8px; justify-content:center; margin-top:12px; flex-wrap:wrap; }
+  .powerups.show { display:flex; }
+  .pu { font-family:'Oswald',sans-serif; font-size:12px; letter-spacing:1px; text-transform:uppercase; color:var(--ink);
+    background:rgba(255,255,255,.05); border:1px solid var(--line); border-radius:9px; padding:8px 13px; cursor:pointer; transition:border-color .15s, background .15s; }
+  .pu:hover:not(:disabled) { border-color:var(--accent2); background:rgba(25,198,255,.1); }
+  .pu#boostBtn:hover:not(:disabled) { border-color:var(--legend); background:rgba(163,102,255,.12); }
+  .pu:disabled { opacity:.32; cursor:default; }
+  .hint { color:var(--dim); font-size:12px; margin-top:8px; text-align:center; }
+  .mini-spin { display:inline-block; width:12px; height:12px; border-radius:50%; border:2px solid rgba(255,255,255,.18);
+    border-top-color:var(--accent); animation:spin .8s linear infinite; vertical-align:-1px; margin-right:6px; }
+
+  /* ---------- at-bat ---------- */
+  #atbatScreen { min-height:70vh; justify-content:center; }
+  .diamond { position:relative; width:100%; max-width:680px; height:380px; border-radius:18px; overflow:hidden;
+    border:1px solid var(--line); background:
+      radial-gradient(120% 80% at 50% 120%, #1f6b2e 0%, #14502160 45%, transparent 70%),
+      linear-gradient(180deg,#0b1b2e,#04070d); }
+  .crowd { position:absolute; top:0; left:0; right:0; height:64px; background:repeating-linear-gradient(90deg,#1a2335 0 6px,#222d44 6px 12px); opacity:.5; }
+  .mound { position:absolute; left:14%; bottom:30%; width:120px; height:30px; background:radial-gradient(circle,#7a5a36,#5a3f24); border-radius:50%; opacity:.8; }
+  .plate { position:absolute; right:16%; bottom:18%; width:26px; height:26px; background:#e9eef6; transform:rotate(45deg); border-radius:4px; opacity:.85; }
+  .silho { position:absolute; bottom:30%; height:150px; width:110px; mask-size:contain; mask-repeat:no-repeat; mask-position:center bottom;
+    -webkit-mask-size:contain; -webkit-mask-repeat:no-repeat; -webkit-mask-position:center bottom; filter:drop-shadow(0 8px 16px rgba(0,0,0,.5)); }
+  .silho.p { left:9%; -webkit-mask-image:url(baller-figure.png); mask-image:url(baller-figure.png); }
+  .silho.b { right:9%; transform:rotateY(180deg); transform-origin:center bottom; -webkit-mask-image:url(baller-figure.png); mask-image:url(baller-figure.png); }
+  .ball { position:absolute; width:16px; height:16px; border-radius:50%; background:radial-gradient(circle at 35% 30%,#fff,#cdd3da);
+    box-shadow:0 0 10px rgba(255,255,255,.6); left:18%; bottom:42%; opacity:0; z-index:5; }
+  .callout { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; }
+  .callout span { font-family:'Oswald',sans-serif; font-weight:700; font-size:56px; letter-spacing:2px; text-transform:uppercase;
+    opacity:0; text-shadow:0 6px 24px rgba(0,0,0,.6); text-align:center; }
+  .pitch-info { position:absolute; left:0; right:0; top:14px; text-align:center; font-family:'Oswald',sans-serif;
+    letter-spacing:2px; font-size:13px; color:#cbd6e6; opacity:0; text-transform:uppercase; }
+  .pitch-seq { display:flex; justify-content:center; align-items:center; gap:10px;
+    margin-top:10px; opacity:0; min-height:52px; flex-wrap:wrap; }
+  .pitch-dot { display:flex; flex-direction:column; align-items:center; gap:3px; flex:0 0 auto; }
+  .pitch-dot .pd-num { width:30px; height:30px; border-radius:50%; border:2px solid rgba(255,255,255,.18);
+    background:rgba(4,7,13,.8); display:flex; align-items:center; justify-content:center;
+    font-family:'Oswald',sans-serif; font-size:11px; font-weight:700; color:var(--dim); }
+  .pitch-dot .pd-call { font-family:'Oswald',sans-serif; font-size:8.5px; letter-spacing:.5px;
+    text-transform:uppercase; text-align:center; white-space:nowrap; color:var(--dim); opacity:0; line-height:1.2; max-width:48px; overflow:hidden; text-overflow:ellipsis; }
+  .pitch-dot.strike .pd-num, .pitch-dot.k .pd-num { border-color:var(--pitch); color:var(--pitch); background:rgba(255,122,24,.18); }
+  .pitch-dot.strike .pd-call, .pitch-dot.k .pd-call { color:var(--pitch); }
+  .pitch-dot.ball .pd-num { border-color:var(--gold); color:var(--gold); background:rgba(255,206,58,.15); }
+  .pitch-dot.ball .pd-call { color:var(--gold); }
+  .pitch-dot.hit .pd-num { border-color:var(--bat); color:var(--bat); background:rgba(25,198,255,.15); }
+  .pitch-dot.hit .pd-call { color:var(--bat); }
+  .pitch-dot.inplay .pd-num { border-color:var(--accent2); color:var(--accent2); background:rgba(25,198,255,.15); }
+  .pitch-dot.inplay .pd-call { color:var(--accent2); }
+  .pitch-dot.active.strike .pd-num, .pitch-dot.active.k .pd-num { box-shadow:0 0 14px rgba(255,122,24,.65); }
+  .pitch-dot.active.ball .pd-num { box-shadow:0 0 14px rgba(255,206,58,.65); }
+  .pitch-dot.active.hit .pd-num, .pitch-dot.active.inplay .pd-num { box-shadow:0 0 14px rgba(25,198,255,.65); }
+  /* waiting-for-opponent overlay (shown on the arena before the at-bat) */
+  .wait-arena { position:absolute; left:0; right:0; bottom:18px; display:none; flex-direction:column; align-items:center; gap:9px; z-index:6; }
+  .wait-arena.show { display:flex; }
+  .wait-arena .wa-spin { width:26px; height:26px; border-radius:50%; border:3px solid rgba(255,255,255,.16); border-top-color:var(--accent); animation:spin .8s linear infinite; }
+  .wait-arena .wa-title { font-family:'Oswald',sans-serif; font-weight:600; letter-spacing:1.5px; text-transform:uppercase; font-size:16px; text-shadow:0 3px 12px rgba(0,0,0,.6); }
+  .wait-arena .wa-bar { width:min(70%,300px); height:8px; border-radius:6px; background:rgba(255,255,255,.12); overflow:hidden; }
+  .wait-arena .wa-fill { height:100%; width:0%; border-radius:6px; background:linear-gradient(90deg,var(--accent),var(--accent2)); transition:width .35s ease; }
+  .wait-arena .wa-count { font-family:'Oswald',sans-serif; font-size:12px; letter-spacing:1px; color:var(--muted); }
+  .silho.dim { opacity:.18; filter:grayscale(1); }
+  .matchup { width:100%; max-width:680px; display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  .matchup .side { display:flex; flex-direction:column; align-items:center; gap:2px; }
+  .matchup .side .who { font-family:'Oswald',sans-serif; font-size:13px; letter-spacing:1px; text-transform:uppercase; }
+  .matchup .side .o { font-family:'Oswald',sans-serif; font-size:30px; font-weight:700; }
+  .matchup .mid { font-family:'Oswald',sans-serif; font-size:22px; color:var(--muted); }
+
+  /* ---------- result ---------- */
+  #resultScreen { justify-content:center; min-height:60vh; }
+  .result-card { width:100%; max-width:460px; text-align:center; border:2px solid var(--line); border-radius:20px; padding:30px 24px;
+    background:linear-gradient(180deg,var(--panel-a),var(--panel-b)); box-shadow:0 20px 60px rgba(0,0,0,.55); }
+  .result-card.win { border-color:var(--gold); box-shadow:0 0 50px rgba(255,206,58,.3); }
+  .result-card.lose { border-color:#56627a; }
+  .result-card .rh { font-family:'Oswald',sans-serif; font-size:46px; font-weight:700; letter-spacing:3px; text-transform:uppercase; }
+  .result-card.win .rh { color:var(--gold); } .result-card.lose .rh { color:var(--muted); }
+  .result-card .rline { color:var(--ink); margin:14px 0 6px; font-size:16px; }
+  .result-card .rsub { color:var(--muted); font-size:13px; }
+  .result-actions { display:flex; flex-direction:column; align-items:center; gap:10px; margin-top:20px; }
+  .result-actions .ra-primary { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; width:100%; }
+  .result-actions .ra-secondary { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
+  .result-actions .ra-primary .btn { flex:1; min-width:130px; max-width:200px; font-size:14px; }
+  .result-actions .ra-secondary .btn, .result-actions .ra-secondary a.btn { font-size:12px; padding:10px 16px; }
+  #rematchStatus { min-height:20px; margin:10px 0 -4px; font-family:'Oswald',sans-serif;
+    font-size:13px; color:var(--muted); text-align:center; letter-spacing:.5px; }
+  #rematchStatus .rs-count { color:var(--accent); font-weight:700; font-size:15px; }
+  #rematchStatus .rs-want { color:var(--bat); }
+  @keyframes rmatch-pulse {
+    0%,100%{ box-shadow:0 4px 26px rgba(25,198,255,0), inset 0 1px 0 rgba(255,255,255,.08); }
+    50%   { box-shadow:0 4px 26px rgba(25,198,255,.55), inset 0 1px 0 rgba(255,255,255,.08); }
+  }
+  .btn.rmatch-glow { animation:rmatch-pulse .9s ease-in-out infinite; }
+
+  @media (min-width: 681px) {
+    .slot.open:not(.armed) { display:none; }
+  }
+
+  @media (max-width: 680px) {
+    .stage { padding:14px 11px 40px; }
+    /* mobile: single column - reel sits above the silhouette */
+    #buildScreen.on { display:flex; flex-direction:column; align-items:stretch; }
+    .reel-wrap, .build-top, .slots { width:100%; }
+    .figwrap { max-width:430px; margin:0 auto; }
+    .node { width:80px; padding:0 0 5px; border-radius:8px; }
+    .node .accent { height:3px; }
+    .node .body { padding:4px 5px 0; }
+    .node .label { font-size:8.5px; letter-spacing:.4px; }
+    .node .part { font-size:8px; }
+    .node .face { width:22px; height:22px; }
+    .node .val { font-size:18px; }
+    .node .who { display:none; }
+    .node .preview { font-size:17px; }
+    .diamond { height:300px; }
+    .silho { height:115px; }
+    .pitch-seq { left:8px; right:8px; bottom:8px; gap:7px; }
+    .pitch-dot .pd-num { width:26px; height:26px; font-size:10px; }
+    .pitch-dot .pd-call { font-size:7.5px; max-width:38px; }
+    .callout span { font-size:40px; }
+    /* build header: let it wrap and shrink so the clock/OVR/opponent pill always fit */
+    .build-top { flex-wrap:wrap; gap:8px 12px; justify-content:space-between; }
+    .clock { font-size:24px; }
+    .ovr-badge b { font-size:22px; }
+    .pill { font-size:11px; padding:5px 10px; }
+    .build-top .pill { order:3; flex:1 1 100%; text-align:center; }
+    /* power-ups: 2 per row, full-width tap targets */
+    .powerups { gap:7px; }
+    .pu { flex:1 1 44%; font-size:11px; padding:9px 6px; }
+    .landed-bar { gap:8px; }
+    /* matchmaking handle pill: stack the name input so it never overflows a narrow screen */
+    .rating-chip .elo { display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:4px 6px; font-size:13px; }
+    .rating-chip .elo input { width:120px; }
+    .rating-chip .rec { flex:1 1 100%; text-align:center; margin:2px 0 0; }
+    /* matchup header + result */
+    .matchup .side .o { font-size:24px; }
+    .matchup .side .who { font-size:11px; }
+    .result-card .rh { font-size:36px; }
+    /* stats: 2-up boxes, name/elo/rank wrap cleanly */
+    .stat-grid { grid-template-columns:repeat(2,1fr); }
+    .stat-top { justify-content:center; text-align:center; }
+    .stat-top .stat-name { flex:1 1 100%; }
+    .lb-rows { max-height:260px; }
+  }
+  @media (max-width: 380px) {
+    .pu { font-size:10px; padding:8px 5px; }
+    .clock { font-size:21px; }
+  }
+</style>
+</head>
+<body>
+<div class="bg"><div class="glow g1"></div><div class="glow g2"></div></div>
+
+<header>
+  <div class="brand">⚔️ Face <i>Off</i></div>
+  <a class="back" href="/">‹ Home</a>
+</header>
+
+<div class="stage">
+
+  <!-- 1. Matchmaking -->
+  <div class="screen on" id="mmScreen">
+    <div class="hero">
+      <div class="kick">Live 1v1</div>
+      <h1>Face <i>Off</i></h1>
+      <p>Match up with a real player online. Build your hooper fast - highest Overall wins the 1-on-1.</p>
+    </div>
+    <div class="live-ticker" id="liveTicker" style="display:none"><span class="lt-dot"></span><span id="ltText">…</span></div>
+    <div class="vs-card">
+      <div id="ratingChip" class="rating-chip"></div>
+      <button class="btn" id="findBtn">⚔️ Find Match</button>
+      <div style="display:flex;align-items:center;gap:10px;margin:18px 0 14px;">
+        <div style="flex:1;height:1px;background:var(--line)"></div>
+        <span style="font-size:11px;letter-spacing:1.5px;color:var(--dim);text-transform:uppercase;white-space:nowrap">or play a friend</span>
+        <div style="flex:1;height:1px;background:var(--line)"></div>
+      </div>
+      <button class="btn ghost" id="mmChalBtn" style="width:100%;font-size:13px;padding:11px 20px;letter-spacing:1.5px;">🔗 Challenge a Friend</button>
+      <div style="color:var(--dim);font-size:11.5px;margin-top:7px;letter-spacing:.2px;text-align:center;">Pick a mode · Share a link · No Elo change</div>
+      <div class="spinner" id="mmSpin"></div>
+      <div class="status" id="mmStatus"></div>
+      <div style="margin-top:18px; display:none;" id="cancelWrap">
+        <button class="btn ghost" id="cancelBtn" style="font-size:13px; padding:9px 18px;">Cancel</button>
+      </div>
+      <div style="margin-top:16px;" id="statsWrap">
+        <button class="btn ghost" id="statsBtn" style="font-size:13px; padding:9px 18px;">📊 My Stats</button>
+        <button class="btn ghost" id="achBtn" style="font-size:13px; padding:9px 18px;">🏅 Achievements</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Challenge Lobby -->
+  <div class="screen" id="lobbyScreen">
+    <div class="hero" style="margin:24px 0 20px">
+      <div class="kick">Private Match</div>
+      <h1>Challenge <i>Lobby</i></h1>
+      <p>Pick a mode, copy the link, and wait for your friend to join.</p>
+    </div>
+    <div class="vs-card" style="max-width:460px">
+      <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;text-align:center;">Select Mode</div>
+      <div class="lobby-modes" id="lobbyModePicker">
+        <button class="lmode active" data-mode="classic">
+          <div class="lm-icon">⚔️</div>
+          <div class="lm-name">Classic</div>
+          <div class="lm-desc">Standard draft · all tiers</div>
+        </button>
+        <button class="lmode" data-mode="legends">
+          <div class="lm-icon">🟣</div>
+          <div class="lm-name">Legends</div>
+          <div class="lm-desc">Purple legends only</div>
+        </button>
+        <button class="lmode" data-mode="hard">
+          <div class="lm-icon">🔒</div>
+          <div class="lm-name">Hard</div>
+          <div class="lm-desc">Ratings hidden</div>
+        </button>
+      </div>
+      <div class="lobby-link-box">
+        <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Challenge Link</div>
+        <div class="lobby-link-url" id="lobbyLinkUrl">-</div>
+        <button class="btn" id="lobbyCopyBtn" style="width:100%;font-size:13px;padding:10px 20px;letter-spacing:1.5px;">🔗 Copy Link</button>
+        <div id="lobbyCopied" style="display:none;color:var(--accent2);font-size:12px;margin-top:8px;text-align:center;letter-spacing:.3px;">✓ Copied! Share it with your friend.</div>
+      </div>
+      <div id="lobbyWaitState" style="text-align:center;padding:4px 0 6px;">
+        <div class="spinner" style="display:block;width:26px;height:26px;border-width:3px;margin:0 auto 12px;"></div>
+        <div style="color:var(--muted);font-size:13px;line-height:1.5;">Waiting for your friend to open the link and accept…<br><span style="font-size:11.5px;color:var(--dim);">The match starts automatically when they join.</span></div>
+      </div>
+      <div style="text-align:center;margin-top:20px;">
+        <button class="btn ghost" id="lobbyCancelBtn" style="font-size:13px;padding:10px 22px;">‹ Back</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="screen" id="statsScreen">
+    <div class="hero" style="margin:22px 0 14px"><h1 style="font-size:clamp(30px,7vw,48px)">My <i>Stats</i></h1></div>
+    <div class="vs-card" style="max-width:520px; text-align:left">
+      <div class="stats-tabs">
+        <button class="stab active" id="tabStats">My Stats</button>
+        <button class="stab" id="tabHistory">History</button>
+      </div>
+      <div id="statsPanel">
+        <div id="statsPersonal"></div>
+        <div id="statsBoard"></div>
+      </div>
+      <div id="historyPanel" style="display:none">
+        <div id="statsHistory"></div>
+      </div>
+      <div id="challengeLinkWrap" style="text-align:center;margin-top:18px">
+        <button class="btn ghost" id="challengeLinkBtn" style="font-size:13px;padding:10px 20px;">🔗 Copy Challenge Link</button>
+        <div id="chalCopied" style="display:none;color:var(--accent2);font-size:12px;margin-top:6px;letter-spacing:.3px">✓ Link copied! Share it with a friend for a friendly match.</div>
+      </div>
+      <div style="text-align:center"><button class="btn ghost" id="statsBack" style="margin-top:14px; font-size:13px; padding:10px 22px;">‹ Back</button></div>
+    </div>
+  </div>
+
+  <!-- 2. Role reveal -->
+  <div class="screen" id="roleScreen">
+    <div class="role-card" id="roleCard"><div class="role-fig" id="roleFig"></div><div class="rl" id="roleLabel">-</div></div>
+    <div class="role-sub" id="roleSub">Get ready…</div>
+    <div class="opp-chip" id="oppChip" style="opacity:0">
+      <div class="oc-vs">vs.</div>
+      <div class="oc-name" id="oppChipName">Opponent</div>
+      <div class="oc-elo" id="oppChipElo"></div>
+    </div>
+  </div>
+
+  <!-- 3. Quick build -->
+  <div class="screen" id="buildScreen">
+    <div class="build-top">
+      <div class="clock" id="clock">60</div>
+      <div class="ovr-badge">OVR<b id="ovrNum">-</b></div>
+      <div class="pill" id="oppPill">Opponent: connecting…</div>
+    </div>
+    <div class="reel-wrap">
+      <div class="reel">
+        <div class="pointer"></div>
+        <div class="pointer bottom"></div>
+        <div class="reel-fade l"></div>
+        <div class="reel-fade r"></div>
+        <div class="sweep" id="sweep"></div>
+        <div class="track" id="track"></div>
+      </div>
+      <div class="landed-bar">
+        <button class="btn" id="spinBtn" style="font-size:14px; padding:11px 22px;">🎰 Spin</button>
+        <div class="li" id="landedLi"><img id="landedImg" alt=""><div><div class="lnm" id="landedName">-</div></div><div class="lov" id="landedOvr">-</div></div>
+      </div>
+      <div class="powerups" id="powerups">
+        <button class="pu" id="snagLeftBtn" title="Take the card to the left">◄ Snag</button>
+        <button class="pu" id="respinBtn" title="Discard and spin again">🔄 Re-spin</button>
+        <button class="pu" id="boostBtn" title="Upgrade to their Prime card">⚡ Boost</button>
+        <button class="pu" id="snagRightBtn" title="Take the card to the right">Snag ►</button>
+      </div>
+      <div class="hint" id="buildHint">Spin the reel, then tap a glowing body part to assign the player.</div>
+    </div>
+    <div class="figwrap" id="figwrap">
+      <div class="base"></div>
+      <div class="shade" id="figureShade"></div>
+      <svg class="wires" id="wires" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+      <div class="nodes" id="nodes"></div>
+    </div>
+    <div class="slots" id="slots"></div>
+  </div>
+
+  <!-- 4. At-bat -->
+  <div class="screen" id="atbatScreen">
+    <div class="matchup" id="matchup"></div>
+    <div class="diamond" id="diamond">
+      <div class="crowd"></div>
+      <div class="pitch-info" id="pitchInfo"></div>
+      <div class="mound"></div><div class="plate"></div>
+      <div class="silho p" id="silhoP"></div>
+      <div class="silho b" id="silhoB"></div>
+      <div class="ball" id="ball"></div>
+      <div class="callout"><span id="callout"></span></div>
+      <div class="wait-arena" id="waitArena">
+        <div class="wa-spin"></div>
+        <div class="wa-title" id="waTitle">Waiting for your opponent…</div>
+        <div class="wa-bar"><div class="wa-fill" id="waFill"></div></div>
+        <div class="wa-count" id="waCount">building…</div>
+      </div>
+    </div>
+    <div class="pitch-seq" id="pitchSeq"></div>
+  </div>
+
+  <!-- Challenge screen (opened via a shared challenge link) -->
+  <div class="screen" id="challengeScreen">
+    <div class="hero" style="margin:30px 0 20px">
+      <div class="kick">Friendly Match</div>
+      <h1>You've Been <i>Challenged!</i></h1>
+    </div>
+    <div class="vs-card" style="text-align:center">
+      <div style="font-size:13px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">challenged by</div>
+      <div id="chalChallengerName" style="font-family:'Oswald',sans-serif;font-size:28px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#fff;margin-bottom:10px"></div>
+      <div id="chalModeTag" style="display:none;margin-bottom:10px;"><span id="chalModeTagInner" style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent2);border:1px solid rgba(25,198,255,.4);background:rgba(25,198,255,.07);border-radius:20px;padding:5px 13px 4px;"></span></div>
+      <div id="chalModeLine" style="font-size:13px;color:var(--muted);margin-bottom:24px">Friendly match · no Elo change · just bragging rights</div>
+      <button class="btn" id="chalAcceptBtn" style="width:100%;max-width:280px;margin:0 auto;display:block;">⚔️ Accept Challenge</button>
+      <div class="status" id="chalStatus" style="margin-top:14px;min-height:20px"></div>
+      <div style="margin-top:12px"><button class="btn ghost" id="chalDeclineBtn" style="font-size:13px;padding:9px 18px;">Decline</button></div>
+    </div>
+  </div>
+
+  <!-- 5. Result -->
+  <div class="screen" id="resultScreen">
+    <div class="result-card" id="resultCard">
+      <div class="rh" id="resultHead">-</div>
+      <div class="rline" id="resultLine"></div>
+      <div class="rsub" id="resultSub"></div>
+      <div id="ratingResult" class="rating-result"></div>
+      <div id="rematchStatus"></div>
+      <div class="result-actions">
+        <div class="ra-primary">
+          <button class="btn" id="rematchBtn">⚔️ Rematch?</button>
+          <button class="btn ghost" id="newMatchBtn">🔄 New Match</button>
+        </div>
+        <div class="ra-secondary">
+          <button class="btn ghost" id="resultStatsBtn">📊 Stats</button>
+          <a class="btn ghost" href="/" style="text-decoration:none;">🏠 Home</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Floating challenge notification (shown when someone accepts your shared link) -->
+<div id="challengeNotif" style="display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:50;max-width:380px;width:calc(100% - 32px)">
+  <div class="chal-notif">
+    <div class="cn-tag">Friendly Challenge</div>
+    <div class="cn-name" id="chalNotifName"></div>
+    <div class="cn-sub">wants a friendly 1v1 · no Elo change</div>
+    <div class="cn-btns">
+      <button class="btn" id="chalNotifAccept">⚔️ Accept</button>
+      <button class="btn ghost" id="chalNotifDecline">Decline</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+function showScreen(id) { document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === id)); }
+function escapeHTML(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+
+/* ---------- shared data: slots / weights / OVR per role ---------- */
+const TEAM_COLORS = {
+  ATL:'#E03A3E', BOS:'#007A33', BKN:'#1D1D1D', CHA:'#00788C', CHI:'#CE1141',
+  CLE:'#860038', DAL:'#00538C', DEN:'#0E2240', DET:'#C8102E', GSW:'#1D428A',
+  HOU:'#CE1141', IND:'#002D62', LAC:'#C8102E', LAL:'#552583', MEM:'#5D76A9',
+  MIA:'#98002E', MIL:'#00471B', MIN:'#0C2340', NOP:'#0C2340', NYK:'#006BB6',
+  OKC:'#007AC1', ORL:'#0077C0', PHI:'#006BB6', PHX:'#1D1160', POR:'#E03A3E',
+  SAC:'#5A2D81', SAS:'#767A7F', TOR:'#CE1141', UTA:'#002B5C', WAS:'#002B5C', FA:'#5b636e',
+};
+const TEAM_NAMES = {
+  ATL:'Hawks', BOS:'Celtics', BKN:'Nets', CHA:'Hornets', CHI:'Bulls', CLE:'Cavaliers',
+  DAL:'Mavericks', DEN:'Nuggets', DET:'Pistons', GSW:'Warriors', HOU:'Rockets', IND:'Pacers',
+  LAC:'Clippers', LAL:'Lakers', MEM:'Grizzlies', MIA:'Heat', MIL:'Bucks', MIN:'Timberwolves',
+  NOP:'Pelicans', NYK:'Knicks', OKC:'Thunder', ORL:'Magic', PHI:'76ers', PHX:'Suns',
+  POR:'Trail Blazers', SAC:'Kings', SAS:'Spurs', TOR:'Raptors', UTA:'Jazz', WAS:'Wizards',
+};
+const IDLE_JERSEY = '#aeb6c2';
+function teamColor(t){ return TEAM_COLORS[t] || IDLE_JERSEY; }
+function brightTeam(t){ // lighten dark team colors so the silhouette reads on the dark field
+  const hex = teamColor(t); const n = parseInt(hex.slice(1),16);
+  let r=n>>16, g=(n>>8)&255, b=n&255; const luma=0.299*r+0.587*g+0.114*b;
+  if (luma>=90) return hex; const k=(90-luma)/(255-luma+1);
+  r=Math.round(r+k*(255-r)); g=Math.round(g+k*(255-g)); b=Math.round(b+k*(255-b));
+  return '#'+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1);
+}
+const SILHOUETTE = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="%2311161d"/><circle cx="50" cy="38" r="20" fill="%23394150"/><path d="M50 62c-20 0-34 14-34 34h68c0-20-14-34-34-34z" fill="%23394150"/></svg>'
+);
+function headshot(p){ return p.img || (p.nbaId ? `https://cdn.nba.com/headshots/nba/latest/260x190/${p.nbaId}.png` : SILHOUETTE); }
+function tier(ovr){ return ovr>=85?'diamond':ovr>=80?'gold':ovr>=75?'silver':ovr>=65?'bronze':'grey'; }
+function borderTier(p){ return p.legend?'legend':tier(p.ovr); }
+
+/* ---------- elo tiers ---------- */
+const ELO_TIERS = [
+  { name:'Bronze',   min:0,    color:'#cd7f32', glow:'rgba(205,127,50,.85)'   },
+  { name:'Silver',   min:900,  color:'#bfc9d4', glow:'rgba(191,201,212,.85)'  },
+  { name:'Gold',     min:1000, color:'#ffd700', glow:'rgba(255,215,0,.85)'    },
+  { name:'Platinum', min:1100, color:'#4de8e0', glow:'rgba(77,232,224,.85)'   },
+  { name:'Diamond',  min:1200, color:'#5eb8ff', glow:'rgba(94,184,255,.85)'   },
+];
+const TOP10_TIER = { name:'Top 10', color:'#cc44ff', glow:'rgba(204,68,255,.85)' };
+function getEloTier(elo, rank){
+  if (rank && rank <= 10) return TOP10_TIER;
+  for (let i = ELO_TIERS.length - 1; i >= 0; i--){
+    if (elo >= ELO_TIERS[i].min) return ELO_TIERS[i];
+  }
+  return ELO_TIERS[0];
+}
+function batSVG(color, glow, size=22){
+  // barrel (circle, upper-right) + handle (rotated rect) + knob (circle, lower-left)
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="${size}" height="${size}" `
+    + `style="display:inline-block;vertical-align:middle;flex-shrink:0;filter:drop-shadow(0 0 5px ${glow}) drop-shadow(0 0 2px ${glow})">`
+    + `<g fill="${color}">`
+    + `<circle cx="17" cy="7" r="5"/>`
+    + `<rect x="10.5" y="7" width="3" height="13" rx="1.5" transform="rotate(45 12 12)"/>`
+    + `<circle cx="5" cy="19" r="2.5"/>`
+    + `</g></svg>`;
+}
+function tierBadgeHTML(elo, rank, size=20){
+  const t = getEloTier(elo, rank);
+  const fs = Math.round(size * 0.65);
+  return `<span class="tier-badge">${batSVG(t.color, t.glow, size)}<span class="tier-name" style="color:${t.color};font-size:${fs}px;letter-spacing:1.5px">${t.name}</span></span>`;
+}
+
+// Both players build the same 9-slot hooper. The two ROLE keys (pitcher/batter) are kept only as
+// vestigial A/B side labels so the matchmaking/figure code needs no changes — both point at hoopers.
+const HOOPER_SLOTS = [
+  { key:'threept',    label:'3-Pointer',  part:'Shooting Hand', mask:'hoop-seg-threept.png',    ax:16, ay:50, lx:7,  ly:56 },
+  { key:'finishing',  label:'Finishing',  part:'Thighs',        mask:'hoop-seg-finishing.png',  ax:40, ay:61, lx:11, ly:74 },
+  { key:'dribble',    label:'Dribble',    part:'Forearms',      mask:'hoop-seg-dribble.png',    ax:27, ay:40, lx:8,  ly:38 },
+  { key:'playmaking', label:'Playmaking', part:'Off Hand',      mask:'hoop-seg-playmaking.png', ax:85, ay:55, lx:93, ly:60 },
+  { key:'defense',    label:'Defense',    part:'Shoulders',     mask:'hoop-seg-defense.png',    ax:70, ay:25, lx:92, ly:22 },
+  { key:'rebounding', label:'Rebounding', part:'Core',          mask:'hoop-seg-rebounding.png', ax:53, ay:46, lx:9,  ly:20 },
+  { key:'speed',      label:'Speed',      part:'Legs',          mask:'hoop-seg-speed.png',      ax:80, ay:76, lx:90, ly:82 },
+  { key:'clutch',     label:'Clutch',     part:'Head',          mask:'hoop-seg-clutch.png',     ax:58, ay:12, lx:86, ly:8 },
+  { key:'frame',      label:'Frame',      part:'Height',        mask:'hoop-seg-frame.png',      ax:54, ay:30, lx:93, ly:40, type:'height' },
+];
+const WEIGHTS_HOOP = { threept:1.2, finishing:1.2, playmaking:1.2, dribble:1.1, defense:1.1, rebounding:1.1, clutch:1.1, speed:0.9, frame:1.0 };
+function heightToRatingHoop(inches){ return inches ? clamp(Math.round(50+(inches-70)*3.6),1,125) : 60; }
+
+const HOOP_CFG = () => ({ data:'ballers.json', figure:'baller-figure.png', slots:HOOPER_SLOTS,
+  h2r:heightToRatingHoop, slotWeight:(k,v)=>WEIGHTS_HOOP[k]||1 });
+const ROLE = { pitcher: HOOP_CFG(), batter: HOOP_CFG() };
+function slotNumeric(role,p,s){
+  if(s.type==='height') return ROLE[role].h2r(p.heightIn);
+  return p[s.key]||0;
+}
+function slotDisplay(role,p,s){
+  if(s.type==='height') return p.height||'-';
+  return p[s.key]||0;
+}
+function computeOvr(role, filled){
+  let vs=0, ws=0;
+  for(const s of ROLE[role].slots){ const v=filled[s.key].value; const w=ROLE[role].slotWeight(s.key,v); vs+=v*w; ws+=w; }
+  return Math.round(vs/ws);
+}
+function modalTeam(slots){ const c={}; slots.forEach(x=>{ if(x.team) c[x.team]=(c[x.team]||0)+1; }); let best='FA',n=0; for(const k in c) if(c[k]>n){n=c[k];best=k;} return best; }
+
+/* ---------- seeded RNG (shared so both phones show the same at-bat) ---------- */
+function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+let rng = Math.random;
+
+/* ---------- minimal sound ---------- */
+const Sound = (() => {
+  let ac, master;
+  function ctx(){ if(!ac){ const AC=window.AudioContext||window.webkitAudioContext; if(!AC)return null; ac=new AC(); master=ac.createGain(); master.gain.value=0.5; master.connect(ac.destination);} if(ac.state==='suspended')ac.resume(); return ac; }
+  function note(f,when,dur,o={}){ const c=ctx(); if(!c)return; const{type='triangle',vol=0.18,glide=null,attack=0.005}=o; const t=c.currentTime+when; const osc=c.createOscillator(),g=c.createGain(); osc.type=type; osc.frequency.setValueAtTime(f,t); if(glide)osc.frequency.exponentialRampToValueAtTime(glide,t+dur); g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(vol,t+attack); g.gain.exponentialRampToValueAtTime(0.0001,t+dur); osc.connect(g).connect(master); osc.start(t); osc.stop(t+dur+0.03); }
+  const arp = (freqs, step, o={}) => freqs.forEach((f,i)=>note(f, i*step, o.dur||step*1.6, o));
+  return {
+    tick(sp=0.5){ const f=210+Math.min(1,sp)*280; note(f,0,0.05,{type:'square',vol:0.05,glide:f*0.55}); },
+    click(){ note(620,0,0.06,{type:'square',vol:0.12,glide:470}); },
+    assign(){ note(520,0,0.06,{type:'square',vol:0.14}); note(780,0.05,0.1,{vol:0.16}); },
+    // landing chimes - same as the Build a Pitcher game, scaled by tier
+    land(){ note(440,0,0.1,{vol:0.12}); note(660,0.04,0.12,{vol:0.1}); },
+    gold(){ arp([660,880],0.09,{vol:0.2,dur:0.18}); },
+    diamond(){ arp([660,990,1320],0.08,{vol:0.2,dur:0.2}); note(1980,0.24,0.25,{type:'sine',vol:0.12}); },
+    legend(){ arp([523,659,784,1046,1319],0.1,{vol:0.22,dur:0.4}); arp([262,330,392,523],0.1,{type:'sine',vol:0.12,dur:0.5}); },
+    whoosh(){ note(900,0,0.18,{type:'sine',vol:0.1,glide:300}); },
+    prime(){ note(300,0,0.35,{type:'sawtooth',vol:0.16,glide:1200}); note(900,0.18,0.25,{vol:0.14}); note(1350,0.3,0.3,{type:'sine',vol:0.12}); },
+    crack(){ note(180,0,0.12,{type:'square',vol:0.25,glide:90}); note(1200,0,0.05,{type:'sine',vol:0.18}); },
+    catch(){ note(300,0,0.08,{type:'triangle',vol:0.16,glide:140}); },
+    win(){ [523,659,784,1046].forEach((f,i)=>note(f,i*0.11,0.4,{vol:0.2})); },
+    lose(){ [400,330,260].forEach((f,i)=>note(f,i*0.13,0.4,{type:'sine',vol:0.16})); },
+  };
+})();
+
+/* ---------- match state ---------- */
+let ably=null, clientId=null;
+let myRole=null, oppRole=null, matchId=null, seed=0, oppId=null, wasClaimer=false;
+let inviteCh=null, matchCh=null;
+let rematchOffered=false, rematchOppOffer=null, rematchCountdown=null, rematchSec=10;
+let oppPresenceName='', oppPresenceElo=0;
+let friendlyMode=false;
+let gameMode='classic'; // 'classic' | 'legends' | 'hard'
+let lobbyWaiting=false;
+let _incomingChalMode='classic';
+const MODE_LABEL={ classic:'⚔️ Classic', legends:'🟣 Legends Only', hard:'🔒 Hard Mode' };
+const MODE_DESC={ classic:'Standard draft · all tiers', legends:'Legends only · purple tier cards', hard:'Standard draft · ratings hidden' };
+let challengeInboxCh=null, _incomingChalId=null, _incomingChalName=null;
+let pendingChallenge=null; // {replyId, replyClientId, name} - incoming challenge waiting on the notif
+let chalWaitTimeout=null;
+let DATA={};               // role -> data json
+let myBuild=null, oppBuild=null, atBatStarted=false, matchResolved=false;
+let claimTimeout=null, waitTimeout=null;
+
+/* ---------- account + Elo rating ----------
+   Two ways to have a rating:
+   - Device guest: a random guestId + a chosen name, stored on this device. Rating persists
+     server-side (no password). Nudged to sign in to back it up / play on other devices.
+   - Google account: shared sign-in with the other games via localStorage 'pl_account'.
+   Either way the rating lives on the server; the client just sends a "principal" identifying who. */
+const GOOGLE_CLIENT_ID = '349698720898-t9bpb8fp7ks6scf8ci8mmoeec1lpm3d3.apps.googleusercontent.com';
+let account=null; try { account = JSON.parse(localStorage.getItem('pl_account') || 'null'); } catch(e){}
+let myStats=null;            // {elo,wins,losses} - set for guests AND signed-in users
+let pendingResult=null;      // {matchId, won, oppElo} captured at game end
+function myElo(){ return myStats ? myStats.elo : 1000; }
+function saveAccount(a){ account=a; try{ localStorage.setItem('pl_account', JSON.stringify(a)); }catch(e){} if(window.Ach) Ach.sync(); }
+
+// device-guest identity
+let guestId, guestName;
+try { guestId = localStorage.getItem('pl_guestId'); } catch(e){}
+if (!guestId){ guestId = 'g_' + Math.random().toString(36).slice(2) + Date.now().toString(36); try{ localStorage.setItem('pl_guestId', guestId); }catch(e){} }
+try { guestName = localStorage.getItem('pl_guestName'); } catch(e){}
+if (!guestName){ guestName = 'Player' + Math.floor(1000 + Math.random()*9000); try{ localStorage.setItem('pl_guestName', guestName); }catch(e){} }
+function setGuestName(n){ guestName = (String(n||'').trim().slice(0,20)) || guestName; try{ localStorage.setItem('pl_guestName', guestName); }catch(e){} }
+
+// who the server should treat this request as. `name` is the player's chosen 1v1 handle (NOT their
+// Google full name) - sent for guests AND signed-in users so the leaderboard shows the handle.
+function principal(){ return account
+  ? { sub:account.sub, sessionToken:account.sessionToken, name:guestName }
+  : { guestId, name:guestName }; }
+function isGuest(){ return !account; }
+function displayName(){ return guestName; }
+// stable per-person id used to avoid matching yourself on a second tab/device
+function personId(){ return account ? ('acct:' + account.sub) : ('guest:' + guestId); }
+
+function initGoogle(tries=0){
+  if (!window.google || !google.accounts || !google.accounts.id){ if (tries<40) setTimeout(()=>initGoogle(tries+1), 250); return; }
+  try { google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleCredential, auto_select: true }); } catch(e){}
+  gsiReady=true; updateRatingChip();
+}
+let gsiReady=false;
+async function onGoogleCredential(resp){
+  try {
+    const j = await fetch('/api/account', { method:'POST', headers:{'content-type':'application/json'},
+      body: JSON.stringify({ action:'login', idToken: resp.credential }) }).then(x=>x.json());
+    if (j.ok){
+      saveAccount({ sub:j.sub, email:j.email, name:j.name, picture:j.picture, sessionToken:j.sessionToken });
+      // give a friendlier default handle from the Google first name (never the full name),
+      // but only if they're still on the auto-generated "Player####" placeholder.
+      if (/^Player\d+$/.test(guestName) && j.name){ setGuestName(String(j.name).trim().split(/\s+/)[0]); }
+      // carry the guest rating onto the account (only if the account has never played)
+      try { await fetch('/api/account', { method:'POST', headers:{'content-type':'application/json'},
+        body: JSON.stringify({ action:'pvpClaim', sub:j.sub, sessionToken:j.sessionToken, guestId }) }); } catch(e){}
+      await refreshStats(); updateRatingChip();
+      if (pendingResult) applyResult();
+    }
+  } catch(e){}
+}
+async function refreshStats(){
+  try {
+    const r = await fetch('/api/account', { method:'POST', headers:{'content-type':'application/json'},
+      body: JSON.stringify(Object.assign({ action:'pvpStats' }, principal())) }).then(x=>x.json());
+    if (r.ok) myStats = { elo:r.elo, wins:r.wins, losses:r.losses, streak:r.streak||0 };
+    else if (account && r.error === 'Not signed in'){ account=null; try{ localStorage.removeItem('pl_account'); }catch(e){} return refreshStats(); }
+  } catch(e){}
+}
+function updateRatingChip(){
+  const el = $('ratingChip'); if (!el) return; el.innerHTML='';
+  const elo = myStats ? myStats.elo : 1000, w = myStats ? myStats.wins : 0, l = myStats ? myStats.losses : 0;
+  const streak = myStats ? (myStats.streak || 0) : 0;
+  const streakTag = streak >= 2 ? ` · 🔥${streak}` : '';
+  // editable handle + rating, always (signed in or guest)
+  const row = document.createElement('div'); row.className='elo';
+  row.innerHTML = `⚔️ <input id="guestNameInput" maxlength="20" value="${escapeHTML(guestName)}"> Rating<b>${elo}</b><span class="rec">${w}W · ${l}L${streakTag}</span>`;
+  el.appendChild(row);
+  const tierRow = document.createElement('div');
+  tierRow.style.cssText = 'display:flex;align-items:center;justify-content:center;margin:4px 0 2px';
+  tierRow.innerHTML = tierBadgeHTML(elo, null, 22);
+  el.appendChild(tierRow);
+  if (account){
+    const note = document.createElement('div'); note.className='guest'; note.textContent='✓ Signed in · rating saved to your account';
+    el.appendChild(note);
+  } else {
+    const note = document.createElement('div'); note.className='guest'; note.textContent='Sign in to save your rating & play on other devices';
+    const wrap = document.createElement('div'); wrap.id='gsiChip';
+    el.appendChild(note); el.appendChild(wrap);
+    if (gsiReady){ try { google.accounts.id.renderButton(wrap, { theme:'filled_black', size:'medium', shape:'pill', text:'signin_with' }); } catch(e){} }
+  }
+  const inp = $('guestNameInput');
+  inp.onchange = () => { setGuestName(inp.value); refreshStats().then(updateRatingChip); };
+  inp.onkeydown = e => { if (e.key==='Enter') inp.blur(); };
+}
+async function applyResult(){
+  if (!pendingResult) return;
+  const pr = pendingResult; pendingResult=null;
+  try {
+    const r = await fetch('/api/account', { method:'POST', headers:{'content-type':'application/json'},
+      body: JSON.stringify(Object.assign({ action:'pvpResult', matchId: pr.matchId, won: pr.won, oppElo: pr.oppElo,
+        role: pr.role, ovr: pr.ovr, oppOvr: pr.oppOvr, oppName: pr.oppName || '', oppKey: pr.oppKey || '' }, principal())) }).then(x=>x.json());
+    if (r.ok){ myStats = { elo:r.elo, wins:r.wins, losses:r.losses, streak:r.streak||0 }; renderRatingResult(r); }
+  } catch(e){}
+}
+function renderRatingResult(r){
+  const el = $('ratingResult'); if (!el) return;
+  const prev = r.elo - r.delta;
+  const dir = r.delta >= 0 ? 'up' : 'down';
+  const sign = r.delta >= 0 ? '+' : '';
+  const streakLine = (r.bonus > 0)
+    ? `<div class="prompt" style="color:#ffb13a">🔥 ${r.streak}-win streak · +${r.bonus} streak bonus${r.streak >= 5 ? ' (max)' : ''}</div>` : '';
+  const oldTier = getEloTier(prev, null);
+  const newTier = getEloTier(r.elo, null);
+  const tierChanged = oldTier.name !== newTier.name;
+  const tierUp = tierChanged && (ELO_TIERS.indexOf(newTier) > ELO_TIERS.indexOf(oldTier) || newTier === TOP10_TIER);
+
+  el.innerHTML = `<div class="delta">Rating ${prev} → <b class="${dir}">${r.elo}</b> <span class="${dir}">(${sign}${r.delta})</span></div>`
+    + `<div class="tier-result" style="display:flex;align-items:center;justify-content:center;margin:5px 0 3px">${tierBadgeHTML(r.elo, null, 22)}</div>`
+    + streakLine
+    + `<div class="prompt">${r.wins}W · ${r.losses}L${isGuest() ? ' · saved on this device' : ''}</div>`;
+  gsap.fromTo(el.querySelector('.delta'), { y:8, opacity:0 }, { y:0, opacity:1, duration:.5, ease:'power2.out' });
+
+  if (window.Ach) {
+    if (r.elo >= 1200) Ach.unlock('elo1');
+    if (r.elo >= 1400) Ach.unlock('elo2');
+    if (r.elo >= 1600) Ach.unlock('elo3');
+    const st = r.streak || 0;
+    if (st >= 3) Ach.unlock('streak1');
+    if (st >= 5) Ach.unlock('streak2');
+    if (st >= 10) Ach.unlock('streak3');
+  }
+
+  // tier change animations
+  if (tierChanged) {
+    const tierResultEl = el.querySelector('.tier-result');
+    const badgeEl = el.querySelector('.tier-badge');
+    if (tierUp) {
+      // inject TIER UP label
+      const label = document.createElement('div');
+      label.style.cssText = `font-family:'Oswald',sans-serif;font-size:19px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:${newTier.color};text-align:center;opacity:0;margin-top:2px`;
+      label.textContent = '⬆ TIER UP!';
+      tierResultEl.after(label);
+      // badge pop + label burst
+      const tl = gsap.timeline({ delay: 0.45 });
+      tl.fromTo(badgeEl, { scale:1 }, { scale:1.8, duration:0.25, ease:'power3.out' })
+        .to(badgeEl, { scale:1, duration:0.55, ease:'elastic.out(1.2, 0.45)' });
+      gsap.fromTo(label, { y:10, opacity:0, scale:0.7 }, { y:0, opacity:1, scale:1, duration:0.4, delay:0.55, ease:'back.out(2)' });
+      // card glow pulse
+      const card = $('resultCard');
+      gsap.fromTo(card, { filter:'brightness(1)' }, { filter:'brightness(1.35)', duration:0.2, delay:0.45, yoyo:true, repeat:3, ease:'power2.inOut',
+        onComplete(){ card.style.filter=''; } });
+    } else {
+      // tier down: label drop + shake
+      const label = document.createElement('div');
+      label.style.cssText = `font-family:'Oswald',sans-serif;font-size:19px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:${newTier.color};text-align:center;opacity:0;margin-top:2px`;
+      label.textContent = '⬇ TIER DOWN';
+      tierResultEl.after(label);
+      gsap.fromTo(label, { y:-10, opacity:0, scale:0.8 }, { y:0, opacity:1, scale:1, duration:0.35, delay:0.5, ease:'power2.out' });
+      gsap.to(badgeEl, { x:-6, duration:0.07, delay:0.45, yoyo:true, repeat:7, ease:'none', onComplete(){ gsap.set(badgeEl, { x:0 }); } });
+      const card = $('resultCard');
+      gsap.fromTo(card, { filter:'brightness(1)' }, { filter:'brightness(0.75)', duration:0.18, delay:0.45, yoyo:true, repeat:3, ease:'power2.inOut',
+        onComplete(){ card.style.filter=''; } });
+    }
+  }
+  // guests: offer to back the rating up to a Google account
+  if (isGuest()){
+    const p = document.createElement('div'); p.className='prompt'; p.style.marginTop='4px';
+    p.textContent='Sign in to save it & play on other devices →';
+    const wrap = document.createElement('div'); wrap.id='gsiResult';
+    el.appendChild(p); el.appendChild(wrap);
+    if (gsiReady){ try { google.accounts.id.renderButton(wrap, { theme:'filled_black', size:'large', shape:'pill', text:'signin_with' }); } catch(e){} }
+  }
+}
+
+function rid(){ return Math.random().toString(36).slice(2) + Date.now().toString(36); }
+
+async function loadData(role){
+  if (DATA[role]) return DATA[role];
+  const res = await fetch(ROLE[role].data);
+  DATA[role] = await res.json();
+  return DATA[role];
+}
+
+let ablyPromise = null;
+function connectAbly(){
+  // single shared connection (reused by the on-load presence ticker AND matchmaking)
+  if (ablyPromise) return ablyPromise;
+  ablyPromise = new Promise((resolve, reject) => {
+    clientId = rid();
+    // echoMessages:false → don't receive our OWN published messages (otherwise our build would
+    // come back to us and get treated as the opponent's = "you vs you").
+    ably = new Ably.Realtime({ authUrl: '/api/ably-token?clientId=' + clientId, clientId, echoMessages: false });
+    ably.connection.once('connected', () => resolve());
+    ably.connection.once('failed', e => { ablyPromise = null; reject(e); });
+  });
+  return ablyPromise;
+}
+
+/* ---------- live "who's online" ticker (global Ably presence) ---------- */
+let onlineCh = null, myOnlineStatus = 'idle';
+async function goOnline(){
+  try { await connectAbly(); } catch(e){ return; }
+  onlineCh = ably.channels.get('hoops:online');
+  onlineCh.presence.subscribe(['enter','leave','update'], recomputeTicker);
+  try { await onlineCh.presence.enter({ status: myOnlineStatus }); } catch(e){}
+  recomputeTicker();
+  subscribeChallengeInbox();
+}
+
+/* ---------- friend challenge ---------- */
+function subscribeChallengeInbox(){
+  if (challengeInboxCh) return;
+  try {
+    challengeInboxCh = ably.channels.get('hoops:challenge:' + personId());
+    challengeInboxCh.subscribe('m', msg => handleChallengeMsg(msg));
+  } catch(e){}
+}
+
+function handleChallengeMsg(msg){
+  const d = msg.data; if (!d || !d.type) return;
+  if (d.type === 'request'){
+    // someone opened your challenge link and clicked Accept
+    if (atBatStarted && !matchResolved) return; // mid-match, ignore
+    pendingChallenge = { replyId: d.replyId, replyClientId: d.clientId, name: d.name || 'Challenger' };
+    if (lobbyWaiting){
+      lobbyWaiting = false;
+      acceptChallengeNotif();
+    } else {
+      showChallengeNotif(d.name || 'Challenger');
+    }
+  } else if (d.type === 'accept'){
+    // challenger accepted our request - start the friendly match
+    if (chalWaitTimeout){ clearTimeout(chalWaitTimeout); chalWaitTimeout=null; }
+    gameMode = d.mode || 'classic';
+    startMatch(d.matchId, d.yourRole, d.seed, d.chalClientId || '', false, true);
+  } else if (d.type === 'decline'){
+    pendingChallenge = null;
+    hideChallengeNotif();
+  }
+}
+
+function checkChallengeURL(){
+  const params = new URLSearchParams(location.search);
+  const ch = params.get('ch'), cn = params.get('cn'), md = params.get('mode');
+  if (!ch) return;
+  _incomingChalId = ch;
+  _incomingChalName = cn ? decodeURIComponent(cn) : 'Challenger';
+  _incomingChalMode = (md && MODE_LABEL[md]) ? md : 'classic';
+  $('chalChallengerName').textContent = _incomingChalName;
+  const tag = $('chalModeTag'), tagInner = $('chalModeTagInner');
+  if (_incomingChalMode !== 'classic' && tag && tagInner){
+    tagInner.textContent = MODE_LABEL[_incomingChalMode];
+    tag.style.display = '';
+  }
+  const modeLine = $('chalModeLine');
+  if (modeLine && _incomingChalMode !== 'classic'){
+    modeLine.innerHTML = `Friendly match · no Elo change · <span style="color:var(--accent2)">${MODE_LABEL[_incomingChalMode]}</span>`;
+  }
+  showScreen('challengeScreen');
+}
+
+async function sendChallengeRequest(){
+  if (!_incomingChalId) return;
+  $('chalAcceptBtn').disabled = true;
+  $('chalStatus').textContent = 'Connecting…';
+  try { await connectAbly(); } catch(e){
+    $('chalStatus').textContent = 'Connection error - check your network.';
+    $('chalAcceptBtn').disabled = false; return;
+  }
+
+  const MAX_TRIES = 5, RETRY_MS = 12000;
+  let tries = 0, chalGaveUp = false;
+
+  function setChalStatus(txt){
+    $('chalStatus').innerHTML = txt + ' <span id="chalCancelTxt" style="cursor:pointer;color:var(--accent2);font-size:11px;letter-spacing:.3px;text-decoration:underline;margin-left:4px">cancel</span>';
+    const c = $('chalCancelTxt');
+    if (c) c.onclick = () => { chalGaveUp=true; if(chalWaitTimeout){clearTimeout(chalWaitTimeout);chalWaitTimeout=null;} showScreen('mmScreen'); updateRatingChip(); };
+  }
+
+  async function attempt(){
+    if (chalGaveUp) return;
+    tries++;
+    setChalStatus(tries === 1 ? 'Contacting challenger…' : `Pinging… (attempt ${tries}/${MAX_TRIES})`);
+    try {
+      const ch = ably.channels.get('hoops:challenge:' + _incomingChalId);
+      await ch.publish('m', { type:'request', replyId: personId(), clientId, name: displayName() });
+    } catch(e){}
+    if (chalGaveUp) return;
+    if (tries < MAX_TRIES){
+      chalWaitTimeout = setTimeout(attempt, RETRY_MS);
+    } else {
+      chalWaitTimeout = setTimeout(() => {
+        if (chalGaveUp) return;
+        $('chalStatus').innerHTML = 'No response - they may be offline. <span id="chalCancelTxt" style="cursor:pointer;color:var(--accent2);font-size:11px;text-decoration:underline;margin-left:4px">go back</span>';
+        const c=$('chalCancelTxt'); if(c) c.onclick=()=>{ showScreen('mmScreen'); updateRatingChip(); };
+        $('chalAcceptBtn').disabled = false;
+      }, RETRY_MS);
+    }
+  }
+  await attempt();
+}
+
+async function acceptChallengeNotif(){
+  if (!pendingChallenge || !ably) return;
+  hideChallengeNotif();
+  const pr = pendingChallenge; pendingChallenge = null;
+  const newId = rid(), newSeed = (Math.random() * 0xFFFFFFFF)|0;
+  const myNewRole = Math.random() < 0.5 ? 'pitcher' : 'batter';
+  const theirRole = myNewRole === 'pitcher' ? 'batter' : 'pitcher';
+  // Retry the accept publish up to 3 times - if this fails silently, the acceptor
+  // never gets the green light and times out even though the challenger is ready.
+  const ch = ably.channels.get('hoops:challenge:' + pr.replyId);
+  const payload = { type:'accept', matchId:newId, seed:newSeed, yourRole:theirRole, chalClientId:clientId, mode:gameMode };
+  for (let i = 0; i < 3; i++){
+    try { await ch.publish('m', payload); break; } catch(e){ if (i < 2) await new Promise(r => setTimeout(r, 800)); }
+  }
+  startMatch(newId, myNewRole, newSeed, pr.replyClientId, false, true);
+}
+
+function declineChallengeNotif(){
+  const pr = pendingChallenge; pendingChallenge = null;
+  hideChallengeNotif();
+  if (pr && ably) {
+    try { ably.channels.get('hoops:challenge:' + pr.replyId).publish('m', { type:'decline' }); } catch(e){}
+  }
+}
+
+function showChallengeNotif(name){
+  $('chalNotifName').textContent = name;
+  const el = $('challengeNotif'); el.style.display = 'block';
+  gsap.fromTo(el, { y:40, opacity:0 }, { y:0, opacity:1, duration:.4, ease:'back.out(1.8)' });
+}
+
+function hideChallengeNotif(){
+  const el = $('challengeNotif'); if (!el || el.style.display === 'none') return;
+  gsap.to(el, { y:20, opacity:0, duration:.25, ease:'power2.in', onComplete(){ el.style.display='none'; } });
+}
+
+function copyChallengeLinkFn(){
+  const link = location.origin + '/versus?ch=' + encodeURIComponent(personId()) + '&cn=' + encodeURIComponent(displayName()) + '&mode=' + gameMode;
+  const done = () => { const c=$('chalCopied'); if(c){ c.style.display=''; setTimeout(()=>{ if(c) c.style.display='none'; },3000); } };
+  if (navigator.clipboard) { navigator.clipboard.writeText(link).then(done).catch(()=>{ prompt('Copy this link:', link); }); }
+  else { try { prompt('Copy this link:', link); done(); } catch(e){} }
+}
+function challengeLink(){
+  return location.origin + '/versus?ch=' + encodeURIComponent(personId()) + '&cn=' + encodeURIComponent(displayName()) + '&mode=' + gameMode;
+}
+function updateLobbyLink(){
+  const link = challengeLink();
+  const el = $('lobbyLinkUrl'); if (el) el.textContent = link;
+  document.querySelectorAll('#lobbyModePicker .lmode').forEach(b => b.classList.toggle('active', b.dataset.mode === gameMode));
+  return link;
+}
+function openLobby(){
+  lobbyWaiting = true;
+  gameMode = 'classic'; // reset to default each time
+  updateLobbyLink();
+  const copied=$('lobbyCopied'); if(copied) copied.style.display='none';
+  showScreen('lobbyScreen');
+}
+function cancelLobby(){
+  lobbyWaiting = false;
+  showScreen('mmScreen');
+  updateRatingChip();
+}
+async function setOnlineStatus(s){
+  myOnlineStatus = s;
+  if (onlineCh){ try { await onlineCh.presence.update({ status: s }); } catch(e){} }
+}
+async function recomputeTicker(){
+  if (!onlineCh) return;
+  let members;
+  try { members = await onlineCh.presence.get(); } catch(e){ return; }
+  let playing = 0, waiting = 0;
+  for (const m of members){ const st = m.data && m.data.status; if (st === 'playing') playing++; else if (st === 'searching') waiting++; }
+  const el = $('liveTicker'), t = $('ltText'); if (!el) return;
+  el.style.display = 'inline-flex';
+  t.textContent = (playing + waiting === 0)
+    ? 'Live · be the first to find a match'
+    : `${playing} playing · ${waiting} waiting for a match`;
+}
+
+let searching=false, retryTimer=null;
+async function findMatch(){
+  resetMatch();
+  gameMode = 'classic';   // ranked is always Classic — clear any leftover friendly (Legends/Hard) mode
+  showScreen('mmScreen');
+  updateRatingChip();
+  $('findBtn').style.display='none'; $('mmSpin').style.display='block'; $('cancelWrap').style.display='block'; $('statsWrap').style.display='none';
+  setStatus('Connecting…');
+  try {
+    if (!ably || ably.connection.state !== 'connected') await connectAbly();
+  } catch(e){ setStatus('Could not connect. Check Ably is configured, then retry.'); failBack(); return; }
+  setStatus('Searching for an opponent…');
+  setOnlineStatus('searching');
+
+  searching = true;
+  // subscribe to my invite channel BEFORE asking the server (so I can't miss a hand-off)
+  inviteCh = ably.channels.get('hoops:invite:' + clientId);
+  inviteCh.subscribe('match', msg => {
+    const d = msg.data;
+    stopSearch();
+    startMatch(d.matchId, d.role, d.seed, d.oppId, false);
+  });
+  attemptMatch();
+}
+
+// Try to claim a waiting opponent; if none, we're enqueued - retry every few seconds so two
+// people who clicked at the same instant (both enqueued, neither claimed) still pair up.
+async function attemptMatch(){
+  if (!searching) return;
+  let r;
+  try {
+    r = await fetch('/api/match-hoops', { method:'POST', headers:{'content-type':'application/json'},
+      body: JSON.stringify({ action:'find', id: clientId, pid: personId() }) }).then(x=>x.json());
+  } catch(e){ if (searching) retryTimer = setTimeout(attemptMatch, 3000); return; }
+  if (!searching) return;
+
+  if (r && r.matched){
+    stopSearch();
+    const theirRole = r.role === 'pitcher' ? 'batter' : 'pitcher';
+    try {
+      await ably.channels.get('hoops:invite:' + r.oppId).publish('match',
+        { matchId: r.matchId, role: theirRole, seed: r.seed, oppId: clientId });
+    } catch(e){}
+    startMatch(r.matchId, r.role, r.seed, r.oppId, true);
+    return;
+  }
+  // still waiting - the invite handler may fire first; otherwise we retry.
+  retryTimer = setTimeout(attemptMatch, 3000);
+}
+
+function stopSearch(){ searching=false; if (retryTimer){ clearTimeout(retryTimer); retryTimer=null; } }
+function setStatus(t){ $('mmStatus').textContent = t; }
+function failBack(){ $('findBtn').style.display='inline-block'; $('mmSpin').style.display='none'; $('cancelWrap').style.display='none'; $('statsWrap').style.display='block'; }
+
+async function cancelSearch(){
+  stopSearch();
+  setOnlineStatus('idle');
+  if (clientId) { try { await fetch('/api/match-hoops',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'leave',id:clientId})}); } catch(e){} }
+  if (inviteCh) { inviteCh.unsubscribe(); try{ inviteCh.detach(); }catch(e){} inviteCh=null; }
+  failBack(); setStatus('');
+}
+
+function resetMatch(){
+  stopSearch();
+  lobbyWaiting=false; _poolCache={};
+  friendlyMode=false; pendingChallenge=null;
+  if ($('challengeNotif')) { gsap.killTweensOf($('challengeNotif')); $('challengeNotif').style.display='none'; }
+  myBuild=null; oppBuild=null; atBatStarted=false; matchResolved=false; oppPresent=false; waitingArena=false;
+  oppProg={filled:0,total:9}; oppPresenceName=''; oppPresenceElo=0;
+  if ($('waitArena')) $('waitArena').classList.remove('show');
+  if (clockTimer){ clearInterval(clockTimer); clockTimer=null; }
+  if (claimTimeout){ clearTimeout(claimTimeout); claimTimeout=null; }
+  if (waitTimeout){ clearTimeout(waitTimeout); waitTimeout=null; }
+  if (buildRepub){ clearInterval(buildRepub); buildRepub=null; }
+  if (matchCh){ try{ matchCh.presence.leave(); }catch(e){} matchCh.unsubscribe(); matchCh.presence.unsubscribe(); try{ matchCh.detach(); }catch(e){} matchCh=null; }
+}
+
+let oppPresent=false;
+async function startMatch(mId, role, sd, opp, claimer, friendly=false){
+  friendlyMode = !!friendly;
+  setOnlineStatus('playing');
+  if (inviteCh){ inviteCh.unsubscribe(); try{ inviteCh.detach(); }catch(e){} inviteCh=null; }
+  matchId=mId; myRole=role; oppRole=role==='pitcher'?'batter':'pitcher'; seed=(sd>>>0); oppId=opp; wasClaimer=!!claimer;
+  rng = mulberry32(seed || 1);
+
+  matchCh = ably.channels.get('hoops:match:' + matchId);
+  // ignore our own messages (belt-and-suspenders alongside echoMessages:false)
+  matchCh.subscribe('build',    m => { if (m.clientId === clientId) return; oppBuild = m.data; updateOppPill(); if (myBuild && !atBatStarted && !matchResolved){ try{ matchCh.publish('build', myBuild); }catch(e){} } maybeStartAtBat(); });
+  matchCh.subscribe('progress', m => { if (m.clientId === clientId) return; updateOppProgress(m.data); });
+  matchCh.subscribe('forfeit',  m => { if (m.clientId === clientId) return; handleOpponentForfeit(m.data || {}); });
+  matchCh.subscribe('rematch',  m => { if (m.clientId === clientId) return; handleRematchMsg(m.data); });
+  matchCh.presence.subscribe('enter', m => { if (m.clientId === clientId) return; oppPresent=true; captureOppPresence(m.data); updateOppPill(); });
+  matchCh.presence.subscribe('present', m => { if (m.clientId === clientId) return; oppPresent=true; captureOppPresence(m.data); updateOppPill(); });
+  await matchCh.presence.enter({ role: myRole, name: displayName(), elo: myElo() });
+  try { const members = await matchCh.presence.get(); const opp = members.find(m => m.clientId !== clientId); if (opp){ oppPresent=true; captureOppPresence(opp.data); } } catch(e){}
+
+  // Dead-waiter guard: if I claimed someone who never shows up, re-queue.
+  if (wasClaimer){
+    claimTimeout = setTimeout(() => { if (!oppPresent){ Sound.whoosh(); findMatch(); } }, 8000);
+    matchCh.presence.subscribe('enter', () => { if (claimTimeout){ clearTimeout(claimTimeout); claimTimeout=null; } });
+  }
+
+  await loadData(myRole);
+  beginRoleReveal();
+}
+
+/* ---------- role reveal ---------- */
+function captureOppPresence(data){
+  if (!data) return;
+  if (data.name) oppPresenceName = data.name;
+  if (data.elo)  oppPresenceElo  = data.elo;
+  updateOppChip();
+}
+function updateOppChip(){
+  const nm = $('oppChipName'); if (!nm) return;
+  nm.textContent = oppPresenceName || 'Opponent';
+  const el = $('oppChipElo');
+  el.textContent = oppPresenceElo ? ('⚡ ' + oppPresenceElo + ' Rating') : '';
+}
+function beginRoleReveal(){
+  showScreen('roleScreen');
+  const card = $('roleCard');
+  card.className = 'role-card ' + myRole;
+  $('roleLabel').textContent = "You're up — build your Hooper!";
+  $('roleSub').textContent = myRole === 'pitcher'
+    ? 'Build a pitcher to strike them out. Highest Overall wins.'
+    : 'Build a hitter to crush it. Highest Overall wins.';
+  updateOppChip();
+  gsap.set('#oppChip', { opacity:0, y:18 });
+  gsap.fromTo(card, { opacity: 0, scale: .82, y: 16 }, { opacity: 1, scale: 1, y: 0, duration: .55, ease: 'back.out(1.6)' });
+  gsap.fromTo('#roleFig', { opacity: 0, y: 26, scale: .9 }, { opacity: 1, y: 0, scale: 1, duration: .6, delay: .12, ease: 'power3.out' });
+  gsap.fromTo('#roleLabel', { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: .4, delay: .28, ease: 'power2.out' });
+  gsap.to('#oppChip', { opacity:1, y:0, duration:.45, delay:.52, ease:'back.out(1.8)' });
+  Sound.whoosh();
+  setTimeout(beginBuild, 2600);
+}
+
+/* ---------- quick build ---------- */
+const REEL_GAP = 12, REEL_PAD_L = 14, CARD_W = 162; // rcard width(150) + gap(12) - fallback; liveCardW() reads actual rendered size
+function liveCardW(){ const el=document.querySelector('#track .rcard'); return el ? Math.round(el.getBoundingClientRect().width)+REEL_GAP : CARD_W; }
+const buildState = { filled:{}, used:new Set(), landed:null, spinning:false, finished:false,
+  respinUsed:false, boostUsed:false, snagUsed:false, boostedThisLand:false, strip:null, targetIndex:0 };
+let clockLeft = 120, clockTimer = null;
+
+// In 1v1, drop grey-tier cards - only players rated 65+ show up in the reel.
+const MIN_VERSUS_OVR = 65;
+let _poolCache = {};
+function pool(){
+  const cacheKey = myRole + ':' + gameMode;
+  if (!_poolCache[cacheKey]){
+    // Legends are a SEPARATE array (DATA[role].legends), not in the regular pool - so Legends mode
+    // must draw from there, otherwise the reel pool is empty and the spin throws.
+    let f = (gameMode === 'legends')
+      ? (DATA[myRole].legends || []).slice()
+      : DATA[myRole].pool.filter(p => p.ovr >= MIN_VERSUS_OVR);
+    if (f.length < 4) f = DATA[myRole].pool.filter(p => p.ovr >= MIN_VERSUS_OVR);   // safety: never an empty reel
+    _poolCache[cacheKey] = f;
+  }
+  return _poolCache[cacheKey];
+}
+function randPlayer(){
+  const p = pool(), legs = DATA[myRole].legends || [];
+  if (legs.length && rng() < 0.03){ const a = legs.filter(x=>!buildState.used.has(x.name)); if (a.length) return a[Math.floor(rng()*a.length)]; }
+  // best-of-2 lifts the average so builds feel good; symmetric for both players
+  let best=null;
+  for (let i=0;i<2;i++){ let q,t=0; do{ q=p[Math.floor(rng()*p.length)]; }while(buildState.used.has(q.name)&&++t<40); if(!best||q.ovr>best.ovr)best=q; }
+  return best;
+}
+function rcardHTML(p){ const t=borderTier(p);
+  const meta = p.legend ? `<div class="legend-tag">★ LEGEND</div>` : `<div class="yr">${escapeHTML(p.year||'')}</div>`;
+  return `<div class="rcard t-${t}">
+    <img src="${headshot(p)}" loading="lazy" onerror="this.onerror=null;this.src='${SILHOUETTE}'">
+    <div class="nm">${escapeHTML(p.name)}</div>
+    <div class="ov">${p.ovr}</div>
+    ${meta}
+    <div class="pos">${escapeHTML(p.pos||'')} · ${escapeHTML(p.team||'')}</div>
+  </div>`; }
+
+function beginBuild(){
+  showScreen('buildScreen');
+  // hard reset any leftover timer/animation from a previous match so clocks can't stack up
+  if(clockTimer){ clearInterval(clockTimer); clockTimer=null; }
+  if(idleTween){ idleTween.kill(); idleTween=null; }
+  gsap.killTweensOf($('track'));
+  buildState.filled={}; buildState.used=new Set(); buildState.landed=null; buildState.finished=false; buildState.spinning=false;
+  buildState.respinUsed=false; buildState.boostUsed=false; buildState.snagUsed=false; buildState.boostedThisLand=false; buildState.strip=null;
+  $('powerups').classList.remove('show');
+  $('respinBtn').onclick = respin; $('boostBtn').onclick = boost;
+  $('snagLeftBtn').onclick = () => snag(-1); $('snagRightBtn').onclick = () => snag(1);
+  // figure base + segments for my role
+  $('figwrap').querySelector('.base').style.background = `url(${ROLE[myRole].figure}) center/contain no-repeat`;
+  $('figureShade').style.webkitMaskImage = `url(${ROLE[myRole].figure})`;
+  $('figureShade').style.maskImage = `url(${ROLE[myRole].figure})`;
+  $('figureShade').style.webkitMaskPosition = $('figureShade').style.maskPosition = 'center';
+  $('figureShade').style.webkitMaskSize = $('figureShade').style.maskSize = 'contain';
+  $('figureShade').style.webkitMaskRepeat = $('figureShade').style.maskRepeat = 'no-repeat';
+  const fw=$('figwrap'); fw.querySelectorAll('.seg').forEach(e=>e.remove());
+  segEls={};
+  for (const s of ROLE[myRole].slots){ const d=document.createElement('div'); d.className='seg'; d.style.webkitMaskImage=`url(${s.mask})`; d.style.maskImage=`url(${s.mask})`; fw.appendChild(d); segEls[s.key]=d; }
+  renderSlots(); renderNodes(); updateFigure(); updateOvr(); idleReel();
+  $('spinBtn').onclick = spin; $('spinBtn').disabled = false;  // re-enable after a previous match left it disabled
+  $('landedLi').classList.remove('show'); $('powerups').classList.remove('show');
+  $('buildHint').textContent = 'Spin the reel, then tap a glowing body part to assign the player.';
+  clockLeft=120; $('clock').textContent=fmtClock(clockLeft); $('clock').classList.remove('warn');
+  clockTimer = setInterval(tickClock, 1000);
+  updateOppPill();
+  publishProgress();
+}
+
+let segEls={};
+function renderSlots(){
+  const wrap=$('slots'); wrap.innerHTML='';
+  for (const s of ROLE[myRole].slots){
+    const f = buildState.filled[s.key];
+    const armed = !!buildState.landed && !f;
+    const d=document.createElement('div');
+    d.className='slot ' + (f?'filled':'open') + (armed?' armed':'');
+    // when a player is landed, preview the exact rating they'd give each open slot (so you can strategize)
+    const preview = armed ? slotNumeric(myRole, buildState.landed, s) : null;
+    const previewTxt = gameMode === 'hard' ? '?' : `+${preview}`;
+    d.innerHTML = `<div style="flex:1"><div class="sname">${s.label}</div><div class="spart">${s.part}</div></div>` +
+      (f ? `<img class="shot" src="${f.img}" onerror="this.style.visibility='hidden'"><div class="sval">${f.display}</div>`
+         : (armed ? `<div class="sval" style="color:var(--accent2)">${previewTxt}</div>`
+                  : `<div class="sval" style="color:#3a445a">·</div>`));
+    if (armed) d.onclick = () => assign(s.key);
+    wrap.appendChild(d);
+  }
+}
+function renderNodes(){
+  const nodes=$('nodes'), wires=$('wires');
+  nodes.innerHTML=''; wires.innerHTML='';
+  const landing = buildState.landed;
+  for (const s of ROLE[myRole].slots){
+    const f = buildState.filled[s.key];
+    const mode = f ? 'set' : (landing ? 'hot' : 'open');
+
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', s.lx); line.setAttribute('y1', s.ly);
+    line.setAttribute('x2', s.ax); line.setAttribute('y2', s.ay);
+    line.setAttribute('vector-effect', 'non-scaling-stroke');
+    if(mode === 'hot') line.classList.add('hot');
+    if(mode === 'set') line.classList.add('set');
+    wires.appendChild(line);
+
+    const dot = document.createElement('div');
+    dot.className = 'anchor' + (mode === 'hot' ? ' hot' : mode === 'set' ? ' set' : '');
+    dot.style.left = s.ax + '%'; dot.style.top = s.ay + '%';
+    nodes.appendChild(dot);
+
+    const div = document.createElement('div');
+    div.className = 'node' + (mode === 'hot' ? ' assignable' : '');
+    div.dataset.key = s.key;
+    div.style.left = s.lx + '%'; div.style.top = s.ly + '%';
+    if(f){
+      const accent = f.legend ? 'var(--legend)' : teamColor(f.team);
+      div.innerHTML = `<div class="accent" style="background:${accent}"></div>
+        <div class="body">
+          <div class="label">${s.label}</div>
+          <div class="row">
+            <div class="face" style="background-image:url('${f.img}')"></div>
+            <div class="val" style="color:${accent}">${f.display}</div>
+          </div>
+          <div class="who">${f.legend ? '★ ' : ''}${escapeHTML(f.player)}</div>
+        </div>`;
+    } else if(landing){
+      const prev = s.type === 'height' ? slotDisplay(myRole, landing, s) : '+' + slotNumeric(myRole, landing, s);
+      div.innerHTML = `<div class="accent"></div>
+        <div class="body">
+          <div class="label">${s.label}</div>
+          <div class="preview">${prev}</div>
+          <div class="who">tap to set</div>
+        </div>`;
+      div.onclick = () => assign(s.key);
+    } else {
+      div.innerHTML = `<div class="accent"></div>
+        <div class="body">
+          <div class="label">${s.label}</div>
+          <div class="part">${s.part}</div>
+        </div>`;
+    }
+    nodes.appendChild(div);
+  }
+}
+function updateFigure(){
+  for (const s of ROLE[myRole].slots){ const f=buildState.filled[s.key], el=segEls[s.key]; if(!el)continue;
+    if(f){ el.style.background = `url(jersey-fabric.png), ${teamColor(f.team)}`; el.style.backgroundSize='150px, auto'; el.style.backgroundBlendMode='overlay'; }
+    else el.style.background='transparent';
+  }
+}
+function updateOvr(){
+  const keys = ROLE[myRole].slots.filter(s=>buildState.filled[s.key]).map(s=>s.key);
+  if(!keys.length){ $('ovrNum').textContent='-'; return; }
+  const partial={}; keys.forEach(k=>partial[k]=buildState.filled[k]);
+  let vs=0,ws=0; for(const k of keys){ const v=partial[k].value; const w=ROLE[myRole].slotWeight(k,v); vs+=v*w; ws+=w; }
+  $('ovrNum').textContent = Math.round(vs/ws);
+}
+
+let idleTween=null;
+function idleReel(){
+  if(idleTween)idleTween.kill();
+  const track=$('track'); const N=18; const cards=[];
+  for(let i=0;i<N;i++)cards.push(pool()[Math.floor(rng()*pool().length)]);
+  track.innerHTML = cards.concat(cards).map(rcardHTML).join('');
+  gsap.set(track,{x:0,filter:'none'});
+  const cw0=liveCardW(); idleTween = gsap.to(track,{x:-(N*cw0),duration:N*0.9,ease:'none',repeat:-1});
+}
+function spin(){
+  if(buildState.spinning || buildState.finished) return;
+  if(openSlots().length===0) return;
+  buildState.spinning=true; buildState.boostedThisLand=false; Sound.click(); if(idleTween)idleTween.kill();
+  $('spinBtn').disabled=true; $('landedLi').classList.remove('show'); $('powerups').classList.remove('show');
+  const target=randPlayer(); const LEN=40, ti=LEN-5; const strip=[];
+  for(let i=0;i<LEN;i++)strip.push(i===ti?target:randPlayer());
+  buildState.strip=strip; buildState.targetIndex=ti;
+  const track=$('track'); gsap.set(track,{x:0,filter:'none'}); track.innerHTML=strip.map(rcardHTML).join('');
+  animateReel(ti, 2.6, 'power4.out', () => land(target));
+}
+function animateReel(index, dur, ease, onDone){
+  const track=$('track'); const el=document.querySelector('#track .rcard');
+  const cardW = el ? el.getBoundingClientRect().width : 150; const cw = cardW + REEL_GAP;
+  const frameW=track.parentElement.clientWidth; const offset=index*cw-(frameW/2)+cardW/2+REEL_PAD_L;
+  let prevX=gsap.getProperty(track,'x'),prevT=performance.now(),lastTick=prevX;
+  gsap.to(track,{ x:-offset, duration:dur, ease,
+    onUpdate:()=>{ const x=gsap.getProperty(track,'x'),t=performance.now(),dt=Math.max(8,t-prevT),sp=Math.abs(x-prevX)/dt; prevX=x;prevT=t;
+      const b=Math.min(6,sp*0.7); track.style.filter=b>0.4?`blur(${b.toFixed(1)}px)`:'none';
+      if(Math.abs(x-lastTick)>=cw){ Sound.tick(sp/7); lastTick=x; } },
+    onComplete:()=>{ track.style.filter='none'; buildState.spinning=false; onDone(); }
+  });
+}
+const TIER_COL = { grey:'#9aa6b8', bronze:'#d28b4e', silver:'#cdd6e2', gold:'#ffce3a', diamond:'#54c7ff', legend:'#a366ff' };
+function land(p){
+  buildState.landed=p;
+  $('landedImg').src=headshot(p); $('landedImg').onerror=function(){this.onerror=null;this.src=SILHOUETTE;};
+  $('landedName').textContent = gameMode==='hard' ? p.name : `${p.name} · ${p.ovr} OVR`;
+  $('landedOvr').textContent = gameMode==='hard' ? '?' : p.ovr; $('landedLi').classList.add('show');
+  const tcol = TIER_COL[borderTier(p)] || '#c8d0da';
+  $('landedOvr').style.color = tcol; $('landedImg').style.boxShadow = `0 0 14px ${tcol}66`;
+  $('landedImg').style.border = `2px solid ${tcol}`;
+  $('spinBtn').disabled=true;
+  // power-ups (one use each per match)
+  const hasPrime = !p.legend && DATA[myRole].prime && !!DATA[myRole].prime[p.name] && !buildState.boostedThisLand;
+  $('powerups').classList.add('show');
+  $('respinBtn').disabled = buildState.respinUsed;
+  $('boostBtn').disabled = buildState.boostUsed || !hasPrime;
+  $('boostBtn').textContent = buildState.boostedThisLand ? '⚡ Primed' : '⚡ Boost';
+  const canSnag = !buildState.snagUsed && buildState.strip;
+  $('snagLeftBtn').disabled = !canSnag || !buildState.strip[buildState.targetIndex-1];
+  $('snagRightBtn').disabled = !canSnag || !buildState.strip[buildState.targetIndex+1];
+  renderSlots(); renderNodes();
+  revealWin(p);
+  // landing sound by rarity - same chimes as the Build a Pitcher game
+  if (p.legend) Sound.legend();
+  else { const tt = tier(p.ovr); if (tt === 'diamond') Sound.diamond(); else if (tt === 'gold') Sound.gold(); else Sound.land(); }
+  $('buildHint').textContent='Tap a glowing body part to assign ' + p.name + ' - or use a power-up.';
+}
+// Cinematic reveal: light sweep + the winning card pops; legend pulls shake the board.
+function revealWin(p){
+  const track=$('track');
+  const card=track.children[buildState.targetIndex];
+  const sweep=$('sweep');
+  if(sweep) gsap.fromTo(sweep,{xPercent:-160,opacity:.9},{xPercent:160,opacity:0,duration:.55,ease:'power2.inOut'});
+  if(card){ card.classList.add('win'); gsap.fromTo(card,{scale:1},{scale:1.14,duration:.5,ease:'back.out(2.2)'}); }
+  gsap.fromTo('.reel .pointer',{scale:1},{scale:1.35,duration:.25,yoyo:true,repeat:1,ease:'power2.out',transformOrigin:'center'});
+  if(p.legend) gsap.fromTo($('buildScreen'),{x:-7},{x:0,duration:.6,ease:'elastic.out(1,0.3)'});
+}
+function respin(){
+  if(buildState.respinUsed || buildState.spinning) return;
+  buildState.respinUsed=true; Sound.whoosh(); spin();
+}
+function boost(){
+  if(buildState.boostUsed || !buildState.landed) return;
+  const base = buildState.landed;
+  const primeCard = DATA[myRole].prime && DATA[myRole].prime[base.name];
+  if(!primeCard) return;
+  buildState.boostUsed=true; buildState.boostedThisLand=true; Sound.prime();
+  land(boostedCard(base, primeCard));
+}
+// Guarantee every rating attribute is at least +5 over the landed card (Frame/height unchanged).
+function boostedCard(base, prime){
+  const c = Object.assign({}, prime);
+  for(const s of ROLE[myRole].slots){
+    if(s.type==='height') continue;
+    const baseVal = Number(base[s.key]);
+    if(isNaN(baseVal)) continue;
+    const primeVal = Number(c[s.key]);
+    c[s.key] = Math.max(isNaN(primeVal) ? -Infinity : primeVal, baseVal + 5);
+  }
+  return c;
+}
+function snag(dir){
+  if(buildState.snagUsed || buildState.spinning || !buildState.strip) return;
+  const idx=buildState.targetIndex+dir, neighbor=buildState.strip[idx];
+  if(!neighbor) return;
+  buildState.snagUsed=true; buildState.targetIndex=idx; buildState.boostedThisLand=false; buildState.spinning=true;
+  Sound.whoosh(); $('landedLi').classList.remove('show'); $('powerups').classList.remove('show');
+  animateReel(idx, 0.5, 'power3.out', () => land(neighbor));
+}
+function openSlots(){ return ROLE[myRole].slots.filter(s=>!buildState.filled[s.key]); }
+function assign(key){
+  if(!buildState.landed || buildState.filled[key]) return;
+  const p=buildState.landed, s=ROLE[myRole].slots.find(x=>x.key===key);
+  const originRect = $('landedImg').getBoundingClientRect();
+  buildState.filled[key]={ slot:s.label, value:slotNumeric(myRole,p,s), display:String(slotDisplay(myRole,p,s)),
+    player:p.name, team:p.team, legend:!!p.legend, img:headshot(p), ovr:p.ovr };
+  buildState.used.add(p.name); buildState.landed=null; Sound.assign();
+  $('landedLi').classList.remove('show'); $('powerups').classList.remove('show'); $('spinBtn').disabled=false;
+  renderSlots(); renderNodes(); updateFigure(); updateOvr(); publishProgress();
+  const node = document.querySelector(`.node[data-key="${key}"]`);
+  const faceEl = node && node.querySelector('.face');
+  if(faceEl) flyHeadshot(originRect, faceEl, headshot(p));
+  const seg = segEls[key];
+  if(seg) gsap.fromTo(seg, { opacity:0 }, { opacity:1, duration:.55, ease:'power2.out' });
+  if(node) gsap.fromTo(node, { scale:.85 }, { scale:1, duration:.4, ease:'back.out(1.8)', delay:.12 });
+  $('buildHint').textContent = openSlots().length ? 'Spin again to fill the next slot.' : 'All slots filled! Locking in…';
+  if(openSlots().length===0) finishBuild();
+  else { if(idleTween)idleTween.kill(); idleReel(); }
+}
+function flyHeadshot(fromRect, targetEl, img){
+  const to = targetEl.getBoundingClientRect();
+  const fly = document.createElement('div');
+  fly.className = 'fly';
+  fly.style.backgroundImage = `url("${img}")`;
+  Object.assign(fly.style, {
+    left: fromRect.left + 'px', top: fromRect.top + 'px',
+    width: fromRect.width + 'px', height: fromRect.height + 'px',
+  });
+  document.body.appendChild(fly);
+  targetEl.style.visibility = 'hidden';
+  gsap.to(fly, {
+    left: to.left + 'px', top: to.top + 'px', width: to.width + 'px', height: to.height + 'px',
+    duration:.55, ease:'power3.inOut',
+    onComplete: () => { targetEl.style.visibility = 'visible'; fly.remove(); },
+  });
+}
+function fmtClock(s){ s=Math.max(0,s); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
+function tickClock(){
+  clockLeft--; $('clock').textContent=fmtClock(clockLeft);
+  if(clockLeft<=15)$('clock').classList.add('warn');
+  if(clockLeft<=0){ clearInterval(clockTimer); clockTimer=null; autoFill(); }
+}
+function autoFill(){
+  const filledCount = ROLE[myRole].slots.filter(s=>buildState.filled[s.key]).length;
+  if(filledCount <= 3){ forfeitMatch(filledCount); return; }
+  // time's up: fill remaining slots with quick random spins
+  const empties=openSlots();
+  for(const s of empties){ const p=randPlayer(); buildState.used.add(p.name);
+    buildState.filled[s.key]={ slot:s.label, value:slotNumeric(myRole,p,s), display:String(slotDisplay(myRole,p,s)),
+      player:p.name, team:p.team, legend:!!p.legend, img:headshot(p), ovr:p.ovr }; }
+  buildState.landed=null; renderSlots(); renderNodes(); updateFigure(); updateOvr();
+  finishBuild();
+}
+function finishBuild(){
+  if(buildState.finished || matchResolved) return; buildState.finished=true;
+  if(clockTimer){ clearInterval(clockTimer); clockTimer=null; }
+  if(idleTween)idleTween.kill();
+  $('powerups').classList.remove('show'); $('landedLi').classList.remove('show'); $('spinBtn').disabled=true;
+  const slots = ROLE[myRole].slots.map(s=>buildState.filled[s.key]);
+  const ovr = computeOvr(myRole, buildState.filled);
+  const team = modalTeam(slots);
+  myBuild = { role:myRole, ovr, team, slots, elo: myElo(), name: displayName(), key: personId() };
+  publishBuild();
+  updateOppPill();
+  // safety net: if the opponent never finishes (left/closed), don't hang forever
+  if (waitTimeout) clearTimeout(waitTimeout);
+  waitTimeout = setTimeout(() => {
+    if (!oppBuild && !atBatStarted && !matchResolved) {
+      const filled = Math.min(oppProg.filled || 0, oppProg.total || 9);
+      if(filled <= 3) showForfeitResult(true, filled);
+      else showNoContest();
+    }
+  }, 75000);
+  if (oppBuild) maybeStartAtBat();   // opponent already finished → straight to the at-bat
+  else showWaitArena();              // otherwise wait IN the arena, watching their progress
+}
+
+let waitingArena=false;
+// You finished first → sit in the arena (your fighter ready, opponent's spot greyed out) and
+// watch how close the opponent is to finishing.
+function showWaitArena(){
+  waitingArena=true;
+  showScreen('atbatScreen');
+  const minePitcher = myRole==='pitcher';
+  const meSide  = `<div class="who" style="color:var(--pitch)">🏀 ${escapeHTML(displayName())} (You)</div><div class="o" style="color:var(--pitch)">${myBuild.ovr}</div>`;
+  const oppSide = `<div class="who" style="color:var(--bat)">🏀 Opponent</div><div class="o" style="color:var(--bat)">?</div>`;
+  const pitcherSide = minePitcher ? meSide : oppSide;
+  const batterSide  = minePitcher ? oppSide : meSide;
+  $('matchup').innerHTML = `<div class="side">${pitcherSide}</div><div class="mid">VS</div><div class="side">${batterSide}</div>`;
+  $('silhoP').style.background = brightTeam(minePitcher ? myBuild.team : 'FA');
+  $('silhoB').style.background = brightTeam(!minePitcher ? myBuild.team : 'FA');
+  $('silhoP').classList.toggle('dim', !minePitcher);
+  $('silhoB').classList.toggle('dim', minePitcher);
+  gsap.set('#ball', { opacity:0 }); $('callout').textContent=''; $('pitchInfo').style.opacity=0;
+  $('pitchSeq').innerHTML=''; gsap.set('#pitchSeq', { opacity:0 });
+  $('waTitle').textContent = 'Waiting for your opponent…';
+  $('waitArena').classList.add('show');
+  updateWaitArena();
+}
+function updateWaitArena(){
+  if (!waitingArena) return;
+  const oppIsPitcher = myRole !== 'pitcher';
+  const total = oppProg.total || (oppIsPitcher ? 9 : 8);
+  const filled = Math.min(oppProg.filled || 0, total);
+  $('waFill').style.width = Math.round(100 * filled / total) + '%';
+  $('waCount').textContent = oppPresent
+    ? (oppIsPitcher ? 'Pitcher' : 'Batter') + ' building · ' + filled + '/' + total + ' slots filled'
+    : 'Connecting to opponent…';
+}
+function showNoContest(){
+  waitingArena=false; $('waitArena').classList.remove('show');
+  setOnlineStatus('idle');
+  if (atBatStarted || oppBuild || matchResolved) return;
+  matchResolved=true;
+  showScreen('resultScreen');
+  resetRematchUI();
+  $('resultCard').className = 'result-card';
+  $('resultHead').textContent = 'NO CONTEST';
+  $('resultLine').textContent = "Your opponent didn’t finish their build in time.";
+  $('resultSub').textContent = 'No rating change - try another match.';
+  $('ratingResult').innerHTML = '';
+}
+function forfeitMatch(filled){
+  if(matchResolved) return;
+  matchResolved=true; buildState.finished=true;
+  if(clockTimer){ clearInterval(clockTimer); clockTimer=null; }
+  if(idleTween)idleTween.kill();
+  $('powerups').classList.remove('show'); $('landedLi').classList.remove('show'); $('spinBtn').disabled=true;
+  publishForfeit(filled);
+  showForfeitResult(false, filled);
+}
+function handleOpponentForfeit(data){
+  if(matchResolved || atBatStarted) return;
+  if(waitTimeout){ clearTimeout(waitTimeout); waitTimeout=null; }
+  showForfeitResult(true, data.filled || 0, data);
+}
+function showForfeitResult(iWon, filled, data={}){
+  matchResolved=true; waitingArena=false;
+  if(clockTimer){ clearInterval(clockTimer); clockTimer=null; }
+  if(idleTween)idleTween.kill();
+  if(waitTimeout){ clearTimeout(waitTimeout); waitTimeout=null; }
+  $('waitArena').classList.remove('show');
+  setOnlineStatus('idle');
+  showScreen('resultScreen');
+  resetRematchUI();
+  const card=$('resultCard'); card.className='result-card '+(iWon?'win':'lose');
+  $('resultHead').textContent = iWon ? 'YOU WIN' : 'YOU LOSE';
+  const oppName = data.name || ((oppBuild && oppBuild.name) ? oppBuild.name : 'your opponent');
+  $('resultLine').textContent = iWon
+    ? `${oppName} forfeited after ${filled} slot${filled===1?'':'s'} filled.`
+    : `You forfeited after ${filled} slot${filled===1?'':'s'} filled.`;
+  $('resultSub').textContent = iWon ? 'Timeout win. Run it back?' : 'Fill at least 4 slots before time expires.';
+  if (window.Ach) Ach.unlock('versus_root');                       // played a 1v1 (forfeit result)
+  iWon ? Sound.win() : Sound.lose();
+  gsap.fromTo(card,{ y:24, opacity:0, scale:.92 },{ y:0, opacity:1, scale:1, duration:.5, ease:'back.out(1.5)' });
+
+  const oppElo = typeof data.elo === 'number' ? data.elo : ((oppBuild && typeof oppBuild.elo === 'number') ? oppBuild.elo : 1000);
+  const oppForfeitName = data.name || (oppBuild && oppBuild.name ? oppBuild.name : '');
+  if (friendlyMode) {
+    $('ratingResult').innerHTML = '<div class="prompt" style="color:var(--accent2);font-size:14px;margin-top:4px">⚔️ Friendly Match · No Elo Change</div>';
+  } else {
+    pendingResult = { matchId, won:iWon, oppElo, role:myRole, ovr:(myBuild ? myBuild.ovr : 0), oppOvr:(oppBuild ? oppBuild.ovr : 0), oppName:oppForfeitName, oppKey:(oppBuild && oppBuild.key ? oppBuild.key : '') };
+    $('ratingResult').innerHTML = '';
+    applyResult();
+  }
+}
+
+/* ---------- opponent status + messaging ---------- */
+function publishProgress(){ if(matchCh){ const n=ROLE[myRole].slots.filter(s=>buildState.filled[s.key]).length; try{ matchCh.publish('progress',{ filled:n, total:ROLE[myRole].slots.length }); }catch(e){} } }
+let buildRepub=null;
+async function publishBuild(){
+  if(!matchCh) return;
+  for(let i=0;i<3;i++){
+    try{ await matchCh.publish('build', myBuild); break; }catch(e){ if(i<2) await new Promise(r=>setTimeout(r,600*(i+1))); }
+  }
+  if(buildRepub) clearInterval(buildRepub);
+  buildRepub = setInterval(()=>{
+    if(!myBuild||oppBuild||atBatStarted||matchResolved){ clearInterval(buildRepub); buildRepub=null; return; }
+    try{ matchCh.publish('build', myBuild); }catch(e){}
+  }, 5000);
+}
+function publishForfeit(filled){ if(matchCh){ try{ matchCh.publish('forfeit',{ role:myRole, filled, total:ROLE[myRole].slots.length, elo:myElo(), name:displayName() }); }catch(e){} } }
+let oppProg={filled:0,total:9};
+function updateOppProgress(d){ oppProg=d; updateOppPill(); updateWaitArena(); }
+function updateOppPill(){
+  const pill=$('oppPill');
+  if(oppBuild){ pill.textContent='Opponent: ready ✓'; pill.style.color='#7CE38B'; }
+  else if(oppPresent){ pill.textContent=`Opponent: building ${oppProg.filled}/${oppProg.total}`; pill.style.color='var(--muted)'; }
+  else { pill.textContent='Opponent: connecting…'; pill.style.color='var(--muted)'; }
+  updateWaitArena();
+}
+
+/* ---------- at-bat ---------- */
+function maybeStartAtBat(){
+  if(matchResolved || atBatStarted || !myBuild || !oppBuild) return;
+  atBatStarted=true;
+  if (waitTimeout){ clearTimeout(waitTimeout); waitTimeout=null; }
+  setTimeout(playAtBat, 700);
+}
+function playAtBat(){
+  if(matchResolved) return;
+  showScreen('atbatScreen');
+  waitingArena=false; $('waitArena').classList.remove('show');
+  $('silhoP').classList.remove('dim'); $('silhoB').classList.remove('dim');
+  const pitcher = myRole==='pitcher' ? myBuild : oppBuild;
+  const batter  = myRole==='pitcher' ? oppBuild : myBuild;
+  const abRng = atBatRng(pitcher, batter);
+  // winner: higher OVR; tie -> seeded coin (identical on both phones)
+  let winnerRole;
+  if(batter.ovr>pitcher.ovr)winnerRole='batter';
+  else if(pitcher.ovr>batter.ovr)winnerRole='pitcher';
+  else winnerRole = abRng()<0.5?'pitcher':'batter';
+  const iWon = winnerRole===myRole;
+  const script = makePitchSequence(pitcher, batter, winnerRole, abRng);
+
+  // matchup header (with each player's name)
+  const pName = escapeHTML(pitcher.name || 'Player A') + (myRole==='pitcher'?' (You)':'');
+  const bName = escapeHTML(batter.name || 'Player B') + (myRole==='batter'?' (You)':'');
+  const pc = brightTeam(pitcher.team), bc = brightTeam(batter.team);
+  $('matchup').innerHTML =
+    `<div class="side"><div class="who" style="color:${pc}">🏀 ${pName}</div><div class="o" style="color:${pc}">${pitcher.ovr}</div></div>`+
+    `<div class="mid">VS</div>`+
+    `<div class="side"><div class="who" style="color:${bc}">🏀 ${bName}</div><div class="o" style="color:${bc}">${batter.ovr}</div></div>`;
+  $('silhoP').style.background = brightTeam(pitcher.team);
+  $('silhoB').style.background = brightTeam(batter.team);
+
+  const ball=$('ball'), call=$('callout'); call.style.opacity=0; call.textContent='';
+  gsap.set(ball,{ opacity:0, left:'18%', bottom:'42%', scale:1 });
+  gsap.set('#silhoP',{ x:0, rotation:0 }); gsap.set('#silhoB',{ x:0, rotation:0, rotationY:180 });
+  renderPitchSeq(script);
+  gsap.set('#pitchSeq', { opacity:1 });
+
+  const tl = gsap.timeline();
+  script.pitches.forEach((pitch, idx) => appendPitch(tl, pitch, idx));
+  tl.add(()=> setTimeout(()=>showResult(iWon, pitcher, batter, winnerRole, script), 1300));
+}
+function atBatRng(pitcher, batter){
+  const n = ((seed || 1) ^ Math.imul(pitcher.ovr || 0, 2654435761) ^ Math.imul(batter.ovr || 0, 1597334677)) >>> 0;
+  return mulberry32(n || 1);
+}
+function funcVel(ovr){ return Math.max(4, Math.round((ovr-70)*0.7)+8); }
+function makePitchSequence(pitcher, batter, winnerRole, rr){
+  // pitcher/batter are just side A/B (both hoopers). The higher-OVR player (winnerRole) scores the
+  // deciding bucket; the beats are seeded so both phones see the same possession.
+  const moves=['Crossover','Hesi pull-up','Step-back','Euro-step','Spin move','Behind-the-back','Jab + go','Snatch-back'];
+  const nextMove = () => moves[Math.floor(rr()*moves.length)];
+  const beat = (call, klass, result, opts={}) => Object.assign({
+    call, klass, result, type:nextMove(), velo:0, swing:false, final:false
+  }, opts);
+  const disparity = Math.abs((pitcher.ovr || 0) - (batter.ovr || 0));
+  const winnerName = (winnerRole==='pitcher' ? pitcher.name : batter.name) || 'The winner';
+  const finishes=[
+    { call:'Pull-up THREE',  result:'three',  fc:'SPLASH! 3' },
+    { call:'Throws it DOWN', result:'dunk',   fc:'POSTER!' },
+    { call:'Silky floater',  result:'bucket', fc:'BUCKET!' },
+    { call:'And-one finish', result:'andone', fc:'AND ONE!' },
+  ];
+  const fin = finishes[Math.floor(rr()*finishes.length)];
+  const last = beat(fin.call, 'hit', fin.result, { swing:true, contact:true, final:true, finalCall:fin.fc });
+
+  if(disparity >= 10){
+    return { outcome:'win', summary:`${winnerName} cooks for an easy bucket`, finalCall:fin.fc,
+      pitches:[ beat('Sizes up','strike','setup'), last ] };
+  }
+  return { outcome:'win', summary:`${winnerName} takes over late and scores`, finalCall:fin.fc,
+    pitches:[ beat('Trade buckets','ball','setup'), beat('Defender contests','strike','setup', { swing:true }), last ] };
+}
+function renderPitchSeq(script){
+  $('pitchSeq').innerHTML = script.pitches.map((p,i) =>
+    `<div class="pitch-dot" id="pitchPill${i}"><div class="pd-num">${i+1}</div><div class="pd-call">-</div></div>`
+  ).join('');
+}
+function activatePitch(idx){
+  const pill = $('pitchPill' + idx);
+  if(!pill) return;
+  document.querySelectorAll('.pitch-dot.active').forEach(d => {
+    d.classList.remove('active');
+    gsap.to(d.querySelector('.pd-num'), { scale:1, duration:.2, ease:'power2.out' });
+  });
+  pill.classList.add('active');
+  const num = pill.querySelector('.pd-num');
+  gsap.fromTo(num, { scale:1 }, { scale:1.25, duration:.22, ease:'back.out(2.5)' });
+  gsap.to(num, { scale:1.05, duration:.2, delay:.22, ease:'power2.inOut' });
+}
+function resolvePitch(idx, pitch){
+  const pill = $('pitchPill' + idx);
+  if(!pill) return;
+  pill.className = 'pitch-dot active ' + pitch.klass;
+  const call = pill.querySelector('.pd-call');
+  call.textContent = pitch.call;
+  gsap.fromTo(call, { opacity:0, y:4 }, { opacity:1, y:0, duration:.22, ease:'power2.out' });
+}
+function appendPitch(tl, pitch, idx){
+  const ball = $('ball');
+  tl.add(() => {
+      $('pitchInfo').textContent = pitch.type;   // the dribble move
+      activatePitch(idx);
+      if(!pitch.final) { $('callout').textContent=''; $('callout').style.opacity=0; }
+    }, idx ? '+=.34' : 0)
+    .to('#pitchInfo',{ opacity:1, duration:.18 })
+    .set(ball,{ opacity:1, left:'24%', bottom:'26%', scale:1 })
+    .fromTo('#silhoP',{ rotation:-5 },{ rotation:6, duration:.26, ease:'power2.in' })
+    .to('#silhoP',{ rotation:0, duration:.12 })
+    .to(ball,{ left:'48%', bottom:'22%', duration:.3, ease:'sine.inOut' });   // dribble toward the lane
+
+  if(pitch.swing){   // defender contest
+    tl.to('#silhoB',{ rotation:-14, duration:.1, ease:'power3.out' },'<.2')
+      .to('#silhoB',{ rotation:0, duration:.22 });
+  }
+
+  if(pitch.final && pitch.contact){   // the bucket: ball rises to the rim, then drops through
+    tl.add(()=> { Sound.crack(); resolvePitch(idx, pitch); })
+      .to(ball,{ left:'80%', bottom:'72%', scale:.82, duration:.5, ease:'power2.out' })
+      .to(ball,{ bottom:'14%', scale:.66, duration:.3, ease:'power1.in' })
+      .add(()=> showCall(pitch.finalCall || 'BUCKET!', '#ff8a3c'))
+      .to('#silhoP',{ rotation:6, duration:.3 },'<');
+  } else {
+    tl.add(()=> { Sound.catch(); resolvePitch(idx, pitch); })
+      .to(ball,{ left:'58%', bottom:'18%', scale:.9, duration:.16, ease:'power2.in' });
+  }
+}
+function showCall(text, color){
+  const el=$('callout'); el.textContent=text; el.style.color=color;
+  gsap.fromTo(el,{ opacity:0, scale:.5 },{ opacity:1, scale:1, duration:.45, ease:'back.out(2)' });
+  gsap.fromTo('#diamond',{ x:-6 },{ x:0, duration:.5, ease:'elastic.out(1,0.4)' });
+}
+
+/* ---------- rematch ---------- */
+function resetRematchUI(){
+  if (rematchCountdown){ clearInterval(rematchCountdown); rematchCountdown=null; }
+  rematchOffered=false; rematchOppOffer=null;
+  const rs=$('rematchStatus'); if(rs) rs.innerHTML='';
+  const rb=$('rematchBtn'); if(rb){ rb.textContent='⚔️ Rematch?'; rb.classList.remove('rmatch-glow'); }
+}
+function handleRematchMsg(data){
+  if (!matchResolved) return;
+  if (data.type === 'offer'){
+    rematchOppOffer = data;
+    if (rematchOffered){
+      // tiebreaker: lower clientId is the authority who generates the new matchId
+      if (clientId < oppId) acceptOppRematch();
+      // else: wait for opponent's 'start' message
+    } else {
+      const oppName = escapeHTML(oppBuild && oppBuild.name ? oppBuild.name : 'Opponent');
+      $('rematchStatus').innerHTML = `<span class="rs-want">⚔️ ${oppName} wants a rematch!</span>`;
+      const rb = $('rematchBtn'); rb.textContent = '✅ Accept!'; rb.classList.add('rmatch-glow');
+    }
+  } else if (data.type === 'start'){
+    doRematch(data.matchId, data.yourRole, data.seed);
+  }
+}
+function offerRematch(){
+  if (!matchCh || rematchOffered) return;
+  rematchOffered = true;
+  try { matchCh.publish('rematch', { type:'offer' }); } catch(e){}
+  const oppName = escapeHTML(oppBuild && oppBuild.name ? oppBuild.name : 'opponent');
+  $('rematchBtn').textContent = 'Cancel';
+  $('rematchBtn').classList.remove('rmatch-glow');
+  rematchSec = 10;
+  $('rematchStatus').innerHTML = `Waiting for ${oppName} to accept… <span class="rs-count">${rematchSec}</span>`;
+  rematchCountdown = setInterval(() => {
+    rematchSec--;
+    const c = $('rematchStatus') && $('rematchStatus').querySelector('.rs-count');
+    if (c) c.textContent = rematchSec;
+    if (rematchSec <= 0){ resetRematchUI(); }
+  }, 1000);
+}
+async function acceptOppRematch(){
+  if (rematchCountdown){ clearInterval(rematchCountdown); rematchCountdown=null; }
+  const newId = rid();
+  const newSeed = (Math.random() * 0xFFFFFFFF) | 0;
+  const myNewRole  = myRole === 'pitcher' ? 'batter' : 'pitcher';
+  const oppNewRole = myRole; // roles swap
+  try { await matchCh.publish('rematch', { type:'start', matchId:newId, seed:newSeed, yourRole:oppNewRole }); } catch(e){}
+  doRematch(newId, myNewRole, newSeed);
+}
+function doRematch(newMatchId, newRole, newSeed){
+  if (rematchCountdown){ clearInterval(rematchCountdown); rematchCountdown=null; }
+  rematchOffered=false; rematchOppOffer=null;
+  const savedOppId = oppId, savedFriendly = friendlyMode;
+  resetMatch();
+  startMatch(newMatchId, newRole, newSeed, savedOppId, false, savedFriendly);
+}
+
+/* ---------- result ---------- */
+function showResult(iWon, pitcher, batter, winnerRole, script){
+  if(matchResolved) return;
+  matchResolved=true;
+  showScreen('resultScreen');
+  setOnlineStatus('idle');
+  resetRematchUI();
+  const card=$('resultCard'); card.className='result-card '+(iWon?'win':'lose');
+  $('resultHead').textContent = iWon ? 'YOU WIN' : 'YOU LOSE';
+  const winName = (winnerRole==='pitcher' ? pitcher.name : batter.name) || 'The higher build';
+  const sequenceLine = script && script.summary ? script.summary : `${winName} wins`;
+  $('resultLine').textContent = `${sequenceLine} · ${pitcher.ovr} OVR vs ${batter.ovr} OVR`;
+  const oppName = (oppBuild && oppBuild.name) ? oppBuild.name : 'your opponent';
+  $('resultSub').textContent = iWon ? `You beat ${oppName}. Run it back?` : `${oppName} got you. Build a better one.`;
+  iWon ? Sound.win() : Sound.lose();
+  gsap.fromTo(card,{ y:24, opacity:0, scale:.92 },{ y:0, opacity:1, scale:1, duration:.5, ease:'back.out(1.5)' });
+
+  if (window.Ach) {
+    Ach.unlock('versus_root');                                    // played a 1v1
+    const myOvr = myBuild ? myBuild.ovr : 0, opp = oppBuild ? oppBuild.ovr : 0;
+    if (iWon && myOvr) {
+      const diff = myOvr - opp;
+      if (diff >= 10) Ach.unlock('mismatch1');
+      if (diff >= 15) Ach.unlock('mismatch2');
+      if (diff >= 20) Ach.unlock('mismatch3');
+      if (myOvr < opp) Ach.unlock('underdog');
+    }
+  }
+
+  const oppElo = (oppBuild && typeof oppBuild.elo === 'number') ? oppBuild.elo : 1000;
+  if (friendlyMode) {
+    $('ratingResult').innerHTML = '<div class="prompt" style="color:var(--accent2);font-size:14px;margin-top:4px">⚔️ Friendly Match · No Elo Change</div>';
+  } else {
+    pendingResult = { matchId, won: iWon, oppElo, role: 'hooper', ovr: (myBuild ? myBuild.ovr : 0), oppOvr: (oppBuild ? oppBuild.ovr : 0), oppName: oppName, oppKey: (oppBuild && oppBuild.key ? oppBuild.key : '') };
+    $('ratingResult').innerHTML = '';
+    applyResult();
+  }
+}
+
+/* ---------- stats page ---------- */
+function switchStatsTab(tab){
+  const isStats = tab !== 'history';
+  $('tabStats').classList.toggle('active', isStats);
+  $('tabHistory').classList.toggle('active', !isStats);
+  $('statsPanel').style.display = isStats ? '' : 'none';
+  $('historyPanel').style.display = isStats ? 'none' : '';
+  if ($('challengeLinkWrap')) $('challengeLinkWrap').style.display = isStats ? '' : 'none';
+}
+function openStats(tab='stats'){
+  showScreen('statsScreen');
+  $('statsPersonal').innerHTML = '<div class="prompt">Loading…</div>';
+  $('statsHistory').innerHTML = '<div class="prompt">Loading…</div>';
+  $('statsBoard').innerHTML = '';
+  switchStatsTab(tab);
+  loadStats();
+}
+async function loadStats(){
+  let data, hist;
+  try {
+    [data, hist] = await Promise.all([
+      fetch('/api/account', { method:'POST', headers:{'content-type':'application/json'},
+        body: JSON.stringify(Object.assign({ action:'pvpLeaderboard', limit:50 }, principal())) }).then(x=>x.json()),
+      fetch('/api/account', { method:'POST', headers:{'content-type':'application/json'},
+        body: JSON.stringify(Object.assign({ action:'pvpHistory' }, principal())) }).then(x=>x.json()).catch(()=>null)
+    ]);
+  } catch(e){ $('statsPersonal').innerHTML = '<div class="prompt">Could not load stats. Try again.</div>'; return; }
+  if (!data || !data.ok){ $('statsPersonal').innerHTML = '<div class="prompt">Could not load stats.</div>'; return; }
+  const histRows = (hist && hist.ok && hist.history) ? hist.history : [];
+  if (histRows.length) {
+    const rows = histRows.map(r => {
+      const delta = (r.elo_after != null && r.elo_before != null) ? (r.elo_after - r.elo_before) : null;
+      const sign = delta >= 0 ? '+' : '';
+      const roleIcon = r.my_role === 'pitcher' ? '⚾' : r.my_role === 'batter' ? '🏏' : '🏀';
+      const sub = [r.my_ovr ? `${r.my_ovr} OVR` : null, r.opp_ovr ? `opp ${r.opp_ovr}` : null].filter(Boolean).join(' · ');
+      return `<div class="hist-row">
+        <div class="hist-wl ${r.won?'w':'l'}">${r.won?'W':'L'}</div>
+        <div class="hist-role">${roleIcon}</div>
+        <div class="hist-info">
+          <div class="hist-vs">vs. ${escapeHTML(r.opp_name || 'Opponent')}</div>
+          ${sub ? `<div class="hist-sub">${sub}</div>` : ''}
+        </div>
+        ${delta != null ? `<div class="hist-delta ${delta>=0?'pos':'neg'}">${sign}${delta}</div>` : ''}
+      </div>`;
+    }).join('');
+    $('statsHistory').innerHTML = `<div class="hist-head">Recent Matches</div><div>${rows}</div>`;
+  } else {
+    $('statsHistory').innerHTML = `<div class="hist-head">Recent Matches</div><div class="prompt" style="margin:6px 0 0">No matches logged yet - play a 1v1 to start tracking history.</div>`;
+  }
+
+  const me = data.me;
+  if (me){
+    const games = me.wins + me.losses, wr = games ? Math.round(me.wins/games*100) : 0;
+    $('statsPersonal').innerHTML =
+      `<div class="stat-top">
+         <div class="stat-name">${escapeHTML(me.name || displayName())}${isGuest()?' · guest':''}</div>
+         <div class="stat-elo"><b>${me.elo}</b><span>RATING</span><div style="display:flex;align-items:center;justify-content:center;margin-top:7px">${tierBadgeHTML(me.elo, me.rank, 24)}</div></div>
+         ${me.rank ? `<div class="stat-rank">#${me.rank}<span>worldwide</span></div>` : ''}
+       </div>
+       <div class="stat-grid">
+         <div class="sbox"><b style="color:#7CE38B">${me.wins}</b><span>Wins</span></div>
+         <div class="sbox"><b style="color:#ff6b6b">${me.losses}</b><span>Losses</span></div>
+         <div class="sbox"><b>${wr}%</b><span>Win Rate</span></div>
+         <div class="sbox"><b>${games}</b><span>Games</span></div>
+       </div>`;
+  } else {
+    $('statsPersonal').innerHTML = `<div class="prompt">No games yet - you start at rating <b>1000</b>. Play a 1v1 to get on the board!</div>`;
+  }
+
+  if (data.rows && data.rows.length){
+    const rowsHtml = data.rows.map((r,i) => {
+      const mine = me && me.rank && (i === me.rank - 1);
+      const rt = getEloTier(r.elo, i + 1);
+      return `<div class="lb-row${mine?' mine':''}"><span class="lr-rank">${i+1}</span><span class="lr-name">${escapeHTML(r.name||'Player')}</span><span class="lr-rec">${r.wins}-${r.losses}</span><span class="lr-elo">${batSVG(rt.color, rt.glow, 14)}<span style="color:${rt.color}">${r.elo}</span></span></div>`;
+    }).join('');
+    $('statsBoard').innerHTML = `<div class="lb-head">🏆 Top Players</div><div class="lb-rows">${rowsHtml}</div>`;
+  } else {
+    $('statsBoard').innerHTML = `<div class="prompt" style="margin-top:16px">No ranked players yet - be the first!</div>`;
+  }
+}
+
+/* ---------- wiring ---------- */
+$('findBtn').onclick = () => { Sound.click(); findMatch(); };
+$('cancelBtn').onclick = () => cancelSearch();
+$('statsBtn').onclick = () => { Sound.click(); openStats(); };
+$('achBtn').onclick = () => { Sound.click(); window.Ach && Ach.open(); };
+if ($('resultStatsBtn')) { /* result-screen achievements shortcut added below */ }
+$('resultStatsBtn').onclick = () => { Sound.click(); openStats(); };
+$('statsBack').onclick = () => { showScreen('mmScreen'); updateRatingChip(); };
+$('tabStats').onclick = () => switchStatsTab('stats');
+$('tabHistory').onclick = () => { switchStatsTab('history'); };
+// deep-link: /versus#stats opens the stats page straight away (from the hamburger menus)
+if (location.hash === '#stats') openStats();
+if (location.hash === '#achievements' || location.hash === '#ach') { const o = () => (window.Ach ? Ach.open() : setTimeout(o, 120)); o(); }
+$('newMatchBtn').onclick = () => { Sound.click(); findMatch(); };
+$('rematchBtn').onclick = () => {
+  Sound.click();
+  if (matchResolved && matchId && matchCh){
+    if (rematchOppOffer && !rematchOffered){ acceptOppRematch(); }
+    else if (rematchOffered){ resetRematchUI(); }   // cancel pending offer
+    else { offerRematch(); }
+  } else { findMatch(); }
+};
+// challenge feature wiring
+$('chalAcceptBtn').onclick = () => { Sound.click(); sendChallengeRequest(); };
+$('chalDeclineBtn').onclick = () => { showScreen('mmScreen'); _incomingChalId=null; updateRatingChip(); };
+$('chalNotifAccept').onclick = () => { Sound.click(); acceptChallengeNotif(); };
+$('chalNotifDecline').onclick = () => { Sound.click(); declineChallengeNotif(); };
+$('challengeLinkBtn').onclick = () => { Sound.click(); copyChallengeLinkFn(); };
+$('mmChalBtn').onclick = () => { Sound.click(); openLobby(); };
+$('lobbyCancelBtn').onclick = () => { Sound.click(); cancelLobby(); };
+$('lobbyCopyBtn').onclick = () => {
+  Sound.click();
+  const link = updateLobbyLink();
+  const done = () => { const c=$('lobbyCopied'); if(c){ c.style.display=''; setTimeout(()=>{ if(c)c.style.display='none'; },3000); } };
+  if (navigator.clipboard){ navigator.clipboard.writeText(link).then(done).catch(()=>{ prompt('Copy this link:',link); done(); }); }
+  else { try{ prompt('Copy this link:',link); done(); }catch(e){} }
+};
+document.querySelectorAll('#lobbyModePicker .lmode').forEach(btn => {
+  btn.onclick = () => {
+    gameMode = btn.dataset.mode;
+    updateLobbyLink();
+  };
+});
+// sign-in + rating on load
+initGoogle();
+refreshStats().then(updateRatingChip);
+checkChallengeURL();  // show challenge screen immediately if URL has ?ch= (no Ably needed for the screen)
+goOnline();  // join the global presence channel so the live ticker shows real counts
+// leave the queue if the tab closes while waiting
+window.addEventListener('pagehide', () => {
+  if (clientId) { try { navigator.sendBeacon('/api/match-hoops', JSON.stringify({ action:'leave', id: clientId })); } catch(e){} }
+  if (ably) { try { ably.close(); } catch(e){} }
+});
+</script>
+
+</body>
+</html>

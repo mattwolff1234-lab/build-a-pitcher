@@ -108,7 +108,7 @@
   .hero h1 i { color:var(--accent); font-style:normal; }
   .hero p { color:var(--muted); font-size:clamp(14px,2.4vw,17px); margin:14px 0 0; letter-spacing:.3px; }
 
-  .picks { display:grid; grid-template-columns:1fr 1fr; gap:18px; width:100%; }
+  .picks { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:18px; width:100%; }
   .pick { position:relative; display:flex; flex-direction:column; align-items:center; text-align:center;
     border:1px solid var(--line); border-radius:18px; padding:26px 20px 22px; overflow:hidden; cursor:pointer;
     text-decoration:none; color:var(--ink); transform-style:preserve-3d; transition:transform .12s ease;
@@ -136,6 +136,7 @@
     background:linear-gradient(180deg,var(--acb),var(--ac2)); box-shadow:0 8px 20px var(--ac); }
   .pick.pitch { --ac:rgba(255,122,24,.28); --ac2:#e0640c; --acb:var(--accent); }
   .pick.bat { --ac:rgba(25,198,255,.26); --ac2:#0f9fd0; --acb:var(--accent2); }
+  .pick.ball { --ac:rgba(255,138,60,.30); --ac2:#e8702a; --acb:#ff8a3c; }
 
   /* ---------- hard mode toggle ---------- */
   .opt { margin-top:34px; width:100%; display:flex; align-items:center; gap:16px;
@@ -298,6 +299,7 @@
       <a class="menu-item" href="/pitching#daily">🎯 Daily Challenge</a>
       <a class="menu-item" href="/pitching#streak">🔥 Streak Calendar</a>
       <a class="menu-item" href="/versus">⚔️ 1v1 Live · Face Off</a>
+      <a class="menu-item" href="/versus-hoops">🏀 1v1 Live · Hoops Face Off</a>
       <div class="menu-sec">Your Stuff</div>
       <a class="menu-item" href="/pitching#hof">🏛️ My Hall of Fame</a>
       <a class="menu-item" href="/pitching#achievements">🏅 Achievements</a>
@@ -391,6 +393,13 @@
       <div class="fig"><img src="/batter-figure.png" alt="Batter"></div>
       <div class="label">Build a <b>Batter</b></div>
       <div class="desc">Power, contact, speed &amp; more. Chase a ring.</div>
+      <div class="go">▶ Play</div>
+    </a>
+    <a class="pick ball" href="/hoops">
+      <span class="br tl"></span><span class="br tr"></span><span class="br bl"></span><span class="br br2"></span>
+      <div class="fig"><img src="/baller-figure.png" alt="Hooper"></div>
+      <div class="label">Build a <b>Hooper</b></div>
+      <div class="desc">Shooting, dunks, defense &amp; more. Chase the title.</div>
       <div class="go">▶ Play</div>
     </a>
   </div>
@@ -554,8 +563,8 @@ $('installNowBtn').onclick = async () => {
   const todayUTC = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }; // LOCAL date — must match each game's local-midnight daily reset
   // The daily alternates between the pitcher and batter games each day (date-seeded, same for
   // everyone worldwide). Point every daily/streak link at today's game.
-  const dailyGameFor = (s) => { const days = Math.floor(Date.parse(s + 'T00:00:00Z') / 86400000); return (days % 2 === 1) ? 'pitcher' : 'batter'; };
-  const dg = dailyGameFor(todayUTC()), dgPath = dg === 'batter' ? '/batting' : '/pitching';
+  const dailyGameFor = (s) => { const days = Math.floor(Date.parse(s + 'T00:00:00Z') / 86400000); return ['pitcher', 'batter', 'baller'][((days % 3) + 3) % 3]; };
+  const dg = dailyGameFor(todayUTC()), dgPath = dg === 'batter' ? '/batting' : dg === 'baller' ? '/hoops' : '/pitching';
   document.querySelectorAll('a[href="/pitching#daily"]').forEach(a => { a.href = dgPath + '#daily'; });
   document.querySelectorAll('a[href="/pitching#streak"]').forEach(a => { a.href = dgPath + '#streak'; });
   let streak = null, playedToday = false;
@@ -569,7 +578,7 @@ $('installNowBtn').onclick = async () => {
   }
   // today's discipline on the CTA copy
   const _dcDesc = $('dailyDesc');
-  if (_dcDesc && !playedToday) _dcDesc.textContent = `Everyone gets the same ${dg === 'batter' ? 'hitters' : 'pitchers'} today. One shot - climb the daily leaderboard.`;
+  if (_dcDesc && !playedToday) _dcDesc.textContent = `Everyone gets the same ${dg === 'batter' ? 'hitters' : dg === 'baller' ? 'players' : 'pitchers'} today. One shot - climb the daily leaderboard.`;
   // already played → reflect "Done" on the CTA
   if (playedToday) {
     const cta = $('dailyCta'); if (cta) cta.classList.add('done');

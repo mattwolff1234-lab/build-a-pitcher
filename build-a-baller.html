@@ -1,0 +1,3025 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>GoatLab · Hoops</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#0a1320">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="GoatLab">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="icon" href="/icon-192.png">
+<meta property="og:title" content="GoatLab · Hoops">
+<meta property="og:description" content="Spin, draft, and build the ultimate NBA hooper, then simulate their career.">
+<meta property="og:image" content="/icon-512.png">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="/icon-512.png">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="/achievements.js" defer></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-TVL2XEQ2Q7"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-TVL2XEQ2Q7');
+</script>
+<!-- Vercel Web Analytics -->
+<script defer src="/_vercel/insights/script.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg0:#04070d; --bg1:#0a1320;
+    --panel-a: rgba(20,31,48,.72); --panel-b: rgba(9,15,25,.86);
+    --ink:#eaf2fb; --muted:#7e8da3; --dim:#56627a;
+    --line: rgba(120,160,210,.16);
+    --accent:#ff7a18; --accent2:#19c6ff;
+    --grey:#9aa6b6; --bronze:#d08a3e; --silver:#c8d0da; --gold:#ffce3a; --diamond:#54c7ff; --legend:#a366ff;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  /* sleek thin scrollbars (replaces the chunky OS default) */
+  * { scrollbar-width: thin; scrollbar-color: rgba(120,160,210,.32) transparent; }
+  ::-webkit-scrollbar { width: 7px; height: 7px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(120,160,210,.28); border-radius: 8px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(120,160,210,.5); }
+  ::-webkit-scrollbar-corner { background: transparent; }
+  html,body { height:100%; }
+  body {
+    margin:0; background:var(--bg0); color:var(--ink); overflow-x:hidden;
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+    min-height:100vh; display:flex; flex-direction:column; align-items:center;
+  }
+  .disp { font-family:'Oswald',sans-serif; }
+
+  /* ---------- animated stadium background ---------- */
+  .bg { position:fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden; background:
+     radial-gradient(120% 90% at 50% -10%, #14253c 0%, var(--bg1) 38%, var(--bg0) 80%); }
+  .bg .glow { position:absolute; width:60vw; height:60vw; border-radius:50%; filter:blur(90px); opacity:.5; }
+  .bg .g1 { background:radial-gradient(circle,#ff7a1855,transparent 60%); top:-12%; left:-10%; animation:drift1 26s ease-in-out infinite; }
+  .bg .g2 { background:radial-gradient(circle,#19c6ff44,transparent 60%); bottom:-18%; right:-12%; animation:drift2 32s ease-in-out infinite; }
+  .bg .grid { position:absolute; inset:-50% 0 -10% 0; transform:perspective(520px) rotateX(62deg);
+    background-image:linear-gradient(rgba(120,170,220,.10) 1px,transparent 1px),linear-gradient(90deg,rgba(120,170,220,.10) 1px,transparent 1px);
+    background-size:46px 46px; mask-image:linear-gradient(transparent, #000 35%, #000 70%, transparent);
+    animation:gridmove 4.5s linear infinite; opacity:.5; }
+  .bg .scan { position:absolute; inset:0; opacity:.05;
+    background:repeating-linear-gradient(0deg, #fff 0 1px, transparent 1px 3px); }
+  @keyframes drift1 { 0%,100%{ transform:translate(-6%,-4%);} 50%{ transform:translate(8%,6%);} }
+  @keyframes drift2 { 0%,100%{ transform:translate(6%,4%);} 50%{ transform:translate(-8%,-6%);} }
+  /* Battery/heat: animating a 90px blur (scale) + the scrolling grid pegs the mobile GPU. Drop the
+     scale (above) and go fully static on phones / reduced-motion so backdrop-filters composite once. */
+  @media (prefers-reduced-motion: reduce){ .bg .glow, .bg .grid{ animation:none!important; } }
+  @media (max-width:820px){ .bg .glow, .bg .grid{ animation:none; } .bg .glow{ filter:none; } }
+  @keyframes gridmove { from{ background-position:0 0;} to{ background-position:0 46px;} }
+
+  .wrap { width:100%; max-width:780px; padding:14px; position:relative; z-index:1; }
+
+  /* ---------- header ---------- */
+  header { width:100%; max-width:780px; padding:20px 16px 2px; position:relative; z-index:1; }
+  .brand { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  @media (max-width: 560px) {
+    .brand { gap:8px; }
+    .brand .mark { font-size:22px; letter-spacing:2px; }
+    .brand .tag { display:none; }
+    .coming-tab { font-size:10px; padding:5px 8px; gap:5px; }
+    .coming-tab .soon { font-size:8px; padding:1px 4px; }
+  }
+  .brand .mark { font-family:'Oswald',sans-serif; font-weight:700; font-size:30px; letter-spacing:3px;
+    text-transform:uppercase; line-height:1; background:linear-gradient(180deg,#fff,#b9c6da);
+    -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .brand .mark i { color:var(--accent); font-style:normal; }
+  .brand .tag { font-family:'Oswald',sans-serif; font-size:11px; font-weight:600; letter-spacing:2px;
+    color:var(--accent2); border:1px solid rgba(25,198,255,.4); padding:3px 8px 2px; border-radius:4px;
+    text-transform:uppercase; background:rgba(25,198,255,.07); }
+  .brand-rule { flex:1; height:2px; border-radius:2px;
+    background:linear-gradient(90deg,var(--accent),transparent); opacity:.5; }
+  .mute { padding:6px 10px; font-size:15px; line-height:1; border-radius:8px;
+    background:rgba(255,255,255,.04); border:1px solid var(--line); }
+  .coming-tab { display:inline-flex; align-items:center; gap:7px; padding:6px 11px; border-radius:8px;
+    font-family:'Oswald',sans-serif; font-size:12px; letter-spacing:.5px; text-transform:uppercase; white-space:nowrap;
+    color:var(--dim); background:rgba(255,255,255,.03); border:1px solid var(--line); cursor:not-allowed; opacity:.75; }
+  .coming-tab.live { opacity:1; cursor:pointer; color:var(--ink); text-decoration:none; }
+  .coming-tab.live:hover { border-color:var(--accent2); box-shadow:0 0 14px rgba(25,198,255,.25); }
+  .coming-tab .soon { font-size:8.5px; font-weight:700; padding:1px 6px; border-radius:10px; letter-spacing:1px;
+    color:var(--accent); background:rgba(255,122,24,.14); border:1px solid rgba(255,122,24,.32); }
+  .toast { position:fixed; bottom:26px; left:50%; transform:translateX(-50%); z-index:200; display:none;
+    background:#10202e; border:1px solid var(--line); color:var(--ink); padding:11px 18px; border-radius:10px;
+    font-size:13px; box-shadow:0 10px 30px rgba(0,0,0,.55); }
+
+  /* ---------- HUD panel base ---------- */
+  .panel { position:relative; border:1px solid var(--line); border-radius:14px;
+    background:linear-gradient(180deg,var(--panel-a),var(--panel-b)); backdrop-filter:blur(6px);
+    box-shadow:0 10px 40px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.05); }
+  .panel::before, .panel::after { content:''; position:absolute; width:14px; height:14px; pointer-events:none; opacity:.65; }
+  .panel::before { top:7px; left:7px; border-top:2px solid var(--accent2); border-left:2px solid var(--accent2); }
+  .panel::after { bottom:7px; right:7px; border-bottom:2px solid var(--accent2); border-right:2px solid var(--accent2); }
+
+  /* ---------- reel ---------- */
+  .reel-frame { position:relative; overflow:hidden; border-radius:14px; height:226px; margin-top:6px; }
+  .reel-track { display:flex; gap:12px; padding:16px 14px; will-change:transform; }
+  .reel-track.idle { opacity:.34; }
+  .reel-track.idle .reel-card { box-shadow:none; border-color:rgba(120,150,190,.22); }
+  .reel-card { flex:0 0 150px; height:194px; border-radius:10px; border:2px solid var(--grey);
+    background:linear-gradient(180deg,#0c1420,#070b12); overflow:hidden; display:flex; flex-direction:column;
+    align-items:center; box-shadow:0 6px 16px rgba(0,0,0,.4); }
+  .reel-card img { width:100%; height:108px; object-fit:cover; object-position:top center; background:#0c131e; }
+  .reel-card .nm { font-size:12px; font-weight:600; margin-top:6px; text-align:center; padding:0 6px; line-height:1.15;
+    max-width:100%; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .reel-card .ov { font-family:'Oswald',sans-serif; font-size:24px; font-weight:700; margin-top:2px; line-height:1; }
+  .reel-card .pos { font-size:10px; color:var(--muted); margin-top:2px; letter-spacing:.5px; }
+  .reel-card .yr { font-family:'Oswald',sans-serif; font-size:11px; color:var(--accent); font-weight:600; }
+  .reel-card.win { border-color:#fff; box-shadow:0 0 0 2px rgba(255,255,255,.5),0 0 26px rgba(25,198,255,.55); }
+  .pointer { position:absolute; top:0; left:50%; transform:translateX(-50%); width:0; height:0;
+    border-left:9px solid transparent; border-right:9px solid transparent; border-top:13px solid var(--accent); z-index:5;
+    filter:drop-shadow(0 0 6px rgba(255,122,24,.8)); }
+  .pointer.bottom { top:auto; bottom:0; border-top:none; border-bottom:13px solid var(--accent); }
+  .reel-fade { position:absolute; top:0; bottom:0; width:80px; z-index:3; pointer-events:none; }
+  .reel-fade.l { left:0; background:linear-gradient(90deg,#0a121e,transparent); }
+  .reel-fade.r { right:0; background:linear-gradient(270deg,#0a121e,transparent); }
+  .sweep { position:absolute; top:0; bottom:0; left:30%; width:42%; z-index:4; pointer-events:none; opacity:0;
+    background:linear-gradient(100deg,transparent,rgba(255,255,255,.4),transparent); mix-blend-mode:screen; }
+
+  /* tier colors */
+  .t-grey{border-color:var(--grey);} .t-bronze{border-color:var(--bronze);box-shadow:0 0 12px rgba(208,138,62,.4);}
+  .t-silver{border-color:var(--silver);box-shadow:0 0 12px rgba(200,208,218,.4);}
+  .t-gold{border-color:var(--gold);box-shadow:0 0 14px rgba(255,206,58,.5);}
+  .t-diamond{border-color:var(--diamond);box-shadow:0 0 16px rgba(84,199,255,.6);}
+  .c-grey{color:var(--grey);} .c-bronze{color:var(--bronze);} .c-silver{color:var(--silver);}
+  .c-gold{color:var(--gold);} .c-diamond{color:var(--diamond);} .c-legend{color:var(--legend);}
+  .t-legend{border-color:var(--legend); box-shadow:0 0 18px rgba(163,102,255,.8), inset 0 0 14px rgba(163,102,255,.28);
+    animation:legendPulse 1.8s ease-in-out infinite;}
+  @keyframes legendPulse{0%,100%{box-shadow:0 0 12px rgba(163,102,255,.65),inset 0 0 10px rgba(163,102,255,.22);}
+    50%{box-shadow:0 0 24px rgba(163,102,255,1),inset 0 0 16px rgba(163,102,255,.4);}}
+  .legend-tag{font-family:'Oswald',sans-serif; font-size:11px; font-weight:600; color:var(--legend); letter-spacing:1px;}
+
+  /* ---------- controls ---------- */
+  .controls { display:flex; gap:10px; justify-content:center; margin:14px 0; flex-wrap:wrap; }
+  button { font-family:'Oswald',sans-serif; font-size:14px; font-weight:600; letter-spacing:1px; text-transform:uppercase;
+    cursor:pointer; border-radius:9px; padding:12px 22px; color:var(--ink); transition:.14s;
+    border:1px solid var(--line); background:linear-gradient(180deg,#1b2535,#121a27); }
+  button:hover:not(:disabled){ border-color:var(--accent2); box-shadow:0 0 14px rgba(25,198,255,.35); transform:translateY(-1px); }
+  button:disabled{ opacity:.35; cursor:not-allowed; }
+  button.primary { background:linear-gradient(180deg,#ff9038,#f06a0c); color:#1a1004; border-color:#ffae6a;
+    box-shadow:0 6px 20px rgba(240,106,12,.45); padding:13px 40px; font-size:16px; }
+  button.primary:hover:not(:disabled){ box-shadow:0 8px 26px rgba(240,106,12,.6); border-color:#ffd0a0; }
+  .spin-wrap { display:flex; justify-content:center; margin:16px 0 8px; }
+  .powerups { display:flex; gap:10px; justify-content:center; font-family:'Oswald',sans-serif; font-size:12px;
+    letter-spacing:1px; color:var(--muted); text-transform:uppercase; }
+  .powerups span { padding:3px 9px; border:1px solid var(--line); border-radius:20px; background:rgba(255,255,255,.03); }
+  .powerups span.used { text-decoration:line-through; opacity:.4; }
+
+  /* ---------- landed panel ---------- */
+  .landed { display:none; margin-top:14px; padding:16px; }
+  .landed.show { display:block; }
+  .landed-top { display:flex; gap:16px; align-items:center; }
+  .landed-top img { width:92px; height:92px; object-fit:cover; object-position:top center;
+    border-radius:10px; border:2px solid var(--grey); background:#0c131e; }
+  .landed-info h2 { font-family:'Oswald',sans-serif; margin:0; font-size:22px; font-weight:600; letter-spacing:.5px; }
+  .landed-info .sub { color:var(--muted); font-size:12px; margin-top:3px; letter-spacing:.8px; text-transform:uppercase; }
+  .landed-info .big-ov { font-family:'Oswald',sans-serif; font-size:34px; font-weight:700; margin-top:4px; line-height:1; }
+  .prime-badge { font-family:'Oswald',sans-serif; display:inline-block; font-size:11px; font-weight:700; color:#1a1205;
+    background:linear-gradient(90deg,var(--gold),var(--accent)); padding:2px 9px; border-radius:20px; margin-left:8px;
+    vertical-align:middle; letter-spacing:1px; }
+  .hint { color:var(--muted); font-size:12.5px; margin:12px 0 0; text-align:center; letter-spacing:.4px; }
+
+  /* ---------- build header / OVR gauge / pips ---------- */
+  .stage-head { display:flex; align-items:center; justify-content:space-between; margin:18px 4px 0; }
+  .sh-left { display:flex; align-items:center; gap:14px; }
+  .lbl { font-family:'Oswald',sans-serif; font-size:13px; letter-spacing:3px; color:var(--muted); text-transform:uppercase; }
+  .pips { display:flex; gap:5px; }
+  .pips i { width:18px; height:6px; border-radius:2px; background:rgba(255,255,255,.10); transition:.35s; }
+  .pips i.on { background:linear-gradient(90deg,var(--accent),var(--accent2)); box-shadow:0 0 9px rgba(255,122,24,.6); }
+  .ovr-badge { display:flex; align-items:center; gap:12px; }
+  .ovr-badge .meta { text-align:right; }
+  .ovr-badge .meta .t { font-family:'Oswald',sans-serif; font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:2px; }
+  .ovr-badge .meta .n { font-size:13px; font-weight:700; color:var(--ink); }
+  .ring { position:relative; width:68px; height:68px; border-radius:50%; display:grid; place-items:center;
+    background:conic-gradient(var(--g, rgba(255,255,255,.12)) calc(var(--p,0)*1%), rgba(255,255,255,.06) 0); }
+  .ring::before { content:''; position:absolute; inset:5px; border-radius:50%; background:#0a111c;
+    box-shadow:inset 0 0 14px rgba(0,0,0,.7); }
+  .ring span { position:relative; z-index:1; font-family:'Oswald',sans-serif; font-size:27px; font-weight:700; }
+
+  /* ---------- figure stage ---------- */
+  .stage3d { perspective:1100px; margin:8px auto 0; max-width:600px; }
+  .stage { position:relative; width:100%; aspect-ratio:1086/1275; max-width:520px; margin:0 auto; border-radius:16px; overflow:hidden;
+    border:1px solid var(--line); transform-style:preserve-3d; will-change:transform;
+    background:radial-gradient(120% 100% at 50% 30%, #122236 0%, #060a12 76%);
+    box-shadow:inset 0 0 70px rgba(0,0,0,.6), 0 14px 50px rgba(0,0,0,.5); }
+  .stage::before, .stage::after { content:''; position:absolute; width:26px; height:26px; z-index:6; pointer-events:none; opacity:.7; }
+  .stage::before { top:10px; left:10px; border-top:2px solid var(--accent2); border-left:2px solid var(--accent2); }
+  .stage::after { bottom:10px; right:10px; border-bottom:2px solid var(--accent2); border-right:2px solid var(--accent2); }
+  .stage .figure { position:absolute; inset:0; background:#39414c;
+    -webkit-mask:url(baller-figure.png) center/contain no-repeat; mask:url(baller-figure.png) center/contain no-repeat;
+    pointer-events:none; }
+  .seg { position:absolute; inset:0; background:transparent; transition:background .25s;
+    -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat; -webkit-mask-position:center; mask-position:center;
+    -webkit-mask-size:contain; mask-size:contain; pointer-events:none; }
+  .stage .shade { position:absolute; inset:0; pointer-events:none; mix-blend-mode:soft-light;
+    background:linear-gradient(158deg,rgba(255,255,255,.30),rgba(255,255,255,0) 42%,rgba(0,0,0,.40));
+    -webkit-mask:url(baller-figure.png) center/contain no-repeat; mask:url(baller-figure.png) center/contain no-repeat; }
+  .burst { position:absolute; inset:0; pointer-events:none; z-index:4; opacity:0;
+    background:radial-gradient(circle at 50% 40%,rgba(163,102,255,.85),rgba(163,102,255,0) 60%); }
+  .wires { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:3; }
+  .wires line { stroke:rgba(120,160,210,.4); stroke-width:1; }
+  .wires line.hot { stroke:var(--accent2); stroke-width:1.6; filter:drop-shadow(0 0 3px rgba(25,198,255,.7)); }
+  .wires line.set { stroke:rgba(255,255,255,.4); }
+  #nodes { position:absolute; inset:0; z-index:4; }
+  .anchor { position:absolute; width:9px; height:9px; border-radius:50%; transform:translate(-50%,-50%);
+    background:var(--muted); border:2px solid #0a0f15; }
+  .anchor.hot { background:var(--accent2); box-shadow:0 0 9px var(--accent2); }
+  .anchor.set { background:#fff; }
+
+  .node { position:absolute; transform:translate(-50%,-50%); width:118px; padding:0 0 7px; border-radius:11px; overflow:hidden;
+    background:linear-gradient(180deg,rgba(18,27,41,.96),rgba(8,13,21,.96)); border:1px solid var(--line);
+    text-align:center; box-shadow:0 8px 20px rgba(0,0,0,.5); backdrop-filter:blur(3px); }
+  .node .accent { height:4px; background:var(--muted); }
+  .node .body { padding:6px 7px 0; }
+  .node .label { font-family:'Oswald',sans-serif; font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; line-height:1.1; }
+  .node .part { font-size:9px; color:var(--dim); margin-top:2px; }
+  .node .row { display:flex; align-items:center; justify-content:center; gap:7px; margin-top:4px; }
+  .node .face { width:32px; height:32px; border-radius:50%; flex:0 0 auto;
+    background:#0c131e center/cover no-repeat; border:1.5px solid var(--line); }
+  .node .val { font-family:'Oswald',sans-serif; font-size:25px; font-weight:700; line-height:1; }
+  .node .who { font-size:9.5px; color:var(--muted); line-height:1.15; word-break:break-word; margin-top:3px; }
+  .node .preview { font-family:'Oswald',sans-serif; font-size:21px; font-weight:700; color:var(--accent); line-height:1; margin-top:3px; }
+  .node.assignable { border-color:var(--accent); cursor:pointer; box-shadow:0 0 14px rgba(255,122,24,.45); }
+  .node.assignable .accent { background:var(--accent); }
+  .node.assignable:hover { background:linear-gradient(180deg,#1d2a3d,#101824); }
+  /* shrink the body-part boxes on phones so the figure stays readable */
+  @media (max-width: 560px) {
+    .node { width:80px; padding:0 0 5px; border-radius:8px; }
+    .node .accent { height:3px; }
+    .node .body { padding:4px 5px 0; }
+    .node .label { font-size:8.5px; letter-spacing:.4px; }
+    .node .part { font-size:7.5px; margin-top:1px; }
+    .node .row { gap:4px; margin-top:2px; }
+    .node .face { width:20px; height:20px; border-width:1px; }
+    .node .val { font-size:17px; }
+    .node .who { font-size:8px; margin-top:2px; }
+    .node .preview { font-size:15px; margin-top:2px; }
+    .anchor { width:7px; height:7px; }
+  }
+
+  .fly { position:fixed; border-radius:50%; background:#0c131e center/cover no-repeat; border:2px solid #fff;
+    z-index:50; pointer-events:none; box-shadow:0 8px 24px rgba(0,0,0,.6); }
+
+  /* ---------- done ---------- */
+  .done { display:none; text-align:center; margin-top:16px; padding:20px; border-color:rgba(255,206,58,.4); }
+  .done.show { display:block; }
+  .done h2 { font-family:'Oswald',sans-serif; margin:0 0 6px; font-size:24px; letter-spacing:1px; text-transform:uppercase; }
+  .done .total { font-family:'Oswald',sans-serif; font-size:52px; font-weight:700; color:var(--gold); line-height:1; }
+  .done-sub { color:var(--muted); font-size:12px; margin:4px 0 16px; letter-spacing:1px; text-transform:uppercase; }
+  .career { margin:14px auto 18px; max-width:680px; text-align:left; border:1px solid rgba(120,160,210,.18); border-radius:10px;
+    background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.025)); overflow:hidden; }
+  .career-top { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 14px;
+    border-bottom:1px solid rgba(120,160,210,.14); }
+  .career-title { font-family:'Oswald',sans-serif; font-size:13px; color:var(--muted); text-transform:uppercase; letter-spacing:2px; }
+  .career-verdict { font-family:'Oswald',sans-serif; font-size:24px; font-weight:700; line-height:1; text-transform:uppercase; }
+  .career-verdict.yes { color:var(--gold); text-shadow:0 0 14px rgba(255,206,58,.35); }
+  .career-verdict.no { color:var(--silver); }
+  .career-verdict.mid { color:var(--bronze); }
+  .career-verdict.low { color:var(--dim); }
+  .career-verdict.goat { color:var(--gold); text-shadow:0 0 22px rgba(255,210,63,.8); animation:goatPulse 1.5s ease-in-out infinite; }
+  @keyframes goatPulse { 0%,100%{ text-shadow:0 0 16px rgba(255,210,63,.5);} 50%{ text-shadow:0 0 28px rgba(255,210,63,.95);} }
+  .career-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:rgba(120,160,210,.12); }
+  .career-stat { padding:10px 8px; background:rgba(5,9,15,.54); text-align:center; min-width:0; }
+  .career-stat b { display:block; font-family:'Oswald',sans-serif; font-size:22px; line-height:1; color:var(--ink); }
+  .career-stat span { display:block; margin-top:4px; color:var(--muted); font-size:10px; letter-spacing:1px; text-transform:uppercase; }
+  .career-note { padding:11px 14px 13px; color:var(--muted); font-size:12px; line-height:1.45; text-align:center; }
+  .career-note strong { color:var(--ink); font-weight:700; }
+  .career-log { max-height:208px; overflow-y:auto; padding:8px 10px; display:flex; flex-direction:column; gap:3px;
+    border-bottom:1px solid rgba(120,160,210,.14); }
+  .season-row { display:flex; flex-direction:column; gap:3px; padding:6px 9px; border-radius:6px; font-size:12px;
+    background:rgba(255,255,255,.025); border:1px solid transparent; }
+  .season-row.big { border-color:rgba(255,206,58,.45); background:rgba(255,206,58,.06); }
+  .season-row .s-main { display:flex; align-items:center; gap:8px; }
+  .season-row .age { font-family:'Oswald',sans-serif; color:var(--accent2); width:26px; flex:0 0 auto; }
+  .team-logo { display:inline-grid; place-items:center; width:28px; height:28px; border-radius:50%;
+    background:rgba(255,255,255,.92); border:1px solid rgba(255,255,255,.65); box-shadow:0 0 10px rgba(0,0,0,.25); flex:0 0 auto; }
+  .team-logo img { width:22px; height:22px; object-fit:contain; display:block; }
+  .team-logo.sm { width:24px; height:24px; }
+  .team-logo.sm img { width:19px; height:19px; }
+  .team-logo.lg { width:76px; height:76px; margin:0 auto 12px; box-shadow:0 0 24px rgba(255,255,255,.16); }
+  .team-logo.lg img { width:60px; height:60px; }
+  .season-row .s-line { flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--ink); }
+  .season-row .s-war { font-family:'Oswald',sans-serif; font-weight:700; width:36px; text-align:right; flex:0 0 auto; color:var(--ink); }
+  .season-row .s-badges { font-family:'Oswald',sans-serif; font-size:10px; letter-spacing:.5px; color:var(--gold); padding-left:66px; }
+
+  /* pre-sim: name + go */
+  .pre-sim { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; max-width:420px; margin:12px auto 0; }
+  .pre-sim input { flex:1; min-width:140px; font:inherit; font-size:14px; color:var(--ink); padding:11px 13px; border-radius:9px;
+    border:1px solid var(--line); background:rgba(255,255,255,.04); outline:none; }
+  .pre-sim input:focus { border-color:var(--accent2); box-shadow:0 0 12px rgba(25,198,255,.3); }
+  .pre-sim .primary { flex-basis:100%; }
+
+  /* live ticker */
+  .career-ticker { display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:rgba(120,160,210,.12);
+    border-bottom:1px solid rgba(120,160,210,.14); }
+  .career-ticker > div { background:rgba(5,9,15,.5); padding:8px 6px; text-align:center; }
+  .career-ticker b { display:block; font-family:'Oswald',sans-serif; font-size:20px; line-height:1; color:var(--accent2); }
+  .career-ticker span { display:block; margin-top:3px; font-size:9px; letter-spacing:1px; text-transform:uppercase; color:var(--muted); }
+  .career-ticker b.pop { animation:tkpop .5s ease; }
+  @keyframes tkpop { 0%{ transform:scale(1.5); color:var(--gold);} 100%{ transform:scale(1);} }
+
+  /* career body: log + news side-by-side on desktop, stacked on phones */
+  .career-cols { display:grid; grid-template-columns:1.15fr .85fr; }
+  .career-cols #careerLog { max-height:248px; border-bottom:none; border-right:1px solid rgba(120,160,210,.14); }
+  .career-news { max-height:248px; overflow-y:auto; padding:8px 10px; display:flex; flex-direction:column; gap:5px; }
+  .news-item { font-size:11.5px; line-height:1.35; color:var(--muted); padding:6px 9px; border-radius:7px;
+    background:rgba(255,255,255,.03); border-left:2px solid var(--accent2); }
+  .news-item.big { color:var(--ink); border-left-color:var(--gold); background:rgba(255,206,58,.07); font-weight:600; }
+  .news-item b { color:var(--ink); }
+  @media (max-width: 720px) {
+    .career-cols { grid-template-columns:1fr; }
+    .career-cols #careerLog { max-height:230px; border-right:none; border-bottom:1px solid rgba(120,160,210,.14); }
+    .career-news { max-height:170px; }
+  }
+
+  /* career card (final, shareable) */
+  .career-card { max-width:380px; margin:16px auto 0; border-radius:14px; overflow:hidden; text-align:left;
+    border:1px solid var(--line); box-shadow:0 14px 44px rgba(0,0,0,.5); }
+  .cc-top { padding:14px 16px; color:#fff; position:relative; display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+  .cc-meta { min-width:0; }
+  .cc-top .cc-team { font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:2px; text-transform:uppercase; opacity:.85; }
+  .cc-top .cc-name { font-family:'Oswald',sans-serif; font-size:24px; font-weight:700; line-height:1.05; margin-top:2px; }
+  .cc-top .cc-role { font-size:11px; opacity:.85; margin-top:2px; }
+  .cc-badge { flex-shrink:0; display:flex; align-items:center; gap:9px; }
+  .cc-top .cc-ovr { font-family:'Oswald',sans-serif; font-size:32px; font-weight:700; line-height:1.15;
+    background:rgba(0,0,0,.25); border-radius:10px; padding:2px 11px; }
+  .cc-logo { width:46px; height:46px; border-radius:50%; flex-shrink:0;
+    background:rgba(255,255,255,.92); display:grid; place-items:center; box-shadow:0 0 18px rgba(0,0,0,.25); }
+  .cc-logo img { width:36px; height:36px; object-fit:contain; }
+  .cc-verdict { font-family:'Oswald',sans-serif; font-size:14px; font-weight:700; text-transform:uppercase; letter-spacing:1px;
+    padding:9px 16px; text-align:center; background:#0a111c; }
+  .cc-vote { font-size:11px; color:var(--muted); text-transform:none; letter-spacing:0; margin-top:2px; font-weight:400; }
+  .cc-line { display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:rgba(120,160,210,.12); }
+  .cc-line > div { background:#0c131e; padding:9px 6px; text-align:center; }
+  .cc-line b { display:block; font-family:'Oswald',sans-serif; font-size:18px; color:var(--ink); line-height:1; }
+  .cc-line span { display:block; margin-top:3px; font-size:9px; letter-spacing:1px; text-transform:uppercase; color:var(--muted); }
+  .cc-trophies { padding:11px 14px; text-align:center; font-size:15px; background:#0c131e; border-top:1px solid rgba(120,160,210,.12); min-height:20px; }
+  .cc-trophies .none { font-size:11px; color:var(--dim); letter-spacing:1px; text-transform:uppercase; }
+  .cc-hint { text-align:center; font-size:10.5px; color:var(--dim); padding:8px; letter-spacing:.5px; }
+
+  /* ---------- draft overlay ---------- */
+  .draft-overlay { position:fixed; inset:0; z-index:200; display:none; align-items:center; justify-content:center;
+    background:rgba(2,5,10,.97); backdrop-filter:blur(14px); cursor:pointer; }
+  .draft-overlay.show { display:flex; }
+  .draft-inner { width:100%; max-width:520px; padding:36px 28px; text-align:center; pointer-events:none; }
+  .draft-league { font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:5px; color:var(--muted);
+    text-transform:uppercase; margin-bottom:8px; }
+  .draft-headline { font-family:'Oswald',sans-serif; font-size:44px; font-weight:700; letter-spacing:5px;
+    text-transform:uppercase; background:linear-gradient(180deg,#fff 20%,#7e9ab4); -webkit-background-clip:text;
+    background-clip:text; color:transparent; line-height:1; margin-bottom:10px; }
+  .draft-round-tag { font-family:'Oswald',sans-serif; font-size:13px; color:var(--accent2); letter-spacing:3px;
+    text-transform:uppercase; margin-bottom:28px; }
+  .draft-divider { height:1px; background:linear-gradient(90deg,transparent,rgba(120,160,210,.4),transparent); margin:0 50px 26px; }
+  .draft-call { font-size:16px; color:var(--muted); line-height:1.65; margin-bottom:20px; min-height:52px; }
+  .draft-call b { color:var(--ink); font-size:18px; }
+  .draft-selecting { font-family:'Oswald',sans-serif; font-size:20px; letter-spacing:.5px; min-height:28px; }
+  .draft-reveal { margin-top:22px; }
+  .dr-team { font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:4px; text-transform:uppercase;
+    color:var(--muted); margin-bottom:10px; }
+  .dr-name { font-family:'Oswald',sans-serif; font-size:48px; font-weight:700; line-height:1.05;
+    margin-bottom:8px; word-break:break-word; color:#fff; }
+  .dr-ovr { font-family:'Oswald',sans-serif; font-size:20px; font-weight:700; margin-bottom:12px; }
+  .dr-arch { display:inline-block; font-family:'Oswald',sans-serif; font-size:12px; letter-spacing:2px;
+    text-transform:uppercase; padding:5px 16px; border-radius:20px; }
+  .draft-skip { margin-top:28px; font-size:11px; color:var(--dim); letter-spacing:2px; text-transform:uppercase;
+    pointer-events:none; opacity:0; transition:opacity .4s; }
+  .draft-skip.show { opacity:.55; }
+
+  @media (max-width: 560px) {
+    .done { padding:16px 12px; }
+    .career-top { align-items:flex-start; flex-direction:column; gap:4px; }
+    .career-verdict { font-size:21px; }
+    .career-ticker b { font-size:17px; }
+    .career-ticker span { font-size:8px; }
+    .season-row { font-size:11.5px; }
+    .cc-top .cc-name { font-size:21px; }
+    .cc-top .cc-ovr { font-size:28px; }
+    .cc-line b { font-size:16px; }
+  }
+  .submit-row { display:flex; gap:8px; justify-content:center; max-width:380px; margin:0 auto; }
+  .submit-row input { flex:1; min-width:0; font:inherit; font-size:15px; color:var(--ink); padding:11px 14px;
+    border-radius:9px; border:1px solid var(--line); background:rgba(255,255,255,.04); outline:none; }
+  .submit-row input:focus { border-color:var(--accent2); box-shadow:0 0 12px rgba(25,198,255,.3); }
+  .submit-row button { padding:11px 22px; }
+  .submit-msg { font-size:12px; color:var(--muted); margin-top:8px; min-height:16px; letter-spacing:.4px; }
+
+  .lb { max-width:420px; margin:6px auto 0; }
+  .lb-tabs { display:flex; gap:6px; justify-content:center; margin-bottom:10px; }
+  .lb-tab { font-family:'Oswald',sans-serif; font-size:12px; letter-spacing:1.5px; padding:8px 18px; border-radius:8px;
+    text-transform:uppercase; background:rgba(255,255,255,.03); border:1px solid var(--line); color:var(--muted); }
+  .lb-tab.active { color:#1a1004; background:linear-gradient(180deg,#ff9038,#f06a0c); border-color:#ffae6a; }
+  .lb-sort-tabs { flex-wrap:wrap; margin-bottom:12px; }
+  .lb-sort-tabs .lb-tab { font-size:10.5px; letter-spacing:1px; padding:6px 12px; }
+  .lb-list { display:flex; flex-direction:column; gap:4px; max-height:62vh; overflow-y:auto; padding-right:2px; }
+  .lb-pin { position:sticky; top:0; z-index:3; padding-bottom:7px; margin-bottom:3px;
+    background:#0b1420; border-bottom:1px dashed rgba(120,160,210,.3); }
+  .lb-row.pinned { background:rgba(25,198,255,.12); border-color:var(--accent2); }
+  .lb-row { display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:8px;
+    background:rgba(255,255,255,.03); border:1px solid var(--line); cursor:pointer; }
+  .lb-row:hover { border-color:var(--accent2); box-shadow:0 0 12px rgba(25,198,255,.22); }
+  .lb-row .rank { font-family:'Oswald',sans-serif; font-size:15px; font-weight:600; color:var(--muted); width:30px; text-align:right; }
+  .lb-row .nm { flex:1; text-align:left; font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .lb-row .nm-ovr { color:var(--muted); font-size:11px; font-weight:600; letter-spacing:.5px; }
+  .lb-row .lb-stat { color:var(--accent2); }
+  .lb-row .chev { color:var(--muted); font-size:14px; }
+  .lb-row .ov { font-family:'Oswald',sans-serif; font-size:20px; font-weight:700; }
+  .lb-row.mine { border-color:var(--accent2); box-shadow:0 0 12px rgba(25,198,255,.3); background:rgba(25,198,255,.07); }
+  .lb-row.top1 .rank { color:var(--gold); } .lb-row.top2 .rank { color:var(--silver); } .lb-row.top3 .rank { color:var(--bronze); }
+  .lb-empty { color:var(--muted); font-size:13px; padding:18px; }
+  .build-summary { color:var(--muted); font-size:12px; margin:-2px 0 12px; letter-spacing:.4px; text-transform:uppercase; }
+  /* shareable build breakdown - vertical slot list with ringed headshots */
+  .bd-card { border:1px solid var(--line); border-radius:14px; padding:14px 15px 6px;
+    background:linear-gradient(180deg,rgba(16,25,38,.6),rgba(7,12,20,.7)); }
+  .bd-head { display:grid; grid-template-columns:auto auto 1fr auto; align-items:center; gap:11px;
+    padding:2px 2px 13px; border-bottom:1px solid var(--line); margin-bottom:6px; }
+  .bd-fig { position:relative; width:46px; height:58px; flex:none; }
+  .bd-fig .lay { position:absolute; inset:0; pointer-events:none;
+    -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat; -webkit-mask-position:center; mask-position:center;
+    -webkit-mask-size:contain; mask-size:contain; }
+  .bd-rank { font-family:'Oswald',sans-serif; font-weight:700; font-size:18px; min-width:38px; height:40px;
+    padding:0 7px; display:grid; place-items:center; border-radius:9px; color:var(--muted);
+    background:rgba(255,255,255,.05); border:1px solid var(--line); border-left:3px solid currentColor; }
+  .bd-id { min-width:0; }
+  .bd-name { font-family:'Oswald',sans-serif; font-weight:700; font-size:21px; letter-spacing:.5px; color:var(--ink);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.05; }
+  .bd-tier { font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:2px; text-transform:uppercase; margin-top:3px; }
+  .bd-ovr { text-align:center; }
+  .bd-ovr span { display:block; font-family:'Oswald',sans-serif; font-size:9px; letter-spacing:2px; color:var(--muted); }
+  .bd-ovr b { font-family:'Oswald',sans-serif; font-weight:700; font-size:34px; line-height:.85; }
+  .build-slots { display:flex; flex-direction:column; }
+  .build-slot { display:grid; grid-template-columns:auto 1fr auto; gap:13px; align-items:center; padding:9px 2px;
+    border-bottom:1px solid rgba(120,160,210,.09); }
+  .build-slot:last-child { border-bottom:0; }
+  .build-slot img { width:46px; height:46px; border-radius:50%; object-fit:cover; background:#11161d;
+    border:2.5px solid currentColor; box-shadow:0 0 11px -3px currentColor; }
+  .build-slot .slot-name { font-family:'Oswald',sans-serif; text-transform:uppercase; letter-spacing:1.2px; font-size:11px; font-weight:600; }
+  .build-slot .slot-player { color:var(--ink); font-size:14px; font-weight:700; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .build-slot .slot-val { font-family:'Oswald',sans-serif; font-size:23px; font-weight:700; }
+  .bd-share { width:100%; margin-top:14px; padding:12px; border-radius:10px; cursor:pointer;
+    font-family:'Oswald',sans-serif; font-size:13px; letter-spacing:1.5px; text-transform:uppercase;
+    color:#fff; background:#0a0a0a; border:1px solid #2a3340; }
+  .bd-share:hover { border-color:var(--accent2); box-shadow:0 0 14px rgba(25,198,255,.22); }
+  .bd-hint { text-align:center; color:var(--dim); font-size:11px; margin-top:9px; }
+  .ghost-btn { font-family:'Oswald',sans-serif; font-size:13px; letter-spacing:1px; text-transform:uppercase; margin-top:16px;
+    padding:10px 22px; border-radius:9px; color:var(--muted); border:1px solid var(--line); background:rgba(255,255,255,.03); }
+  .ghost-btn:hover { color:var(--ink); border-color:var(--accent2); }
+
+  /* ---- overlays (menu / leaderboard / how-to-play) ---- */
+  .overlay { position:fixed; inset:0; z-index:100; display:none; align-items:center; justify-content:center; padding:18px;
+    background:rgba(3,6,11,.74); backdrop-filter:blur(5px); }
+  .overlay.show { display:flex; }
+  .overlay-card { width:100%; max-width:440px; max-height:86dvh; display:flex; flex-direction:column; overflow:hidden; }
+  .overlay-head { display:flex; align-items:center; justify-content:space-between; padding:14px 16px;
+    border-bottom:1px solid var(--line); }
+  .overlay-title { font-family:'Oswald',sans-serif; font-size:16px; letter-spacing:2px; text-transform:uppercase; }
+  .overlay-close { font-size:16px; line-height:1; padding:6px 11px; border-radius:8px; color:var(--ink);
+    background:rgba(255,255,255,.05); border:1px solid var(--line); }
+  .overlay-close:hover { border-color:var(--accent); }
+  .overlay-body { padding:16px; overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; }
+  .menu-item { display:flex; align-items:center; gap:10px; width:100%; text-align:left; padding:11px 14px; margin-bottom:6px;
+    font-family:'Oswald',sans-serif; font-size:14px; letter-spacing:1px; text-transform:uppercase; text-decoration:none;
+    border-radius:10px; color:var(--ink); background:linear-gradient(180deg,#1b2535,#121a27); border:1px solid var(--line); }
+  .menu-item:last-child { margin-bottom:0; }
+  .menu-sec { font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:2px; text-transform:uppercase;
+    color:var(--muted); margin:15px 4px 7px; padding-top:13px; border-top:1px solid var(--line); }
+  .menu-sec:first-of-type { margin-top:6px; padding-top:0; border-top:0; }
+  .menu-item:hover { border-color:var(--accent2); box-shadow:0 0 14px rgba(25,198,255,.25); }
+  .tip-item { align-items:flex-start; border-color:rgba(255,122,24,.4); }
+  .tip-item:hover { border-color:var(--accent); box-shadow:0 0 14px rgba(255,122,24,.3); }
+  .tip-item .ti-text { display:flex; flex-direction:column; gap:3px; }
+  .tip-item .ti-text small { text-transform:none; letter-spacing:0; font-family:'Inter',sans-serif; font-size:12px; color:var(--muted); line-height:1.35; }
+  .mi-chev { margin-left:auto; font-size:14px; color:var(--muted); }
+  .disc-item { border-color:rgba(88,101,242,.5); }
+  .disc-item:hover { border-color:#5865F2; box-shadow:0 0 14px rgba(88,101,242,.4); }
+  .social-row { display:flex; gap:10px; margin:2px 0 6px; }
+  .soc-tile { width:46px; height:46px; border-radius:12px; display:flex; align-items:center; justify-content:center;
+    color:#fff; border:1px solid var(--line); transition:transform .1s ease, box-shadow .15s ease; }
+  .soc-tile:hover { transform:translateY(-2px); }
+  .soc-tile svg { width:22px; height:22px; }
+  .soc-discord { background:#5865F2; }
+  .soc-discord:hover { box-shadow:0 6px 16px rgba(88,101,242,.45); }
+  .soc-x { background:#000; }
+  .soc-x:hover { box-shadow:0 6px 16px rgba(0,0,0,.5); border-color:rgba(255,255,255,.3); }
+  .discord-cta { display:flex; align-items:flex-start; gap:12px; width:100%; box-sizing:border-box;
+    margin-top:14px; padding:15px 16px; border-radius:12px; text-decoration:none; color:var(--ink);
+    background:linear-gradient(180deg,rgba(88,101,242,.16),rgba(88,101,242,.05)); border:1px solid rgba(88,101,242,.55); }
+  .discord-cta:hover { border-color:#5865F2; box-shadow:0 0 16px rgba(88,101,242,.4); }
+  .discord-cta .dc-emoji { font-size:26px; line-height:1; }
+  .discord-cta .dc-text { display:flex; flex-direction:column; gap:3px; }
+  .discord-cta .dc-text b { font-family:'Oswald',sans-serif; font-size:16px; letter-spacing:.5px; text-transform:uppercase; }
+  .discord-cta .dc-text small { font-family:'Inter',sans-serif; font-size:12.5px; color:var(--muted); line-height:1.4; }
+  .install-steps { margin:-2px 0 9px; padding:13px; border-radius:10px; background:rgba(0,0,0,.28); border:1px solid var(--line); }
+  .install-steps .inst-label { font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:1.5px; text-transform:uppercase;
+    color:var(--accent2); margin:10px 0 9px; }
+  .install-steps .inst-label:first-of-type { margin-top:0; }
+  .install-steps .step { display:flex; gap:10px; margin-bottom:10px; }
+  .install-steps .step:last-child { margin-bottom:0; }
+  .install-steps .step-n { flex:0 0 auto; width:22px; height:22px; border-radius:50%; background:rgba(255,122,24,.15);
+    border:1px solid var(--accent); color:var(--accent); font-family:'Oswald',sans-serif; font-size:12px; font-weight:700;
+    display:flex; align-items:center; justify-content:center; }
+  .install-steps .step b { font-size:13px; color:var(--ink); }
+  .install-steps .step p { margin:2px 0 0; font-size:12px; color:var(--muted); line-height:1.45; }
+  .how-body { text-align:left; color:var(--muted); font-size:13.5px; line-height:1.6; }
+  .how-body p { margin:0 0 12px; }
+  .how-body ol, .how-body ul { margin:0 0 14px; padding-left:20px; }
+  .how-body li { margin-bottom:7px; }
+  .how-body b { color:var(--ink); }
+  .how-body h4 { font-family:'Oswald',sans-serif; color:var(--accent); font-size:13px; letter-spacing:2px;
+    text-transform:uppercase; margin:4px 0 8px; }
+  .footer-note { color:var(--dim); font-size:11.5px; text-align:center; padding:22px 12px 36px; position:relative; z-index:1; letter-spacing:.4px; }
+  .loading { text-align:center; color:var(--muted); padding:50px; font-family:'Oswald',sans-serif; letter-spacing:2px; text-transform:uppercase; }
+  /* ---- Accounts + Hall of Fame ---- */
+  .acct { display:flex; align-items:center; gap:10px; padding:11px 13px; margin-bottom:9px; border:1px solid rgba(120,160,210,.18); border-radius:12px; background:rgba(8,14,22,.5); }
+  .acct img { width:34px; height:34px; border-radius:50%; flex:0 0 auto; }
+  .acct .who { flex:1; min-width:0; }
+  .acct .who b { display:block; font-size:13px; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .acct .who span { font-size:11px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; }
+  .acct .signout { font-size:11px; padding:6px 10px; flex:0 0 auto; }
+  #acctSlot { margin-bottom:9px; }
+  #gsiWrap { display:flex; justify-content:center; }
+  .acct-hint { font-size:11px; color:var(--muted); text-align:center; padding:8px 6px 4px; line-height:1.4; }
+  .save-hof-btn { background:linear-gradient(135deg,#ffce3a,#e0a020); color:#1a1205; }
+  .save-hof-btn:disabled { opacity:.6; cursor:default; }
+  .hof-empty { text-align:center; color:var(--muted); padding:28px 16px; font-size:13px; line-height:1.6; }
+  .hof-list { display:flex; flex-direction:column; gap:12px; max-height:60vh; overflow-y:auto; padding:4px 2px 8px; }
+  .hof-card { position:relative; border:1px solid rgba(120,160,210,.18); border-radius:14px; overflow:hidden; background:#0c131e; }
+  .hof-card .hc-top { display:flex; align-items:center; gap:12px; padding:11px 13px; }
+  .hof-card .hc-logo img { width:32px; height:32px; object-fit:contain; }
+  .hof-card .hc-id { flex:1; min-width:0; }
+  .hof-card .hc-name { font-family:'Oswald',sans-serif; font-size:17px; font-weight:700; color:#fff; line-height:1.05; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .hof-card .hc-sub { font-size:10px; color:rgba(255,255,255,.82); text-transform:uppercase; letter-spacing:.6px; margin-top:2px; }
+  .hof-card .hc-ovr { font-family:'Oswald',sans-serif; font-size:30px; font-weight:700; color:#fff; line-height:1; flex:0 0 auto; }
+  .hof-card .hc-body { padding:9px 13px 12px; }
+  .hof-card .hc-verdict { font-family:'Oswald',sans-serif; font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; }
+  .hof-card .hc-stats { font-size:12px; color:var(--ink); margin-top:4px; }
+  .hof-card .hc-money { font-family:'Oswald',sans-serif; font-size:14px; font-weight:700; color:var(--gold); margin-top:3px; }
+  .hof-card .hc-del { position:absolute; top:8px; right:10px; background:rgba(0,0,0,.32); border:none; color:rgba(255,255,255,.7); font-size:13px; cursor:pointer; width:24px; height:24px; border-radius:50%; line-height:22px; padding:0; }
+  .hof-card .hc-del:hover { background:rgba(220,60,60,.75); color:#fff; }
+  /* ---------- Daily Challenge + streak (ported from the pitcher game) ---------- */
+  .dc-btn.pulse { color:var(--gold); border-color:rgba(255,206,58,.5); animation:dcPulse 1.8s ease-in-out infinite; }
+  .dc-btn.done { color:var(--accent2); border-color:rgba(25,198,255,.4); opacity:.9; }
+  @keyframes dcPulse { 0%,100%{ box-shadow:0 0 0 rgba(255,206,58,0); } 50%{ box-shadow:0 0 16px rgba(255,206,58,.55); } }
+  .streak-chip { display:inline-flex; align-items:center; gap:4px; padding:5px 9px; border-radius:8px;
+    font-family:'Oswald',sans-serif; font-size:13px; font-weight:600; letter-spacing:.5px; color:var(--gold);
+    background:rgba(255,122,24,.12); border:1px solid rgba(255,122,24,.35); white-space:nowrap; }
+  @media (max-width:560px){ .streak-chip { font-size:11px; padding:4px 7px; } }
+  .dc-header-tag { color:var(--gold)!important; border-color:rgba(255,206,58,.5)!important; }
+  .day-toast { position:fixed; bottom:26px; left:50%; transform:translateX(-50%); z-index:210; display:none;
+    max-width:340px; text-align:center; white-space:pre-line; background:linear-gradient(180deg,rgba(20,31,48,.96),rgba(9,15,25,.97));
+    border:1px solid rgba(255,206,58,.4); color:var(--ink); padding:13px 20px; border-radius:13px; font-size:14px; line-height:1.4;
+    box-shadow:0 14px 44px rgba(0,0,0,.55), 0 0 26px rgba(255,206,58,.16); align-items:center; justify-content:center; }
+  @media (max-width:560px){ .day-toast { left:12px; right:12px; transform:none; max-width:none; } }
+  .streak-chip .freeze { color:var(--diamond); }
+  .daily-info { display:none; flex-wrap:wrap; gap:8px 14px; justify-content:center; align-items:center; margin:0 0 12px;
+    padding:10px 14px; border:1px solid rgba(255,206,58,.3); border-radius:12px; background:rgba(255,206,58,.06);
+    font-family:'Oswald',sans-serif; font-size:12.5px; letter-spacing:.4px; }
+  .daily-info .di-best b { color:var(--gold); }
+  .daily-info .di-lucky { color:var(--gold); font-weight:600; }
+  .daily-info .di-prev { color:var(--accent2); }
+  .reel-frame.lucky { box-shadow:0 0 0 2px rgba(255,206,58,.5), 0 0 34px rgba(255,206,58,.4) !important; animation:luckyGlow 1.6s ease-in-out infinite; }
+  @keyframes luckyGlow { 0%,100%{ box-shadow:0 0 0 2px rgba(255,206,58,.45), 0 0 22px rgba(255,206,58,.3); } 50%{ box-shadow:0 0 0 2px rgba(255,206,58,.7), 0 0 40px rgba(255,206,58,.55); } }
+  .daily-reveal { position:fixed; inset:0; z-index:260; display:none; align-items:center; justify-content:center; padding:16px;
+    background:rgba(2,5,10,.78); backdrop-filter:blur(4px); }
+  .daily-reveal.show { display:flex; }
+  .dr-card { width:100%; max-width:380px; text-align:center; padding:26px 24px; border-radius:18px;
+    border:1px solid rgba(255,206,58,.4); background:linear-gradient(180deg,rgba(20,31,48,.96),rgba(9,15,25,.98));
+    box-shadow:0 24px 70px rgba(0,0,0,.6), 0 0 40px rgba(255,206,58,.16); }
+  .dr-eyebrow { font-family:'Oswald',sans-serif; font-size:12px; letter-spacing:3px; text-transform:uppercase; color:var(--gold); }
+  /* scoped so it doesn't collide with the draft-overlay's own .dr-ovr */
+  .daily-reveal .dr-ovr { font-family:'Oswald',sans-serif; font-weight:700; font-size:62px; line-height:1; margin:6px 0 2px; color:var(--ink); }
+  .daily-reveal .dr-ovr small { font-size:15px; color:var(--muted); letter-spacing:2px; margin-left:6px; }
+  .dr-pb { font-family:'Oswald',sans-serif; font-weight:700; letter-spacing:1px; color:var(--gold); margin:6px 0; animation:pbFlash 1s ease-in-out infinite; }
+  @keyframes pbFlash { 0%,100%{ opacity:1; transform:scale(1); } 50%{ opacity:.6; transform:scale(1.05); } }
+  .dr-froze { color:var(--diamond); font-size:13px; margin:4px 0; }
+  .dr-rank { font-family:'Oswald',sans-serif; font-weight:700; font-size:40px; line-height:1; margin-top:10px; color:var(--accent2); }
+  .dr-pct { font-family:'Oswald',sans-serif; font-size:18px; letter-spacing:1px; color:var(--gold); margin-top:2px; }
+  .dr-field { color:var(--muted); font-size:12.5px; margin-top:4px; }
+  .dr-streak { color:var(--accent); font-family:'Oswald',sans-serif; font-size:14px; letter-spacing:.5px; margin-top:12px; }
+  .dr-replay { color:var(--gold); font-family:'Oswald',sans-serif; font-size:15px; letter-spacing:.5px; margin-top:8px; }
+  .dr-replay:empty { display:none; }
+  .dres-card { max-width:420px; }
+  .dres-you { display:flex; align-items:center; gap:16px; justify-content:center; margin:8px 0 2px; }
+  .dres-ovrbox { display:flex; flex-direction:column; align-items:center; }
+  .dres-ovrbox span { font-family:'Oswald',sans-serif; font-weight:700; font-size:52px; line-height:1; color:var(--ink); }
+  .dres-ovrbox small, .dres-rankbox small { font-size:10px; letter-spacing:1.5px; color:var(--muted); }
+  .dres-rankbox { text-align:left; }
+  .dres-rank { font-family:'Oswald',sans-serif; font-weight:700; font-size:34px; line-height:1; color:var(--accent2); }
+  .dres-pct { font-family:'Oswald',sans-serif; font-size:15px; letter-spacing:1px; color:var(--gold); }
+  .dres-best { margin:12px 0 4px; padding:10px 12px; border-radius:10px; font-size:13px; line-height:1.45;
+    border:1px solid rgba(84,199,255,.3); background:rgba(84,199,255,.07); color:var(--ink); }
+  .dres-best b { color:var(--diamond); }
+  .dres-best .dres-gap { color:var(--muted); font-size:12px; }
+  .dres-board-label { font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); text-align:left; margin:10px 0 6px; }
+  .dres-board { display:flex; flex-direction:column; gap:4px; max-height:220px; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+  .dres-row { display:flex; align-items:center; gap:10px; padding:7px 10px; border-radius:8px; background:rgba(255,255,255,.03); border:1px solid var(--line); font-size:13px; }
+  .dres-row.me { border-color:var(--accent2); background:rgba(25,198,255,.1); }
+  .dres-row > span:first-child { width:20px; color:var(--muted); font-family:'Oswald',sans-serif; }
+  .dres-row .dres-nm { flex:1; text-align:left; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .dres-row .dres-rov { font-family:'Oswald',sans-serif; font-weight:700; }
+  .sk-stats { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+  .sk-stat { background:rgba(255,122,24,.1); border:1px solid rgba(255,122,24,.32); border-radius:11px; padding:9px 16px; text-align:center; min-width:74px; }
+  .sk-stat b { display:block; font-family:'Oswald',sans-serif; font-size:24px; font-weight:700; color:var(--gold); line-height:1; }
+  .sk-stat span { font-size:9px; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); }
+  .sk-next { text-align:center; font-family:'Oswald',sans-serif; font-size:12.5px; color:var(--accent2); margin:12px 0 6px; letter-spacing:.4px; }
+  #streakModal .overlay-card { max-width:560px; }
+  .sk-timeline { display:flex; gap:0; overflow-x:auto; -webkit-overflow-scrolling:touch; overscroll-behavior-x:contain; padding:34px 8px 10px; }
+  .sk-day { position:relative; flex:0 0 auto; width:60px; text-align:center; }
+  .sk-day .sk-dow { font-size:10.5px; color:var(--dim); text-transform:uppercase; letter-spacing:.5px; }
+  .sk-day .sk-dot { width:46px; height:46px; margin:6px auto 4px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-size:23px; border:2px solid var(--line); background:rgba(255,255,255,.03); position:relative; z-index:1; }
+  .sk-day .sk-dom { font-family:'Oswald',sans-serif; font-size:16px; color:var(--muted); line-height:1; }
+  .sk-day .sk-mon { font-size:9px; color:var(--dim); text-transform:uppercase; letter-spacing:1px; height:12px; }
+  .sk-day.played .sk-dot { border-color:var(--gold); background:rgba(255,206,58,.18); box-shadow:0 0 14px rgba(255,206,58,.3); }
+  .sk-day.played .sk-dom { color:var(--ink); }
+  .sk-day.today .sk-dot { border-color:var(--accent2); background:rgba(25,198,255,.16); }
+  .sk-day.today .sk-dom { color:var(--accent2); }
+  .sk-day.future { opacity:.4; }
+  .sk-day.missed .sk-dot { opacity:.5; color:var(--dim); }
+  .sk-day.ll::before { content:''; position:absolute; left:-30px; top:39px; width:60px; height:4px; background:var(--gold); opacity:.55; z-index:0; }
+  .sk-badge { position:absolute; top:-24px; left:50%; transform:translateX(-50%); font-size:19px; z-index:3; filter:drop-shadow(0 0 4px rgba(255,206,58,.6)); }
+  .sk-legend { text-align:center; font-size:11px; color:var(--dim); margin-top:12px; letter-spacing:.3px; }
+</style>
+</head>
+<body>
+<div class="bg">
+  <div class="glow g1"></div>
+  <div class="glow g2"></div>
+  <div class="grid"></div>
+  <div class="scan"></div>
+</div>
+
+<header>
+  <div class="brand">
+    <span class="mark">Hooper <i>Lab</i></span>
+    <span class="tag">Draft Mode</span>
+    <span id="streakChip" class="streak-chip" title="Your daily streak" style="display:none">🔥 0</span>
+    <span class="brand-rule"></span>
+    <button id="muteBtn" class="mute" title="Toggle sound">🔊</button>
+    <button id="dailyBtn" class="coming-tab live dc-btn" title="Daily Challenge - same players for everyone!">🎯 Daily</button>
+    <a id="buildTab" class="coming-tab live" href="/pitching" title="Build a Pitcher">🛠️ Build a Pitcher</a>
+    <button id="menuBtn" class="mute" title="Menu">☰</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <div id="loading" class="loading">Loading players…</div>
+
+  <div id="game" style="display:none">
+    <div id="dailyInfo" class="daily-info" style="display:none"></div>
+    <div class="reel-frame panel">
+      <div class="pointer"></div>
+      <div class="pointer bottom"></div>
+      <div class="reel-fade l"></div>
+      <div class="reel-fade r"></div>
+      <div class="sweep" id="sweep"></div>
+      <div id="track" class="reel-track"></div>
+    </div>
+
+    <div class="spin-wrap">
+      <button id="spinBtn" class="primary">Spin</button>
+    </div>
+    <div class="powerups">
+      <span id="pu-respin">Re-spin 1</span>
+      <span id="pu-boost">Boost 1</span>
+      <span id="pu-snag">Snag 1</span>
+    </div>
+
+    <div id="landed" class="landed panel">
+      <div class="landed-top">
+        <img id="landedImg" src="" alt="">
+        <div class="landed-info">
+          <h2 id="landedName">-<span id="primeBadge" class="prime-badge" style="display:none">PRIME</span></h2>
+          <div class="sub" id="landedSub">-</div>
+          <div class="big-ov" id="landedOvr">-</div>
+        </div>
+      </div>
+      <div class="hint">Tap a glowing body part to lock this player's rating into that slot.</div>
+      <div class="controls">
+        <button id="snagLeftBtn">⟵ Snag</button>
+        <button id="respinBtn">Re-spin</button>
+        <button id="boostBtn">⚡ Boost</button>
+        <button id="snagRightBtn">Snag ⟶</button>
+      </div>
+    </div>
+
+    <div class="stage-head">
+      <div class="sh-left">
+        <span class="lbl">Build</span>
+        <div id="pips" class="pips"></div>
+      </div>
+      <div class="ovr-badge">
+        <div class="meta">
+          <div class="t">Overall</div>
+          <div class="n" id="slotsLeft">8 slots left</div>
+        </div>
+        <div class="ring" id="ovrRing"><span id="ovrNum">-</span></div>
+      </div>
+    </div>
+
+    <div class="stage3d">
+      <div class="stage" id="stage">
+        <div class="figure" id="figure"></div>
+        <div id="segments"></div>
+        <div class="shade"></div>
+        <div class="burst" id="burst"></div>
+        <svg class="wires" id="wires" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+        <div id="nodes"></div>
+      </div>
+    </div>
+
+    <div id="done" class="done panel">
+      <h2>Hooper Complete</h2>
+      <div class="total" id="doneOvr">-</div>
+      <div class="done-sub">Weighted overall rating</div>
+
+      <div id="preSim" class="pre-sim">
+        <input id="nameInput" maxlength="20" placeholder="Name your hooper" autocomplete="off">
+        <button id="simBtn" class="primary">▶ Simulate Career</button>
+      </div>
+
+      <div id="career" class="career" style="display:none">
+        <div class="career-top">
+          <div>
+            <div class="career-title">Career Simulation</div>
+            <div id="careerSpan" class="done-sub" style="margin:3px 0 0">-</div>
+          </div>
+          <div id="careerVerdict" class="career-verdict">…</div>
+          <div id="careerNote" class="career-note" style="display:none"></div>
+        </div>
+        <div class="career-ticker">
+          <div><b id="tkK">0</b><span>Points</span></div>
+          <div><b id="tkW">0</b><span>Assists</span></div>
+          <div><b id="tkWar">0.0</b><span>Win Shares</span></div>
+          <div><b id="tkMoney">$0</b><span>Earned</span></div>
+        </div>
+        <div class="career-cols">
+          <div id="careerLog" class="career-log"></div>
+          <div id="careerNews" class="career-news"></div>
+        </div>
+      </div>
+
+      <div id="careerCard" class="career-card" style="display:none"></div>
+
+      <div id="submitRow" class="submit-row" style="display:none">
+        <button id="saveHofBtn" class="save-hof-btn">💾 Save to my Hall of Fame</button>
+        <button id="submitBtn" class="primary">Submit to Leaderboard</button>
+      </div>
+      <div id="submitMsg" class="submit-msg"></div>
+      <a class="discord-cta" href="https://discord.gg/bMVX2zJp49" target="_blank" rel="noopener"><span class="dc-emoji">💬</span><span class="dc-text"><b>Share this build in our Discord</b><small>Talk shop, post your builds, and challenge players to live 1v1s ↗</small></span></a>
+
+      <button id="resetBtn" class="ghost-btn">Build Another</button>
+    </div>
+  </div>
+</div>
+
+<div id="menu" class="overlay">
+  <div class="overlay-card panel">
+    <div class="overlay-head"><span class="overlay-title">Menu</span><button class="overlay-close" data-close="menu">✕</button></div>
+    <div class="overlay-body">
+      <div id="acctSlot"></div>
+      <div class="menu-sec">Play</div>
+      <a class="menu-item" href="/">🏠 Home</a>
+      <button class="menu-item" id="miDaily">🎯 Daily Challenge</button>
+      <button class="menu-item" id="miStreak">🔥 Streak Calendar</button>
+      <a class="menu-item" href="/versus-hoops">⚔️ 1v1 Live · Hoops Face Off</a>
+      <div class="menu-sec">Your Stuff</div>
+      <button class="menu-item" id="miHof">🏛️ My Hall of Fame</button>
+      <button class="menu-item" id="miAch">🏅 Achievements<span class="mi-chev" data-ach-count style="margin-left:auto;font-family:'Oswald',sans-serif;font-size:12px;color:var(--gold)">0/0</span></button>
+      <div class="menu-sec">Compete</div>
+      <button class="menu-item" id="miLb">🏆 Leaderboard</button>
+      <a class="menu-item" href="/versus-hoops#stats">📊 1v1 Stats</a>
+      <div class="menu-sec">Help</div>
+      <button class="menu-item" id="miHow">📖 How to Play</button>
+      <button class="menu-item" id="miInstall">📲 Install App<span class="mi-chev" id="installChev">⌄</span></button>
+      <div id="installSteps" class="install-steps" style="display:none">
+        <button id="installNowBtn" class="primary" style="display:none;width:100%;margin-bottom:12px">⬇ Install GoatLab</button>
+        <div class="inst-label">On Desktop / Android (Chrome · Edge)</div>
+        <div class="step"><span class="step-n">1</span><div><b>Look for the install icon</b><p>Click the install icon (a screen with a ⊕) on the right side of the address bar.</p></div></div>
+        <div class="step"><span class="step-n">2</span><div><b>Click Install</b><p>Confirm in the prompt - the app opens in its own window with a home-screen icon.</p></div></div>
+        <div class="inst-label">On iPhone / iPad (Safari)</div>
+        <div class="step"><span class="step-n">1</span><div><b>Open in Safari</b><p>Make sure you're in Safari - not Chrome or another browser.</p></div></div>
+        <div class="step"><span class="step-n">2</span><div><b>Tap Share</b><p>Tap the Share button at the bottom of the screen (the box with an arrow pointing up).</p></div></div>
+        <div class="step"><span class="step-n">3</span><div><b>Add to Home Screen</b><p>Scroll down, tap "Add to Home Screen," then tap "Add."</p></div></div>
+      </div>
+      <div class="menu-sec">Community</div>
+      <div class="social-row">
+        <a class="soc-tile soc-discord" href="https://discord.gg/bMVX2zJp49" target="_blank" rel="noopener" title="Join our Discord" aria-label="Discord"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M20.317 4.369A19.79 19.79 0 0 0 15.432 3a.07.07 0 0 0-.074.036c-.211.375-.444.864-.608 1.249a18.27 18.27 0 0 0-5.487 0 12.6 12.6 0 0 0-.617-1.25.07.07 0 0 0-.073-.035A19.736 19.736 0 0 0 3.677 4.37a.064.064 0 0 0-.03.025C.533 9.046-.32 13.58.099 18.057a.08.08 0 0 0 .031.055 19.9 19.9 0 0 0 5.993 3.03.07.07 0 0 0 .076-.027c.462-.63.873-1.295 1.226-1.994a.07.07 0 0 0-.038-.098 13.1 13.1 0 0 1-1.872-.892.07.07 0 0 1-.007-.117c.126-.094.252-.192.372-.291a.07.07 0 0 1 .073-.01c3.927 1.793 8.18 1.793 12.061 0a.07.07 0 0 1 .074.009c.12.099.246.198.373.292a.07.07 0 0 1-.006.117c-.598.349-1.224.645-1.873.891a.07.07 0 0 0-.038.099c.36.698.772 1.362 1.225 1.993a.07.07 0 0 0 .076.028 19.84 19.84 0 0 0 6.002-3.03.07.07 0 0 0 .032-.054c.5-5.177-.838-9.673-3.549-13.66a.06.06 0 0 0-.031-.027zM8.02 15.331c-1.182 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg></a>
+        <a class="soc-tile soc-x" href="https://x.com/GoatLabApp" target="_blank" rel="noopener" title="Follow on X" aria-label="X"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24h-6.66l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zM17.083 19.77h1.833L7.084 4.126H5.117z"/></svg></a>
+      </div>
+      <a class="menu-item" href="https://pitchergami.com" target="_blank" rel="noopener">⚾ PitcherGami ↗</a>
+      <a class="menu-item tip-item" href="https://buymeacoffee.com/mattwolff1d" target="_blank" rel="noopener">☕<span class="ti-text"><b>Buy me a coffee</b><small>I'm a solo dev paying for the servers out of pocket so it stays free for everyone. Anything's hugely appreciated! ↗</small></span></a>
+    </div>
+  </div>
+</div>
+
+<div id="lbModal" class="overlay">
+  <div class="overlay-card panel">
+    <div class="overlay-head"><span class="overlay-title">Leaderboard</span><button class="overlay-close" data-close="lbModal">✕</button></div>
+    <div class="overlay-body">
+      <div class="lb-tabs">
+        <button class="lb-tab lb-game-tab" data-game="pitcher">Pitchers</button>
+        <button class="lb-tab lb-game-tab" data-game="batter">Batters</button>
+        <button class="lb-tab lb-game-tab active" data-game="baller">Hoopers</button>
+      </div>
+      <div class="lb-tabs">
+        <button class="lb-tab lb-scope-tab active" data-scope="global">All-Time</button>
+        <button class="lb-tab lb-scope-tab" data-scope="daily">Today</button>
+      </div>
+      <div class="lb-tabs lb-sort-tabs" id="lbSortTabs"></div>
+      <div id="lbList" class="lb-list"></div>
+    </div>
+  </div>
+</div>
+
+<div id="hofModal" class="overlay">
+  <div class="overlay-card panel">
+    <div class="overlay-head"><span class="overlay-title">🏛️ My Hall of Fame</span><button class="overlay-close" data-close="hofModal">✕</button></div>
+    <div class="overlay-body">
+      <div class="lb-tabs lb-sort-tabs" id="hofSortTabs"></div>
+      <div id="hofList" class="hof-list"></div>
+    </div>
+  </div>
+</div>
+
+<div id="buildModal" class="overlay">
+  <div class="overlay-card panel">
+    <div class="overlay-head"><span class="overlay-title">Build Breakdown</span><button class="overlay-close" data-close="buildModal">✕</button></div>
+    <div class="overlay-body">
+      <div id="buildDetailCard" class="bd-card">
+        <div id="buildDetailHead" class="bd-head"></div>
+        <div id="buildDetailList" class="build-slots"></div>
+      </div>
+      <button id="bdShare" class="bd-share">𝕏  Share on X</button>
+      <div class="bd-hint">📸 Screenshot the card above to post your build</div>
+    </div>
+  </div>
+</div>
+
+<div id="howModal" class="overlay">
+  <div class="overlay-card panel">
+    <div class="overlay-head"><span class="overlay-title">How to Play</span><button class="overlay-close" data-close="howModal">✕</button></div>
+    <div class="overlay-body how-body">
+      <p>Build the ultimate baller, one body part at a time.</p>
+      <ol>
+        <li><b>Spin</b> the reel. It stops on a random player.</li>
+        <li><b>Assign</b> that player to one of the 9 body parts. Each part is an attribute like 3-Pointer, Finishing, Defense, or Dribble, and the slot takes that player's rating for it.</li>
+        <li>Fill every part to finish your hooper and reveal their Overall rating. Card colors show how strong a hooper is, from grey up to diamond, with purple for legends.</li>
+        <li><b>Simulate Career</b> to play out their seasons and see if they reach the Hall of Fame.</li>
+        <li>Name your hooper and post them to the leaderboard.</li>
+      </ol>
+      <h4>Power-ups</h4>
+      <p>You get one of each per run, so spend them wisely.</p>
+      <ul>
+        <li><b>Re-spin:</b> toss the current player and spin for a new one.</li>
+        <li><b>Boost:</b> upgrade the current player to their Prime version with stronger ratings, then assign them.</li>
+        <li><b>Snag:</b> grab the player one spot to the left or right of where you landed.</li>
+      </ul>
+      <p>Tip: your strongest players do the most good on 3-Pointer, Finishing, and Playmaking.</p>
+    </div>
+  </div>
+</div>
+
+<div id="draftOverlay" class="draft-overlay">
+  <div class="draft-inner">
+    <div class="draft-league">NBA Draft</div>
+    <div class="draft-headline">Draft Day</div>
+    <div class="draft-round-tag" id="draftRoundTag">Round 1 - Pick 1</div>
+    <div class="draft-divider"></div>
+    <div class="draft-call" id="draftCall">With the <b id="draftPickOrd">1st</b> pick in Round <b id="draftRoundNum">1</b> of the NBA Draft...</div>
+    <div class="draft-selecting" id="draftSelecting"></div>
+    <div class="draft-reveal" id="draftReveal">
+      <span class="team-logo lg" id="drLogo"><img src="" alt=""></span>
+      <div class="dr-team" id="drTeam"></div>
+      <div class="dr-name" id="drName"></div>
+      <div class="dr-ovr" id="drOvr"></div>
+      <div class="dr-arch" id="drArch"></div>
+    </div>
+    <div class="draft-skip" id="draftSkip">Tap anywhere to continue -></div>
+  </div>
+</div>
+
+<div id="streakModal" class="overlay">
+  <div class="overlay-card panel">
+    <div class="overlay-head"><span class="overlay-title">🔥 Your Streak</span><button class="overlay-close" data-close="streakModal">✕</button></div>
+    <div class="overlay-body">
+      <div class="sk-stats">
+        <div class="sk-stat"><b id="skCount">0</b><span>Current 🔥</span></div>
+        <div class="sk-stat"><b id="skBest">0</b><span>Best Ever</span></div>
+        <div class="sk-stat" id="skFreezeWrap" style="display:none"><b id="skFreeze">0</b><span>Freezes 🧊</span></div>
+      </div>
+      <div class="sk-next" id="skNext"></div>
+      <div class="sk-timeline" id="skTimeline"></div>
+      <div class="sk-legend">🔥 played · 🎯 today · 🧊 freeze earned · 🏆/🐐 milestone</div>
+    </div>
+  </div>
+</div>
+
+<div id="dailyReveal" class="daily-reveal">
+  <div id="drCard" class="dr-card">
+    <div class="dr-eyebrow">🎯 Daily Challenge</div>
+    <div class="dr-ovr"><span id="drDailyOvr">0</span><small>OVR</small></div>
+    <div id="drPB" class="dr-pb" style="display:none">🏆 NEW PERSONAL BEST!</div>
+    <div id="drFroze" class="dr-froze" style="display:none">🧊 Streak Freeze used - your streak is safe!</div>
+    <div class="dr-rank"><span id="drRankNum">-</span></div>
+    <div class="dr-pct">Top <span id="drPctNum">0</span>%</div>
+    <div id="drField" class="dr-field"></div>
+    <div id="drStreak" class="dr-streak"></div>
+    <div id="drReplay" class="dr-replay"></div>
+    <button id="drClose" class="primary" style="margin-top:14px;width:100%">Nice 🔥</button>
+  </div>
+</div>
+
+<div id="dailyResults" class="daily-reveal">
+  <div id="dResCard" class="dr-card dres-card">
+    <div class="dr-eyebrow">🎯 Today's Daily · Results</div>
+    <div class="dres-you">
+      <div class="dres-ovrbox"><span id="dResOvr">0</span><small>YOUR OVR</small></div>
+      <div class="dres-rankbox">
+        <div class="dres-rank"><span id="dResRank">-</span></div>
+        <div class="dres-pct">Top <span id="dResPct">0</span>%</div>
+        <div id="dResField" class="dr-field"></div>
+      </div>
+    </div>
+    <div id="dResPB" class="dr-pb" style="display:none">🏆 NEW PERSONAL BEST!</div>
+    <div id="dResFroze" class="dr-froze" style="display:none">🧊 Streak Freeze used - your streak is safe!</div>
+    <div class="dres-best" id="dResBest"></div>
+    <div class="dres-board-label">Today's top builds</div>
+    <div class="dres-board" id="dResBoard"></div>
+    <div id="dResStreak" class="dr-streak"></div>
+    <button id="dResSim" class="primary" style="margin-top:14px;width:100%">Continue → name &amp; simulate</button>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<div class="footer-note">Ratings from NBA 2K. Not affiliated with the NBA or 2K.</div>
+
+<script>
+// Each slot maps an attribute to a body part. ax/ay = anchor point on the figure (%),
+// lx/ly = where the label node floats (%). A wire connects the two.
+const SLOTS = [
+  { key: 'threept',    label: '3-Pointer',  part: 'Shooting Hand', mask: 'hoop-seg-threept.png',    ax: 16, ay: 50, lx: 7,  ly: 56 },
+  { key: 'finishing',  label: 'Finishing',  part: 'Thighs',        mask: 'hoop-seg-finishing.png',  ax: 40, ay: 61, lx: 11, ly: 74 },
+  { key: 'dribble',    label: 'Dribble',    part: 'Forearms',      mask: 'hoop-seg-dribble.png',    ax: 27, ay: 40, lx: 8,  ly: 38 },
+  { key: 'playmaking', label: 'Playmaking', part: 'Off Hand',      mask: 'hoop-seg-playmaking.png', ax: 85, ay: 55, lx: 93, ly: 60 },
+  { key: 'defense',    label: 'Defense',    part: 'Shoulders',     mask: 'hoop-seg-defense.png',    ax: 70, ay: 25, lx: 92, ly: 22 },
+  { key: 'rebounding', label: 'Rebounding', part: 'Core',          mask: 'hoop-seg-rebounding.png', ax: 53, ay: 46, lx: 9,  ly: 20 },
+  { key: 'speed',      label: 'Speed',      part: 'Legs',          mask: 'hoop-seg-speed.png',      ax: 80, ay: 76, lx: 90, ly: 82 },
+  { key: 'clutch',     label: 'Clutch',     part: 'Head',          mask: 'hoop-seg-clutch.png',     ax: 58, ay: 12, lx: 86, ly: 8 },
+  { key: 'frame',      label: 'Frame',      part: 'Height',        mask: 'hoop-seg-frame.png',      ax: 54, ay: 30, lx: 93, ly: 40, type: 'height' },
+];
+
+// NBA team primary colors (jersey tint). FA / unknown -> neutral steel.
+const TEAM_COLORS = {
+  ATL:'#E03A3E', BOS:'#007A33', BKN:'#1D1D1D', CHA:'#00788C', CHI:'#CE1141',
+  CLE:'#860038', DAL:'#00538C', DEN:'#0E2240', DET:'#C8102E', GSW:'#1D428A',
+  HOU:'#CE1141', IND:'#002D62', LAC:'#C8102E', LAL:'#552583', MEM:'#5D76A9',
+  MIA:'#98002E', MIL:'#00471B', MIN:'#0C2340', NOP:'#0C2340', NYK:'#006BB6',
+  OKC:'#007AC1', ORL:'#0077C0', PHI:'#006BB6', PHX:'#1D1160', POR:'#E03A3E',
+  SAC:'#5A2D81', SAS:'#767A7F', TOR:'#CE1141', UTA:'#002B5C', WAS:'#002B5C',
+  FA:'#5b636e',
+};
+const IDLE_JERSEY = '#aeb6c2';
+const TEAM_NAMES = {
+  ATL:'Hawks', BOS:'Celtics', BKN:'Nets', CHA:'Hornets', CHI:'Bulls', CLE:'Cavaliers',
+  DAL:'Mavericks', DEN:'Nuggets', DET:'Pistons', GSW:'Warriors', HOU:'Rockets', IND:'Pacers',
+  LAC:'Clippers', LAL:'Lakers', MEM:'Grizzlies', MIA:'Heat', MIL:'Bucks', MIN:'Timberwolves',
+  NOP:'Pelicans', NYK:'Knicks', OKC:'Thunder', ORL:'Magic', PHI:'76ers', PHX:'Suns',
+  POR:'Trail Blazers', SAC:'Kings', SAS:'Spurs', TOR:'Raptors', UTA:'Jazz', WAS:'Wizards',
+};
+const TEAM_IDS = {
+  ATL:1610612737, BOS:1610612738, BKN:1610612751, CHA:1610612766, CHI:1610612741, CLE:1610612739,
+  DAL:1610612742, DEN:1610612743, DET:1610612765, GSW:1610612744, HOU:1610612745, IND:1610612754,
+  LAC:1610612746, LAL:1610612747, MEM:1610612763, MIA:1610612748, MIL:1610612749, MIN:1610612750,
+  NOP:1610612740, NYK:1610612752, OKC:1610612760, ORL:1610612753, PHI:1610612755, PHX:1610612756,
+  POR:1610612757, SAC:1610612758, SAS:1610612759, TOR:1610612761, UTA:1610612762, WAS:1610612764,
+};
+function randTeamAb(rng = Math.random, exclude = null) {
+  const abbrs = Object.keys(TEAM_NAMES).filter(ab => ab !== exclude);
+  return abbrs[Math.floor(rng() * abbrs.length)];
+}
+function teamLogoUrl(abbr) {
+  return TEAM_IDS[abbr] ? `https://cdn.nba.com/logos/nba/${TEAM_IDS[abbr]}/primary/L/logo.svg` : '';
+}
+function teamLogoHTML(abbr, cls = '') {
+  const url = teamLogoUrl(abbr);
+  if (!url) return '';
+  const label = TEAM_NAMES[abbr] || abbr || 'Team';
+  return `<span class="team-logo ${cls}"><img src="${url}" alt="${escapeHTML(label)} logo" onerror="this.parentElement.style.display='none'"></span>`;
+}
+function teamInfo(abbr) {
+  return { abbr, name: TEAM_NAMES[abbr] || 'club', color: teamColor(abbr), logo: teamLogoUrl(abbr) };
+}
+// darken/lighten a hex color
+function shade(hex, amt) {
+  const n = parseInt(hex.slice(1), 16);
+  const r = clamp((n >> 16) + amt, 0, 255), g = clamp(((n >> 8) & 255) + amt, 0, 255), b = clamp((n & 255) + amt, 0, 255);
+  return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+}
+// Brighten a hex color toward white so it's readable on a near-black backdrop.
+function brightColor(hex, minLuma = 110) {
+  const n = parseInt(hex.slice(1), 16);
+  let r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+  if (luma >= minLuma) return hex;
+  const t = Math.min(0.88, (minLuma - luma) / (255 - luma + 1));
+  r = Math.round(r + t * (255 - r)); g = Math.round(g + t * (255 - g)); b = Math.round(b + t * (255 - b));
+  return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+}
+function verdictColor(cls) { return cls === 'goat' ? '#ffd23f' : cls === 'yes' ? '#ffce3a' : cls === 'no' ? '#c8d0da' : cls === 'mid' ? '#d08a3e' : '#7e8da3'; }
+function teamColor(team) { return TEAM_COLORS[team] || IDLE_JERSEY; }
+
+function tier(ovr) {
+  if (ovr >= 85) return 'diamond';
+  if (ovr >= 80) return 'gold';
+  if (ovr >= 75) return 'silver';
+  if (ovr >= 65) return 'bronze';
+  return 'grey';
+}
+
+// OVR weighting: the offensive engine counts a little more, physicals a little less.
+const WEIGHTS = {
+  threept: 1.2, finishing: 1.2, playmaking: 1.2,
+  dribble: 1.1, defense: 1.1, rebounding: 1.1, clutch: 1.1,
+  speed: 0.9, frame: 1.0,
+};
+
+// Frame is pure height: taller is always better, with NO 99 cap (Wembanyama's 7'4" -> ~115, like the
+// rating curve). A short guard sits in the 50s, a true seven-footer pushes 100+. Weighted below the
+// skills in the Overall, so it's an edge, not a cheat code.
+function heightToRating(inches) {
+  if (!inches) return 60;
+  return clamp(Math.round(50 + (inches - 70) * 3.6), 1, 125);
+}
+function slotNumeric(p, s) { return s.type === 'height' ? heightToRating(p.heightIn) : (p[s.key] || 0); }
+function slotDisplay(p, s) { return s.type === 'height' ? (p.height || '-') : (p[s.key] || 0); }
+
+const SILHOUETTE = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="%2311161d"/><circle cx="50" cy="38" r="20" fill="%23394150"/><path d="M50 62c-20 0-34 14-34 34h68c0-20-14-34-34-34z" fill="%23394150"/></svg>'
+);
+function headshot(p) {
+  if (p.img) return p.img;
+  return p.nbaId ? `https://cdn.nba.com/headshots/nba/latest/260x190/${p.nbaId}.png` : SILHOUETTE;
+}
+
+let DATA = null;
+const state = {
+  filled: {}, used: new Set(), landed: null,
+  respinUsed: false, boostUsed: false, snagUsed: false,
+  boostedThisLand: false, spinning: false, strip: null, targetIndex: 0,
+  career: null, draftTeamAb: null,
+};
+
+// Hard mode ("hide ratings") - set on the landing page, shared via localStorage.
+let hardMode = false;
+try { hardMode = localStorage.getItem('pl_hardMode') === '1'; } catch (e) {}
+let hardRevealed = false;
+const ratingsHidden = () => hardMode && !hardRevealed;
+
+const $ = id => document.getElementById(id);
+let deferredInstall = null;
+const LEADERBOARD_GAME = 'baller';
+let lbScope = 'global';
+let lbGame = LEADERBOARD_GAME;
+let lbSort = 'ovr';
+let lbEntries = new Map();
+const SORT_OPTIONS = {
+  pitcher: [{ key: 'ovr', label: 'OVR' }, { key: 'ovrAsc', label: 'Worst' }, { key: 'k', label: 'Strikeouts' }, { key: 'war', label: 'WAR' }, { key: 'wins', label: 'Wins' }, { key: 'rings', label: 'Rings' }, { key: 'cyYoung', label: 'Cy Youngs' }],
+  batter: [{ key: 'ovr', label: 'OVR' }, { key: 'ovrAsc', label: 'Worst' }, { key: 'hr', label: 'Home Runs' }, { key: 'hits', label: 'Hits' }, { key: 'war', label: 'WAR' }, { key: 'rings', label: 'Rings' }, { key: 'mvp', label: 'MVPs' }],
+  baller: [{ key: 'ovr', label: 'OVR' }, { key: 'ovrAsc', label: 'Worst' }, { key: 'pts', label: 'Points' }, { key: 'reb', label: 'Rebounds' }, { key: 'ast', label: 'Assists' }, { key: 'rings', label: 'Rings' }, { key: 'mvp', label: 'MVPs' }],
+};
+function sortOptionsFor(game) { return SORT_OPTIONS[game] || SORT_OPTIONS.baller; }
+function fmtStat(v) { return lbSort === 'war' ? Number(v).toFixed(1) : Math.round(v); }
+
+// ---------- sound (synthesized via Web Audio - no asset files) ----------
+const Sound = (() => {
+  let ac, master, muted = false;
+  function ctx() {
+    if (!ac) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      ac = new AC();
+      master = ac.createGain();
+      master.gain.value = 0.5;
+      master.connect(ac.destination);
+    }
+    if (ac.state === 'suspended') ac.resume();
+    return ac;
+  }
+  function note(freq, when, dur, o = {}) {
+    const c = ctx(); if (!c) return;
+    const { type = 'triangle', vol = 0.2, glide = null, attack = 0.005 } = o;
+    const t = c.currentTime + when;
+    const osc = c.createOscillator(), g = c.createGain();
+    osc.type = type; osc.frequency.setValueAtTime(freq, t);
+    if (glide) osc.frequency.exponentialRampToValueAtTime(glide, t + dur);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(vol, t + attack);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    osc.connect(g).connect(master);
+    osc.start(t); osc.stop(t + dur + 0.03);
+  }
+  const arp = (freqs, step, o = {}) => freqs.forEach((f, i) => note(f, i * step, o.dur || step * 1.6, o));
+  return {
+    setMuted(m) { muted = m; if (master) master.gain.value = m ? 0 : 0.5; },
+    isMuted() { return muted; },
+    // retro slot "tok": warm low pluck + sub-octave body; pitch drops as the reel slows
+    tick(speed = 0.5) {
+      const f = 210 + Math.min(1, speed) * 280;   // ~210 (slow) .. 490 (fast)
+      note(f, 0, 0.055, { type: 'square', vol: 0.06, glide: f * 0.55 });
+      note(f / 2, 0, 0.06, { type: 'triangle', vol: 0.05, glide: f * 0.28 });
+    },
+    click()   { note(620, 0, 0.06, { type: 'square', vol: 0.12, glide: 470 }); },
+    land()    { note(440, 0, 0.1, { vol: 0.12 }); note(660, 0.04, 0.12, { vol: 0.1 }); },
+    gold()    { arp([660, 880], 0.09, { vol: 0.2, dur: 0.18 }); },
+    diamond() { arp([660, 990, 1320], 0.08, { vol: 0.2, dur: 0.2 }); note(1980, 0.24, 0.25, { type: 'sine', vol: 0.12 }); },
+    legend()  { arp([523, 659, 784, 1046, 1319], 0.1, { vol: 0.22, dur: 0.4 }); arp([262, 330, 392, 523], 0.1, { type: 'sine', vol: 0.12, dur: 0.5 }); },
+    assign()  { note(520, 0, 0.06, { type: 'square', vol: 0.14 }); note(780, 0.05, 0.1, { vol: 0.16 }); },
+    prime()   { note(300, 0, 0.35, { type: 'sawtooth', vol: 0.16, glide: 1200 }); note(900, 0.18, 0.25, { vol: 0.14 }); note(1350, 0.3, 0.3, { type: 'sine', vol: 0.12 }); },
+    swap()    { note(740, 0, 0.16, { type: 'square', vol: 0.1, glide: 360 }); note(360, 0.02, 0.18, { type: 'triangle', vol: 0.12, glide: 880 }); note(1180, 0.18, 0.12, { type: 'sine', vol: 0.08 }); },
+    whoosh()  { note(900, 0, 0.18, { type: 'sine', vol: 0.1, glide: 300 }); },
+    complete(){ arp([523, 659, 784, 1046], 0.12, { vol: 0.2, dur: 0.5 }); note(1568, 0.36, 0.6, { type: 'sine', vol: 0.12 }); },
+  };
+})();
+
+async function init() {
+  try {
+    const res = await fetch('ballers.json');
+    DATA = await res.json();
+  } catch (e) {
+    $('loading').textContent = 'Could not load ballers.json. Run "node fetch-ballers.js" first and serve over http.';
+    return;
+  }
+  buildWeights();
+  buildSegments();
+  buildPips();
+  $('loading').style.display = 'none';
+  $('game').style.display = 'block';
+  if (hardMode) document.querySelector('header .tag').textContent = 'Hard Mode 🙈';
+  renderNodes();
+  initTilt();
+  startIdleReel();
+  $('spinBtn').onclick = spin;
+  $('respinBtn').onclick = respin;
+  $('boostBtn').onclick = boost;
+  $('snagLeftBtn').onclick = () => snag(-1);
+  $('snagRightBtn').onclick = () => snag(1);
+  $('resetBtn').onclick = reset;
+  $('muteBtn').onclick = () => { const m = !Sound.isMuted(); Sound.setMuted(m); if (window.Ach) Ach.muted = m; $('muteBtn').textContent = m ? '🔇' : '🔊'; };
+  if (window.Ach) Ach.muted = Sound.isMuted();
+  $('buildTab').onclick = () => Sound.click();
+  $('simBtn').onclick = runCareerPlaythrough;
+  $('submitBtn').onclick = submitScore;
+  $('nameInput').addEventListener('keydown', e => { if (e.key === 'Enter') runCareerPlaythrough(); });
+  document.querySelectorAll('.lb-scope-tab').forEach(t => t.onclick = () => loadLeaderboard(t.dataset.scope, lbGame));
+  document.querySelectorAll('.lb-game-tab').forEach(t => t.onclick = () => loadLeaderboard(lbScope, t.dataset.game));
+
+  // menu + overlays
+  $('menuBtn').onclick = () => { Sound.click(); openOverlay('menu'); };
+  $('miHof').onclick = () => { closeOverlay('menu'); openHof(); };
+  $('saveHofBtn').onclick = () => saveToHof($('saveHofBtn'));
+  $('miLb').onclick = () => { closeOverlay('menu'); openLeaderboard('global'); };
+  $('miHow').onclick = () => { closeOverlay('menu'); openOverlay('howModal'); };
+  $('miInstall').onclick = () => {
+    const el = $('installSteps'), open = el.style.display === 'block';
+    el.style.display = open ? 'none' : 'block';
+    $('installChev').textContent = open ? '⌄' : '⌃';
+    if (!open) gsap.fromTo(el, { y: -6, opacity: 0 }, { y: 0, opacity: 1, duration: .25 });
+  };
+  // Real one-click install on browsers that support it (Chrome/Edge/Android).
+  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredInstall = e; $('installNowBtn').style.display = 'block'; });
+  $('installNowBtn').onclick = async () => {
+    if (!deferredInstall) return;
+    deferredInstall.prompt();
+    await deferredInstall.userChoice;
+    deferredInstall = null;
+    $('installNowBtn').style.display = 'none';
+  };
+  document.querySelectorAll('.overlay-close').forEach(b => b.onclick = () => closeOverlay(b.dataset.close));
+  document.querySelectorAll('.overlay').forEach(o => o.addEventListener('click', e => { if (e.target === o) closeOverlay(o.id); }));
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.overlay.show').forEach(o => closeOverlay(o.id)); });
+  renderAcct();
+  initGoogle();
+
+  // Daily Challenge + streak wiring
+  $('dailyBtn').onclick = () => { Sound.click(); startDailyChallenge(); };
+  $('drClose').onclick = () => { Sound.click(); closeDailyReveal(); };
+  $('dailyReveal').addEventListener('click', e => { if (e.target.id === 'dailyReveal') closeDailyReveal(); });
+  $('dResSim').onclick = () => { Sound.click(); closeDailyResults(false); };
+  $('miDaily').onclick = () => { Sound.click(); startDailyChallenge(); };
+  $('miStreak').onclick = () => { Sound.click(); openStreak(); };
+  renderStreakChip();
+  updateDailyBtn();
+  syncAccountDates();   // pull this device/account's daily status from the server
+
+  // deep-link from the home-page menu, e.g. /batting#daily, /batting#streak
+  $('miAch').onclick = () => { closeOverlay('menu'); Sound.click(); window.Ach && Ach.open(); };
+  const h = (location.hash || '').replace('#', '').toLowerCase();
+  if (h === 'daily') setTimeout(startDailyChallenge, 350);
+  else if (h === 'streak') setTimeout(openStreak, 200);
+  else if (h === 'achievements' || h === 'ach') { const o = () => (window.Ach ? Ach.open() : setTimeout(o, 120)); o(); }
+}
+
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  gsap.fromTo(t, { opacity: 0 }, { opacity: 1, duration: .25 });
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => gsap.to(t, { opacity: 0, duration: .4, onComplete: () => { t.style.display = 'none'; } }), 1900);
+}
+function openOverlay(id) { const el = $(id); el.classList.add('show'); gsap.fromTo(el.firstElementChild, { y: 14, opacity: 0 }, { y: 0, opacity: 1, duration: .3, ease: 'power3.out' }); }
+function closeOverlay(id) { $(id).classList.remove('show'); }
+function openLeaderboard(scope, game = LEADERBOARD_GAME) { openOverlay('lbModal'); loadLeaderboard(scope, game); }
+
+/* ===== Accounts ("Sign in with Google") + My Hall of Fame ===== */
+const GOOGLE_CLIENT_ID = '349698720898-t9bpb8fp7ks6scf8ci8mmoeec1lpm3d3.apps.googleusercontent.com';
+const HOF_GAME = 'baller';
+let account = null;
+try { account = JSON.parse(localStorage.getItem('pl_account') || 'null'); } catch (e) {}
+
+function saveAccount(a) {
+  const changed = !account || account.sub !== a.sub;
+  account = a; try { localStorage.setItem('pl_account', JSON.stringify(a)); } catch (e) {} renderAcct();
+  if (window.Ach) Ach.sync();
+  if (changed) { try { localStorage.removeItem(dcKey()); } catch (e) {} updateDailyBtn(); }   // new identity -> reset device daily gate
+  syncAccountDates();   // pull this account's true daily status (re-locks if already played today)
+}
+function clearAccount() { account = null; try { localStorage.removeItem('pl_account'); } catch (e) {} try { localStorage.removeItem(dcKey()); } catch (e) {} try { google.accounts.id.disableAutoSelect(); } catch (e) {} renderAcct(); updateDailyBtn(); if (window.Ach) Ach.signOut(); }
+
+function googleConfigured() { return GOOGLE_CLIENT_ID && GOOGLE_CLIENT_ID.indexOf('REPLACE_WITH') !== 0; }
+function initGoogle(tries) {
+  tries = tries || 0;
+  if (!googleConfigured()) { renderAcct(); return; }
+  if (!window.google || !google.accounts || !google.accounts.id) { if (tries < 40) setTimeout(() => initGoogle(tries + 1), 250); return; }
+  try { google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleCredential, auto_select: true }); } catch (e) {}
+  renderAcct();
+}
+
+async function onGoogleCredential(resp) {
+  try {
+    const r = await fetch('/api/account', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'login', idToken: resp.credential }) });
+    const j = await r.json();
+    if (j.ok) {
+      saveAccount({ sub: j.sub, email: j.email, name: j.name, picture: j.picture, sessionToken: j.sessionToken });
+      if (typeof j.streak === 'number' && j.streak >= streak.count) { streak.count = j.streak; streak.best = Math.max(streak.best, j.bestStreak || j.streak); saveStreak(); renderStreakChip(); }
+      toast('Signed in as ' + (j.name || j.email));
+    }
+    else toast('Sign-in failed');
+  } catch (e) { toast('Sign-in failed'); }
+}
+
+function renderAcct() {
+  const slot = $('acctSlot'); if (!slot) return;
+  if (account) {
+    slot.innerHTML = `<div class="acct">
+      ${account.picture ? `<img src="${account.picture}" alt="" referrerpolicy="no-referrer">` : ''}
+      <div class="who"><b>${escapeHTML(account.name || 'Player')}</b><span>${escapeHTML(account.email || '')}</span></div>
+      <button class="signout" id="signOutBtn">Sign out</button></div>`;
+    const so = $('signOutBtn'); if (so) so.onclick = () => { clearAccount(); toast('Signed out'); };
+  } else if (!googleConfigured()) {
+    slot.innerHTML = `<div class="acct-hint">🔒 Sign-in is coming soon - you'll be able to save your players to a personal Hall of Fame.</div>`;
+  } else {
+    slot.innerHTML = `<div id="gsiWrap"></div><div class="acct-hint">Sign in with Google to save your players to a personal Hall of Fame.</div>`;
+    try { google.accounts.id.renderButton($('gsiWrap'), { theme: 'filled_black', size: 'large', shape: 'pill', text: 'signin_with' }); }
+    catch (e) { $('gsiWrap').innerHTML = '<div class="acct-hint">Google sign-in is loading…</div>'; }
+  }
+}
+
+async function saveToHof(btn) {
+  if (!account) { toast('Sign in first (☰ menu)'); openOverlay('menu'); return; }
+  if (!state.career) { toast('Simulate a career first'); return; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  const teamAb = (state.simTeam && state.simTeam.abbr) || state.draftTeamAb || (state.career && state.career.finalTeam);
+  const reset = () => { if (btn) { btn.disabled = false; btn.textContent = '💾 Save to my Hall of Fame'; } };
+  try {
+    const slimSlots = state.build.map(({ img: _img, ...s }) => s);
+    const slimCareer = { totals: state.career.totals, role: state.career.role, finalTeam: state.career.finalTeam };
+    const r = await fetch('/api/account', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'save', sub: account.sub, sessionToken: account.sessionToken, game: HOF_GAME,
+        name: state.simName || 'My Player', ovr: state.finalOvr,
+        build: { slots: slimSlots, career: slimCareer, team: teamAb } }) });
+    const j = await r.json();
+    if (j.ok) { if (btn) btn.textContent = '✓ Saved'; toast('Saved to your Hall of Fame'); if (Sound.complete) Sound.complete(); }
+    else if (r.status === 401) { clearAccount(); toast('Please sign in again'); reset(); }
+    else { toast(j.error || 'Save failed'); reset(); }
+  } catch (e) { toast('Save failed'); reset(); }
+}
+
+const HOF_SORTS = [
+  { key: 'ovr', label: 'Overall' }, { key: 'war', label: 'WAR' }, { key: 'earnings', label: 'Earnings' },
+  { key: 'hof', label: 'Hall of Fame' }, { key: 'date', label: 'Newest' },
+];
+let hofSort = 'ovr', hofSaves = [];
+
+function statOf(s, key) {
+  const t = (s.build && s.build.career && s.build.career.totals) || {};
+  if (key === 'ovr') return s.ovr || 0;
+  if (key === 'war') return Number(t.war) || 0;
+  if (key === 'earnings') return Number(t.earnings) || 0;
+  if (key === 'hof') return (t.hallOfFame ? 1e6 : 0) + (Number(t.hofScore) || 0);
+  if (key === 'date') return new Date(s.created_at).getTime() || 0;
+  return 0;
+}
+
+async function openHof() {
+  if (!account) { toast('Sign in first (☰ menu)'); openOverlay('menu'); return; }
+  openOverlay('hofModal');
+  renderHofSortTabs();
+  $('hofList').innerHTML = '<div class="hof-empty">Loading…</div>';
+  try {
+    const r = await fetch(`/api/account?action=list&game=${HOF_GAME}&sub=${encodeURIComponent(account.sub)}&sessionToken=${encodeURIComponent(account.sessionToken)}`);
+    const j = await r.json();
+    if (!j.ok) { if (r.status === 401) clearAccount(); $('hofList').innerHTML = '<div class="hof-empty">Could not load your players. Try signing in again.</div>'; return; }
+    hofSaves = j.rows || [];
+    renderHof();
+  } catch (e) { $('hofList').innerHTML = '<div class="hof-empty">Could not load your players.</div>'; }
+}
+
+function renderHofSortTabs() {
+  const wrap = $('hofSortTabs');
+  wrap.innerHTML = HOF_SORTS.map(s => `<button class="lb-tab${s.key === hofSort ? ' active' : ''}" data-hsort="${s.key}">${s.label}</button>`).join('');
+  wrap.querySelectorAll('[data-hsort]').forEach(b => b.onclick = () => { hofSort = b.dataset.hsort; renderHofSortTabs(); renderHof(); });
+}
+
+function renderHof() {
+  const list = $('hofList');
+  if (!hofSaves.length) { list.innerHTML = '<div class="hof-empty">No saved players yet.<br>Simulate a career, then tap <b>💾 Save to my Hall of Fame</b>.</div>'; return; }
+  const sorted = [...hofSaves].sort((a, b) => statOf(b, hofSort) - statOf(a, hofSort));
+  list.innerHTML = sorted.map(hofCardHTML).join('');
+  list.querySelectorAll('[data-del]').forEach(b => b.onclick = () => deleteSave(b.dataset.del));
+  gsap.from(list.querySelectorAll('.hof-card'), { y: 18, opacity: 0, duration: .4, stagger: .05, ease: 'power2.out' });
+}
+
+function hofCardHTML(s) {
+  const t = (s.build && s.build.career && s.build.career.totals) || {};
+  const team = teamInfo((s.build && s.build.team) || '');
+  const verdict = careerTier(t, s.ovr);
+  const isBat = s.game === 'batter';
+  const kind = s.game === 'batter' ? 'Batter' : s.game === 'baller' ? 'Hooper' : 'Pitcher';
+  const stats = s.game === 'baller'
+    ? `${t.ppg || 0} PPG · ${t.rpg || 0} RPG · ${t.apg || 0} APG · ${(Number(t.war) || 0).toFixed(1)} WS`
+    : isBat
+    ? `${(Number(t.avg) || 0).toFixed(3).replace(/^0\./, '.')} AVG · ${t.hr || 0} HR · ${(Number(t.war) || 0).toFixed(1)} WAR`
+    : `${t.wins || 0}-${t.losses || 0} · ${(Number(t.era) || 0).toFixed(2)} ERA · ${(t.k || 0).toLocaleString()} K · ${(Number(t.war) || 0).toFixed(1)} WAR`;
+  const money = t.earnings ? `<div class="hc-money">💰 ${fmtMoney(t.earnings)}</div>` : '';
+  return `<div class="hof-card">
+    <button class="hc-del" data-del="${s.id}" title="Delete">✕</button>
+    <div class="hc-top" style="background:linear-gradient(135deg, ${team.color}, ${shade(team.color, -34)});">
+      ${team.logo ? `<div class="hc-logo"><img src="${team.logo}" alt="" onerror="this.parentElement.style.display='none'"></div>` : ''}
+      <div class="hc-id"><div class="hc-name">${escapeHTML(s.name)}</div><div class="hc-sub">${escapeHTML(team.name || '')} · ${kind}</div></div>
+      <div class="hc-ovr">${s.ovr}</div>
+    </div>
+    <div class="hc-body">
+      <div class="hc-verdict" style="color:${verdictColor(verdict.cls)}">${verdict.txt}</div>
+      <div class="hc-stats">${stats}</div>
+      ${money}
+    </div></div>`;
+}
+
+async function deleteSave(id) {
+  if (!account) return;
+  try {
+    await fetch('/api/account', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'delete', sub: account.sub, sessionToken: account.sessionToken, id: Number(id) }) });
+  } catch (e) {}
+  hofSaves = hofSaves.filter(s => String(s.id) !== String(id));
+  renderHof();
+}
+
+const TIER_ODDS = { diamond: 0.31, gold: 0.32, silver: 0.22, bronze: 0.12, grey: 0.03 };
+let cumWeights = [], totalWeight = 0;
+function buildWeights() {
+  const counts = {};
+  for (const p of DATA.pool) { const t = tier(p.ovr); counts[t] = (counts[t] || 0) + 1; }
+  cumWeights = []; totalWeight = 0;
+  for (const p of DATA.pool) {
+    const t = tier(p.ovr);
+    totalWeight += (TIER_ODDS[t] || 0) / counts[t];
+    cumWeights.push(totalWeight);
+  }
+}
+function pickWeighted(rng) {
+  const rand = rng || Math.random;
+  const r = rand() * totalWeight;
+  let lo = 0, hi = cumWeights.length - 1;
+  while (lo < hi) { const mid = (lo + hi) >> 1; if (cumWeights[mid] < r) lo = mid + 1; else hi = mid; }
+  return DATA.pool[lo];
+}
+const LEGEND_ODDS = 0.04;
+function randHitter(rng) {
+  const rand = rng || Math.random;
+  const legs = DATA.legends || [];
+  if (legs.length && rand() < LEGEND_ODDS) {
+    const avail = legs.filter(p => !state.used.has(p.name));
+    if (avail.length) return avail[Math.floor(rand() * avail.length)];
+  }
+  let p, tries = 0;
+  do { p = pickWeighted(rng); } while (state.used.has(p.name) && ++tries < 50);
+  return p;
+}
+
+function borderTier(p) { return p.legend ? 'legend' : tier(p.ovr); }
+
+function cardHTML(p) {
+  const t = borderTier(p);
+  const meta = p.legend ? `<div class="legend-tag">★ LEGEND</div>` : `<div class="yr">${p.year || ''}</div>`;
+  return `<div class="reel-card t-${t}">
+    <img src="${headshot(p)}" alt="" loading="lazy" onerror="this.onerror=null;this.src='${SILHOUETTE}'">
+    <div class="nm">${p.name}</div>
+    <div class="ov c-${t}">${p.ovr}</div>
+    ${meta}
+    <div class="pos">${p.pos || ''} · ${p.team || ''}</div>
+  </div>`;
+}
+
+const CARD_W = 162;
+
+// Idle "attract" reel: a faint, slowly scrolling roll of headshots before/between spins.
+let idleTween = null;
+function startIdleReel() {
+  stopIdleReel();
+  if (!DATA || !DATA.pool.length) return;
+  const track = $('track');
+  const N = 24;
+  const cards = [];
+  for (let i = 0; i < N; i++) cards.push(DATA.pool[Math.floor(Math.random() * DATA.pool.length)]);
+  track.innerHTML = cards.concat(cards).map(cardHTML).join('');   // two sets → seamless loop
+  track.classList.add('idle');
+  gsap.set(track, { x: 0, filter: 'none' });
+  idleTween = gsap.to(track, { x: -(N * CARD_W), duration: N * 0.95, ease: 'none', repeat: -1 });
+}
+function stopIdleReel() {
+  if (idleTween) { idleTween.kill(); idleTween = null; }
+  $('track').classList.remove('idle');
+}
+
+// Count one "play" per game session (first spin) - feeds the live PLAYS counter on the landing page.
+function logPlay() {
+  if (window.__plLogged) return;
+  window.__plLogged = true;
+  try { gtag('event', 'game_start', { game: 'baller' }); } catch (e) {}
+  fetch('/api/score', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'play', game: 'baller' }) }).catch(function(){});
+}
+function spin() {
+  if (state.spinning) return;
+  if (openSlots().length === 0) return;
+  logPlay();
+  state.spinning = true;
+  state.boostedThisLand = false;
+  Sound.click();
+  stopIdleReel();
+  $('spinBtn').disabled = true;
+  $('landed').classList.remove('show');
+
+  const rng = dailyMode ? dailyRng : undefined;       // seeded reel on Daily Challenge days
+  let target;
+  if (dailyMode && luckyToday && !luckyConsumed && openSlots().length === SLOTS.length) {
+    // Lucky Spin: first card of a lucky daily is a guaranteed Diamond (seeded → same for everyone).
+    const dpool = DATA.pool.filter(p => p.ovr >= 85);
+    const lr = seededRandom(`pl-lucky-pick-${todayUTC()}`);
+    target = dpool.length ? dpool[Math.floor(lr() * dpool.length)] : randHitter(rng);
+    luckyConsumed = true;
+  } else {
+    target = randHitter(rng);
+  }
+  const strip = [];
+  const STRIP_LEN = 45;
+  const targetIndex = STRIP_LEN - 6;
+  for (let i = 0; i < STRIP_LEN; i++) strip.push(i === targetIndex ? target : randHitter());
+
+  const track = $('track');
+  gsap.set(track, { x: 0, filter: 'none' });
+  track.innerHTML = strip.map(cardHTML).join('');
+  state.strip = strip;
+  state.targetIndex = targetIndex;
+
+  const frameW = track.parentElement.clientWidth;
+  const offset = centerOffset(targetIndex, frameW);
+  animateReelTo(offset, 3.2, 'power4.out', () => land(target));
+}
+
+function centerOffset(index, frameW) { return index * CARD_W - (frameW / 2) + 75 + 14; }
+
+function animateReelTo(offset, duration, ease, onDone) {
+  const track = $('track');
+  let prevX = gsap.getProperty(track, 'x'), prevT = performance.now(), lastTickX = prevX;
+  gsap.to(track, {
+    x: -offset, duration, ease,
+    onUpdate: () => {
+      const x = gsap.getProperty(track, 'x'), t = performance.now();
+      const dt = Math.max(8, t - prevT);
+      const speed = Math.abs(x - prevX) / dt;
+      prevX = x; prevT = t;
+      const b = Math.min(6, speed * 0.7);
+      track.style.filter = b > 0.4 ? `blur(${b.toFixed(1)}px)` : 'none';
+      if (Math.abs(x - lastTickX) >= CARD_W) { Sound.tick(speed / 7); lastTickX = x; }  // ticker (pitch by speed)
+    },
+    onComplete: () => { track.style.filter = 'none'; state.spinning = false; onDone(); },
+  });
+}
+
+// Cinematic reveal: light sweep + the winning card pops; legend pulls shake the board.
+function revealWin(p) {
+  const track = $('track');
+  const card = track.children[state.targetIndex];
+  const sweep = $('sweep');
+  gsap.fromTo(sweep, { xPercent: -160, opacity: .9 },
+    { xPercent: 160, opacity: 0, duration: .55, ease: 'power2.inOut' });
+  if (card) {
+    card.classList.add('win');
+    gsap.fromTo(card, { scale: 1 }, { scale: 1.14, duration: .5, ease: 'back.out(2.2)' });
+  }
+  gsap.fromTo('.pointer', { scale: 1 }, { scale: 1.35, duration: .25, yoyo: true, repeat: 1, ease: 'power2.out', transformOrigin: 'center' });
+  if (p.legend) {
+    gsap.fromTo($('game'), { x: -7 }, { x: 0, duration: .6, ease: 'elastic.out(1,0.3)' });
+  }
+}
+
+function land(p) {
+  state.landed = p;
+  const t = borderTier(p);
+  $('landedImg').src = headshot(p);
+  $('landedImg').onerror = function () { this.onerror = null; this.src = SILHOUETTE; };
+  $('landedImg').className = 't-' + t;
+  $('landedName').childNodes[0].nodeValue = p.name + ' ';
+  $('landedSub').textContent = p.legend
+    ? `★ LEGEND · ${p.pos || ''} · ${p.team || ''}`
+    : `${p.year || ''} · ${p.pos || ''} · ${p.team || ''}`;
+  $('landedOvr').textContent = ratingsHidden() ? '?' : p.ovr;
+  $('landedOvr').className = 'big-ov c-' + t;
+
+  const hasPrime = !p.legend && !!DATA.prime[p.name] && !state.boostedThisLand;
+  $('primeBadge').style.display = state.boostedThisLand ? 'inline-block' : 'none';
+  $('respinBtn').disabled = state.respinUsed;
+  $('respinBtn').textContent = state.respinUsed ? 'Re-spin ✕' : 'Re-spin';
+  $('boostBtn').disabled = state.boostUsed || !hasPrime;
+  $('boostBtn').textContent = state.boostUsed ? 'Boost ✕' : (!hasPrime ? 'No Prime' : '⚡ Boost');
+
+  const canSnag = !state.snagUsed && state.strip;
+  $('snagLeftBtn').disabled = !canSnag || !state.strip[state.targetIndex - 1];
+  $('snagRightBtn').disabled = !canSnag || !state.strip[state.targetIndex + 1];
+
+  $('landed').classList.add('show');
+  $('spinBtn').disabled = true;
+  renderNodes();
+  revealWin(p);
+
+  // landing sound by rarity
+  if (p.legend) Sound.legend();
+  else { const tt = tier(p.ovr); if (tt === 'diamond') Sound.diamond(); else if (tt === 'gold') Sound.gold(); else Sound.land(); }
+
+  gsap.fromTo($('landed'), { y: 10, opacity: 0 }, { y: 0, opacity: 1, duration: .4, ease: 'power3.out', delay: .15 });
+  gsap.fromTo('#landedImg', { scale: .8 }, { scale: 1, duration: .45, ease: 'back.out(2)', delay: .15 });
+  if (p.legend) {
+    gsap.fromTo($('burst'), { opacity: 0 }, { opacity: 1, duration: .22, yoyo: true, repeat: 1, ease: 'power2.out' });
+  }
+}
+
+let segEls = {};
+function buildSegments() {
+  const wrap = $('segments');
+  wrap.innerHTML = '';
+  segEls = {};
+  for (const s of SLOTS) {
+    const d = document.createElement('div');
+    d.className = 'seg';
+    d.style.webkitMaskImage = `url(${s.mask})`;
+    d.style.maskImage = `url(${s.mask})`;
+    wrap.appendChild(d);
+    segEls[s.key] = d;
+  }
+}
+function updateFigure() {
+  for (const s of SLOTS) {
+    const f = state.filled[s.key];
+    const el = segEls[s.key];
+    if (!el) continue;
+    if (f) {
+      el.style.background = `url(jersey-fabric.png), ${teamColor(f.team)}`;
+      el.style.backgroundSize = '150px, auto';
+      el.style.backgroundBlendMode = 'overlay';
+    } else {
+      el.style.background = 'transparent';
+    }
+  }
+}
+
+function buildPips() {
+  const w = $('pips');
+  w.innerHTML = '';
+  for (let i = 0; i < SLOTS.length; i++) w.appendChild(document.createElement('i'));
+}
+function updateProgress(n) {
+  const pips = $('pips').children;
+  for (let i = 0; i < pips.length; i++) pips[i].classList.toggle('on', i < n);
+}
+
+function respin() {
+  if (state.respinUsed || state.spinning) return;
+  state.respinUsed = true;
+  Sound.whoosh();
+  updatePowerups();
+  spin();
+}
+
+function boost() {
+  if (state.boostUsed || !state.landed) return;
+  const primeCard = DATA.prime[state.landed.name];
+  if (!primeCard) return;
+  state.boostUsed = true;
+  state.boostedThisLand = true;
+  Sound.prime();
+  updatePowerups();
+  // Guard: a Boost should never lower a rating - keep the better of Live vs Prime per stat.
+  const merged = { ...primeCard };
+  for (const s of SLOTS) {
+    if (s.type === 'height') {
+      if ((state.landed.heightIn || 0) > (primeCard.heightIn || 0)) {
+        merged.heightIn = state.landed.heightIn; merged.height = state.landed.height;
+      }
+    } else {
+      merged[s.key] = Math.max(primeCard[s.key] || 0, state.landed[s.key] || 0);
+    }
+  }
+  land(merged);
+}
+
+function snag(dir) {
+  if (state.snagUsed || state.spinning || !state.strip) return;
+  const idx = state.targetIndex + dir;
+  const neighbor = state.strip[idx];
+  if (!neighbor) return;
+  state.snagUsed = true;
+  state.targetIndex = idx;
+  state.boostedThisLand = false;
+  state.spinning = true;
+  Sound.whoosh();
+  $('landed').classList.remove('show');
+  updatePowerups();
+  const frameW = $('track').parentElement.clientWidth;
+  animateReelTo(centerOffset(idx, frameW), 0.5, 'power3.out', () => land(neighbor));
+}
+
+function openSlots() { return SLOTS.filter(s => !state.filled[s.key]); }
+
+function assign(slotKey) {
+  if (!state.landed || state.filled[slotKey]) return;
+  const p = state.landed;
+  const s = SLOTS.find(x => x.key === slotKey);
+  const originRect = $('landedImg').getBoundingClientRect();
+
+  state.filled[slotKey] = {
+    name: p.name, value: slotNumeric(p, s), display: slotDisplay(p, s),
+    ovr: p.ovr, legend: !!p.legend, team: p.team, img: headshot(p),
+  };
+  state.used.add(p.name);
+  (state.dealtCards || (state.dealtCards = [])).push(p);   // for the daily "best possible build"
+  state.landed = null;
+  state.boostedThisLand = false;
+  Sound.assign();
+  $('landed').classList.remove('show');
+  updatePowerups();
+  renderNodes();
+
+  const node = document.querySelector(`.node[data-key="${slotKey}"]`);
+  const faceEl = node && node.querySelector('.face');
+  if (faceEl) flyHeadshot(originRect, faceEl, headshot(p));
+  const seg = segEls[slotKey];
+  if (seg) gsap.fromTo(seg, { opacity: 0 }, { opacity: 1, duration: .55, ease: 'power2.out' });
+  if (node) gsap.fromTo(node, { scale: .85 }, { scale: 1, duration: .4, ease: 'back.out(1.8)', delay: .12 });
+
+  if (openSlots().length === 0) finish();
+  else {
+    $('spinBtn').disabled = false;
+    startIdleReel();
+    // Mobile: glide back up to the Spin button so you can spin again without scrolling all the
+    // way up. Wait for the headshot fly-in (~0.55s) to land in its slot first.
+    if (window.matchMedia('(max-width: 720px)').matches) {
+      setTimeout(() => $('spinBtn').scrollIntoView({ behavior: 'smooth', block: 'center' }), 680);
+    }
+  }
+}
+
+function flyHeadshot(fromRect, targetEl, img) {
+  const to = targetEl.getBoundingClientRect();
+  const fly = document.createElement('div');
+  fly.className = 'fly';
+  fly.style.backgroundImage = `url("${img}")`;
+  Object.assign(fly.style, {
+    left: fromRect.left + 'px', top: fromRect.top + 'px',
+    width: fromRect.width + 'px', height: fromRect.height + 'px',
+  });
+  document.body.appendChild(fly);
+  targetEl.style.visibility = 'hidden';
+  gsap.to(fly, {
+    left: to.left + 'px', top: to.top + 'px', width: to.width + 'px', height: to.height + 'px',
+    duration: .55, ease: 'power3.inOut',
+    onComplete: () => { targetEl.style.visibility = 'visible'; fly.remove(); },
+  });
+}
+
+function renderNodes() {
+  const nodes = $('nodes');
+  const wires = $('wires');
+  nodes.innerHTML = '';
+  wires.innerHTML = '';
+  const landing = state.landed;
+
+  for (const s of SLOTS) {
+    const f = state.filled[s.key];
+    const mode = f ? 'set' : (landing ? 'hot' : 'open');
+
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', s.lx); line.setAttribute('y1', s.ly);
+    line.setAttribute('x2', s.ax); line.setAttribute('y2', s.ay);
+    line.setAttribute('vector-effect', 'non-scaling-stroke');
+    if (mode === 'hot') line.classList.add('hot');
+    if (mode === 'set') line.classList.add('set');
+    wires.appendChild(line);
+
+    const dot = document.createElement('div');
+    dot.className = 'anchor' + (mode === 'hot' ? ' hot' : mode === 'set' ? ' set' : '');
+    dot.style.left = s.ax + '%'; dot.style.top = s.ay + '%';
+    nodes.appendChild(dot);
+
+    const div = document.createElement('div');
+    div.className = 'node' + (mode === 'hot' ? ' assignable' : '');
+    div.dataset.key = s.key;
+    div.style.left = s.lx + '%'; div.style.top = s.ly + '%';
+    if (f) {
+      const t = f.legend ? 'legend' : tier(f.ovr);
+      const accent = f.legend ? 'var(--legend)' : teamColor(f.team);
+      div.innerHTML = `<div class="accent" style="background:${accent}"></div>
+        <div class="body">
+          <div class="label">${s.label}</div>
+          <div class="row">
+            <div class="face" style="background-image:url('${f.img}')"></div>
+            <div class="val c-${t}">${ratingsHidden() ? '?' : f.display}</div>
+          </div>
+          <div class="who">${f.legend ? '★ ' : ''}${f.name}</div>
+        </div>`;
+    } else if (landing) {
+      const prev = ratingsHidden() ? '?' : (s.type === 'height' ? slotDisplay(landing, s) : '+' + slotNumeric(landing, s));
+      div.innerHTML = `<div class="accent"></div>
+        <div class="body">
+          <div class="label">${s.label}</div>
+          <div class="preview">${prev}</div>
+          <div class="who">tap to set</div>
+        </div>`;
+      div.onclick = () => assign(s.key);
+    } else {
+      div.innerHTML = `<div class="accent"></div>
+        <div class="body">
+          <div class="label">${s.label}</div>
+          <div class="part">${s.part}</div>
+        </div>`;
+    }
+    nodes.appendChild(div);
+  }
+  updateFigure();
+  updateOvr();
+}
+
+function weightedOvr(keys) {
+  let vsum = 0, wsum = 0;
+  for (const k of keys) {
+    const w = WEIGHTS[k] || 1;
+    vsum += state.filled[k].value * w; wsum += w;
+  }
+  return Math.round(vsum / wsum);
+}
+
+let ovrShown = 0;
+function updateOvr() {
+  const filledKeys = SLOTS.filter(s => state.filled[s.key]).map(s => s.key);
+  const left = SLOTS.length - filledKeys.length;
+  $('slotsLeft').textContent = left === 0 ? 'Complete' : `${left} slot${left > 1 ? 's' : ''} left`;
+  updateProgress(filledKeys.length);
+  const ring = $('ovrRing'), num = $('ovrNum');
+  if (!filledKeys.length) {
+    num.textContent = '-'; num.className = ''; ovrShown = 0;
+    ring.style.setProperty('--p', 0); ring.style.setProperty('--g', 'rgba(255,255,255,.12)');
+    return;
+  }
+  if (ratingsHidden()) {
+    num.textContent = '?'; num.className = ''; ovrShown = 0;
+    ring.style.setProperty('--p', 0); ring.style.setProperty('--g', 'rgba(255,255,255,.12)');
+    return;
+  }
+  const avg = weightedOvr(filledKeys);
+  num.className = 'c-' + tier(avg);
+  ring.style.setProperty('--g', getComputedStyle(num).color);
+  const o = { v: ovrShown };
+  gsap.to(o, { v: avg, duration: .6, ease: 'power2.out', onUpdate: () => {
+    num.textContent = Math.round(o.v);
+    ring.style.setProperty('--p', o.v.toFixed(1));
+  } });
+  gsap.fromTo(ring, { scale: 1.14 }, { scale: 1, duration: .5, ease: 'back.out(2)' });
+  ovrShown = avg;
+}
+
+function updatePowerups() {
+  const r = $('pu-respin'), b = $('pu-boost'), s = $('pu-snag');
+  r.textContent = 'Re-spin ' + (state.respinUsed ? 0 : 1);
+  b.textContent = 'Boost ' + (state.boostUsed ? 0 : 1);
+  s.textContent = 'Snag ' + (state.snagUsed ? 0 : 1);
+  r.classList.toggle('used', state.respinUsed);
+  b.classList.toggle('used', state.boostUsed);
+  s.classList.toggle('used', state.snagUsed);
+}
+
+function clamp(n, lo, hi) { return Math.max(lo, Math.min(hi, n)); }
+function round(n, places = 0) {
+  const m = Math.pow(10, places);
+  return Math.round(n * m) / m;
+}
+function seededRandom(seedText) {
+  let h = 2166136261;
+  for (let i = 0; i < seedText.length; i++) {
+    h ^= seedText.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return function () {
+    h += 0x6D2B79F5;
+    let t = h;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function randRange(rng, lo, hi) { return lo + (hi - lo) * rng(); }
+function bell(rng, spread = 1) { return (rng() + rng() + rng() - 1.5) * spread; }
+
+/* ===== Daily Challenge + streak (ported from the pitcher game, batter-flavored) ===== */
+// "today" is the player's LOCAL calendar date (daily resets at local midnight).
+function todayUTC() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+// The Daily Challenge rotates between Build a Pitcher, Batter, and Baller each day (date-seeded so
+// everyone worldwide gets the same one). Returns 'pitcher', 'batter', or 'baller' for a given date.
+function dailyGameFor(dateStr) {
+  const days = Math.floor(Date.parse(dateStr + 'T00:00:00Z') / 86400000);
+  return ['pitcher', 'batter', 'baller'][((days % 3) + 3) % 3];
+}
+function getOrCreateGuestId() {
+  let gid = null;
+  try { gid = localStorage.getItem('pl_guestId'); } catch (e) {}
+  if (!gid) { gid = (Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)).slice(0, 36); try { localStorage.setItem('pl_guestId', gid); } catch (e) {} }
+  return gid;
+}
+
+let streak = { count: 0, best: 0, lastDate: null };
+try { const _s = JSON.parse(localStorage.getItem('pl_streak') || 'null'); if (_s && typeof _s === 'object') streak = _s; } catch (e) {}
+streak.count = Number(streak.count) || 0; streak.best = Number(streak.best) || 0;
+let freezeTokens = 0;
+try { freezeTokens = Number(localStorage.getItem('pl_freeze') || '0') || 0; } catch (e) {}
+function saveStreak() { try { localStorage.setItem('pl_streak', JSON.stringify(streak)); } catch (e) {} }
+function saveFreeze() { try { localStorage.setItem('pl_freeze', String(freezeTokens)); } catch (e) {} }
+function addDays(dateStr, n) { const d = new Date(dateStr + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
+function getPlayedDates() {
+  let arr = [];
+  try { arr = JSON.parse(localStorage.getItem('pl_played') || '[]'); } catch (e) {}
+  if (!Array.isArray(arr)) arr = [];
+  if (!arr.length && streak.count > 0 && streak.lastDate) {
+    for (let i = 0; i < streak.count; i++) arr.push(addDays(streak.lastDate, -i));
+    try { localStorage.setItem('pl_played', JSON.stringify(arr)); } catch (e) {}
+  }
+  return new Set(arr);
+}
+function recordPlayedDate(dateStr) {
+  const s = getPlayedDates(); if (s.has(dateStr)) return;
+  s.add(dateStr);
+  try { localStorage.setItem('pl_played', JSON.stringify([...s].sort())); } catch (e) {}
+}
+async function syncAccountDates() {
+  const q = account ? `sub=${encodeURIComponent(account.sub)}` : `guestId=${encodeURIComponent(getOrCreateGuestId())}`;
+  try {
+    const r = await fetch(`/api/score?action=dailyDates&game=${LEADERBOARD_GAME}&date=${todayUTC()}&${q}`);
+    const j = await r.json();
+    if (!j.ok) return null;
+    if (Array.isArray(j.dates) && j.dates.length) {
+      const s = getPlayedDates();
+      j.dates.forEach(d => s.add(d));
+      try { localStorage.setItem('pl_played', JSON.stringify([...s].sort())); } catch (e) {}
+    }
+    if (j.today) { setDailyDone({ ovr: j.today.ovr, rank: j.today.rank, total: j.today.total }); updateDailyBtn(); return j.today; }
+    return null;
+  } catch (e) { return null; }
+}
+function openStreak() {
+  closeOverlay('menu');
+  renderStreakTimeline();
+  openOverlay('streakModal');
+  syncAccountDates().then(renderStreakTimeline);
+}
+function renderStreakTimeline() {
+  const played = getPlayedDates();
+  const today = todayUTC();
+  let start = played.size ? [...played].sort()[0] : addDays(today, -6);
+  const cap = addDays(today, -44);
+  if (start < cap) start = cap;
+  const end = addDays(today, 2);
+  $('skCount').textContent = streak.count;
+  $('skBest').textContent = streak.best;
+  $('skFreeze').textContent = freezeTokens;
+  $('skFreezeWrap').style.display = freezeTokens > 0 ? 'block' : 'none';
+  const next = STREAK_MILESTONES.find(m => m > streak.count);
+  $('skNext').textContent = next
+    ? `${next - streak.count} day${next - streak.count === 1 ? '' : 's'} to a 🔥 ${next}-day streak${FREEZE_MILESTONES.includes(next) ? ' + 🧊 Freeze' : ''}`
+    : "You've hit every milestone. Legend. 🐐";
+  const MS_BADGE = { 3: '🔥', 7: '🧊', 14: '🧊', 30: '🏆', 100: '🐐' };
+  const DOW = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+  const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const cells = [];
+  let run = 0;
+  for (let d = start; d <= end; d = addDays(d, 1)) {
+    const isFuture = d > today, isToday = d === today, p = played.has(d);
+    run = p ? run + 1 : 0;
+    const ll = p && played.has(addDays(d, -1));
+    const badge = (p && MS_BADGE[run]) ? `<div class="sk-badge">${MS_BADGE[run]}</div>` : '';
+    const cls = p ? 'played' : (isToday ? 'today' : (isFuture ? 'future' : 'missed'));
+    const dt = new Date(d + 'T00:00:00Z'), dom = dt.getUTCDate();
+    const showMon = dom === 1 || d === start;
+    const icon = p ? '🔥' : (isToday ? '🎯' : (isFuture ? '' : '·'));
+    cells.push(`<div class="sk-day ${cls}${ll ? ' ll' : ''}" title="${MON[dt.getUTCMonth()]} ${dom}">${badge}<div class="sk-dow">${DOW[dt.getUTCDay()]}</div><div class="sk-dot">${icon}</div><div class="sk-dom">${dom}</div><div class="sk-mon">${showMon ? MON[dt.getUTCMonth()] : ''}</div></div>`);
+  }
+  $('skTimeline').innerHTML = cells.join('');
+  const tl = $('skTimeline'); requestAnimationFrame(() => { tl.scrollLeft = tl.scrollWidth; });
+}
+function markPlayedToday() {
+  const today = todayUTC();
+  if (streak.lastDate === today) return { firstToday: false, frozeUsed: false };
+  const d = new Date(today + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() - 1);
+  const yd = d.toISOString().slice(0, 10);
+  d.setUTCDate(d.getUTCDate() - 1);
+  const dby = d.toISOString().slice(0, 10);
+  let frozeUsed = false;
+  if (streak.lastDate === yd) streak.count++;
+  else if (streak.lastDate === dby && freezeTokens > 0) { freezeTokens--; saveFreeze(); streak.count++; frozeUsed = true; }
+  else streak.count = 1;
+  streak.best = Math.max(streak.best, streak.count);
+  streak.lastDate = today; saveStreak(); recordPlayedDate(today); renderStreakChip();
+  return { firstToday: true, frozeUsed };
+}
+function renderStreakChip() {
+  const chip = $('streakChip'); if (!chip) return;
+  if (streak.count >= 2 || freezeTokens > 0) {
+    chip.innerHTML = `🔥 ${streak.count}` + (freezeTokens > 0 ? ` <span class="freeze">🧊${freezeTokens > 1 ? freezeTokens : ''}</span>` : '');
+    chip.style.display = 'inline-flex';
+  } else chip.style.display = 'none';
+}
+const STREAK_MILESTONES = [3, 7, 14, 30, 100];
+const FREEZE_MILESTONES = [7, 14, 30, 100];
+function checkStreakMilestone(n) {
+  let gotFreeze = false;
+  if (FREEZE_MILESTONES.includes(n)) { freezeTokens++; saveFreeze(); renderStreakChip(); gotFreeze = true; }
+  if (!STREAK_MILESTONES.includes(n)) return;
+  const msgs = { 3: "3-day streak! You're on a roll. 🔥", 7: 'One full week! 🔥🔥', 14: "Two weeks straight. You're hooked. 🔥🔥🔥", 30: '30 days! Legendary dedication. 🏆', 100: '100 days. You are the absolute GOAT. 🐐' };
+  let m = msgs[n] || `${n}-day streak!`;
+  if (gotFreeze) m += '\n🧊 Earned a Streak Freeze - protects one missed day!';
+  dayToast(m); Sound.legend();
+}
+function nextMilestonePreview() {
+  const today = todayUTC();
+  const d = new Date(today + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() - 1);
+  const yd = d.toISOString().slice(0, 10);
+  const projected = streak.lastDate === today ? streak.count : (streak.lastDate === yd ? streak.count + 1 : 1);
+  if (STREAK_MILESTONES.includes(projected)) {
+    const freeze = FREEZE_MILESTONES.includes(projected) ? ' + a 🧊 Freeze' : '';
+    return `Finish today for a 🔥 ${projected}-day streak${freeze}!`;
+  }
+  const next = STREAK_MILESTONES.find(m => m > projected);
+  if (!next) return '';
+  const left = next - projected;
+  const freeze = FREEZE_MILESTONES.includes(next) ? ' + 🧊 Freeze' : '';
+  return `${left} more day${left === 1 ? '' : 's'} → 🔥 ${next}-day streak${freeze}`;
+}
+function dayToast(msg) {
+  let t = $('dayToast');
+  if (!t) { t = document.createElement('div'); t.id = 'dayToast'; t.className = 'day-toast'; document.body.appendChild(t); }
+  t.textContent = msg; t.style.display = 'flex'; gsap.killTweensOf(t);
+  gsap.fromTo(t, { y: 14, opacity: 0, scale: .94 }, { y: 0, opacity: 1, scale: 1, duration: .45, ease: 'back.out(1.5)' });
+  clearTimeout(t._tmr); t._tmr = setTimeout(() => gsap.to(t, { opacity: 0, y: -10, duration: .4, onComplete: () => { t.style.display = 'none'; } }), 4800);
+}
+
+// personal best is split per game (the two OVR scales differ — batters can top 99).
+function dailyBest() { try { return Number(localStorage.getItem('pl_dc_best_baller') || '0') || 0; } catch (e) { return 0; } }
+function setDailyBest(v) { try { localStorage.setItem('pl_dc_best_baller', String(v)); } catch (e) {} }
+
+let dailyMode = false, dailyRng = null, luckyToday = false, luckyConsumed = false, dailyResultsShown = false;
+// The "played today" gate is shared across both games (only one runs per date).
+function dcKey() { return `pl_dc_${todayUTC()}`; }
+function getDailyStatus() { try { return JSON.parse(localStorage.getItem(dcKey()) || 'null'); } catch (e) { return null; } }
+function setDailyDone(data) { try { localStorage.setItem(dcKey(), JSON.stringify(data)); } catch (e) {} }
+function isLuckyToday() { return seededRandom(`pl-lucky-${todayUTC()}`)() < (1 / 7); }
+
+let _playedTodayCache = null;
+async function fetchPlayedToday() {
+  if (_playedTodayCache != null) return _playedTodayCache;
+  try {
+    const r = await fetch(`/api/score?action=challengeLeaderboard&game=${LEADERBOARD_GAME}&limit=1&date=${todayUTC()}`);
+    const j = await r.json(); if (j.ok) { _playedTodayCache = j.total; return j.total; }
+  } catch (e) {}
+  return null;
+}
+function updateDailyBtn() {
+  const btn = $('dailyBtn'); if (!btn) return;
+  const done = getDailyStatus();
+  if (done) { btn.textContent = '✅ Done'; btn.classList.add('done'); btn.classList.remove('pulse'); btn.title = `Today: ${done.ovr} OVR · #${done.rank} of ${done.total}`; }
+  else {
+    btn.textContent = '🎯 Daily'; btn.classList.remove('done'); btn.classList.add('pulse'); btn.title = 'Daily Challenge - same players for everyone today!';
+    fetchPlayedToday().then(n => { if (n != null && n > 0 && !getDailyStatus()) { btn.textContent = `🎯 Daily · ${n}`; btn.title = `${n} played today`; } });
+  }
+}
+function showDailyInfo() {
+  const el = $('dailyInfo'); if (!el) return;
+  const best = dailyBest(), preview = nextMilestonePreview();
+  let html = '';
+  if (luckyToday) html += `<span class="di-lucky">✨ LUCKY SPIN - a 💎 Diamond is locked into your first card!</span>`;
+  if (best > 0) html += `<span class="di-best">🏆 Your best daily: <b>${best}</b> OVR - beat it!</span>`;
+  if (preview) html += `<span class="di-prev">${preview}</span>`;
+  el.innerHTML = html || `<span class="di-prev">🎯 Same players for everyone today. One shot - make it count.</span>`;
+  el.style.display = 'flex';
+}
+function hideDailyInfo() { const el = $('dailyInfo'); if (el) el.style.display = 'none'; }
+async function startDailyChallenge() {
+  // Off-day: today's daily is the other game — hand off to it.
+  const _dg = dailyGameFor(todayUTC());
+  if (_dg !== LEADERBOARD_GAME) { location.href = (_dg === 'batter' ? '/batting' : _dg === 'baller' ? '/hoops' : '/pitching') + '#daily'; return; }
+  closeOverlay('menu');
+  const serverToday = await syncAccountDates();
+  const done = serverToday || getDailyStatus();
+  if (done) { rankReveal(done.ovr, done.rank, done.total, false, true); return; }
+  reset();
+  dailyMode = true;
+  luckyConsumed = false;
+  dailyRng = seededRandom(`pl-daily-${todayUTC()}-baller-v1`);
+  luckyToday = isLuckyToday();
+  const tagEl = document.querySelector('header .tag');
+  if (tagEl) { tagEl.textContent = '🎯 Daily Challenge'; tagEl.classList.add('dc-header-tag'); }
+  const reel = document.querySelector('.reel-frame'); if (reel) reel.classList.toggle('lucky', luckyToday);
+  showDailyInfo();
+  if (luckyToday && Sound.gold) Sound.gold();
+  if (window.matchMedia('(max-width: 720px)').matches) $('spinBtn').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+async function finishDailyChallenge(ovr, name, build) {
+  if (!dailyMode) return null;
+  dailyMode = false; dailyRng = null; luckyToday = false;
+  hideDailyInfo();
+  const tagEl = document.querySelector('header .tag');
+  if (tagEl) { tagEl.textContent = 'Draft Mode'; tagEl.classList.remove('dc-header-tag'); }
+  const reel = document.querySelector('.reel-frame'); if (reel) reel.classList.remove('lucky');
+  let rank = 1, total = 1;
+  try {
+    const body = { action: 'challengeSubmit', game: LEADERBOARD_GAME, ovr, name, build, date: todayUTC() };
+    if (account) body.sub = account.sub; else body.guestId = getOrCreateGuestId();
+    const r = await fetch('/api/score', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const j = await r.json(); if (j.ok) { rank = j.rank; total = j.total; }
+  } catch (e) {}
+  setDailyDone({ ovr, rank, total });
+  _playedTodayCache = null;
+  updateDailyBtn();
+  const prevBest = dailyBest(); const isPB = ovr > prevBest; if (isPB) setDailyBest(ovr);
+  let frozeUsed = false;
+  const mp = markPlayedToday();
+  if (mp.firstToday) {
+    frozeUsed = mp.frozeUsed;
+    checkStreakMilestone(streak.count);
+    if (account) {
+      try {
+        const r = await fetch('/api/account', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'updateStreak', sub: account.sub, sessionToken: account.sessionToken }) });
+        const j = await r.json(); if (j.ok) { streak.count = j.streak; streak.best = j.best; saveStreak(); renderStreakChip(); }
+      } catch (e) {}
+    }
+  }
+  bumpDailyAch();
+  return { ovr, rank, total, isPB, frozeUsed };
+}
+
+function popcount(x) { let c = 0; while (x) { c += x & 1; x >>>= 1; } return c; }
+function bestPossibleOvr(cards) {
+  if (!cards || cards.length !== SLOTS.length) return null;
+  const n = SLOTS.length;
+  const val = cards.map(c => SLOTS.map(s => slotNumeric(c, s)));
+  const wt = SLOTS.map(s => WEIGHTS[s.key] || 1);   // batter weights are fixed per slot
+  const sc = cards.map((c, ci) => SLOTS.map((s, si) => val[ci][si] * wt[si]));
+  const FULL = (1 << n) - 1;
+  const dpScore = new Float64Array(1 << n).fill(-1), dpW = new Float64Array(1 << n);
+  dpScore[0] = 0;
+  for (let mask = 0; mask <= FULL; mask++) {
+    if (dpScore[mask] < 0) continue;
+    const i = popcount(mask); if (i >= n) continue;
+    for (let s = 0; s < n; s++) {
+      if (mask & (1 << s)) continue;
+      const nm = mask | (1 << s), ns = dpScore[mask] + sc[i][s];
+      if (ns > dpScore[nm]) { dpScore[nm] = ns; dpW[nm] = dpW[mask] + wt[s]; }
+    }
+  }
+  return dpW[FULL] ? Math.round(dpScore[FULL] / dpW[FULL]) : null;
+}
+
+async function showDailyResults() {
+  if (dailyResultsShown) return;
+  const ov = $('dailyResults');
+  if (!ov) { dailyResultsShown = true; runCareerPlaythrough(); return; }
+  dailyResultsShown = true;
+  $('dResOvr').textContent = state.finalOvr;
+  $('dResRank').textContent = '…'; $('dResPct').textContent = '…';
+  $('dResField').textContent = 'submitting…';
+  $('dResPB').style.display = 'none'; $('dResFroze').style.display = 'none';
+  $('dResBest').innerHTML = ''; $('dResBoard').innerHTML = ''; $('dResStreak').textContent = '';
+  ov.classList.add('show');
+  document.body.classList.add('ach-open');
+  gsap.fromTo($('dResCard'), { y: 26, opacity: 0, scale: .92 }, { y: 0, opacity: 1, scale: 1, duration: .55, ease: 'back.out(1.6)' });
+  try {
+    const name = $('nameInput').value.trim() || (account && account.name) || 'Anonymous';
+    if (name !== 'Anonymous') { try { localStorage.setItem('pl_lastName', name); } catch (e) {} }
+    const res = (await finishDailyChallenge(state.finalOvr, name, { slots: state.build, career: null })) || { ovr: state.finalOvr, rank: 1, total: 1, isPB: false, frozeUsed: false };
+    let best = null;
+    try { best = bestPossibleOvr(state.dealtCards); } catch (e) {}
+    let rows = [];
+    try {
+      const r = await fetch(`/api/score?action=challengeLeaderboard&game=${LEADERBOARD_GAME}&limit=8&date=${todayUTC()}`);
+      const j = await r.json(); if (j.ok) rows = j.rows || [];
+    } catch (e) {}
+    renderDailyResults(res, best, rows, name);
+  } catch (e) {
+    $('dResField').textContent = 'Tap Continue to simulate.';
+  }
+}
+function renderDailyResults(res, best, rows, name) {
+  const ov = $('dailyResults');
+  const pct = res.total > 1 ? Math.max(1, Math.round((1 - (res.rank - 1) / res.total) * 100)) : 100;
+  $('dResOvr').textContent = res.ovr;
+  $('dResRank').textContent = '-';
+  $('dResPct').textContent = '0';
+  $('dResField').textContent = `of ${res.total.toLocaleString()} player${res.total === 1 ? '' : 's'} today`;
+  $('dResPB').style.display = res.isPB ? 'block' : 'none';
+  $('dResFroze').style.display = res.frozeUsed ? 'block' : 'none';
+  $('dResStreak').textContent = streak.count >= 2 ? `🔥 ${streak.count}-day streak${freezeTokens > 0 ? ` · 🧊${freezeTokens}` : ''}` : '';
+  if (best != null) {
+    const gap = best - res.ovr;
+    $('dResBest').innerHTML = gap <= 0
+      ? `💎 <b>Optimal!</b> You placed your cards perfectly - best possible was <b>${best}</b> OVR.`
+      : `💎 Best possible with your cards: <b>${best}</b> OVR <span class="dres-gap">(+${gap} with smarter slotting)</span>`;
+  } else $('dResBest').innerHTML = '';
+  $('dResBoard').innerHTML = rows.length
+    ? rows.map((r, i) => `<div class="dres-row${(i + 1) === res.rank && r.name === name ? ' me' : ''}"><span>${i + 1}</span><span class="dres-nm">${escapeHTML(r.name)}</span><span class="dres-rov c-${tier(r.ovr)}">${r.ovr}</span></div>`).join('')
+    : '<div class="dr-field" style="padding:6px">Be the first on today\'s board!</div>';
+  if (!ov.classList.contains('show')) return;
+  gsap.from($('dResBoard').children, { x: 30, opacity: 0, duration: .4, stagger: .05, delay: .05, ease: 'power2.out' });
+  const rk = { v: Math.min(res.total, Math.max(res.rank, Math.round(res.total * 0.6))) }, pc = { v: 0 };
+  gsap.to(rk, { v: res.rank, duration: 1.2, ease: 'power2.out', onUpdate: () => { $('dResRank').textContent = '#' + Math.round(rk.v).toLocaleString(); } });
+  gsap.to(pc, {
+    v: pct, duration: 1.2, ease: 'power2.out', onUpdate: () => { $('dResPct').textContent = Math.round(pc.v); },
+    onComplete: () => { if (pct <= 5) Sound.legend(); else if (pct <= 25) (Sound.diamond || Sound.gold || Sound.complete)(); else Sound.complete(); if (res.isPB && Sound.gold) Sound.gold(); }
+  });
+}
+function closeDailyResults(thenSim) {
+  const ov = $('dailyResults'); if (ov) ov.classList.remove('show');
+  document.body.classList.remove('ach-open');
+  if (thenSim) runCareerPlaythrough();
+}
+
+function rankReveal(ovr, rank, total, isPB, replay, frozeUsed) {
+  const ov = $('dailyReveal'); if (!ov) return;
+  const pct = total > 1 ? Math.max(1, Math.round((1 - (rank - 1) / total) * 100)) : 100;
+  $('drDailyOvr').textContent = ovr;
+  $('drPctNum').textContent = '0';
+  $('drRankNum').textContent = '-';
+  $('drField').textContent = `of ${total.toLocaleString()} player${total === 1 ? '' : 's'} today`;
+  $('drPB').style.display = isPB ? 'block' : 'none';
+  $('drFroze').style.display = frozeUsed ? 'block' : 'none';
+  $('drStreak').textContent = streak.count >= 2 ? `🔥 ${streak.count}-day streak${freezeTokens > 0 ? ` · 🧊${freezeTokens}` : ''}` : '';
+  if (replay) startDailyCountdown($('drReplay')); else { stopDailyCountdown(); $('drReplay').textContent = ''; }
+  const closeBtn = $('drClose');
+  if (replay) { closeBtn.textContent = '← Back to Home'; closeBtn.onclick = () => { Sound.click(); stopDailyCountdown(); location.href = '/'; }; }
+  else { closeBtn.textContent = 'Nice 🔥'; closeBtn.onclick = () => { Sound.click(); closeDailyReveal(); }; }
+  ov.classList.add('show');
+  gsap.fromTo($('drCard'), { y: 18, opacity: 0, scale: .94 }, { y: 0, opacity: 1, scale: 1, duration: .5, ease: 'back.out(1.6)' });
+  const rk = { v: Math.min(total, Math.max(rank, Math.round(total * 0.6))) }, pc = { v: 0 };
+  gsap.to(rk, { v: rank, duration: 1.1, ease: 'power2.out', onUpdate: () => { $('drRankNum').textContent = '#' + Math.round(rk.v).toLocaleString(); } });
+  gsap.to(pc, {
+    v: pct, duration: 1.1, ease: 'power2.out', onUpdate: () => { $('drPctNum').textContent = Math.round(pc.v); },
+    onComplete: () => { if (pct <= 5) Sound.legend(); else if (pct <= 25) (Sound.diamond || Sound.gold || Sound.complete)(); else Sound.complete(); if (isPB && Sound.gold) Sound.gold(); }
+  });
+}
+function closeDailyReveal() { stopDailyCountdown(); const ov = $('dailyReveal'); if (ov) ov.classList.remove('show'); }
+let _dailyCountdown = null;
+function msToNextDaily() { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate() + 1, 0, 0, 0, 0).getTime() - n.getTime(); }
+function fmtCountdown(ms) { const s = Math.max(0, Math.floor(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = s % 60; return `${h}h ${String(m).padStart(2, '0')}m ${String(x).padStart(2, '0')}s`; }
+function startDailyCountdown(el) {
+  stopDailyCountdown();
+  const tick = () => {
+    const ms = msToNextDaily();
+    if (ms <= 0) { stopDailyCountdown(); el.textContent = '✨ New daily ready — refresh!'; return; }
+    el.textContent = '🔒 Next puzzle in ' + fmtCountdown(ms);
+  };
+  tick(); _dailyCountdown = setInterval(tick, 1000);
+}
+function stopDailyCountdown() { if (_dailyCountdown) { clearInterval(_dailyCountdown); _dailyCountdown = null; } }
+// Daily achievements + the shared cross-game play counter (achievements.js is loaded in this game too).
+function bumpDailyAch() {
+  let n = 0; try { n = Number(localStorage.getItem('pl_dc_count') || '0'); } catch (e) {}
+  n++; try { localStorage.setItem('pl_dc_count', String(n)); } catch (e) {}
+  if (!window.Ach) return;
+  Ach.unlock('daily_root');
+  if (n >= 7) Ach.unlock('grind1');
+  if (n >= 30) Ach.unlock('grind2');
+  if (n >= 100) Ach.unlock('grind3');
+}
+
+/* ===== Achievements (shared board across both games) =====
+   Only the achievements that map to the batter game are wired here — the pitcher-specific ones
+   (career strikeouts / wins, the K+stamina "Glass Cannon") simply never fire, which is correct. */
+function parseHeightIn(s) {
+  const m = String(s || '').match(/(\d+)\s*'\s*(\d+)/);
+  return m ? (+m[1]) * 12 + (+m[2]) : 0;
+}
+// Fires when all slots are filled (called from finish()).
+function checkBuildAchievements() {
+  if (!window.Ach) return;
+  const f = state.filled, ovr = state.finalOvr;
+  Ach.unlock('draft_root');                                   // first/any completed build
+  if (ovr >= 90) Ach.unlock('builder1');
+  if (ovr >= 95) Ach.unlock('builder2');
+  if (ovr === 99) Ach.unlock('the_goat');
+  if (ovr > 99) Ach.unlock('beyond');
+  if (ovr < 60) Ach.unlock('bargain');
+  if (state.respinUsed && state.boostUsed && state.snagUsed) Ach.unlock('triple1');
+  if (SLOTS.some(s => Number(f[s.key].value) >= 125)) Ach.unlock('offcharts');
+  const hi = parseHeightIn(f['frame'] && f['frame'].display);
+  if (hi && hi <= 71) Ach.unlock('short_king');
+  if (hi >= 81) Ach.unlock('tall_tale');
+  const teams = SLOTS.map(s => f[s.key].team);
+  if (teams[0] && teams.every(t => t === teams[0])) Ach.unlock('one_team');
+  if ((f['fielding_ability'] && f['fielding_ability'].ovr >= 99) || (f['frame'] && f['frame'].ovr >= 99)) Ach.unlock('nepo');
+}
+// Fires after a simulated career (called from finishPlaythrough()).
+function checkCareerAchievements(t, verdict, votePct) {
+  if (!window.Ach) return;
+  Ach.unlock('sim_root');
+  if (t.rings >= 1) Ach.unlock('ring1');
+  if (t.rings >= 3) Ach.unlock('ring2');
+  if (t.rings >= 5) Ach.unlock('ring3');
+  if (t.hallOfFame) Ach.unlock('cooperstown');
+  if (votePct >= 99) Ach.unlock('unanimous');
+  if (verdict.cls === 'no') Ach.unlock('hopg');
+  if (verdict.cls === 'low') Ach.unlock('hall_not_good');
+}
+
+function ballerRole(vals) {
+  if (vals.playmaking >= 88 && vals.dribble >= 85) return 'Floor General';
+  if (vals.threept >= 95) return 'Sharpshooter';
+  if (vals.rebounding >= 90 && vals.frame >= 84) return 'Big Man';
+  if (vals.defense >= 92) return 'Two-Way Wing';
+  if (vals.finishing >= 92) return 'Slasher';
+  return 'Bucket Getter';
+}
+
+function simulateCareer(filled, finalOvr, draftTeamAb) {
+  const vals = {};
+  for (const s of SLOTS) vals[s.key] = filled[s.key].value;
+  const seed = SLOTS.map(s => `${s.key}:${vals[s.key]}:${filled[s.key].player || filled[s.key].name}`).join('|');
+  const rng = seededRandom(seed + '|hoop-career-v1');
+  const role = ballerRole(vals);
+  const seasons = [];
+  const totals = { gp:0, min:0, pts:0, reb:0, ast:0, stl:0, blk:0, war:0,
+    mvp:0, allStar:0, allNba:0, scoringTitles:0, dpoy:0, roy:0, rings:0, finalsMvp:0, p30:0, earnings:0 };
+  let currentTeam = draftTeamAb || randTeamAb(rng);
+  let currentTeamQuality = randRange(rng, -0.1, 0.12);
+  let tradeCount = 0;
+  const startAge = 20;
+  const maxAge = Math.round(clamp(30 + vals.frame * 0.085 + (vals.clutch - 50) * 0.01 + randRange(rng, -2, 3), 26, 41));
+  let declineDebt = 0, badStreak = 0, peakWar = 0, rookieDone = false;
+
+  for (let age = startAge; age <= maxAge; age++) {
+    let trade = null;
+    if (age > startAge && tradeCount < 4) {
+      const tradeChance = clamp(0.045 + badStreak * 0.035 + (age > 31 ? 0.018 : 0) + (peakWar > 5.5 ? 0.015 : 0), 0.025, 0.22);
+      if (rng() < tradeChance) {
+        const from = currentTeam;
+        currentTeam = randTeamAb(rng, from);
+        currentTeamQuality = randRange(rng, -0.08, 0.1);
+        trade = { from, to: currentTeam };
+        tradeCount++;
+      }
+    }
+    const growth = age < 26 ? 1 + (age - startAge) * 0.02 : 1;
+    const decline = age > 30 ? 1 - Math.pow(age - 30, 1.4) * 0.024 : 1;
+    const ageFactor = clamp(growth * decline - declineDebt, 0.62, 1.08);
+    const seasonOvr = clamp(finalOvr * ageFactor + bell(rng, 2.2), 35, 99);
+
+    const yearIdx = age - startAge;
+    const shoot = clamp(vals.threept * ageFactor + bell(rng, 3), 18, 130);
+    const fin = clamp(vals.finishing * ageFactor + bell(rng, 3), 18, 130);
+    const handle = clamp(vals.dribble * ageFactor + bell(rng, 3), 18, 130);
+    const play = clamp(vals.playmaking * ageFactor + bell(rng, 3), 18, 130);
+    const def = clamp(vals.defense * ageFactor + bell(rng, 2.8), 18, 130);
+    const reb = clamp(vals.rebounding * ageFactor + bell(rng, 3), 18, 130);
+    const spd = clamp(vals.speed * ageFactor + bell(rng, 2.5), 18, 130);
+    const clutch = clamp(vals.clutch * ageFactor + bell(rng, 3.5), 18, 130);
+    const durab = vals.frame;
+
+    const injuryRisk = clamp(0.13 - (durab - 50) * 0.0022 + Math.max(0, age - 32) * 0.016, 0.03, 0.36);
+    const hurt = rng() < injuryRisk;
+    const gp = Math.round(clamp(75 + (durab - 60) * 0.16 + bell(rng, 5), 28, 82) * (hurt ? randRange(rng, 0.42, 0.78) : 1));
+    if (hurt && age > 30) declineDebt += randRange(rng, 0.006, 0.018);
+    const mpg = clamp(19 + (seasonOvr - 64) * 0.6 + bell(rng, 2), 10, 38.5);
+
+    const scoreSkill = shoot * 0.30 + fin * 0.34 + handle * 0.16 + clutch * 0.10 + (mpg - 24) * 0.6;
+    const ppg = clamp((scoreSkill - 42) * 0.5 + bell(rng, 2.6), 1.5, 40);
+    const rpg = clamp((reb - 42) * 0.16 + (durab - 50) * 0.03 + (mpg - 24) * 0.12 + bell(rng, 1), 0.5, 15.5);
+    const apg = clamp((play - 42) * 0.13 + (handle - 50) * 0.04 + (mpg - 24) * 0.11 + bell(rng, 0.8), 0.3, 12.5);
+    const spg = clamp((def - 46) * 0.018 + (spd - 50) * 0.006 + bell(rng, 0.25), 0.1, 2.8);
+    const bpg = clamp((def - 52) * 0.013 + (durab - 55) * 0.012 + bell(rng, 0.18), 0, 3.6);
+    const tpPct = clamp(0.28 + (shoot - 60) * 0.0016 + bell(rng, 0.018), 0.20, 0.47);
+    const fgPct = clamp(0.41 + (fin - 60) * 0.0011 + (shoot - 60) * 0.0005 + bell(rng, 0.014), 0.37, 0.64);
+    const ts = clamp(fgPct + 0.075 + (shoot - 60) * 0.0006, 0.46, 0.70);
+    const war = clamp((ts - 0.53) * ppg * 0.5 + (ppg - 12) * 0.11 + (rpg - 4) * 0.16 + (apg - 3) * 0.2
+      + (spg - 0.9) * 0.55 + (bpg - 0.6) * 0.6 + (seasonOvr - 70) * 0.05 + bell(rng, 0.6), -1.5, 20.5) * (gp / 72);
+    const pts = Math.round(ppg * gp), rebT = Math.round(rpg * gp), astT = Math.round(apg * gp), stlT = Math.round(spg * gp), blkT = Math.round(bpg * gp);
+
+    const mvpDom = (war - 8) * 0.7 + (ppg - 25) * 0.12 + Math.max(0, finalOvr - 90) * 0.7 + currentTeamQuality * 2;
+    const mvp = age >= 21 && rng() < clamp(mvpDom * 0.032, 0, 0.45);
+    const allNba = !mvp && (war >= 8.5 || (ppg >= 24 && war >= 6.5)) && rng() < clamp((war - 7) * 0.12 + 0.2, 0, 0.72);
+    const allStar = mvp || allNba || war >= 6 || ppg >= 21.5;
+    const scoringTitle = ppg >= 25 && rng() < clamp((ppg - 25) * 0.05, 0, 0.5);
+    const dpoy = def >= 95 && (spg + bpg) >= 2.0 && rng() < clamp((def - 95) * 0.015 + 0.03, 0, 0.22);
+    const roy = yearIdx <= 1 && !rookieDone && war >= 2.3 && rng() < clamp((war - 2.3) * 0.12 + 0.12, 0, 0.55);
+    if (yearIdx === 0) rookieDone = true;
+    const playoff = rng() < clamp(0.35 + currentTeamQuality + (war - 4) * 0.01, 0.1, 0.8);
+    const ring = playoff && rng() < clamp(0.08 + currentTeamQuality * 0.45 + (clutch - 60) * 0.003 + Math.max(0, war - 7) * 0.012, 0.03, 0.42);
+    const finalsMvp = ring && (mvp || war >= 10) && rng() < 0.55;
+    const p30 = ppg >= 30;
+
+    // --- salary: NBA rookie-scale -> veteran market value arc, with yearly cap inflation.
+    const inflation = Math.pow(1.04, yearIdx);
+    const marketBase = clamp((seasonOvr - 70) * 1.7e6 + Math.max(0, war) * 1.9e6, 0, 52e6);
+    let salary = yearIdx <= 3
+      ? (4.2e6 + Math.max(0, finalOvr - 70) * 0.16e6) * inflation
+      : Math.max(8e6 * inflation, marketBase * inflation);
+    salary += ((mvp ? 5e6 : 0) + (allNba ? 2e6 : 0) + (allStar ? 1.2e6 : 0) + (ring ? 0.6e6 : 0)
+      + (scoringTitle ? 0.8e6 : 0) + (dpoy ? 0.8e6 : 0)) * inflation;
+    salary = Math.round(salary);
+
+    const season = { age, role, gp, mpg: round(mpg, 1), ppg: round(ppg, 1), rpg: round(rpg, 1), apg: round(apg, 1),
+      spg: round(spg, 1), bpg: round(bpg, 1), pts, reb: rebT, ast: astT, stl: stlT, blk: blkT,
+      fgPct: round(fgPct, 3), tpPct: round(tpPct, 3), ts: round(ts, 3), war: round(war, 1),
+      mvp, allStar, allNba, scoringTitle, dpoy, roy, playoff, ring, finalsMvp, p30,
+      salary, hurt, exit: null, struggling: false, team: currentTeam, trade };
+    seasons.push(season);
+    totals.gp+=gp; totals.min+=Math.round(mpg*gp); totals.pts+=pts; totals.reb+=rebT; totals.ast+=astT; totals.stl+=stlT; totals.blk+=blkT; totals.war+=war;
+    totals.mvp+=mvp?1:0; totals.allStar+=allStar?1:0; totals.allNba+=allNba?1:0; totals.scoringTitles+=scoringTitle?1:0;
+    totals.dpoy+=dpoy?1:0; totals.roy+=roy?1:0; totals.rings+=ring?1:0; totals.finalsMvp+=finalsMvp?1:0; totals.p30+=p30?1:0; totals.earnings+=salary;
+
+    peakWar = Math.max(peakWar, war);
+    const everStar = peakWar >= 11;
+    const badYear = war < 1.5 || ppg < 7;
+    badStreak = badYear ? badStreak + 1 : 0;
+    const disaster = war < 0 || (ppg < 5 && mpg < 16);
+    if (badStreak >= 2 && !disaster) season.struggling = true;
+    if (!everStar && age >= 24 && (badStreak >= 2 || disaster)
+        && rng() < clamp(0.4 + (badStreak - 1) * 0.3 + (disaster ? 0.3 : 0), 0, 0.95)) {
+      season.exit = (war < 0.5 || ppg < 5) ? 'waived' : 'pushed-out'; break;
+    }
+    // Non-stars phase out of the league in their early-mid 30s (keeps compiler totals rare & earned).
+    if (!everStar && age >= 31 && rng() < clamp((age - 30) * 0.12 + (seasonOvr < 76 ? 0.15 : 0) - Math.max(0, finalOvr - 86) * 0.03, 0, 0.62)) { season.exit = 'faded'; break; }
+    if (age >= 35 && (seasonOvr < 60 || badStreak >= 2) && rng() < 0.5) { season.exit = 'faded'; break; }
+  }
+
+  const cg = Math.max(1, totals.gp);
+  const ppgC = totals.pts / cg, rpgC = totals.reb / cg, apgC = totals.ast / cg;
+  const peak = seasons.reduce((b, s) => s.war > b.war ? s : b, seasons[0]);
+  let fgw = 0, tpw = 0, tsw = 0, gpw = 0;
+  for (const s of seasons) { fgw += s.fgPct * s.gp; tpw += s.tpPct * s.gp; tsw += s.ts * s.gp; gpw += s.gp; }
+  const fgPctC = fgw / Math.max(1, gpw), tpPctC = tpw / Math.max(1, gpw), tsC = tsw / Math.max(1, gpw);
+
+  const warPts = totals.war * 0.5;
+  const ptsPts = clamp((totals.pts - 12000) * 0.0012, 0, 22);
+  const hardware = totals.mvp * 16 + totals.rings * 3 + totals.finalsMvp * 3 + totals.allNba * 2
+    + totals.allStar * 1.3 + totals.scoringTitles * 1.6 + totals.dpoy * 2.2;
+  const hofScore = Math.max(0, round(warPts + ptsPts + hardware, 1));
+  const slamDunk = totals.war >= 155 || totals.mvp >= 3 || totals.rings >= 4
+    || (totals.mvp >= 1 && totals.rings >= 2);
+  const hallOfFame = slamDunk || rng() < clamp((hofScore - 55) / 32, 0, 1);
+  // Hall of Fame status pays out beyond the floor - endorsements, legacy deals, appearances.
+  const hofBonus = hallOfFame ? Math.round(totals.earnings * 0.18) : 0;
+  const careerEarnings = totals.earnings + hofBonus;
+  const highlight = bestCareerHighlight(totals, peak);
+  const teams = [...new Set(seasons.map(s => s.team).filter(Boolean))];
+
+  return { version: 1, seed, role, seasons, peakSeason: peak,
+    draftTeam: draftTeamAb || teams[0],
+    finalTeam: seasons[seasons.length - 1] && seasons[seasons.length - 1].team,
+    teams,
+    totals: { gp: totals.gp, pts: totals.pts, reb: totals.reb, ast: totals.ast, stl: totals.stl, blk: totals.blk,
+      ppg: round(ppgC, 1), rpg: round(rpgC, 1), apg: round(apgC, 1), fgPct: round(fgPctC, 3), tpPct: round(tpPctC, 3), ts: round(tsC, 3),
+      war: round(totals.war, 1), mvp: totals.mvp, allStar: totals.allStar, allNba: totals.allNba,
+      scoringTitles: totals.scoringTitles, dpoy: totals.dpoy, roy: totals.roy, rings: totals.rings, finalsMvp: totals.finalsMvp,
+      hofScore, hallOfFame, earnings: careerEarnings, earningsOnField: totals.earnings, hofBonus },
+    highlight };
+}
+
+function bestCareerHighlight(totals, peak) {
+  if (totals.mvp) return `${totals.mvp} MVP award${totals.mvp === 1 ? '' : 's'}`;
+  if (totals.rings) return `${totals.rings} championship${totals.rings === 1 ? '' : 's'}`;
+  if (totals.pts >= 20000) return `${totals.pts.toLocaleString()} career points`;
+  if (totals.scoringTitles) return `${totals.scoringTitles} scoring title${totals.scoringTitles === 1 ? '' : 's'}`;
+  return `peak: age ${peak.age}, ${peak.ppg} PPG, ${peak.war.toFixed(1)} WS`;
+}
+
+function ordinal(n) {
+  const mod100 = n % 100;
+  if (mod100 >= 11 && mod100 <= 13) return n + 'th';
+  const mod10 = n % 10;
+  if (mod10 === 1) return n + 'st';
+  if (mod10 === 2) return n + 'nd';
+  if (mod10 === 3) return n + 'rd';
+  return n + 'th';
+}
+
+function getDraftSlot(ovr, rng) {
+  let round, pick;
+  if (ovr >= 95) { round = 1; pick = 1 + Math.floor(rng() * 3); }
+  else if (ovr >= 90) { round = 1; pick = 3 + Math.floor(rng() * 9); }
+  else if (ovr >= 85) { round = 1; pick = 10 + Math.floor(rng() * 14); }
+  else if (ovr >= 80) { round = 1; pick = 20 + Math.floor(rng() * 11); }
+  else if (ovr >= 75) { round = 2; pick = 1 + Math.floor(rng() * 12); }
+  else if (ovr >= 70) { round = 2; pick = 10 + Math.floor(rng() * 12); }
+  else { round = 2; pick = 20 + Math.floor(rng() * 11); }
+  return { round, pick };
+}
+
+function runDraftAnimation({ round, pick, teamAbbr, teamName, tColor, hitter, ovr, role }, onDone) {
+  const overlay = $('draftOverlay');
+  if (round === 1 && pick === 1 && window.Ach) Ach.unlock('first_overall');
+  const pickOrd = ordinal(pick);
+  const bColor = brightColor(tColor);
+  $('draftRoundTag').textContent = `Round ${round} - Pick ${pick}`;
+  $('draftPickOrd').textContent = pickOrd;
+  $('draftRoundNum').textContent = round;
+  $('draftSelecting').textContent = '';
+  $('draftSelecting').style.color = bColor;
+  const reveal = $('draftReveal');
+  const logo = $('drLogo');
+  const logoImg = logo && logo.querySelector('img');
+  if (logo && logoImg) {
+    const logoUrl = teamLogoUrl(teamAbbr);
+    logo.style.display = logoUrl ? 'inline-grid' : 'none';
+    logoImg.src = logoUrl || '';
+    logoImg.alt = `${teamName} logo`;
+    logoImg.onerror = () => { logo.style.display = 'none'; };
+  }
+  $('drTeam').textContent = 'The ' + teamName.toUpperCase();
+  $('drName').textContent = hitter;
+  $('drName').style.textShadow = `0 0 36px ${bColor}80`;
+  $('drOvr').textContent = `${ovr} OVR`;
+  $('drOvr').style.color = bColor;
+  $('drArch').textContent = role || '';
+  $('drArch').style.background = bColor + '1a';
+  $('drArch').style.border = `1px solid ${bColor}55`;
+  $('drArch').style.color = bColor;
+  $('draftSkip').classList.remove('show');
+
+  const league = overlay.querySelector('.draft-league');
+  const headline = overlay.querySelector('.draft-headline');
+  const roundTag = overlay.querySelector('.draft-round-tag');
+  const divider = overlay.querySelector('.draft-divider');
+  const call = $('draftCall');
+  const selecting = $('draftSelecting');
+  gsap.set([league, headline, roundTag, divider, call, selecting, reveal], { opacity: 0, y: 0 });
+
+  overlay.classList.add('show');
+  gsap.fromTo(overlay, { opacity: 0 }, { opacity: 1, duration: .35 });
+
+  const tl = gsap.timeline();
+  tl.to(league,   { opacity: 1, y: 0, duration: .4, ease: 'power2.out' }, 0.2)
+    .fromTo(headline, { y: 14, opacity: 0 }, { y: 0, opacity: 1, duration: .55, ease: 'power3.out' }, 0.38)
+    .to(roundTag,  { opacity: 1, duration: .4 }, 0.7)
+    .to(divider,   { opacity: 1, duration: .5 }, 0.9)
+    .to(call,      { opacity: 1, duration: .45 }, 1.2)
+    .add(() => { selecting.textContent = `The ${teamName} select...`; }, 2.0)
+    .to(selecting, { opacity: 1, duration: .35 }, 2.0)
+    .fromTo(reveal, { y: 18, opacity: 0 }, { y: 0, opacity: 1, duration: .55, ease: 'back.out(1.6)' }, 2.7)
+    .add(() => {
+      if (ovr >= 90) Sound.legend(); else if (ovr >= 85) Sound.diamond(); else Sound.gold();
+      gsap.fromTo(reveal, { scale: .92 }, { scale: 1, duration: .5, ease: 'back.out(2)' });
+    }, 2.7)
+    .add(() => { $('draftSkip').classList.add('show'); }, 3.4);
+
+  let done = false;
+  function complete() {
+    if (done) return;
+    done = true;
+    tl.kill();
+    $('draftSkip').classList.remove('show');
+    gsap.to(overlay, { opacity: 0, duration: .38, onComplete: () => {
+      overlay.classList.remove('show');
+      gsap.set(overlay, { opacity: '' });
+      onDone();
+    }});
+  }
+  const autoTimer = setTimeout(complete, 5200);
+  overlay.onclick = () => { clearTimeout(autoTimer); complete(); };
+}
+
+function countUp(el, to, places, comma) {
+  const o = { v: 0 };
+  gsap.to(o, { v: to, duration: .9, ease: 'power2.out', onUpdate: () => {
+    const val = places ? o.v.toFixed(places) : String(Math.round(o.v));
+    el.textContent = comma ? Number(places ? o.v.toFixed(places) : Math.round(o.v)).toLocaleString() : val;
+  } });
+}
+
+function addNews(news, h) {
+  const d = document.createElement('div');
+  d.className = 'news-item' + (h.big ? ' big' : '');
+  d.innerHTML = h.text;
+  news.appendChild(d);
+  news.scrollTop = news.scrollHeight;
+  gsap.fromTo(d, { x: 10, opacity: 0 }, { x: 0, opacity: 1, duration: .25 });
+}
+function flashTk(id) { const el = $(id); el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); }
+
+// Headlines generated from a season's events.
+function seasonHeadlines(s, idx, total, P, fallbackTeam) {
+  const teamName = TEAM_NAMES[s.team] || fallbackTeam;
+  const team = 'the ' + teamName;
+  const h = [];
+  if (s.trade) {
+    const from = TEAM_NAMES[s.trade.from] || s.trade.from;
+    const to = TEAM_NAMES[s.trade.to] || s.trade.to;
+    h.push({ text: `${P} is <b>traded</b> from the ${from} to the ${to}.`, big: true });
+  }
+  if (idx === 0) h.push({ text: `${P} makes his <b>NBA debut</b> with ${team}.`, big: true });
+  if (s.roy) h.push({ text: `${P} is named <b>Rookie of the Year</b>.`, big: true });
+  if (s.mvp) h.push({ text: `🏆 ${P} is named league <b>MVP</b>!`, big: true });
+  if (s.finalsMvp) h.push({ text: `🏆 ${P} wins <b>Finals MVP</b> as ${team} take the title!`, big: true });
+  else if (s.ring) h.push({ text: `💍 ${P} and ${team} win the <b>NBA Championship</b>!`, big: true });
+  if (s.p30) h.push({ text: `${P} averages <b>${s.ppg} points</b> a game.`, big: true });
+  if (s.scoringTitle) h.push({ text: `${P} wins the <b>scoring title</b> (${s.ppg} PPG).` });
+  if (s.dpoy) h.push({ text: `${P} is <b>Defensive Player of the Year</b>.` });
+  if (s.allNba && !s.mvp) h.push({ text: `${P} earns <b>All-NBA</b> honors.` });
+  if (s.hurt && !s.mvp) h.push({ text: `${P} battles injury, limited to ${s.gp} games.` });
+  if (s.struggling && !s.exit) h.push({ text: `${P} slips to ${s.ppg} PPG and is fighting for minutes.` });
+  if (idx === total - 1) {
+    if (s.exit === 'waived') h.push({ text: `${P} is <b>waived</b> and can't catch on elsewhere - career over.`, big: true });
+    else if (s.exit === 'pushed-out') h.push({ text: `${P} loses his rotation spot and <b>walks away</b> after ${total} seasons.`, big: true });
+    else h.push({ text: `${P} announces his <b>retirement</b> after ${total} seasons.`, big: true });
+  }
+  return h;
+}
+
+// Play the career out season by season - log, headlines, live ticker - then the verdict + card.
+function runCareerPlaythrough() {
+  if (state.career) return;
+  // Daily: if the auto-popup hasn't fired yet, show the results panel first (fallback path).
+  if (dailyMode && !dailyResultsShown) { showDailyResults(); return; }
+  $('simBtn').disabled = true;
+
+  const vals = {};
+  for (const s of SLOTS) vals[s.key] = state.filled[s.key].value;
+  const role = ballerRole(vals);
+  const draftSeed = SLOTS.map(s => `${s.key}:${state.filled[s.key].value}:${state.filled[s.key].name}`).join('|');
+  const draftRng = seededRandom(draftSeed + '|hoop-draft-v1');
+  const { round, pick } = getDraftSlot(state.finalOvr, draftRng);
+
+  state.draftTeamAb = randTeamAb(draftRng);
+  const hitter = $('nameInput').value.trim() || 'Your Hooper';
+
+  runDraftAnimation({
+    round, pick,
+    teamAbbr: state.draftTeamAb,
+    teamName: TEAM_NAMES[state.draftTeamAb] || 'club',
+    tColor: teamColor(state.draftTeamAb),
+    hitter,
+    ovr: state.finalOvr,
+    role,
+  }, _doCareerSim);
+}
+
+function _doCareerSim() {
+  state.career = simulateCareer(state.filled, state.finalOvr, state.draftTeamAb);
+  const career = state.career, seasons = career.seasons;
+  const ab = state.draftTeamAb;
+  state.simTeam = teamInfo(ab);
+  state.simName = $('nameInput').value.trim() || 'Your baller';
+  const P = state.simName, T = state.simTeam.name, accent = state.simTeam.color;
+
+  $('preSim').style.display = 'none';
+  $('careerCard').style.display = 'none';
+  const panel = $('career');
+  panel.style.display = 'block';
+  gsap.fromTo(panel, { y: 10, opacity: 0 }, { y: 0, opacity: 1, duration: .4 });
+  const log = $('careerLog'), news = $('careerNews');
+  log.innerHTML = ''; news.innerHTML = '';
+  $('careerVerdict').textContent = '…'; $('careerVerdict').className = 'career-verdict';
+  $('tkK').textContent = '0'; $('tkW').textContent = '0'; $('tkWar').textContent = '0.0'; $('tkMoney').textContent = '$0';
+
+  let runPts = 0, runAst = 0, runWar = 0, runMoney = 0;
+  const ptsMiles = [10000, 20000, 30000], astMiles = [5000, 10000];
+  const delay = clamp(3400 / seasons.length, 130, 320);
+  let i = 0;
+  function step() {
+    if (i >= seasons.length) return finishPlaythrough(career);
+    const yr = String(2026 + i).slice(-2);
+    const s = seasons[i]; i++;
+    const rowTeam = teamInfo(s.team || state.simTeam.abbr);
+    const badges = [s.mvp ? 'MVP' : '', s.allStar ? '★' : '', s.allNba ? 'All-NBA' : '', s.scoringTitle ? 'SCORE Title' : '',
+      s.dpoy ? 'DPOY' : '', s.roy ? 'ROY' : '', s.finalsMvp ? 'FMVP' : '', s.ring ? '💍' : ''].filter(Boolean).join(' · ');
+    const row = document.createElement('div');
+    row.className = 'season-row' + (s.mvp || s.ring || s.p30 ? ' big' : '');
+    row.style.borderLeft = `3px solid ${rowTeam.color}`;
+    row.innerHTML = `<div class="s-main">
+        <span class="age">'${yr}</span>
+        ${teamLogoHTML(rowTeam.abbr, 'sm')}
+        <span class="s-line">${s.ppg} PPG · ${s.rpg} RPG · ${s.apg} APG</span>
+        <span class="s-war">${s.war.toFixed(1)}</span>
+      </div>${badges ? `<div class="s-badges">${badges}</div>` : ''}`;
+    log.appendChild(row);
+    log.scrollTop = log.scrollHeight;
+    gsap.fromTo(row, { x: -14, opacity: 0 }, { x: 0, opacity: 1, duration: .22 });
+    $('careerSpan').textContent = `${rowTeam.name} · Age ${seasons[0].age}–${s.age}`;
+
+    // live ticker + milestone headlines
+    const beforePts = runPts, beforeAst = runAst;
+    runPts += s.pts; runAst += s.ast; runWar += s.war; runMoney += s.salary;
+    $('tkK').textContent = runPts.toLocaleString(); $('tkW').textContent = runAst.toLocaleString(); $('tkWar').textContent = runWar.toFixed(1);
+    $('tkMoney').textContent = fmtMoney(runMoney);
+    const heads = seasonHeadlines(s, i - 1, seasons.length, P, T);
+    let milestone = false;
+    for (const m of ptsMiles) if (beforePts < m && runPts >= m) { heads.push({ text: `${P} scores his <b>${m.toLocaleString()}th career point</b>.`, big: true }); flashTk('tkK'); milestone = true; }
+    for (const m of astMiles) if (beforeAst < m && runAst >= m) { heads.push({ text: `${P} dishes career assist <b>#${m.toLocaleString()}</b>.`, big: true }); flashTk('tkW'); milestone = true; }
+    heads.forEach(h => addNews(news, h));
+
+    if (s.trade) Sound.swap();
+    else if (s.mvp || s.p30 || s.ring || milestone) Sound.gold();
+    else Sound.tick(0.35);
+    setTimeout(step, delay);
+  }
+  step();
+}
+
+// "The Compiler": milestone clubs (like real HOF voters) reward gaudy counting totals
+// even when the rate stats / WAR are mediocre. Named clubs (the famous thresholds) also
+// act as the trigger for the special "Hall of Compilers" tier.
+function milestoneBonus(t) {
+  let pts = 0; const clubs = [];
+  if (t.pts >= 30000)      { pts += 8; clubs.push('30K PTS'); }
+  else if (t.pts >= 25000) { pts += 6; clubs.push('25K PTS'); }
+  else if (t.pts >= 20000) { pts += 4; clubs.push('20K PTS'); }
+  else if (t.pts >= 15000) { pts += 2; }
+  if (t.ast >= 9000)       { pts += 4; clubs.push('9K AST'); }
+  else if (t.ast >= 6000)  { pts += 2; clubs.push('6K AST'); }
+  if (t.reb >= 12000)      { pts += 4; clubs.push('12K REB'); }
+  else if (t.reb >= 8000)  { pts += 2; clubs.push('8K REB'); }
+  return { pts: Math.min(pts, 9), clubs };
+}
+
+// Career verdict: Hall of Fame is earned in the sim; the rest are labeled by OVR,
+// nudged up by the Compiler bonus from counting-stat milestones.
+function careerTier(t, ovr) {
+  if (t.hallOfFame && ovr >= 99) return { txt: '🐐 G.O.A.T.', cls: 'goat' };
+  if (t.hallOfFame) return { txt: '🏆 Hall of Fame', cls: 'yes' };
+  const mb = milestoneBonus(t);
+  // True compiler: an absurd counting line forces its way onto the ballot.
+  if (mb.clubs.length >= 2 && (t.pts >= 25000 || t.ast >= 9000 || t.reb >= 12000))
+    return { txt: '🏀 Hall of Bucket-Getters', cls: 'no',
+      note: `The advanced stats shrug, but the box score doesn't lie: <strong>${mb.clubs.join(' · ')}</strong>. Compilers make the Hall too.` };
+  const eff = ovr + mb.pts;
+  const note = mb.pts
+    ? `Counting stats carried this one: <strong>Compiler bonus +${mb.pts}</strong>${mb.clubs.length ? ` (${mb.clubs.join(', ')})` : ''} → played like a <strong>${eff}</strong> when the milestones are counted.`
+    : '';
+  if (eff >= 80) return { txt: 'Hall of Pretty Good', cls: 'no', note };
+  if (eff >= 72) return { txt: 'Hall of Mid', cls: 'mid', note };
+  return { txt: 'Hall of Not Good', cls: 'low', note };
+}
+
+function finishPlaythrough(career) {
+  const t = career.totals;
+  const verdict = careerTier(t, state.finalOvr);
+
+  // HOF vote reveal
+  let voteLine = '', votePct = 0;
+  if (t.hallOfFame) {
+    const pct = clamp(round(75 + (t.hofScore - 78) * 0.18 + t.mvp * 1.2, 1), 75, 99.6);
+    votePct = pct;
+    const firstBallot = pct >= 90 || t.mvp >= 3;
+    const goat = state.finalOvr >= 99;
+    voteLine = `${goat ? 'Hall of Fame · ' : ''}${firstBallot ? 'First ballot · ' : ''}${pct}% of the vote`;
+  }
+  checkCareerAchievements(t, verdict, votePct);
+
+  const v = $('careerVerdict');
+  v.textContent = verdict.txt;
+  v.className = 'career-verdict ' + verdict.cls;
+  const note = $('careerNote');
+  if (verdict.note) { note.innerHTML = verdict.note; note.style.display = 'block'; }
+  else { note.style.display = 'none'; }
+  gsap.fromTo(v, { scale: 1.9, opacity: 0, rotation: -7 }, { scale: 1, opacity: 1, rotation: 0, duration: .65, ease: 'back.out(2)' });
+  if (t.hallOfFame) Sound.legend(); else Sound.complete();
+
+  $('tkMoney').textContent = fmtMoney(t.earnings);
+  if (t.hofBonus > 0) {
+    flashTk('tkMoney');
+    addNews($('careerNews'), { text: `The Hall pays: <b>${fmtMoney(t.hofBonus)}</b> more in endorsements & legacy deals.`, big: true });
+  }
+
+  buildCard(career, verdict, voteLine);
+  setTimeout(() => {
+    $('careerCard').style.display = 'block';
+    gsap.fromTo($('careerCard'), { y: 14, opacity: 0, scale: .97 }, { y: 0, opacity: 1, scale: 1, duration: .55, ease: 'back.out(1.5)' });
+    $('submitRow').style.display = 'flex';
+    const shb = $('saveHofBtn'); shb.disabled = false; shb.textContent = '💾 Save to my Hall of Fame';
+    gsap.fromTo($('submitRow'), { y: 8, opacity: 0 }, { y: 0, opacity: 1, duration: .4, delay: .2 });
+  }, 550);
+}
+
+function fmtMoney(v) {
+  if (v >= 1e9) return '$' + (v / 1e9).toFixed(2) + 'B';
+  if (v >= 1e6) return '$' + (v / 1e6).toFixed(v >= 100e6 ? 0 : 1) + 'M';
+  return '$' + Math.round(v / 1e3) + 'K';
+}
+
+// Shareable career card + trophy case.
+function buildCard(career, verdict, voteLine) {
+  const t = career.totals, team = teamInfo(career.finalTeam || (state.simTeam && state.simTeam.abbr) || state.draftTeamAb), name = state.simName;
+  const trophies = [];
+  for (let i = 0; i < t.mvp; i++) trophies.push('🏆');
+  for (let i = 0; i < t.rings; i++) trophies.push('💍');
+  if (t.allStar) trophies.push(`⭐ ${t.allStar}`);
+  if (t.allNba) trophies.push(`🏀 ${t.allNba}`);
+  if (t.dpoy) trophies.push(`🛡️ ${t.dpoy}`);
+  const trophyHtml = trophies.length ? trophies.join('&nbsp; ') : '<span class="none">No major hardware</span>';
+  const yrs = `${career.seasons[0].age}–${career.seasons[career.seasons.length - 1].age}`;
+
+  $('careerCard').innerHTML = `
+    <div class="cc-top" style="background:linear-gradient(135deg, ${team.color}, ${shade(team.color, -34)});">
+      <div class="cc-meta">
+        <div class="cc-team">${escapeHTML(team.name)}</div>
+        <div class="cc-name">${escapeHTML(name)}</div>
+        <div class="cc-role">${career.role} · age ${yrs} · ${career.seasons.length} seasons</div>
+      </div>
+      <div class="cc-badge">
+        <div class="cc-logo"><img src="${team.logo}" alt="${escapeHTML(team.name)} logo" onerror="this.parentElement.style.display='none'"></div>
+        <div class="cc-ovr">${state.finalOvr}</div>
+      </div>
+    </div>
+    <div class="cc-verdict" style="color:${verdictColor(verdict.cls)}">${verdict.txt}${voteLine ? `<div class="cc-vote">${voteLine}</div>` : ''}</div>
+    <div class="cc-line">
+      <div><b>${t.ppg}</b><span>PPG</span></div>
+      <div><b>${t.rpg}</b><span>RPG</span></div>
+      <div><b>${t.apg}</b><span>APG</span></div>
+      <div><b>${t.war.toFixed(1)}</b><span>WS</span></div>
+      <div><b>${t.pts.toLocaleString()}</b><span>PTS</span></div>
+      <div><b>${(t.tpPct * 100).toFixed(1)}</b><span>3P%</span></div>
+    </div>
+    <div class="cc-trophies">${trophyHtml}</div>
+    <div class="cc-money" style="text-align:center; padding:6px 0 2px; font-family:'Oswald',sans-serif; font-size:20px; font-weight:700; color:var(--gold); letter-spacing:.5px;">💰 ${fmtMoney(t.earnings)} <span style="font-size:11px; color:var(--muted); font-weight:600; letter-spacing:1px;">CAREER EARNINGS</span></div>
+    <div class="cc-hint">📸 Screenshot to share your hooper</div>`;
+}
+
+let myEntryId = null;
+function finish() {
+  hardRevealed = true;  // hard mode: reveal all ratings on completion
+  renderNodes();
+  const avg = weightedOvr(SLOTS.map(s => s.key));
+  state.finalOvr = avg;
+  state.build = SLOTS.map(s => {
+    const f = state.filled[s.key];
+    return { slot: s.label, value: f.value, display: String(f.display), player: f.name, team: f.team, legend: !!f.legend, img: f.img, ovr: f.ovr };
+  });
+  state.career = null;
+  state.draftTeamAb = null;
+  myEntryId = null;
+  checkBuildAchievements();
+  $('doneOvr').className = 'total c-' + tier(avg);
+  $('preSim').style.display = 'flex';
+  $('simBtn').disabled = false;
+  $('career').style.display = 'none';
+  $('careerCard').style.display = 'none';
+  $('submitRow').style.display = 'none';
+  $('submitBtn').disabled = false;
+  $('nameInput').value = '';
+  $('submitMsg').textContent = '';
+  $('done').classList.add('show');
+  $('spinBtn').disabled = true;
+  Sound.complete();
+  gsap.fromTo($('done'), { y: 16, opacity: 0, scale: .96 }, { y: 0, opacity: 1, scale: 1, duration: .5, ease: 'back.out(1.5)' });
+  const o = { v: 0 };
+  gsap.to(o, { v: avg, duration: 1.0, ease: 'power2.out', onUpdate: () => { $('doneOvr').textContent = Math.round(o.v); } });
+  // Daily: the results leaderboard pops up automatically once the build is done.
+  if (dailyMode) setTimeout(showDailyResults, 900);
+}
+
+function escapeHTML(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+async function submitScore() {
+  $('submitBtn').disabled = true;
+  $('submitMsg').textContent = 'Submitting…';
+  Sound.click();
+  const name = $('nameInput').value.trim() || 'Anonymous';
+  try {
+    const res = await fetch('/api/score', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, ovr: state.finalOvr, game: LEADERBOARD_GAME, build: { slots: state.build, career: state.career } }),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'failed');
+    myEntryId = data.id;
+    $('submitRow').style.display = 'none';
+    $('submitMsg').textContent = `You're #${data.globalRank} all-time. Open the menu anytime to see the board.`;
+    openLeaderboard('global', LEADERBOARD_GAME);
+  } catch (e) {
+    $('submitBtn').disabled = false;
+    $('submitMsg').textContent = 'Leaderboard not reachable yet (goes live once deployed with the database).';
+  }
+}
+
+function lbRow(rank, entry, cls) {
+  const sorted = lbSort !== 'ovr' && lbSort !== 'ovrAsc';
+  const sub = sorted ? ` <span class="nm-ovr">${entry.ovr} OVR</span>` : '';
+  const right = sorted
+    ? `<div class="ov lb-stat">${entry.stat == null ? '-' : fmtStat(entry.stat)}</div>`
+    : `<div class="ov c-${tier(entry.ovr)}">${entry.ovr}</div>`;
+  return `<div class="lb-row ${cls}" role="button" tabindex="0" data-entry-id="${entry.id}"><div class="rank">${rank}</div>
+    <div class="nm">${escapeHTML(entry.name)}${sub}</div>
+    ${right}
+    <div class="chev">›</div></div>`;
+}
+function renderSortTabs(game) {
+  const tabs = $('lbSortTabs');
+  tabs.innerHTML = sortOptionsFor(game).map(o =>
+    `<button class="lb-tab lb-sort-tab${o.key === lbSort ? ' active' : ''}" data-sort="${o.key}">${o.label}</button>`).join('');
+  tabs.querySelectorAll('.lb-sort-tab').forEach(t => t.onclick = () => loadLeaderboard(lbScope, lbGame, t.dataset.sort));
+}
+function buildSlotsFromEntry(entry) {
+  const b = entry && (entry.slots || (entry.build && (entry.build.slots || entry.build)));
+  return Array.isArray(b) ? b : [];
+}
+// Resolve a headshot from the loaded player data by name (backfills entries saved before img was stored).
+let HEADSHOTS = null;
+function headshotByName(name) {
+  if (!HEADSHOTS) {
+    HEADSHOTS = new Map();
+    const add = p => { if (p && p.name && !HEADSHOTS.has(p.name)) HEADSHOTS.set(p.name, headshot(p)); };
+    if (DATA) { (DATA.pool || []).forEach(add); Object.values(DATA.prime || {}).forEach(add); (DATA.legends || []).forEach(add); }
+  }
+  return HEADSHOTS.get(name) || null;
+}
+const TIER_LABELS = { grey: 'Common', bronze: 'Bronze', silver: 'Silver', gold: 'Gold', diamond: 'Diamond', legend: 'Legend' };
+// Mini team-colored figure for a leaderboard build - per game, keyed by slot label (works for either board).
+const FIG_CONFIG = {
+  baller: { base: 'baller-figure.png', masks: { '3-Pointer': 'hoop-seg-threept.png', 'Finishing': 'hoop-seg-finishing.png', 'Dribble': 'hoop-seg-dribble.png', 'Playmaking': 'hoop-seg-playmaking.png', 'Defense': 'hoop-seg-defense.png', 'Rebounding': 'hoop-seg-rebounding.png', 'Speed': 'hoop-seg-speed.png', 'Clutch': 'hoop-seg-clutch.png', 'Frame': 'hoop-seg-frame.png' } },
+};
+function miniFigureHTML(entry, slots) {
+  const cfg = FIG_CONFIG.baller;
+  const mask = u => `-webkit-mask:url(${u}) center/contain no-repeat;mask:url(${u}) center/contain no-repeat;`;
+  let layers = `<div class="lay" style="background:#39414c;${mask(cfg.base)}"></div>`;
+  for (const s of slots) {
+    const m = cfg.masks[s.slot];
+    if (m) layers += `<div class="lay" style="background:${teamColor(s.team)};${mask(m)}"></div>`;
+  }
+  const dim = 'width:52px;height:61px';
+  return `<div class="bd-fig" style="${dim}" title="Built figure">${layers}</div>`;
+}
+function shareBuild(entry) {
+  const kind = 'baller';
+  const url = 'https://goat-lab.app';
+  const txt = `I built a ${entry.ovr} OVR ${kind}${entry.name ? ` - "${entry.name}"` : ''} on GoatLab. Think you can do better?`;
+  window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(txt)}&url=${encodeURIComponent(url)}`, '_blank', 'noopener');
+}
+function openBuildDetails(entryId) {
+  const entry = lbEntries.get(String(entryId));
+  if (!entry) return;
+  const slots = buildSlotsFromEntry(entry);
+  const t = tier(entry.ovr);
+  const name = (entry.name || 'Build').replace(/\s*\(you\)\s*$/, '');
+  $('buildDetailHead').innerHTML = `
+    <div class="bd-rank c-${t}">${entry._rank ? '#' + entry._rank : '-'}</div>
+    ${miniFigureHTML(entry, slots)}
+    <div class="bd-id">
+      <div class="bd-name">${escapeHTML(name)}</div>
+      <div class="bd-tier c-${t}">${TIER_LABELS[t] || ''} · ${entry.game === 'batter' ? 'Batter' : entry.game === 'baller' ? 'Hooper' : 'Pitcher'}</div>
+    </div>
+    <div class="bd-ovr"><span>OVR</span><b class="c-${t}">${entry.ovr}</b></div>`;
+  $('buildDetailList').innerHTML = slots.length ? slots.map(s => {
+    const st = tier(Number(s.value) || 0);
+    const val = s.display != null ? s.display : (s.value != null ? s.value : '-');
+    return `<div class="build-slot">
+      <img class="c-${st}" src="${s.img || headshotByName(s.player) || SILHOUETTE}" alt="" onerror="this.onerror=null;this.src='${SILHOUETTE}'">
+      <div>
+        <div class="slot-name c-${st}">${escapeHTML(s.slot || '')}</div>
+        <div class="slot-player">${escapeHTML(s.player || 'Unknown')}${s.legend ? ' ★' : ''}</div>
+      </div>
+      <div class="slot-val c-${st}">${escapeHTML(String(val))}</div>
+    </div>`;
+  }).join('') : '<div class="lb-empty">This build was saved before build details were tracked.</div>';
+  $('bdShare').onclick = () => shareBuild(entry);
+  openOverlay('buildModal');
+}
+async function loadLeaderboard(scope = lbScope, game = lbGame, sort = lbSort) {
+  lbScope = scope === 'daily' ? 'daily' : 'global';
+  lbGame = game === 'batter' ? 'batter' : 'pitcher';
+  lbSort = sortOptionsFor(lbGame).some(o => o.key === sort) ? sort : 'ovr';
+  document.querySelectorAll('.lb-scope-tab').forEach(t => t.classList.toggle('active', t.dataset.scope === lbScope));
+  document.querySelectorAll('.lb-game-tab').forEach(t => t.classList.toggle('active', t.dataset.game === lbGame));
+  renderSortTabs(lbGame);
+  const list = $('lbList');
+  list.innerHTML = '<div class="lb-empty">Loading…</div>';
+  try {
+    const meParam = myEntryId ? `&me=${myEntryId}` : '';
+    const res = await fetch(`/api/score?scope=${lbScope}&limit=200&game=${lbGame}&sort=${lbSort}${meParam}`);
+    const data = await res.json();
+    if (!data.ok) throw new Error();
+    let html = '';
+    lbEntries = new Map();
+    // pin the submitter's rank at the top (works even if they're outside the top 200)
+    if (data.me) {
+      data.me._rank = data.me.rank;
+      lbEntries.set(String(data.me.id), data.me);
+      html += `<div class="lb-pin">${lbRow('#' + data.me.rank, { ...data.me, name: data.me.name + ' (you)' }, 'mine pinned')}</div>`;
+    }
+    if (!data.rows.length) {
+      html += '<div class="lb-empty">No entries yet - be the first!</div>';
+    } else {
+      html += data.rows.map((r, i) => {
+        const rank = i + 1;
+        r._rank = rank;
+        lbEntries.set(String(r.id), r);
+        const cls = [rank <= 3 ? 'top' + rank : '', r.id === myEntryId ? 'mine' : ''].filter(Boolean).join(' ');
+        return lbRow(rank, r, cls);
+      }).join('');
+    }
+    list.innerHTML = html;
+    list.onclick = e => { const row = e.target.closest('.lb-row[data-entry-id]'); if (row) openBuildDetails(row.dataset.entryId); };
+    list.onkeydown = e => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const row = e.target.closest('.lb-row[data-entry-id]');
+      if (row) { e.preventDefault(); openBuildDetails(row.dataset.entryId); }
+    };
+  } catch (e) {
+    list.innerHTML = '<div class="lb-empty">Couldn\'t load leaderboard.</div>';
+  }
+}
+
+function initTilt() {
+  const stage = $('stage');
+  const wrap = stage.parentElement;
+  const rotX = gsap.quickTo(stage, 'rotationX', { duration: .6, ease: 'power2.out' });
+  const rotY = gsap.quickTo(stage, 'rotationY', { duration: .6, ease: 'power2.out' });
+  wrap.addEventListener('mousemove', e => {
+    const r = wrap.getBoundingClientRect();
+    rotY(((e.clientX - r.left) / r.width - .5) * 11);
+    rotX(-((e.clientY - r.top) / r.height - .5) * 8);
+  });
+  wrap.addEventListener('mouseleave', () => { rotX(0); rotY(0); });
+}
+
+function reset() {
+  dailyMode = false; dailyRng = null;   // a fresh game is never a daily until startDailyChallenge says so
+  const _tag = document.querySelector('header .tag');
+  if (_tag && _tag.classList.contains('dc-header-tag')) { _tag.textContent = 'Draft Mode'; _tag.classList.remove('dc-header-tag'); }
+  dailyResultsShown = false;
+  hardRevealed = false;  // re-hide ratings if hard mode is on
+  state.filled = {};
+  state.used = new Set();
+  state.dealtCards = [];
+  state.landed = null;
+  state.respinUsed = false;
+  state.boostUsed = false;
+  state.snagUsed = false;
+  state.boostedThisLand = false;
+  state.spinning = false;
+  state.strip = null;
+  state.career = null;
+  state.draftTeamAb = null;
+  $('done').classList.remove('show');
+  $('career').style.display = 'none';
+  $('landed').classList.remove('show');
+  $('spinBtn').disabled = false;
+  updatePowerups();
+  renderNodes();
+  startIdleReel();
+}
+
+init();
+</script>
+
+</body>
+</html>

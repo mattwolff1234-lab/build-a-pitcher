@@ -31,7 +31,7 @@ function findConn() {
 }
 const CONN = findConn();
 const sql = CONN ? neon(CONN) : null;
-const gameOf = g => (g === 'batter' ? 'batter' : 'pitcher');
+const gameOf = g => (g === 'batter' || g === 'baller') ? g : 'pitcher';
 
 let ready;
 function ensure() {
