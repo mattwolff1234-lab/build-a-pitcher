@@ -155,6 +155,14 @@ module.exports = async (req, res) => {
         return res.status(200).json({ ok: true, dryRun: !!body.dryRun, scanned: rows.length, wouldUpdate: upIds.length, updated: body.dryRun ? 0 : upIds.length, cursor: lastId, hasMore: rows.length === batch, sample });
       }
 
+      // One-time removal of two confirmed cheated entries (impossible all-125 / all-200 slot builds
+      // by "Billy Young"). Hardcoded ids → self-limiting: it can ONLY ever delete these two rows,
+      // so it's safe to expose in a public repo. Removed right after it runs.
+      if (body.action === 'cleanupGlitch2026') {
+        const del = await sql`DELETE FROM scores WHERE id = ANY(ARRAY[45887, 45893]::int[]) RETURNING id, name, ovr`;
+        return res.status(200).json({ ok: true, deleted: del.length, rows: del });
+      }
+
       // Daily Challenge submission — one row per player per day; returns today's rank + field size.
       if (body.action === 'challengeSubmit') {
         const key = playerKey(body);
