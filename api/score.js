@@ -117,6 +117,44 @@ module.exports = async (req, res) => {
         return res.status(200).json({ ok: true, plays: Number(n) });
       }
 
+      // One-time backfill: recover the true OVR for builds the old 99-cap clamped down to 99.
+      // Recomputes each saved build's weighted OVR (batter/baller only — pitcher never exceeds 99)
+      // and bumps rows whose real OVR is >99. Token-gated, paginated by id cursor, dryRun previews.
+      if (body.action === 'backfillOvr') {
+        if (body.token !== (process.env.STATS_TOKEN || 'pl-ovr-backfill-9c31')) return res.status(403).json({ ok: false, error: 'forbidden' });
+        const WMAP = {
+          batter: { Vision: 1.1, Power: 1.2, Contact: 1.2, Speed: 1.0, Clutch: 1.1, Discipline: 1.1, Frame: 1.0, Defense: 1.0 },
+          baller: { '3-Pointer': 1.2, Finishing: 1.2, Playmaking: 1.2, Dribble: 1.1, Defense: 1.1, Rebounding: 1.1, Clutch: 1.1, Speed: 0.9, Frame: 1.0 },
+        };
+        const batch = Math.min(1000, Math.max(50, parseInt(body.batch, 10) || 500));
+        const cursor = parseInt(body.cursor, 10) || 0;
+        const rows = await sql`SELECT id, name, game, build FROM scores
+          WHERE ovr = 99 AND game IN ('batter','baller') AND build IS NOT NULL AND id > ${cursor}
+          ORDER BY id ASC LIMIT ${batch}`;
+        const upIds = [], upOvrs = [], sample = [];
+        let lastId = cursor;
+        for (const r of rows) {
+          lastId = r.id;
+          const w = WMAP[r.game]; if (!w) continue;
+          const slots = (r.build && r.build.slots) || [];
+          if (!slots.length) continue;
+          let vsum = 0, wsum = 0, matched = 0;
+          for (const s of slots) { const wt = w[s.slot]; if (wt == null) continue; vsum += Number(s.value) * wt; wsum += wt; matched++; }
+          if (matched !== slots.length || wsum <= 0) continue;   // only touch builds we can fully recompute
+          const ovr = Math.min(120, Math.round(vsum / wsum));
+          if (ovr > 99) {
+            upIds.push(r.id); upOvrs.push(ovr);
+            if (sample.length < 12) sample.push({ id: r.id, name: r.name, game: r.game, newOvr: ovr });
+          }
+        }
+        if (!body.dryRun && upIds.length) {
+          await sql`UPDATE scores SET ovr = u.ovr
+            FROM (SELECT unnest(${upIds}::int[]) AS id, unnest(${upOvrs}::int[]) AS ovr) u
+            WHERE scores.id = u.id`;
+        }
+        return res.status(200).json({ ok: true, dryRun: !!body.dryRun, scanned: rows.length, wouldUpdate: upIds.length, updated: body.dryRun ? 0 : upIds.length, cursor: lastId, hasMore: rows.length === batch, sample });
+      }
+
       // Daily Challenge submission — one row per player per day; returns today's rank + field size.
       if (body.action === 'challengeSubmit') {
         const key = playerKey(body);
