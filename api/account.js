@@ -123,9 +123,10 @@ async function verifyGoogle(idToken) {
 }
 
 // Standard Elo (K=32). Each player updates only their own rating, vs the opponent's reported rating.
-function nextElo(elo, oppElo, won) {
+// K is overridable so the dodge-loss backfill can apply retro losses at a gentler K (softer penalty).
+function nextElo(elo, oppElo, won, k = 32) {
   const expected = 1 / (1 + Math.pow(10, (oppElo - elo) / 400));
-  const delta = Math.round(32 * ((won ? 1 : 0) - expected));
+  const delta = Math.round(k * ((won ? 1 : 0) - expected));
   return { elo: Math.max(100, elo + delta), delta };
 }
 // Small win-streak bonus: +2 Elo per consecutive win, stops growing at a 5-win streak (max +10).
@@ -335,6 +336,21 @@ module.exports = async (req, res) => {
         const oppOvr = Math.round(Number(body.oppOvr) || 0) || null;
         const oppName = String(body.oppName || '').trim().slice(0, 40) || null;
 
+        // Authoritative opponent from the recorded match. Closes loss-dodging (we charge the true
+        // loser from the record even if they never report) and rejects a reporter who was provably
+        // not one of the two participants. Matches with no record (created before this shipped, or
+        // friendly/challenge games that skip matchmaking) fall through to the legacy oppKey path.
+        const normKey = p => (p && p.indexOf('acct:') === 0) ? p.slice(5) : p;
+        let recordedOpp = null;
+        try {
+          const [mp] = await sql`SELECT claimer_pid, opp_pid FROM pvp_match_players WHERE match_id = ${matchId}`;
+          if (mp) {
+            const a = normKey(mp.claimer_pid), b = normKey(mp.opp_pid);
+            if (key !== a && key !== b) return res.status(403).json({ ok: false, error: 'not a participant in this match' });
+            recordedOpp = (key === a) ? b : a;
+          }
+        } catch (e) {}
+
         // anonymous balance log (one row per match+role; idempotent)
         if (role) {
           try {
@@ -356,8 +372,13 @@ module.exports = async (req, res) => {
         const elo = Math.max(100, u.elo + delta + bonus);
         const wins = u.wins + (won ? 1 : 0), losses = u.losses + (won ? 0 : 1);
         await sql`UPDATE users SET pvp_elo = ${elo}, pvp_wins = ${wins}, pvp_losses = ${losses}, pvp_streak = ${streak} WHERE google_sub = ${key}`;
+        // Prefer the recorded opponent; else the client-reported oppKey (normalized so account keys,
+        // sent as `acct:<sub>`, match the raw `<sub>` stored in users — a bug that previously made
+        // the loss-apply silently no-op for signed-in opponents).
         const oppKeyVal = body.oppKey ? String(body.oppKey).slice(0, 80) : null;
-        const validOppKey = oppKeyVal && /^(acct:|guest:)/.test(oppKeyVal) && oppKeyVal !== key ? oppKeyVal : null;
+        const clientOpp = oppKeyVal && /^(acct:|guest:)/.test(oppKeyVal) ? normKey(oppKeyVal) : null;
+        const settleOpp = recordedOpp || clientOpp;
+        const validOppKey = settleOpp && settleOpp !== key ? settleOpp : null;
         try {
           await sql`INSERT INTO pvp_history (player_key, match_id, won, my_role, my_ovr, opp_name, opp_ovr, opp_key, elo_before, elo_after)
             VALUES (${key}, ${matchId}, ${won}, ${role}, ${myOvr}, ${oppName}, ${oppOvr}, ${validOppKey}, ${u.elo}, ${elo})`;
@@ -454,6 +475,26 @@ module.exports = async (req, res) => {
           batter_win_pct: br == null ? null : Number(br.toFixed(1)) });
       }
 
+      // admin: dump a single player's full 1v1 match history (token-gated) — for investigating
+      // implausible records. Target by email (exact) or google_sub key.
+      if (action === 'pvpPlayerHistory') {
+        if (body.token !== STATS_TOKEN) return res.status(403).json({ ok: false, error: 'forbidden' });
+        let key = body.key ? String(body.key) : null;
+        if (!key && body.email) {
+          const [u] = await sql`SELECT google_sub FROM users WHERE lower(email) = lower(${String(body.email).trim()})`;
+          key = u ? u.google_sub : null;
+        }
+        if (!key) return res.status(400).json({ ok: false, error: 'key or email required (no match)' });
+        const [u] = await sql`SELECT google_sub, name, email, pvp_elo AS elo, pvp_wins AS wins, pvp_losses AS losses, pvp_streak AS streak, created_at FROM users WHERE google_sub = ${key}`;
+        const rows = await sql`
+          SELECT h.match_id, h.won, h.my_role, h.my_ovr, h.opp_name, h.opp_ovr, h.opp_key, h.elo_before, h.elo_after, h.created_at,
+            EXISTS (SELECT 1 FROM users ou WHERE ou.google_sub = h.opp_key) AS opp_is_real,
+            EXISTS (SELECT 1 FROM pvp_history h2 WHERE h2.match_id = h.match_id AND h2.player_key = h.opp_key AND h2.won = false) AS opp_recorded_loss
+          FROM pvp_history h WHERE h.player_key = ${key}
+          ORDER BY h.created_at ASC`;
+        return res.status(200).json({ ok: true, user: u || null, count: rows.length, history: rows });
+      }
+
       // admin: look up a player by name and cross-check reported vs logged matches
       if (action === 'pvpUserLookup') {
         if (body.token !== STATS_TOKEN) return res.status(403).json({ ok: false, error: 'forbidden' });
@@ -484,6 +525,8 @@ module.exports = async (req, res) => {
       if (action === 'pvpBackfillLosses') {
         if (body.token !== STATS_TOKEN) return res.status(403).json({ ok: false, error: 'forbidden' });
         const dryRun = body.dryRun !== false;
+        // Gentler penalty for retro dodge-losses (default K=8 ≈ 1/4 of a live loss). Tunable via body.k.
+        const backfillK = Math.max(1, Math.min(32, Math.round(Number(body.k) || 8)));
 
         // Wins with no corresponding loss row in pvp_history for the same match
         const orphanedWins = await sql`
@@ -526,7 +569,7 @@ module.exports = async (req, res) => {
           }
 
           const loser = candidates[0];
-          const { delta } = nextElo(loser.pvp_elo, win.winner_elo_before, false);
+          const { delta } = nextElo(loser.pvp_elo, win.winner_elo_before, false, backfillK);
           const newElo = Math.max(100, loser.pvp_elo + delta);
 
           results.push({
@@ -659,6 +702,7 @@ module.exports = async (req, res) => {
       }
       await ensure();
       const applying = req.query.apply === '1';
+      const backfillK = Math.max(1, Math.min(32, Math.round(Number(req.query.k) || 8)));
 
       const orphanedWins = await sql`
         SELECT h.match_id, h.player_key AS winner_key, h.opp_name, h.opp_ovr,
@@ -683,7 +727,7 @@ module.exports = async (req, res) => {
             )`;
         if (candidates.length !== 1) continue;
         const loser = candidates[0];
-        const { delta } = nextElo(loser.pvp_elo, win.winner_elo_before, false);
+        const { delta } = nextElo(loser.pvp_elo, win.winner_elo_before, false, backfillK);
         const newElo = Math.max(100, loser.pvp_elo + delta);
         if (!byPlayer[loser.name]) byPlayer[loser.name] = { losses: 0, elo_drop: 0 };
         byPlayer[loser.name].losses++;
@@ -709,7 +753,7 @@ module.exports = async (req, res) => {
         .sort((a, b) => b.losses - a.losses);
       const total = ranked.reduce((s, r) => s + r.losses, 0);
       const token = req.query.token;
-      const applyUrl = `/api/account?action=pvpBackfillPreview&token=${encodeURIComponent(token)}&apply=1`;
+      const applyUrl = `/api/account?action=pvpBackfillPreview&token=${encodeURIComponent(token)}&k=${backfillK}&apply=1`;
 
       const rows = ranked.map((p, i) => `<tr>
         <td>${i + 1}</td><td><b>${p.name}</b></td>
@@ -732,7 +776,7 @@ module.exports = async (req, res) => {
   .skipped{color:#888;font-size:12px;margin-top:12px}
 </style></head><body>
 <h1>Loss Backfill ${applying ? '— Applied ✓' : '— Preview'}</h1>
-<div class="sub">${orphanedWins.length} orphaned wins found · ${total} losses to assign</div>
+<div class="sub">${orphanedWins.length} orphaned wins found · ${total} losses to assign · gentle K=${backfillK}</div>
 ${applying
   ? `<div class="done">✓ Applied ${applied} loss${applied !== 1 ? 'es' : ''} to ${ranked.length} player${ranked.length !== 1 ? 's' : ''}</div>`
   : `<a class="btn" href="${applyUrl}" onclick="return confirm('Apply ${total} losses to ${ranked.length} players?')">Apply All ${total} Losses</a>`}

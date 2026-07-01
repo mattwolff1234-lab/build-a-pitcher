@@ -33,6 +33,15 @@ function ensure() {
       // pid = a stable per-person id (account sub or device guest id) so we never pair someone
       // with themselves on a second tab/device.
       await sql`ALTER TABLE pvp_queue ADD COLUMN IF NOT EXISTS pid text`;
+      // Records who the two real participants of a match are, so result-reporting can settle
+      // authoritatively (charge the true loser even if they dodge; reject fabricated matches).
+      await sql`CREATE TABLE IF NOT EXISTS pvp_match_players (
+        match_id text PRIMARY KEY,
+        claimer_pid text,
+        opp_pid text,
+        claimer_role text,
+        created_at timestamptz NOT NULL DEFAULT now()
+      )`;
     })();
   }
   return ready;
@@ -64,15 +73,22 @@ module.exports = async (req, res) => {
         LIMIT 1
         FOR UPDATE SKIP LOCKED
       )
-      RETURNING id`;
+      RETURNING id, pid`;
 
     if (claimed.length) {
       const oppId = claimed[0].id;
+      const oppPid = claimed[0].pid || oppId;
       // Make sure I'm not also sitting in the queue from a previous attempt.
       await sql`DELETE FROM pvp_queue WHERE id = ${id}`;
       const matchId = crypto.randomUUID();
       const seed = (crypto.randomBytes(4).readUInt32BE(0)) >>> 0;
       const role = Math.random() < 0.5 ? 'pitcher' : 'batter'; // my role; opponent gets the other
+      // Record the two real participants so result-reporting can settle authoritatively.
+      try {
+        await sql`INSERT INTO pvp_match_players (match_id, claimer_pid, opp_pid, claimer_role)
+          VALUES (${matchId}, ${pid}, ${oppPid}, ${role})
+          ON CONFLICT (match_id) DO NOTHING`;
+      } catch (e) {}
       return res.status(200).json({ ok: true, matched: true, matchId, seed, role, oppId });
     }
 
