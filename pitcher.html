@@ -2104,7 +2104,7 @@ function snag(dir) {
 function openSlots() { return SLOTS.filter(s => !state.filled[s.key]); }
 
 function assign(slotKey) {
-  if (!state.landed || state.filled[slotKey]) return;
+  if (state.spinning || !state.landed || state.filled[slotKey]) return;   // can't assign mid-spin (re-spin/snag exploit)
   const p = state.landed;
   const s = SLOTS.find(x => x.key === slotKey);
   const originRect = $('landedImg').getBoundingClientRect();
