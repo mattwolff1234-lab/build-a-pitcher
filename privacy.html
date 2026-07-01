@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy Policy — GoatLab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg0:#04070d; --bg1:#0a1320;
+    --panel-a: rgba(20,31,48,.72); --panel-b: rgba(9,15,25,.86);
+    --ink:#eaf2fb; --body:#c2cfe0; --muted:#8595ab; --dim:#56627a;
+    --line: rgba(120,160,210,.16);
+    --accent:#ff7a18; --accent2:#19c6ff;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin:0; background:var(--bg0); color:var(--body);
+    font-family:'Inter',system-ui,sans-serif; font-size:15.5px; line-height:1.62;
+    overflow-x:hidden; padding:34px 16px 70px;
+  }
+  /* ---- animated stadium background ---- */
+  .bg { position:fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden;
+     background:radial-gradient(120% 90% at 50% -10%, #14253c 0%, var(--bg1) 38%, var(--bg0) 80%); }
+  .bg .blob { position:absolute; width:60vw; height:60vw; border-radius:50%; filter:blur(60px); opacity:.6; }
+  .bg .g1 { background:radial-gradient(circle,#ff7a1844,transparent 60%); top:-16%; left:-12%; animation:drift1 26s ease-in-out infinite; }
+  .bg .g2 { background:radial-gradient(circle,#19c6ff3a,transparent 60%); bottom:-20%; right:-14%; animation:drift2 32s ease-in-out infinite; }
+  .bg .scan { position:absolute; inset:0; opacity:.04; mix-blend-mode:overlay;
+     background:repeating-linear-gradient(0deg,#fff 0 1px,transparent 1px 3px); }
+  @keyframes drift1 { 50% { transform:translate(8vw,6vh) scale(1.1); } }
+  @keyframes drift2 { 50% { transform:translate(-7vw,-5vh) scale(1.08); } }
+
+  /* ---- glass panel ---- */
+  .doc { position:relative; z-index:1; max-width:780px; margin:0 auto; padding:44px 46px 40px;
+    background:linear-gradient(180deg,var(--panel-a),var(--panel-b)); backdrop-filter:blur(7px);
+    border:1px solid var(--line); border-radius:18px; box-shadow:0 24px 70px rgba(0,0,0,.5); }
+  .br { position:absolute; width:18px; height:18px; border:2px solid var(--accent2); opacity:.5; }
+  .br.tl { top:14px; left:14px; border-right:0; border-bottom:0; }
+  .br.tr { top:14px; right:14px; border-left:0; border-bottom:0; }
+  .br.bl { bottom:14px; left:14px; border-right:0; border-top:0; }
+  .br.brc { bottom:14px; right:14px; border-left:0; border-top:0; }
+
+  .backlink { display:inline-flex; align-items:center; gap:6px; font-size:12.5px; color:var(--accent2);
+    text-decoration:none; letter-spacing:.6px; text-transform:uppercase; font-weight:600; margin-bottom:22px; }
+  .backlink:hover { color:var(--ink); }
+
+  header.cover { border-bottom:1px solid var(--line); padding-bottom:18px; margin-bottom:26px; }
+  header.cover .brand { font-family:'Oswald',sans-serif; font-size:12px; letter-spacing:3px;
+    text-transform:uppercase; color:var(--accent2); margin:0 0 8px; }
+  h1 { font-family:'Oswald',sans-serif; font-weight:700; font-size:clamp(30px,6vw,44px);
+    letter-spacing:.5px; text-transform:uppercase; margin:0 0 10px; color:var(--ink); line-height:1.02; }
+  h1 span { color:var(--accent); }
+  .meta { font-family:'Oswald',sans-serif; font-size:12.5px; letter-spacing:1px; color:var(--muted); margin:0; text-transform:uppercase; }
+
+  h2 { font-family:'Oswald',sans-serif; font-weight:600; font-size:21px; letter-spacing:.6px;
+    text-transform:uppercase; color:var(--ink); margin:34px 0 12px; padding-left:13px; position:relative; }
+  h2::before { content:""; position:absolute; left:0; top:2px; bottom:2px; width:4px; border-radius:3px;
+    background:linear-gradient(180deg,var(--accent),var(--accent2)); }
+  h3 { font-family:'Inter',sans-serif; font-weight:700; font-size:15px; color:var(--ink); margin:18px 0 5px; }
+  p { margin:0 0 12px; }
+  strong { color:var(--ink); font-weight:600; }
+  ul { margin:0 0 12px; padding-left:20px; }
+  li { margin:0 0 7px; }
+  li::marker { color:var(--accent2); }
+  a { color:var(--accent2); text-decoration:none; word-break:break-word; }
+  a:hover { text-decoration:underline; }
+
+  table { width:100%; border-collapse:collapse; margin:12px 0 16px; font-size:14px; }
+  th, td { border:1px solid var(--line); padding:9px 11px; text-align:left; vertical-align:top; }
+  th { background:rgba(25,198,255,.08); font-family:'Oswald',sans-serif; font-weight:500;
+    letter-spacing:.6px; text-transform:uppercase; color:var(--ink); font-size:12.5px; }
+
+  .toc { background:rgba(9,15,25,.5); border:1px solid var(--line); border-radius:12px;
+    padding:16px 20px 16px 20px; margin:0 0 8px; }
+  .toc strong { font-family:'Oswald',sans-serif; letter-spacing:1.5px; text-transform:uppercase;
+    font-size:12.5px; color:var(--accent2); display:block; margin-bottom:8px; }
+  .toc ol { margin:0; padding-left:20px; columns:2; column-gap:28px; font-size:13.5px; }
+  .toc li { margin:0 0 5px; }
+
+  .callout { background:rgba(255,122,24,.07); border-left:3px solid var(--accent); border-radius:0 8px 8px 0;
+    padding:12px 16px; margin:0 0 14px; font-size:14px; color:var(--body); }
+
+  footer { margin-top:34px; border-top:1px solid var(--line); padding-top:14px;
+    font-family:'Inter',sans-serif; font-size:12.5px; color:var(--dim); }
+
+  @media (max-width:560px) {
+    .doc { padding:34px 22px 30px; }
+    .toc ol { columns:1; }
+  }
+  @media print {
+    body { background:#fff; color:#111; padding:0; }
+    .bg { display:none; }
+    .doc { box-shadow:none; border:none; background:#fff; color:#111; max-width:none; }
+    .doc, .doc p, .doc li, .doc td { color:#111; }
+    h1, h2, h3, header.cover .brand, .meta, th { color:#111; }
+    a { color:#1558b0; }
+    .br { display:none; }
+  }
+</style>
+</head>
+<body>
+<div class="bg"><div class="blob g1"></div><div class="blob g2"></div><div class="scan"></div></div>
+
+<div class="doc">
+<span class="br tl"></span><span class="br tr"></span><span class="br bl"></span><span class="br brc"></span>
+
+<a class="backlink" href="/">&larr; Back to GoatLab</a>
+
+<header class="cover">
+  <p class="brand">GoatLab</p>
+  <h1>Privacy <span>Policy</span></h1>
+  <p class="meta">Effective June 29, 2026 &nbsp;&bull;&nbsp; Last updated July 1, 2026</p>
+</header>
+
+<p>This Privacy Policy explains how <strong>GoatLab</strong> ("GoatLab," "we," "us," or "our") collects, uses, and shares information about you when you visit, create an account on, or make a purchase through our games and websites, including <a href="https://goat-lab.app">goat-lab.app</a>, <a href="https://pitchergami.com">pitchergami.com</a>, and their subdomains (such as <a href="https://pitchinglab.pitchergami.com">pitchinglab.pitchergami.com</a>) (collectively, the "Services").</p>
+
+<p>By accessing or using the Services, you agree to the collection and use of information in accordance with this Privacy Policy. If you do not agree with this policy, please do not use the Services.</p>
+
+<div class="toc">
+<strong>Contents</strong>
+<ol>
+  <li>Information We Collect</li>
+  <li>How We Use Your Information</li>
+  <li>Cookies and Similar Technologies</li>
+  <li>Analytics</li>
+  <li>Advertising</li>
+  <li>Payments</li>
+  <li>How We Share Your Information</li>
+  <li>Third-Party Services</li>
+  <li>Data Retention</li>
+  <li>Data Security</li>
+  <li>Your Privacy Rights</li>
+  <li>California Privacy Rights (CCPA/CPRA)</li>
+  <li>Children's Privacy</li>
+  <li>Third-Party Links</li>
+  <li>Changes to This Policy</li>
+  <li>Contact Us</li>
+</ol>
+</div>
+
+<section>
+<h2>1. Information We Collect</h2>
+
+<h3>1.1 Information You Provide to Us</h3>
+<p><strong>Account information (Google Sign-In).</strong> When you create an account or sign in, you may do so using Google Sign-In. When you authenticate through Google, we receive and store basic profile information associated with your Google account, which includes your <strong>email address, name, and profile picture</strong>. We use this information to create and maintain your account, identify you across our Services, and save the content you create (such as your saved players and game history).</p>
+
+<p><strong>Content you create.</strong> We store the in-game players, scores, and other content you generate so they can appear on leaderboards and in your personal collection.</p>
+
+<p><strong>Payment information.</strong> If you purchase a product or service from us (for example, an ad-free experience or other digital goods), your payment is processed by our third-party payment processor, <strong>Stripe</strong>. We do not collect or store your full payment card number. Stripe collects and processes your payment details directly; we may receive limited transaction information such as a confirmation of payment, the amount, the date, and a partial card identifier.</p>
+
+<p><strong>Communications.</strong> If you contact us by email, we receive your email address and the contents of your message.</p>
+
+<h3>1.2 Information We Collect Automatically</h3>
+<p>When you use the Services, we and our service providers automatically collect certain information about your device and usage, including:</p>
+<ul>
+  <li>Device and browser information (such as device type, operating system, browser type, and language);</li>
+  <li>Usage data (such as pages or screens viewed, games played, features used, time spent, and referring/exit pages);</li>
+  <li>Approximate location derived from your IP address;</li>
+  <li>Identifiers stored in cookies, local storage, and similar technologies.</li>
+</ul>
+<p>This information is collected through analytics and advertising technologies described in Sections 3 through 5.</p>
+</section>
+
+<section>
+<h2>2. How We Use Your Information</h2>
+<p>We use the information we collect to:</p>
+<ul>
+  <li>Provide, operate, and maintain the Services;</li>
+  <li>Create and manage your account and authenticate you;</li>
+  <li>Save and display the content you create, including leaderboards and your personal collection;</li>
+  <li>Process transactions and provide the products or services you purchase;</li>
+  <li>Display and measure advertising;</li>
+  <li>Understand how the Services are used so we can improve them;</li>
+  <li>Communicate with you, including responding to your inquiries;</li>
+  <li>Detect, prevent, and address fraud, abuse, security issues, and technical problems;</li>
+  <li>Comply with legal obligations and enforce our terms.</li>
+</ul>
+</section>
+
+<section>
+<h2>3. Cookies and Similar Technologies</h2>
+<p>We and our third-party partners use cookies, local storage, and similar technologies to operate the Services, remember your preferences and login session, measure usage, and deliver and measure advertising.</p>
+<p>Most web browsers let you control cookies through their settings, including blocking or deleting them. If you disable cookies, some features of the Services may not function properly. You can also manage advertising-related cookies using the opt-out tools described in Section 5.</p>
+</section>
+
+<section>
+<h2>4. Analytics</h2>
+<p>We use <strong>Google Analytics</strong>, a web analytics service provided by Google, to understand how visitors interact with the Services. Google Analytics uses cookies and similar technologies to collect information such as how often users visit, what pages they view, and what other sites they used before arriving. We use this information to improve the Services.</p>
+<p>Google's ability to use and share information collected by Google Analytics is governed by the <a href="https://policies.google.com/privacy">Google Privacy Policy</a>. You can opt out of Google Analytics by installing the <a href="https://tools.google.com/dlpage/gaoptout">Google Analytics Opt-out Browser Add-on</a>.</p>
+</section>
+
+<section>
+<h2>5. Advertising</h2>
+<p>All or partial advertising on this Website or App is managed by Playwire LLC. If Playwire publisher advertising services are used, Playwire LLC may collect and use certain aggregated and anonymized data for advertising purposes. To learn more about the types of data collected, how data is used and your choices as a user, please visit <a href="https://www.playwire.com/privacy-policy">https://www.playwire.com/privacy-policy</a>.</p>
+<p>Playwire and its advertising partners may use cookies, device identifiers, and similar technologies to collect information about your activity on the Services and other sites and apps over time in order to deliver advertising that is more relevant to you and to measure its performance. Playwire uses a Common ID tracking cookie that is enabled by default to allow advertisers to serve targeted ads. You may opt out of this and other interest-based advertising using the industry tools below.</p>
+<p>You can learn about and opt out of interest-based advertising from participating companies through the following industry tools:</p>
+<ul>
+  <li>Digital Advertising Alliance: <a href="https://optout.aboutads.info">optout.aboutads.info</a></li>
+  <li>Network Advertising Initiative: <a href="https://optout.networkadvertising.org">optout.networkadvertising.org</a></li>
+  <li>European users: <a href="https://www.youronlinechoices.eu">youronlinechoices.eu</a></li>
+</ul>
+<p>If you purchase an ad-free product, we will limit or remove advertising on the Services in accordance with that product's description.</p>
+</section>
+
+<section>
+<h2>6. Payments</h2>
+<p>Purchases are processed by <strong>Stripe, Inc.</strong> ("Stripe"). When you make a payment, you provide your payment details directly to Stripe, and Stripe processes that information as a data controller and/or processor under its own privacy policy. We do not receive or store your full payment card details. Your use of Stripe's payment services is subject to the <a href="https://stripe.com/privacy">Stripe Privacy Policy</a>.</p>
+</section>
+
+<section>
+<h2>7. How We Share Your Information</h2>
+<p>We do not sell your personal information for money. We may share information in the following circumstances:</p>
+<ul>
+  <li><strong>Service providers.</strong> With third parties that perform services on our behalf, such as authentication (Google), analytics (Google), advertising (Playwire), payment processing (Stripe), and hosting and database infrastructure.</li>
+  <li><strong>Public content.</strong> Content you choose to make public, such as a display name and scores on a leaderboard, is visible to other users.</li>
+  <li><strong>Legal and safety.</strong> When we believe disclosure is necessary to comply with applicable law, legal process, or government request, or to protect the rights, property, or safety of GoatLab, our users, or others.</li>
+  <li><strong>Business transfers.</strong> In connection with a merger, acquisition, financing, reorganization, or sale of assets, in which case information may be transferred as part of that transaction.</li>
+</ul>
+<div class="callout">Certain sharing for advertising and analytics purposes may be considered a "sale" or "sharing" of personal information under California law. See Section 12 for your rights and how to opt out.</div>
+</section>
+
+<section>
+<h2>8. Third-Party Services</h2>
+<p>The Services rely on the following key third parties, each of which handles data under its own privacy policy:</p>
+<table>
+  <tr><th>Provider</th><th>Purpose</th><th>Privacy Policy</th></tr>
+  <tr><td>Google (Sign-In &amp; Analytics)</td><td>Account authentication and usage analytics</td><td><a href="https://policies.google.com/privacy">policies.google.com/privacy</a></td></tr>
+  <tr><td>Playwire</td><td>Advertising</td><td><a href="https://www.playwire.com/privacy-policy">playwire.com/privacy-policy</a></td></tr>
+  <tr><td>Stripe</td><td>Payment processing</td><td><a href="https://stripe.com/privacy">stripe.com/privacy</a></td></tr>
+</table>
+</section>
+
+<section>
+<h2>9. Data Retention</h2>
+<p>We retain personal information for as long as your account is active or as needed to provide the Services, comply with our legal obligations, resolve disputes, and enforce our agreements. When information is no longer needed, we take reasonable steps to delete or anonymize it. You may request deletion of your account information as described in Section 11.</p>
+</section>
+
+<section>
+<h2>10. Data Security</h2>
+<p>We use reasonable administrative, technical, and organizational measures designed to protect personal information against unauthorized access, loss, misuse, or alteration. However, no method of transmission over the internet or method of electronic storage is completely secure, and we cannot guarantee absolute security.</p>
+</section>
+
+<section>
+<h2>11. Your Privacy Rights</h2>
+<p>Depending on where you live, you may have rights regarding your personal information, including the right to access, correct, delete, or obtain a copy of your information, and the right to opt out of certain processing. To exercise any of these rights, contact us at <a href="mailto:pitchergami@gmail.com">pitchergami@gmail.com</a>. We will respond to your request consistent with applicable law. We will not discriminate against you for exercising your rights.</p>
+</section>
+
+<section>
+<h2>12. California Privacy Rights (CCPA/CPRA)</h2>
+<p>If you are a California resident, the California Consumer Privacy Act, as amended by the California Privacy Rights Act ("CCPA"), provides you with specific rights regarding your personal information.</p>
+
+<h3>Categories of information</h3>
+<p>In the past 12 months, we may have collected the following categories of personal information: identifiers (such as email address, name, and online identifiers); commercial information (such as products or services purchased); internet or other electronic network activity information (such as usage and device data); approximate geolocation derived from IP address; and inferences drawn for advertising. We collect this information from you directly and automatically through the technologies described in this policy.</p>
+
+<h3>Your California rights</h3>
+<ul>
+  <li><strong>Right to know / access</strong> the categories and specific pieces of personal information we have collected about you.</li>
+  <li><strong>Right to delete</strong> personal information we have collected from you, subject to certain exceptions.</li>
+  <li><strong>Right to correct</strong> inaccurate personal information.</li>
+  <li><strong>Right to opt out</strong> of the "sale" or "sharing" of your personal information.</li>
+  <li><strong>Right to non-discrimination</strong> for exercising your rights.</li>
+</ul>
+
+<h3>Do Not Sell or Share My Personal Information</h3>
+<p>We do not sell your personal information for money. However, our use of advertising and analytics cookies that share identifiers with third parties (such as Playwire and Google) may be considered "selling" or "sharing" under the CCPA. You can opt out by adjusting your browser cookie settings and by using the industry opt-out tools listed in Section 5. To submit a request, you may also contact us at <a href="mailto:pitchergami@gmail.com">pitchergami@gmail.com</a>.</p>
+
+<h3>How to exercise your rights</h3>
+<p>To submit a request to know, delete, correct, or opt out, email us at <a href="mailto:pitchergami@gmail.com">pitchergami@gmail.com</a>. We may need to verify your identity before processing your request, which may require you to confirm information associated with your account. You may use an authorized agent to submit a request on your behalf, subject to verification.</p>
+
+<h3>"Shine the Light"</h3>
+<p>California Civil Code Section 1798.83 permits California residents to request information regarding our disclosure of personal information to third parties for their direct marketing purposes. We do not disclose personal information to third parties for their own direct marketing purposes.</p>
+</section>
+
+<section>
+<h2>13. Children's Privacy</h2>
+<p>The Services are not directed to children under the age of 13, and we do not knowingly collect personal information from children under 13. If you believe a child under 13 has provided us with personal information, please contact us at <a href="mailto:pitchergami@gmail.com">pitchergami@gmail.com</a> and we will take steps to delete such information.</p>
+</section>
+
+<section>
+<h2>14. Third-Party Links</h2>
+<p>The Services may contain links to third-party websites and services that we do not operate or control. This Privacy Policy does not apply to those third parties, and we are not responsible for their privacy practices. We encourage you to review the privacy policies of any third-party sites you visit.</p>
+</section>
+
+<section>
+<h2>15. Changes to This Policy</h2>
+<p>We may update this Privacy Policy from time to time. When we do, we will revise the "Last updated" date at the top of this policy. If we make material changes, we will take additional steps to notify you where required by law. Your continued use of the Services after the changes take effect constitutes your acceptance of the revised policy.</p>
+</section>
+
+<section>
+<h2>16. Contact Us</h2>
+<p>If you have any questions, concerns, or requests regarding this Privacy Policy or our privacy practices, please contact us at:</p>
+<p><strong>GoatLab</strong><br>
+Email: <a href="mailto:pitchergami@gmail.com">pitchergami@gmail.com</a></p>
+</section>
+
+<footer>
+  &copy; 2026 GoatLab. All rights reserved. This Privacy Policy is provided for general informational purposes and does not constitute legal advice.
+</footer>
+
+</div>
+</body>
+</html>

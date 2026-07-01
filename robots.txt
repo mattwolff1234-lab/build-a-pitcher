@@ -1,0 +1,13 @@
+# GoatLab / Pitching Lab — allow all crawlers, including Google's
+# ad-verification bots so they can read /ads.txt and the ad units.
+User-agent: *
+Allow: /
+
+User-agent: AdsBot-Google
+Allow: /
+
+User-agent: AdsBot-Google-Mobile
+Allow: /
+
+User-agent: Mediapartners-Google
+Allow: /
