@@ -176,13 +176,6 @@ module.exports = async (req, res) => {
         return res.status(200).json({ ok: true, plays: Number(n) });
       }
 
-      // One-time removal of two confirmed all-9-legends cheat entries ("Never B Beaten", "1 of 1").
-      // Hardcoded ids → self-limiting: it can ONLY ever delete these two rows. Removed after it runs.
-      if (body.action === 'cleanupLegends2026') {
-        const del = await sql`DELETE FROM scores WHERE id = ANY(ARRAY[53955, 53760]::int[]) RETURNING id, name, ovr`;
-        return res.status(200).json({ ok: true, deleted: del.length, rows: del });
-      }
-
       // Daily Challenge submission — one row per player per day; returns today's rank + field size.
       if (body.action === 'challengeSubmit') {
         const key = playerKey(body);
