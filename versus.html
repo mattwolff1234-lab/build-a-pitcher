@@ -1049,15 +1049,45 @@ function connectAbly(){
   return ablyPromise;
 }
 
-/* ---------- live "who's online" ticker (global Ably presence) ---------- */
-let onlineCh = null, myOnlineStatus = 'idle';
+/* ---------- live "who's online" ticker (cheap DB heartbeat — NOT Ably) ---------- */
+// The old ticker used Ably presence; fanning presence out to every idle viewer was ~90% of the Ably
+// bill. Now each viewer heartbeats /api/live every ~45s (only while the tab is visible) and the same
+// response returns the live counts. Linear cost, plain DB queries, zero Ably.
+const LIVE_GAME = 'versus';
+let myOnlineStatus = 'idle', liveId = null, liveTimer = null;
 async function goOnline(){
+  // Start the live heartbeat; connect Ably + wire the friend-challenge inbox (unrelated to the ticker).
+  startLiveTicker();
   try { await connectAbly(); } catch(e){ return; }
-  onlineCh = ably.channels.get('versus:online');
-  onlineCh.presence.subscribe(['enter','leave','update'], recomputeTicker);
-  try { await onlineCh.presence.enter({ status: myOnlineStatus }); } catch(e){}
-  recomputeTicker();
   subscribeChallengeInbox();
+}
+async function liveHeartbeat(){
+  if (!liveId) liveId = rid();
+  try {
+    const r = await fetch('/api/live', { method:'POST', headers:{'content-type':'application/json'},
+      body: JSON.stringify({ id: liveId, game: LIVE_GAME, status: myOnlineStatus }) });
+    renderTicker(await r.json());
+  } catch(e){}
+}
+function startLiveTicker(){
+  if (liveTimer) return;
+  liveHeartbeat();
+  liveTimer = setInterval(() => { if (document.visibilityState === 'visible') liveHeartbeat(); }, 45000);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') liveHeartbeat(); });
+  window.addEventListener('pagehide', () => {
+    try { navigator.sendBeacon('/api/live', new Blob([JSON.stringify({ id: liveId, action:'leave', game: LIVE_GAME })], { type:'application/json' })); } catch(e){}
+  });
+}
+function renderTicker(d){
+  const el = $('liveTicker'), t = $('ltText'); if (!el || !t) return;
+  if (!d || !d.ok){ el.style.display = 'none'; return; }
+  const online = Math.max(0, d.online|0), searching = d.searching|0, playing = d.playing|0;
+  if (online <= 0){ el.style.display = 'none'; return; }
+  el.style.display = 'inline-flex';
+  const extra = []; if (playing > 0) extra.push(`${playing} in a match`); if (searching > 0) extra.push(`${searching} searching`);
+  t.textContent = (online === 1 && !extra.length)
+    ? 'Live · be the first to find a match'
+    : (extra.length ? `${online} online · ${extra.join(' · ')}` : `${online} online now`);
 }
 
 /* ---------- friend challenge ---------- */
@@ -1216,21 +1246,9 @@ function cancelLobby(){
   showScreen('mmScreen');
   updateRatingChip();
 }
-async function setOnlineStatus(s){
+function setOnlineStatus(s){
   myOnlineStatus = s;
-  if (onlineCh){ try { await onlineCh.presence.update({ status: s }); } catch(e){} }
-}
-async function recomputeTicker(){
-  if (!onlineCh) return;
-  let members;
-  try { members = await onlineCh.presence.get(); } catch(e){ return; }
-  let playing = 0, waiting = 0;
-  for (const m of members){ const st = m.data && m.data.status; if (st === 'playing') playing++; else if (st === 'searching') waiting++; }
-  const el = $('liveTicker'), t = $('ltText'); if (!el) return;
-  el.style.display = 'inline-flex';
-  t.textContent = (playing + waiting === 0)
-    ? 'Live · be the first to find a match'
-    : `${playing} playing · ${waiting} waiting for a match`;
+  liveHeartbeat();   // reflect the new status in the live count right away
 }
 
 let searching=false, retryTimer=null;
@@ -2256,7 +2274,7 @@ document.querySelectorAll('#lobbyModePicker .lmode').forEach(btn => {
 initGoogle();
 refreshStats().then(updateRatingChip);
 checkChallengeURL();  // show challenge screen immediately if URL has ?ch= (no Ably needed for the screen)
-goOnline();  // join the global presence channel so the live ticker shows real counts
+goOnline();  // connect + wire the friend-challenge inbox (global presence is joined lazily on search)
 // leave the queue if the tab closes while waiting
 window.addEventListener('pagehide', () => {
   if (clientId) { try { navigator.sendBeacon('/api/match', JSON.stringify({ action:'leave', id: clientId })); } catch(e){} }
