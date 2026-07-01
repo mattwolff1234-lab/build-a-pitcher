@@ -176,6 +176,14 @@ module.exports = async (req, res) => {
         return res.status(200).json({ ok: true, plays: Number(n) });
       }
 
+      // One-time removal of the "Billy Young" cheater's spammed perfect-build entries (all games,
+      // leaderboard + daily). Name-scoped → self-limiting. Removed after it runs.
+      if (body.action === 'cleanupBillyYoung') {
+        const a = await sql`DELETE FROM scores WHERE lower(trim(name)) = 'billy young' RETURNING id`;
+        const b = await sql`DELETE FROM daily_scores WHERE lower(trim(name)) = 'billy young' RETURNING id`;
+        return res.status(200).json({ ok: true, deletedScores: a.length, deletedDaily: b.length });
+      }
+
       // Daily Challenge submission — one row per player per day; returns today's rank + field size.
       if (body.action === 'challengeSubmit') {
         const key = playerKey(body);
