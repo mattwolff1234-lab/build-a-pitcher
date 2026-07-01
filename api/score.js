@@ -138,7 +138,7 @@ module.exports = async (req, res) => {
 
       let name = String(body.name == null ? '' : body.name).trim().slice(0, 20);
       if (!name) name = 'Anonymous';
-      const ovr = Math.max(1, Math.min(99, Math.round(Number(body.ovr) || 0)));
+      const ovr = Math.max(1, Math.min(120, Math.round(Number(body.ovr) || 0)));
       const build = body.build && typeof body.build === 'object' ? JSON.stringify(body.build) : null;
       const game = gameOf(body.game);
 
