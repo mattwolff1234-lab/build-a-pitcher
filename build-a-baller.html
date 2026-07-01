@@ -1095,7 +1095,7 @@ let lbEntries = new Map();
 const SORT_OPTIONS = {
   pitcher: [{ key: 'ovr', label: 'OVR' }, { key: 'ovrAsc', label: 'Worst' }, { key: 'k', label: 'Strikeouts' }, { key: 'war', label: 'WAR' }, { key: 'wins', label: 'Wins' }, { key: 'rings', label: 'Rings' }, { key: 'cyYoung', label: 'Cy Youngs' }],
   batter: [{ key: 'ovr', label: 'OVR' }, { key: 'ovrAsc', label: 'Worst' }, { key: 'hr', label: 'Home Runs' }, { key: 'hits', label: 'Hits' }, { key: 'war', label: 'WAR' }, { key: 'rings', label: 'Rings' }, { key: 'mvp', label: 'MVPs' }],
-  baller: [{ key: 'ovr', label: 'OVR' }, { key: 'ovrAsc', label: 'Worst' }, { key: 'pts', label: 'Points' }, { key: 'reb', label: 'Rebounds' }, { key: 'ast', label: 'Assists' }, { key: 'rings', label: 'Rings' }, { key: 'mvp', label: 'MVPs' }],
+  baller: [{ key: 'ovr', label: 'OVR' }, { key: 'ovrAsc', label: 'Worst' }, { key: 'pts', label: 'Points' }, { key: 'reb', label: 'Rebounds' }, { key: 'ast', label: 'Assists' }, { key: 'war', label: 'Win Shares' }, { key: 'rings', label: 'Rings' }, { key: 'mvp', label: 'MVPs' }],
 };
 function sortOptionsFor(game) { return SORT_OPTIONS[game] || SORT_OPTIONS.baller; }
 function fmtStat(v) { return lbSort === 'war' ? Number(v).toFixed(1) : Math.round(v); }
@@ -2933,7 +2933,7 @@ function openBuildDetails(entryId) {
 }
 async function loadLeaderboard(scope = lbScope, game = lbGame, sort = lbSort) {
   lbScope = scope === 'daily' ? 'daily' : 'global';
-  lbGame = game === 'batter' ? 'batter' : 'pitcher';
+  lbGame = (game === 'batter' || game === 'baller') ? game : 'pitcher';
   lbSort = sortOptionsFor(lbGame).some(o => o.key === sort) ? sort : 'ovr';
   document.querySelectorAll('.lb-scope-tab').forEach(t => t.classList.toggle('active', t.dataset.scope === lbScope));
   document.querySelectorAll('.lb-game-tab').forEach(t => t.classList.toggle('active', t.dataset.game === lbGame));
