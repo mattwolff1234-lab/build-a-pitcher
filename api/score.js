@@ -26,6 +26,45 @@ const playerKey = b => (b && b.sub ? 'acct:' + String(b.sub).slice(0, 80) : (b &
 // We validate it and fall back to the server's CURRENT_DATE (UTC) when absent/malformed.
 const dailyDate = v => (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
 
+// --- Server-side build validation (closes the trust-the-client hole for impossible builds) ---
+// Each slot's cap is the TRUE max for that stat across the game's real cards (+ a few points of
+// buffer); a value above it can't come from a legit card. Frame is heightToRating-bounded, so it's
+// low. Note most batter slots (Vision/Power/Contact/Clutch/Discipline) and some pitcher slots
+// (Velocity/Strikeout/Clutch/Stamina) legitimately reach ~125 — only the low-max slots below catch
+// a uniform "all-125/all-200" cheat.
+const SLOT_MAX = {
+  pitcher: { _default: 128, Break: 102, Command: 102, Defense: 100, 'Ground Ball': 104, Frame: 102 },
+  batter:  { _default: 128, Speed: 102, Defense: 102, Frame: 96 },
+  baller:  { _default: 128, '3-Pointer': 123, Finishing: 120, Dribble: 123, Playmaking: 120, Defense: 117, Speed: 118, Clutch: 121 },
+};
+// Plain weighted-avg OVR — matches batter/baller's client computeOvr exactly, so we can reject an
+// inflated OVR claim. Pitcher uses a value-scaled formula, so we don't recompute it (its slot caps
+// still block impossible ratings).
+const OVR_W = {
+  batter: { Vision: 1.1, Power: 1.2, Contact: 1.2, Speed: 1.0, Clutch: 1.1, Discipline: 1.1, Frame: 1.0, Defense: 1.0 },
+  baller: { '3-Pointer': 1.2, Finishing: 1.2, Playmaking: 1.2, Dribble: 1.1, Defense: 1.1, Rebounding: 1.1, Clutch: 1.1, Speed: 0.9, Frame: 1.0 },
+};
+function checkBuild(game, clientOvr, build) {
+  const ovr = Math.max(1, Math.min(120, Math.round(Number(clientOvr) || 0)));
+  const maxes = SLOT_MAX[game];
+  const slots = build && typeof build === 'object' && Array.isArray(build.slots) ? build.slots : null;
+  if (!slots || !slots.length || !maxes) return { ok: true, ovr };   // nothing to validate (legacy/missing build)
+  let vsum = 0, wsum = 0, matched = 0;
+  const w = OVR_W[game];
+  for (const s of slots) {
+    const v = Number(s && s.value);
+    if (!Number.isFinite(v) || v < 0) return { ok: false };
+    const cap = maxes[s.slot] != null ? maxes[s.slot] : maxes._default;
+    if (v > cap) return { ok: false };
+    if (w && w[s.slot] != null) { vsum += v * w[s.slot]; wsum += w[s.slot]; matched++; }
+  }
+  if (w && wsum > 0 && matched === slots.length) {
+    const recomputed = Math.round(vsum / wsum);
+    if (recomputed > 124 || Math.abs(recomputed - ovr) > 3) return { ok: false };   // inflated / implausible OVR
+  }
+  return { ok: true, ovr };
+}
+
 let ready;
 function ensure() {
   if (!ready) {
@@ -122,7 +161,9 @@ module.exports = async (req, res) => {
         const key = playerKey(body);
         if (!key) return res.status(400).json({ ok: false, error: 'No player key' });
         const game = gameOf(body.game);
-        const ovr = Math.max(1, Math.min(120, Math.round(Number(body.ovr) || 0)));
+        const chk = checkBuild(game, body.ovr, body.build);
+        if (!chk.ok) return res.status(400).json({ ok: false, error: 'Invalid build' });
+        const ovr = chk.ovr;
         const cname = String(body.name == null ? '' : body.name).trim().slice(0, 40) || 'Anonymous';
         const cbuild = body.build && typeof body.build === 'object' ? JSON.stringify(body.build) : null;
         const cd = dailyDate(body.date);
@@ -138,9 +179,11 @@ module.exports = async (req, res) => {
 
       let name = String(body.name == null ? '' : body.name).trim().slice(0, 20);
       if (!name) name = 'Anonymous';
-      const ovr = Math.max(1, Math.min(120, Math.round(Number(body.ovr) || 0)));
-      const build = body.build && typeof body.build === 'object' ? JSON.stringify(body.build) : null;
       const game = gameOf(body.game);
+      const chk = checkBuild(game, body.ovr, body.build);
+      if (!chk.ok) return res.status(400).json({ ok: false, error: 'Invalid build - ratings exceed what any real card can have' });
+      const ovr = chk.ovr;
+      const build = body.build && typeof body.build === 'object' ? JSON.stringify(body.build) : null;
 
       const [row] = await sql`
         INSERT INTO scores (name, ovr, build, game) VALUES (${name}, ${ovr}, ${build}::jsonb, ${game})
