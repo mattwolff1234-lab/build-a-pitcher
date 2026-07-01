@@ -44,20 +44,40 @@ const OVR_W = {
   batter: { Vision: 1.1, Power: 1.2, Contact: 1.2, Speed: 1.0, Clutch: 1.1, Discipline: 1.1, Frame: 1.0, Defense: 1.0 },
   baller: { '3-Pointer': 1.2, Finishing: 1.2, Playmaking: 1.2, Dribble: 1.1, Defense: 1.1, Rebounding: 1.1, Clutch: 1.1, Speed: 0.9, Frame: 1.0 },
 };
+// Legend names per game, loaded lazily from the baked data (auto-updates on refresh; only read on
+// submit, so the GET leaderboard hot path is untouched). Blocks impossible "all-legends" builds:
+// legends only come from random spins (~3-4% each), so more than a few can only be a client-edited
+// build. Matched by player NAME (not the client-supplied `legend` flag, which a cheat could fake).
+let _legends = null;
+function legendSet(game) {
+  if (!_legends) {
+    const names = d => new Set((((d && d.legends) || [])).map(p => String((p && p.name) || '').trim().toLowerCase()).filter(Boolean));
+    try {
+      _legends = { pitcher: names(require('../pitchers.json')), batter: names(require('../batters.json')), baller: names(require('../ballers.json')) };
+    } catch (e) { _legends = { pitcher: new Set(), batter: new Set(), baller: new Set() }; }
+  }
+  return _legends[game] || null;
+}
+const LEGEND_CAP = { baller: 6, batter: 7, pitcher: 7 };   // observed legit maxima: baller 3, batter 4, pitcher 5
+
 function checkBuild(game, clientOvr, build) {
   const ovr = Math.max(1, Math.min(120, Math.round(Number(clientOvr) || 0)));
   const maxes = SLOT_MAX[game];
   const slots = build && typeof build === 'object' && Array.isArray(build.slots) ? build.slots : null;
   if (!slots || !slots.length || !maxes) return { ok: true, ovr };   // nothing to validate (legacy/missing build)
-  let vsum = 0, wsum = 0, matched = 0;
+  let vsum = 0, wsum = 0, matched = 0, flagLeg = 0, nameLeg = 0;
   const w = OVR_W[game];
+  const legs = legendSet(game);
   for (const s of slots) {
     const v = Number(s && s.value);
     if (!Number.isFinite(v) || v < 0) return { ok: false };
     const cap = maxes[s.slot] != null ? maxes[s.slot] : maxes._default;
     if (v > cap) return { ok: false };
+    if (s && s.legend === true) flagLeg++;
+    if (legs && s && legs.has(String((s.player) || '').trim().toLowerCase())) nameLeg++;
     if (w && w[s.slot] != null) { vsum += v * w[s.slot]; wsum += w[s.slot]; matched++; }
   }
+  if (Math.max(flagLeg, nameLeg) >= (LEGEND_CAP[game] || 99)) return { ok: false };   // impossible legend count
   if (w && wsum > 0 && matched === slots.length) {
     const recomputed = Math.round(vsum / wsum);
     if (recomputed > 124 || Math.abs(recomputed - ovr) > 3) return { ok: false };   // inflated / implausible OVR
@@ -154,6 +174,13 @@ module.exports = async (req, res) => {
         const [{ n }] = await sql`INSERT INTO counters (key, n) VALUES ('plays', 1)
           ON CONFLICT (key) DO UPDATE SET n = counters.n + 1 RETURNING n`;
         return res.status(200).json({ ok: true, plays: Number(n) });
+      }
+
+      // One-time removal of two confirmed all-9-legends cheat entries ("Never B Beaten", "1 of 1").
+      // Hardcoded ids → self-limiting: it can ONLY ever delete these two rows. Removed after it runs.
+      if (body.action === 'cleanupLegends2026') {
+        const del = await sql`DELETE FROM scores WHERE id = ANY(ARRAY[53955, 53760]::int[]) RETURNING id, name, ovr`;
+        return res.status(200).json({ ok: true, deleted: del.length, rows: del });
       }
 
       // Daily Challenge submission — one row per player per day; returns today's rank + field size.
