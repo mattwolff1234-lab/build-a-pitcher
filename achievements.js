@@ -104,18 +104,24 @@
     let owner = null, resetting = false;
     try { owner = localStorage.getItem('pl_ach_owner'); resetting = localStorage.getItem('pl_ach_rst') === ACH_VER; } catch (e) {}
     // If the local cache already belongs to this account, push its unlocks up (covers offline play).
-    // Otherwise it's guest progress (or a different account) — adopt this account's set and discard
-    // the local data, so achievements stay tied to whoever is signed in with Google.
+    // Otherwise it's guest progress (or a different account's) — send it as a CLAIM: the server
+    // adopts it only into an account with no unlocks yet (like pvpClaim for the 1v1 rating), so a
+    // long-time guest keeps their board on first sign-in but can never pollute an established account.
     const sameOwner = owner === a.sub;
-    const payload = (sameOwner || resetting) ? done : {};
+    const claiming = !sameOwner && !resetting;
     try {
       const r = await fetch('/api/account', {
         method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ action: 'achSync', sub: a.sub, sessionToken: a.sessionToken, achievements: payload, reset: resetting }),
+        body: JSON.stringify({ action: 'achSync', sub: a.sub, sessionToken: a.sessionToken, achievements: done, reset: resetting, claim: claiming }),
       }).then(x => x.json());
       if (r && r.ok && r.achievements) {
         try { if (resetting) localStorage.removeItem('pl_ach_rst'); localStorage.setItem('pl_ach_owner', a.sub); } catch (e) {}
+        // unlocks the account has that this device didn't = progress coming back (restore/backfill,
+        // or signing in on a new device) — celebrate it instead of silently updating the board
+        const gained = Object.keys(r.achievements).filter(k => byId[k] && !done[k]).length;
         done = r.achievements; save(); refreshBadges();
+        if (gained > 0) showToast({ icon: '🏅', label: 'Welcome back', name: 'Your achievements have returned!',
+          desc: gained + ' unlock' + (gained === 1 ? '' : 's') + ' restored to your Trophy Room.' });
         if (chromeReady && built && ov && ov.classList.contains('show')) render();
       }
     } catch (e) {}
@@ -437,6 +443,7 @@
     toastBusy = true;
     const a = toastQ.shift();
     toast.querySelector('.ti').textContent = a.icon;
+    toast.querySelector('.tl').textContent = a.label || 'Achievement Unlocked';
     toast.querySelector('.tnm').textContent = a.name;
     toast.querySelector('.tds').textContent = a.desc || '';
     toast.style.display = 'flex';

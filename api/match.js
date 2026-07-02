@@ -42,7 +42,7 @@ function ensure() {
         claimer_role text,
         created_at timestamptz NOT NULL DEFAULT now()
       )`;
-    })();
+    })().catch(e => { ready = null; throw e; });   // don't cache a transient failure forever
   }
   return ready;
 }

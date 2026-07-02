@@ -104,7 +104,7 @@ function ensure() {
       await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_active_date date`;
       await sql`CREATE INDEX IF NOT EXISTS idx_pvp_history_player ON pvp_history (player_key, created_at DESC)`;
       await sql`CREATE INDEX IF NOT EXISTS idx_pvp_history_opp_key ON pvp_history (opp_key) WHERE opp_key IS NOT NULL`;
-    })();
+    })().catch(e => { ready = null; throw e; });   // don't cache a transient failure forever
   }
   return ready;
 }
@@ -302,12 +302,16 @@ module.exports = async (req, res) => {
         // reset=true replaces the account copy with the caller's current set (used for version wipes);
         // otherwise merge (union, earliest unlock time wins) so progress follows the email across devices.
         const base = body.reset === true ? {} : ((await sql`SELECT achievements FROM users WHERE google_sub = ${body.sub}`)[0] || {}).achievements || {};
+        // claim=true marks pre-sign-in guest progress: adopt it only into an account with no
+        // unlocks yet (mirrors pvpClaim), so a shared device's guest board can never pollute an
+        // established account — but a long-time guest keeps their board on first sign-in.
+        const adopt = (body.claim === true && Object.keys(base).length > 0) ? {} : incoming;
         const merged = Object.assign({}, base);
         let n = 0;
-        for (const k in incoming) {
+        for (const k in adopt) {
           if (n++ > 200) break;
           if (typeof k !== 'string' || !k || k.length > 40) continue;
-          const t = String(incoming[k] || '').slice(0, 40);
+          const t = String(adopt[k] || '').slice(0, 40);
           if (!merged[k] || (t && t < merged[k])) merged[k] = t || merged[k] || new Date().toISOString();
         }
         await sql`UPDATE users SET achievements = ${JSON.stringify(merged)}::jsonb WHERE google_sub = ${body.sub}`;
@@ -417,21 +421,40 @@ module.exports = async (req, res) => {
         return res.status(200).json({ ok: true, history: rows });
       }
 
-      // Carry a device-guest's rating onto a Google account the first time they sign in
-      // (only if the account hasn't played yet, so we never clobber an existing rating).
+      // Carry a device-guest's rating onto a Google account the first time they sign in.
+      // Baseball and hoops claim independently, each only onto a side the account hasn't played
+      // yet (so we never clobber an existing rating). Claimed match history is re-keyed so it
+      // follows the account; the guest row is only deleted once nothing unclaimed is left on it.
       if (action === 'pvpClaim') {
         if (!(await authed(body.sub, body.sessionToken))) return res.status(401).json({ ok: false, error: 'Not signed in' });
         const gid = body.guestId ? ('guest:' + String(body.guestId).slice(0, 48)) : null;
-        const [acct] = await sql`SELECT pvp_elo AS elo, pvp_wins AS wins, pvp_losses AS losses FROM users WHERE google_sub = ${body.sub}`;
-        if (gid && acct && acct.wins === 0 && acct.losses === 0) {
-          const [g] = await sql`SELECT pvp_elo AS elo, pvp_wins AS wins, pvp_losses AS losses, pvp_streak AS streak FROM users WHERE google_sub = ${gid}`;
-          if (g && (g.wins > 0 || g.losses > 0)) {
+        const [acct] = await sql`SELECT pvp_elo AS elo, pvp_wins AS wins, pvp_losses AS losses,
+          pvp_elo_hoops AS helo, pvp_wins_hoops AS hwins, pvp_losses_hoops AS hlosses FROM users WHERE google_sub = ${body.sub}`;
+        const [g] = gid ? await sql`SELECT pvp_elo AS elo, pvp_wins AS wins, pvp_losses AS losses, pvp_streak AS streak,
+          pvp_elo_hoops AS helo, pvp_wins_hoops AS hwins, pvp_losses_hoops AS hlosses, pvp_streak_hoops AS hstreak
+          FROM users WHERE google_sub = ${gid}` : [];
+        let claimedBase = false, claimedHoops = false;
+        if (acct && g) {
+          if (acct.wins === 0 && acct.losses === 0 && (g.wins > 0 || g.losses > 0)) {
             await sql`UPDATE users SET pvp_elo = ${g.elo}, pvp_wins = ${g.wins}, pvp_losses = ${g.losses}, pvp_streak = ${g.streak} WHERE google_sub = ${body.sub}`;
+            await sql`UPDATE pvp_history SET player_key = ${body.sub} WHERE player_key = ${gid} AND sport IS DISTINCT FROM 'hoops'`;
+            claimedBase = true;
+          }
+          if (acct.hwins === 0 && acct.hlosses === 0 && (g.hwins > 0 || g.hlosses > 0)) {
+            await sql`UPDATE users SET pvp_elo_hoops = ${g.helo}, pvp_wins_hoops = ${g.hwins}, pvp_losses_hoops = ${g.hlosses}, pvp_streak_hoops = ${g.hstreak} WHERE google_sub = ${body.sub}`;
+            await sql`UPDATE pvp_history SET player_key = ${body.sub} WHERE player_key = ${gid} AND sport = 'hoops'`;
+            claimedHoops = true;
+          }
+          const baseLeft = (g.wins > 0 || g.losses > 0) && !claimedBase;
+          const hoopsLeft = (g.hwins > 0 || g.hlosses > 0) && !claimedHoops;
+          if ((claimedBase || claimedHoops) && !baseLeft && !hoopsLeft) {
+            await sql`UPDATE pvp_history SET opp_key = ${body.sub} WHERE opp_key = ${gid}`;
             await sql`DELETE FROM users WHERE google_sub = ${gid}`;  // retire the guest identity
-            return res.status(200).json({ ok: true, claimed: true, elo: g.elo, wins: g.wins, losses: g.losses });
           }
         }
-        return res.status(200).json({ ok: true, claimed: false, elo: acct ? acct.elo : 1000, wins: acct ? acct.wins : 0, losses: acct ? acct.losses : 0 });
+        const src = claimedBase ? g : acct;
+        return res.status(200).json({ ok: true, claimed: claimedBase || claimedHoops, claimedHoops,
+          elo: src ? src.elo : 1000, wins: src ? src.wins : 0, losses: src ? src.losses : 0 });
       }
 
       if (action === 'pvpLeaderboard') {
@@ -608,6 +631,142 @@ module.exports = async (req, res) => {
           applied, skipped_ambiguous, skipped_no_candidate,
           results,
         });
+      }
+
+      // One-time, token-gated: rebuild achievements from server evidence (pvp_history, daily_scores,
+      // Hall of Fame saves) for signed-in accounts. Additive only — never removes or overwrites an
+      // existing unlock — so it safely restores boards lost to the old sign-in flow that discarded
+      // guest progress. Defaults to dryRun:true; pass dryRun:false to commit.
+      if (action === 'achBackfill') {
+        if (body.token !== STATS_TOKEN) return res.status(403).json({ ok: false, error: 'forbidden' });
+        const dryRun = body.dryRun !== false;
+        const evid = {};
+        const add = (sub, ...ids) => {
+          if (!sub || sub.indexOf('guest:') === 0) return;
+          const set = evid[sub] || (evid[sub] = new Set());
+          for (const id of ids) set.add(id);
+        };
+
+        // 1v1 (both sports share the achievement board): played, win runs, Elo peaks, blowouts, upsets
+        const hist = await sql`SELECT player_key, won, my_ovr, opp_ovr, elo_after
+          FROM pvp_history WHERE player_key NOT LIKE 'guest:%' ORDER BY player_key, created_at`;
+        let prev = null, run = 0;
+        for (const h of hist) {
+          if (h.player_key !== prev) { prev = h.player_key; run = 0; }
+          add(h.player_key, 'versus_root');
+          run = h.won ? run + 1 : 0;
+          if (run >= 3) add(h.player_key, 'streak1');
+          if (run >= 5) add(h.player_key, 'streak2');
+          if (run >= 10) add(h.player_key, 'streak3');
+          const ea = Number(h.elo_after) || 0;
+          if (ea >= 1200) add(h.player_key, 'elo1');
+          if (ea >= 1400) add(h.player_key, 'elo2');
+          if (ea >= 1600) add(h.player_key, 'elo3');
+          if (h.won && h.my_ovr && h.opp_ovr) {
+            const d = h.my_ovr - h.opp_ovr;
+            if (d >= 10) add(h.player_key, 'mismatch1');
+            if (d >= 15) add(h.player_key, 'mismatch2');
+            if (d >= 20) add(h.player_key, 'mismatch3');
+            if (d < 0) add(h.player_key, 'underdog');
+          }
+        }
+
+        // current rating/streak/record columns catch matches that predate pvp_history
+        const users = await sql`SELECT google_sub, achievements, pvp_elo, pvp_streak, pvp_wins, pvp_losses,
+          pvp_elo_hoops, pvp_streak_hoops, pvp_wins_hoops, pvp_losses_hoops
+          FROM users WHERE google_sub NOT LIKE 'guest:%'`;
+        for (const u of users) {
+          if ((u.pvp_wins + u.pvp_losses + u.pvp_wins_hoops + u.pvp_losses_hoops) > 0) add(u.google_sub, 'versus_root');
+          const elo = Math.max(u.pvp_elo, u.pvp_elo_hoops), st = Math.max(u.pvp_streak, u.pvp_streak_hoops);
+          if (elo >= 1200) add(u.google_sub, 'elo1');
+          if (elo >= 1400) add(u.google_sub, 'elo2');
+          if (elo >= 1600) add(u.google_sub, 'elo3');
+          if (st >= 3) add(u.google_sub, 'streak1');
+          if (st >= 5) add(u.google_sub, 'streak2');
+          if (st >= 10) add(u.google_sub, 'streak3');
+        }
+
+        // dailies (per game, like the in-game unlocks): played / 7 / 30 / 100, and each daily
+        // submission is proof of a completed build at that OVR
+        const dailies = await sql`SELECT player_key, count(*)::int AS n, max(ovr)::int AS best,
+            bool_or(ovr = 99) AS goat, bool_or(ovr > 99) AS beyond, bool_or(ovr < 60) AS bargain
+          FROM daily_scores WHERE player_key LIKE 'acct:%' GROUP BY player_key, game`;
+        for (const d of dailies) {
+          const sub = d.player_key.slice(5);
+          add(sub, 'daily_root', 'draft_root');
+          if (d.n >= 7) add(sub, 'grind1');
+          if (d.n >= 30) add(sub, 'grind2');
+          if (d.n >= 100) add(sub, 'grind3');
+          if (d.best >= 90) add(sub, 'builder1');
+          if (d.best >= 95) add(sub, 'builder2');
+          if (d.goat) add(sub, 'the_goat');
+          if (d.beyond) add(sub, 'beyond');
+          if (d.bargain) add(sub, 'bargain');
+        }
+
+        // Hall of Fame saves: full build slots + slim career line
+        const saves = await sql`SELECT google_sub, game, ovr, build FROM saves WHERE google_sub NOT LIKE 'guest:%'`;
+        for (const s of saves) {
+          const sub = s.google_sub;
+          add(sub, 'draft_root');
+          if (s.ovr >= 90) add(sub, 'builder1');
+          if (s.ovr >= 95) add(sub, 'builder2');
+          if (s.ovr === 99) add(sub, 'the_goat');
+          if (s.ovr > 99) add(sub, 'beyond');
+          if (s.ovr < 60) add(sub, 'bargain');
+          const b = s.build && typeof s.build === 'object' ? s.build : {};
+          const slots = Array.isArray(b.slots) ? b.slots : [];
+          if (slots.some(x => Number(x && x.value) >= 125)) add(sub, 'offcharts');
+          const teams = slots.map(x => x && x.team).filter(Boolean);
+          if (slots.length >= 7 && teams.length === slots.length && teams.every(t => t === teams[0])) add(sub, 'one_team');
+          if (slots.some(x => x && (x.slot === 'Defense' || x.slot === 'Frame') && Number(x.ovr) >= 99)) add(sub, 'nepo');
+          const fr = slots.find(x => x && x.slot === 'Frame');
+          const hm = fr && /(\d+)'\s*(\d+)/.exec(String(fr.display || ''));
+          if (hm) {
+            const inches = Number(hm[1]) * 12 + Number(hm[2]);
+            if (inches <= 71) add(sub, 'short_king');
+            if (inches >= 81) add(sub, 'tall_tale');
+          }
+          const t = b.career && b.career.totals;
+          if (t) {
+            add(sub, 'sim_root');
+            const rings = Number(t.rings) || 0;
+            if (rings >= 1) add(sub, 'ring1');
+            if (rings >= 3) add(sub, 'ring2');
+            if (rings >= 5) add(sub, 'ring3');
+            if (s.game === 'pitcher') {
+              const k = Number(t.k) || 0, w = Number(t.wins) || 0;
+              if (k >= 1000) add(sub, 'k1');
+              if (k >= 3000) add(sub, 'k2');
+              if (k >= 5000) add(sub, 'k3');
+              if (w >= 100) add(sub, 'w1');
+              if (w >= 200) add(sub, 'w2');
+              if (w >= 300) add(sub, 'w3');
+            }
+          }
+        }
+
+        // merge into users.achievements — only fills gaps, never touches existing unlocks
+        const nowIso = new Date().toISOString();
+        const byAch = {};
+        let updated = 0, grants = 0;
+        for (const u of users) {
+          const set = evid[u.google_sub];
+          if (!set) continue;
+          const cur = (u.achievements && typeof u.achievements === 'object') ? u.achievements : {};
+          const missing = [...set].filter(id => !cur[id]);
+          if (!missing.length) continue;
+          updated++;
+          grants += missing.length;
+          for (const id of missing) byAch[id] = (byAch[id] || 0) + 1;
+          if (!dryRun) {
+            const merged = Object.assign({}, cur);
+            for (const id of missing) merged[id] = nowIso;
+            await sql`UPDATE users SET achievements = ${JSON.stringify(merged)}::jsonb WHERE google_sub = ${u.google_sub}`;
+          }
+        }
+        return res.status(200).json({ ok: true, dryRun, accounts_scanned: users.length,
+          accounts_granted: updated, total_grants: grants, by_achievement: byAch });
       }
 
       return res.status(400).json({ ok: false, error: 'Unknown action' });

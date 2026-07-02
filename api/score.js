@@ -115,7 +115,7 @@ function ensure() {
         UNIQUE (player_key, game, challenge_date)
       )`;
       await sql`CREATE INDEX IF NOT EXISTS idx_daily_scores_date ON daily_scores (game, challenge_date, ovr DESC)`;
-    })();
+    })().catch(e => { ready = null; throw e; });   // don't cache a transient failure forever
   }
   return ready;
 }

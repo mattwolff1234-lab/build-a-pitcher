@@ -36,7 +36,7 @@ function ensure() {
         updated_at timestamptz NOT NULL DEFAULT now()
       )`;
       await sql`CREATE INDEX IF NOT EXISTS idx_live_game_seen ON live_presence (game, updated_at)`;
-    })();
+    })().catch(e => { ready = null; throw e; });   // don't cache a transient failure forever
   }
   return ready;
 }
