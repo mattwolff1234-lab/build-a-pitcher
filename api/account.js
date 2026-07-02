@@ -704,8 +704,24 @@ module.exports = async (req, res) => {
           if (d.bargain) add(sub, 'bargain');
         }
 
-        // Hall of Fame saves: full build slots + slim career line
-        const saves = await sql`SELECT google_sub, game, ovr, build FROM saves WHERE google_sub NOT LIKE 'guest:%'`;
+        // Hall of Fame saves. Older saves store the FULL career (huge), so pulling raw build jsonb
+        // blows Neon's 64MB response cap — extract just the per-save facts in SQL instead.
+        const saves = await sql`SELECT google_sub, game, ovr,
+            (build->'career'->'totals') IS NOT NULL AS simmed,
+            COALESCE((build->'career'->'totals'->>'rings')::numeric, 0)::int AS rings,
+            COALESCE((build->'career'->'totals'->>'k')::numeric, 0)::int AS k,
+            COALESCE((build->'career'->'totals'->>'wins')::numeric, 0)::int AS wins,
+            (SELECT bool_or(CASE WHEN s->>'value' ~ '^[0-9]+([.][0-9]+)?$' THEN (s->>'value')::numeric >= 125 END)
+               FROM jsonb_array_elements(CASE WHEN jsonb_typeof(build->'slots') = 'array' THEN build->'slots' ELSE '[]'::jsonb END) s) AS offcharts,
+            (SELECT count(DISTINCT s->>'team') = 1 AND count(*) >= 7 AND count(s->>'team') = count(*)
+               FROM jsonb_array_elements(CASE WHEN jsonb_typeof(build->'slots') = 'array' THEN build->'slots' ELSE '[]'::jsonb END) s) AS one_team,
+            (SELECT bool_or(CASE WHEN s->>'ovr' ~ '^[0-9]+([.][0-9]+)?$' THEN (s->>'ovr')::numeric >= 99 END)
+               FROM jsonb_array_elements(CASE WHEN jsonb_typeof(build->'slots') = 'array' THEN build->'slots' ELSE '[]'::jsonb END) s
+               WHERE s->>'slot' IN ('Defense', 'Frame')) AS nepo,
+            (SELECT min(s->>'display')
+               FROM jsonb_array_elements(CASE WHEN jsonb_typeof(build->'slots') = 'array' THEN build->'slots' ELSE '[]'::jsonb END) s
+               WHERE s->>'slot' = 'Frame') AS frame_disp
+          FROM saves WHERE google_sub NOT LIKE 'guest:%'`;
         for (const s of saves) {
           const sub = s.google_sub;
           add(sub, 'draft_root');
@@ -714,34 +730,27 @@ module.exports = async (req, res) => {
           if (s.ovr === 99) add(sub, 'the_goat');
           if (s.ovr > 99) add(sub, 'beyond');
           if (s.ovr < 60) add(sub, 'bargain');
-          const b = s.build && typeof s.build === 'object' ? s.build : {};
-          const slots = Array.isArray(b.slots) ? b.slots : [];
-          if (slots.some(x => Number(x && x.value) >= 125)) add(sub, 'offcharts');
-          const teams = slots.map(x => x && x.team).filter(Boolean);
-          if (slots.length >= 7 && teams.length === slots.length && teams.every(t => t === teams[0])) add(sub, 'one_team');
-          if (slots.some(x => x && (x.slot === 'Defense' || x.slot === 'Frame') && Number(x.ovr) >= 99)) add(sub, 'nepo');
-          const fr = slots.find(x => x && x.slot === 'Frame');
-          const hm = fr && /(\d+)'\s*(\d+)/.exec(String(fr.display || ''));
+          if (s.offcharts) add(sub, 'offcharts');
+          if (s.one_team) add(sub, 'one_team');
+          if (s.nepo) add(sub, 'nepo');
+          const hm = /(\d+)'\s*(\d+)/.exec(String(s.frame_disp || ''));
           if (hm) {
             const inches = Number(hm[1]) * 12 + Number(hm[2]);
             if (inches <= 71) add(sub, 'short_king');
             if (inches >= 81) add(sub, 'tall_tale');
           }
-          const t = b.career && b.career.totals;
-          if (t) {
+          if (s.simmed) {
             add(sub, 'sim_root');
-            const rings = Number(t.rings) || 0;
-            if (rings >= 1) add(sub, 'ring1');
-            if (rings >= 3) add(sub, 'ring2');
-            if (rings >= 5) add(sub, 'ring3');
+            if (s.rings >= 1) add(sub, 'ring1');
+            if (s.rings >= 3) add(sub, 'ring2');
+            if (s.rings >= 5) add(sub, 'ring3');
             if (s.game === 'pitcher') {
-              const k = Number(t.k) || 0, w = Number(t.wins) || 0;
-              if (k >= 1000) add(sub, 'k1');
-              if (k >= 3000) add(sub, 'k2');
-              if (k >= 5000) add(sub, 'k3');
-              if (w >= 100) add(sub, 'w1');
-              if (w >= 200) add(sub, 'w2');
-              if (w >= 300) add(sub, 'w3');
+              if (s.k >= 1000) add(sub, 'k1');
+              if (s.k >= 3000) add(sub, 'k2');
+              if (s.k >= 5000) add(sub, 'k3');
+              if (s.wins >= 100) add(sub, 'w1');
+              if (s.wins >= 200) add(sub, 'w2');
+              if (s.wins >= 300) add(sub, 'w3');
             }
           }
         }
