@@ -1302,6 +1302,7 @@ function resetMatch(){
   if (clockTimer){ clearInterval(clockTimer); clockTimer=null; }
   if (claimTimeout){ clearTimeout(claimTimeout); claimTimeout=null; }
   if (waitTimeout){ clearTimeout(waitTimeout); waitTimeout=null; }
+  cancelOppQuit();
   if (buildRepub){ clearInterval(buildRepub); buildRepub=null; }
   if (matchCh){ try{ matchCh.presence.leave(); }catch(e){} matchCh.unsubscribe(); matchCh.presence.unsubscribe(); try{ matchCh.detach(); }catch(e){} matchCh=null; }
 }
@@ -1319,9 +1320,11 @@ async function startMatch(mId, role, sd, opp, claimer, friendly=false){
   matchCh.subscribe('build',    m => { if (m.clientId === clientId) return; oppBuild = m.data; updateOppPill(); if (myBuild && !atBatStarted && !matchResolved){ try{ matchCh.publish('build', myBuild); }catch(e){} } maybeStartAtBat(); });
   matchCh.subscribe('progress', m => { if (m.clientId === clientId) return; updateOppProgress(m.data); });
   matchCh.subscribe('forfeit',  m => { if (m.clientId === clientId) return; handleOpponentForfeit(m.data || {}); });
+  matchCh.subscribe('quitwin',  m => { if (m.clientId === clientId) return; handleOpponentQuitWin(); });
   matchCh.subscribe('rematch',  m => { if (m.clientId === clientId) return; handleRematchMsg(m.data); });
-  matchCh.presence.subscribe('enter', m => { if (m.clientId === clientId) return; oppPresent=true; captureOppPresence(m.data); updateOppPill(); });
-  matchCh.presence.subscribe('present', m => { if (m.clientId === clientId) return; oppPresent=true; captureOppPresence(m.data); updateOppPill(); });
+  matchCh.presence.subscribe('enter', m => { if (m.clientId === clientId) return; oppPresent=true; cancelOppQuit(); captureOppPresence(m.data); updateOppPill(); });
+  matchCh.presence.subscribe('present', m => { if (m.clientId === clientId) return; oppPresent=true; cancelOppQuit(); captureOppPresence(m.data); updateOppPill(); });
+  matchCh.presence.subscribe('leave', m => { if (m.clientId === clientId) return; onOppLeave(); });
   await matchCh.presence.enter({ role: myRole, name: displayName(), elo: myElo() });
   try { const members = await matchCh.presence.get(); const opp = members.find(m => m.clientId !== clientId); if (opp){ oppPresent=true; captureOppPresence(opp.data); } } catch(e){}
 
@@ -1695,15 +1698,14 @@ function finishBuild(){
   myBuild = { role:myRole, ovr, team, slots, elo: myElo(), name: displayName(), key: personId() };
   publishBuild();
   updateOppPill();
-  // safety net: if the opponent never finishes (left/closed), don't hang forever
+  // Safety net: if the opponent never delivers a build (left/closed), don't hang forever.
+  // Both shot clocks froze together, so their build-or-autofill MUST arrive within the time
+  // they have left (+slack). Silence past that means they're gone → forfeit WIN, never
+  // "No Contest" — quitting must always count as a loss for the quitter.
   if (waitTimeout) clearTimeout(waitTimeout);
   waitTimeout = setTimeout(() => {
-    if (!oppBuild && !atBatStarted && !matchResolved) {
-      const filled = Math.min(oppProg.filled || 0, oppProg.total || 9);
-      if(filled <= 3) showForfeitResult(true, filled);
-      else showNoContest();
-    }
-  }, 75000);
+    if (!oppBuild && !atBatStarted && !matchResolved) claimQuitWin();
+  }, Math.max(0, clockLeft) * 1000 + 30000);
   if (oppBuild) maybeStartAtBat();   // opponent already finished → straight to the at-bat
   else showWaitArena();              // otherwise wait IN the arena, watching their progress
 }
@@ -1771,6 +1773,31 @@ function handleOpponentForfeit(data){
   if(waitTimeout){ clearTimeout(waitTimeout); waitTimeout=null; }
   showForfeitResult(true, data.filled || 0, data);
 }
+// Rage-quit guard: the opponent left the match channel mid-build and didn't come back within
+// the grace window → forfeit win for the stayer. The quitter's loss settles server-side via
+// the recorded match participants, so closing the tab can never dodge a loss.
+let oppQuitTimer=null;
+function cancelOppQuit(){ if(oppQuitTimer){ clearTimeout(oppQuitTimer); oppQuitTimer=null; } }
+function onOppLeave(){
+  oppPresent=false; updateOppPill();
+  if(matchResolved || atBatStarted || oppBuild) return;   // their build is in → match resolves normally
+  cancelOppQuit();
+  oppQuitTimer = setTimeout(()=>{
+    oppQuitTimer=null;
+    if(matchResolved || atBatStarted || oppBuild) return;
+    claimQuitWin();
+  }, 15000);   // grace for flaky connections — an Ably re-enter cancels this
+}
+function claimQuitWin(){
+  if(matchCh){ try{ matchCh.publish('quitwin', { role:myRole }); }catch(e){} }   // if they're secretly alive, they take the loss
+  const filled = Math.min(oppProg.filled || 0, oppProg.total || 9);
+  showForfeitResult(true, filled, { quit:true, name:oppPresenceName, elo:(oppPresenceElo > 0 ? oppPresenceElo : undefined) });
+}
+function handleOpponentQuitWin(){
+  if(matchResolved || atBatStarted) return;
+  const filled = ROLE[myRole].slots.filter(s=>buildState.filled[s.key]).length;
+  showForfeitResult(false, filled, { quit:true });
+}
 function showForfeitResult(iWon, filled, data={}){
   matchResolved=true; waitingArena=false; stopWaitClock();
   if(clockTimer){ clearInterval(clockTimer); clockTimer=null; }
@@ -1784,9 +1811,11 @@ function showForfeitResult(iWon, filled, data={}){
   $('resultHead').textContent = iWon ? 'YOU WIN' : 'YOU LOSE';
   const oppName = data.name || ((oppBuild && oppBuild.name) ? oppBuild.name : 'your opponent');
   $('resultLine').textContent = iWon
-    ? `${oppName} forfeited after ${filled} slot${filled===1?'':'s'} filled.`
-    : `You forfeited after ${filled} slot${filled===1?'':'s'} filled.`;
-  $('resultSub').textContent = iWon ? 'Timeout win. Run it back?' : 'Fill at least 4 slots before time expires.';
+    ? (data.quit ? `${oppName} left the match.` : `${oppName} forfeited after ${filled} slot${filled===1?'':'s'} filled.`)
+    : (data.quit ? 'You disconnected mid-match.' : `You forfeited after ${filled} slot${filled===1?'':'s'} filled.`);
+  $('resultSub').textContent = iWon
+    ? (data.quit ? 'Win by forfeit — quitting still counts as a loss for them.' : 'Timeout win. Run it back?')
+    : (data.quit ? 'An abandoned match counts as a forfeit loss.' : 'Fill at least 4 slots before time expires.');
   if (window.Ach) Ach.unlock('versus_root');                       // played a 1v1 (forfeit result)
   iWon ? Sound.win() : Sound.lose();
   gsap.fromTo(card,{ y:24, opacity:0, scale:.92 },{ y:0, opacity:1, scale:1, duration:.5, ease:'back.out(1.5)' });

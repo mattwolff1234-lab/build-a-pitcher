@@ -148,20 +148,50 @@ async function hoopsResult(body, key, res) {
   const myOvr = Math.round(Number(body.ovr) || 0) || null;
   const oppOvr = Math.round(Number(body.oppOvr) || 0) || null;
   const oppName = String(body.oppName || '').trim().slice(0, 40) || null;
+  // Authoritative opponent from the recorded match (mirrors pvpResult): charge the true loser
+  // even if they quit before ever identifying themselves, and reject a reporter who provably
+  // wasn't one of the two participants. Matches with no record (pre-fix or friend challenges)
+  // fall through to the client-reported oppKey path.
+  const normKey = p => (p && p.indexOf('acct:') === 0) ? p.slice(5) : p;
+  let recordedOpp = null;
+  try {
+    const [mp] = await sql`SELECT claimer_pid, opp_pid FROM pvp_match_players WHERE match_id = ${matchId}`;
+    if (mp) {
+      const a = normKey(mp.claimer_pid), b = normKey(mp.opp_pid);
+      if (key !== a && key !== b) return res.status(403).json({ ok: false, error: 'not a participant in this match' });
+      recordedOpp = (key === a) ? b : a;
+    }
+  } catch (e) {}
   const [u] = await sql`SELECT pvp_elo_hoops AS elo, pvp_wins_hoops AS wins, pvp_losses_hoops AS losses, pvp_streak_hoops AS streak FROM users WHERE google_sub = ${key}`;
   if (!u) return res.status(401).json({ ok: false, error: 'Not signed in' });
   // namespaced dedup key so a hoops match never collides with a baseball one in the shared pvp_results
   const dedup = 'h:' + matchId;
   const ins = await sql`INSERT INTO pvp_results (match_id, google_sub) VALUES (${dedup}, ${key}) ON CONFLICT DO NOTHING RETURNING match_id`;
-  if (!ins.length) return res.status(200).json({ ok: true, counted: false, elo: u.elo, delta: 0, bonus: 0, streak: u.streak, wins: u.wins, losses: u.losses });
+  if (!ins.length) {
+    // Already settled — usually the winner reported first and we applied this player's loss
+    // server-side. Pull the real delta from the recorded history row so the loser's screen
+    // shows "-13" instead of "+0".
+    let delta = 0, elo = u.elo;
+    try {
+      const [h] = await sql`SELECT elo_before, elo_after FROM pvp_history
+        WHERE match_id = ${matchId} AND player_key = ${key} AND sport = 'hoops'`;
+      if (h) { delta = h.elo_after - h.elo_before; elo = h.elo_after; }
+    } catch (e) {}
+    return res.status(200).json({ ok: true, counted: false, elo, delta, bonus: 0, streak: u.streak, wins: u.wins, losses: u.losses });
+  }
   const { delta } = nextElo(u.elo, oppElo, won);
   const streak = won ? (u.streak || 0) + 1 : 0;
   const bonus = won ? Math.min(streak, STREAK_CAP) * STREAK_BONUS : 0;
   const elo = Math.max(100, u.elo + delta + bonus);
   const wins = u.wins + (won ? 1 : 0), losses = u.losses + (won ? 0 : 1);
   await sql`UPDATE users SET pvp_elo_hoops = ${elo}, pvp_wins_hoops = ${wins}, pvp_losses_hoops = ${losses}, pvp_streak_hoops = ${streak} WHERE google_sub = ${key}`;
+  // Prefer the recorded opponent; else the client-reported oppKey. Normalize acct:<sub> to the
+  // raw sub stored in users — hoops previously kept the prefix, so the loss-apply silently
+  // no-op'd against every signed-in opponent (only guests ever got charged).
   const oppKeyVal = body.oppKey ? String(body.oppKey).slice(0, 80) : null;
-  const validOppKey = oppKeyVal && /^(acct:|guest:)/.test(oppKeyVal) && oppKeyVal !== key ? oppKeyVal : null;
+  const clientOpp = oppKeyVal && /^(acct:|guest:)/.test(oppKeyVal) ? normKey(oppKeyVal) : null;
+  const settleOpp = recordedOpp || clientOpp;
+  const validOppKey = settleOpp && settleOpp !== key ? settleOpp : null;
   try {
     await sql`INSERT INTO pvp_history (player_key, match_id, won, my_role, my_ovr, opp_name, opp_ovr, opp_key, elo_before, elo_after, sport)
       VALUES (${key}, ${matchId}, ${won}, 'hooper', ${myOvr}, ${oppName}, ${oppOvr}, ${validOppKey}, ${u.elo}, ${elo}, 'hoops')`;
@@ -368,7 +398,18 @@ module.exports = async (req, res) => {
         // dedupe: only the first report for this (match, player) counts
         const ins = await sql`INSERT INTO pvp_results (match_id, google_sub) VALUES (${matchId}, ${key})
           ON CONFLICT DO NOTHING RETURNING match_id`;
-        if (!ins.length) return res.status(200).json({ ok: true, counted: false, elo: u.elo, delta: 0, bonus: 0, streak: u.streak, wins: u.wins, losses: u.losses });
+        if (!ins.length) {
+          // Already settled — usually the winner reported first and we applied this player's loss
+          // server-side. Pull the real delta from the recorded history row so the loser's screen
+          // shows "-13" instead of "+0".
+          let delta = 0, elo = u.elo;
+          try {
+            const [h] = await sql`SELECT elo_before, elo_after FROM pvp_history
+              WHERE match_id = ${matchId} AND player_key = ${key} AND sport IS DISTINCT FROM 'hoops'`;
+            if (h) { delta = h.elo_after - h.elo_before; elo = h.elo_after; }
+          } catch (e) {}
+          return res.status(200).json({ ok: true, counted: false, elo, delta, bonus: 0, streak: u.streak, wins: u.wins, losses: u.losses });
+        }
         const { delta } = nextElo(u.elo, oppElo, won);
         // win-streak bonus (grows per consecutive win, capped at a 5-win streak)
         const streak = won ? (u.streak || 0) + 1 : 0;
@@ -711,6 +752,7 @@ module.exports = async (req, res) => {
             COALESCE((build->'career'->'totals'->>'rings')::numeric, 0)::int AS rings,
             COALESCE((build->'career'->'totals'->>'k')::numeric, 0)::int AS k,
             COALESCE((build->'career'->'totals'->>'wins')::numeric, 0)::int AS wins,
+            COALESCE((build->'career'->'totals'->>'earnings')::numeric, 0)::bigint AS earnings,
             (SELECT bool_or(CASE WHEN s->>'value' ~ '^[0-9]+([.][0-9]+)?$' THEN (s->>'value')::numeric >= 125 END)
                FROM jsonb_array_elements(CASE WHEN jsonb_typeof(build->'slots') = 'array' THEN build->'slots' ELSE '[]'::jsonb END) s) AS offcharts,
             (SELECT count(DISTINCT s->>'team') = 1 AND count(*) >= 7 AND count(s->>'team') = count(*)
@@ -744,6 +786,7 @@ module.exports = async (req, res) => {
             if (s.rings >= 1) add(sub, 'ring1');
             if (s.rings >= 3) add(sub, 'ring2');
             if (s.rings >= 5) add(sub, 'ring3');
+            if (Number(s.earnings) >= 1e9) add(sub, 'billion');
             if (s.game === 'pitcher') {
               if (s.k >= 1000) add(sub, 'k1');
               if (s.k >= 3000) add(sub, 'k2');

@@ -261,6 +261,12 @@ a `⚔️ 1v1 Live` ☰ item in both games, and the `/versus` route.
 > highest batter slot (median 70, well spread), so it's untouched. Sim: +0.9 avg pitcher OVR, which
 > *helps* the underdog pitcher side. **Re-check `pvpMatchStats`** after post-fix games accumulate; if
 > pitchers jump past ~53%, shave the `curvePitchDef`/`defWeightP` constants down.
+>
+> **2026-07-02 shave:** that happened — pitchers hit 54.4% reported (50k matches, avg OVR 90.8 vs
+> 90.5). `curvePitchDef` shaved from `62 + (v-48)*1.5` to `60 + (v-48)*1.4` (≈ −0.3 avg pitcher
+> OVR, the size of the gap); `defWeightP` untouched (shaving both overshoots batter-favored again).
+> Re-check `pvpMatchStats` after post-shave games accumulate; expect pitcher-reported wins ~51–52%
+> (reporting bias means it never reads exactly 50). Still high → drop the base to 58.
 
 ### ⚙️ Setup REQUIRED for a fresh deploy
 - **`ABLY_API_KEY`** env var in Vercel (format `appId.keyId:keySecret`, mark **Sensitive**). Without

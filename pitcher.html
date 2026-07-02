@@ -1418,7 +1418,7 @@ async function deleteSave(id) {
   renderHof();
 }
 
-const TIER_ODDS = { diamond: 0.10, gold: 0.20, silver: 0.24, bronze: 0.28, grey: 0.18 };
+const TIER_ODDS = { diamond: 0.15, gold: 0.24, silver: 0.26, bronze: 0.25, grey: 0.10 };
 let cumWeights = [], totalWeight = 0;
 function buildWeights() {
   const counts = {};
@@ -1437,7 +1437,7 @@ function pickWeighted(rng) {
   while (lo < hi) { const mid = (lo + hi) >> 1; if (cumWeights[mid] < r) lo = mid + 1; else hi = mid; }
   return DATA.pool[lo];
 }
-const LEGEND_ODDS = 0.03;
+const LEGEND_ODDS = 0.04;
 function randPitcher(rng) {
   const rand = rng || Math.random;
   const legs = DATA.legends || [];
@@ -2863,6 +2863,7 @@ function checkCareerAchievements(t, verdict, votePct) {
   if (t.rings >= 1) Ach.unlock('ring1');
   if (t.rings >= 3) Ach.unlock('ring2');
   if (t.rings >= 5) Ach.unlock('ring3');
+  if ((Number(t.earnings) || 0) >= 1e9) Ach.unlock('billion');
   if (t.hallOfFame) Ach.unlock('cooperstown');
   if (votePct >= 99) Ach.unlock('unanimous');
   if (verdict.cls === 'no') Ach.unlock('hopg');

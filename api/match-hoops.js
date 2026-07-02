@@ -30,6 +30,16 @@ function ensure() {
         pid text,
         created_at timestamptz NOT NULL DEFAULT now()
       )`;
+      // Shared with baseball's match.js — records the two real participants of every match so
+      // result-reporting can settle authoritatively (charge a quitter's loss even if they never
+      // report; reject reporters who weren't in the match).
+      await sql`CREATE TABLE IF NOT EXISTS pvp_match_players (
+        match_id text PRIMARY KEY,
+        claimer_pid text,
+        opp_pid text,
+        claimer_role text,
+        created_at timestamptz NOT NULL DEFAULT now()
+      )`;
     })().catch(e => { ready = null; throw e; });   // don't cache a transient failure forever
   }
   return ready;
@@ -59,16 +69,22 @@ module.exports = async (req, res) => {
         LIMIT 1
         FOR UPDATE SKIP LOCKED
       )
-      RETURNING id`;
+      RETURNING id, pid`;
 
     if (claimed.length) {
       const oppId = claimed[0].id;
+      const oppPid = claimed[0].pid || oppId;
       await sql`DELETE FROM pvp_queue_hoops WHERE id = ${id}`;
       const matchId = crypto.randomUUID();
       const seed = (crypto.randomBytes(4).readUInt32BE(0)) >>> 0;
       // Both players build a hooper; 'role' is just a vestigial A/B side label (drives positioning +
       // the seeded tie-break coin), kept as pitcher/batter so the client matchmaking code is unchanged.
       const role = Math.random() < 0.5 ? 'pitcher' : 'batter';
+      try {
+        await sql`INSERT INTO pvp_match_players (match_id, claimer_pid, opp_pid, claimer_role)
+          VALUES (${matchId}, ${pid}, ${oppPid}, ${role})
+          ON CONFLICT (match_id) DO NOTHING`;
+      } catch (e) {}
       return res.status(200).json({ ok: true, matched: true, matchId, seed, role, oppId });
     }
 

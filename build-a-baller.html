@@ -2272,6 +2272,7 @@ function checkCareerAchievements(t, verdict, votePct) {
   if (t.rings >= 1) Ach.unlock('ring1');
   if (t.rings >= 3) Ach.unlock('ring2');
   if (t.rings >= 5) Ach.unlock('ring3');
+  if ((Number(t.earnings) || 0) >= 1e9) Ach.unlock('billion');
   if (t.hallOfFame) Ach.unlock('cooperstown');
   if (votePct >= 99) Ach.unlock('unanimous');
   if (verdict.cls === 'no') Ach.unlock('hopg');
