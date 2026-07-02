@@ -118,10 +118,22 @@
     background:var(--gold,#ffce3a); box-shadow:0 0 8px var(--gold,#ffce3a); pointer-events:none; }
   .xp-hud.leveled{ border-color:rgba(255,206,58,.85); box-shadow:0 16px 46px rgba(0,0,0,.55), 0 0 40px rgba(255,206,58,.4); }`;
 
+  // The stylesheet must land as soon as the bar mounts (not just when a gain animation first
+  // plays) — otherwise a page that hasn't awarded XP yet (e.g. the landing page) renders the
+  // menu bar completely unstyled, with the label/rank/XP text run together.
+  let cssInjected = false;
+  function injectCss() {
+    if (cssInjected) return;
+    const head = document.head || document.documentElement;
+    if (!head) return;
+    const s = document.createElement('style'); s.textContent = css; head.appendChild(s);
+    cssInjected = true;
+  }
+
   let chromeReady = false, hud, fillEl, shineEl, lvEl, rankEl, amtEl, icoEl, needEl, gainTimer;
   function ensureChrome() {
     if (chromeReady) return;
-    const s = document.createElement('style'); s.textContent = css; document.head.appendChild(s);
+    injectCss();
     hud = document.createElement('div'); hud.className = 'xp-hud';
     hud.innerHTML = `<div class="xh-top"><span class="xh-ico"></span><span class="xh-lv"></span><span class="xh-rank"></span><span class="xh-amt"></span></div>
       <div class="xh-track"><div class="xh-fill"></div><div class="xh-shine"></div></div>
@@ -135,6 +147,7 @@
 
   // ---- the menu badge ----------------------------------------------------
   function mount() {
+    injectCss();
     const L = levelFromXp(total), rk = rankFor(L);
     const cur = cumToReach(L), next = cumToReach(L + 1);
     const into = total - cur, span = next - cur, pct = Math.max(0, Math.min(100, span ? (into / span) * 100 : 100));
