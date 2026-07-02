@@ -152,11 +152,16 @@ Cross-game progression that rewards *playing*, not just first-time achievements.
   flavor title per band (Rookie Ball → Prospect → … → Immortal). No hard cap.
 - **Earning** (`XP.award(amount, reason)`): finishing a build (`20 + max(0, ovr−60)`), simulating a
   career (`40 + 150 HOF + max(0, ovr−70) + 12·rings`, capped), a 1v1 result (win 55 / loss 18), and
-  every achievement unlock. Awards inside one build **batch** into a single "+N XP" toast; crossing a
-  level fires a center-screen level-up celebration + chime.
-- **UI:** `XP.mount()` fills any `[data-xp-bar]` slot with a level chip + progress bar — dropped into
-  each game's ☰ menu (under the account chip) and the versus **Stats** screen. `[data-xp-level]` slots
-  get just the number.
+  every achievement unlock. Awards inside one build **batch** (320ms) into a single animated run.
+- **Gain animation — Pokémon-style (`.xp-hud`):** a bar slides up from the bottom and **fills** from
+  where it last sat to the new total. `segments(from,to)` splits the gain at each level boundary, so a
+  big award **fills → flashes/dings/level-number bumps + spark burst (`levelUp`) → wraps to empty →
+  refills**, repeating for **every** level crossed in one go (0, 1, or many). `lastShownXp` tracks what
+  the bar last rendered (so a cross-device restore or `{silent:true}` award never animates), and an
+  `animBusy` guard queues XP that arrives mid-animation. All GSAP; degrades to an instant set if absent.
+- **UI:** `XP.mount()` fills any `[data-xp-bar]` slot with the resting level chip + progress bar —
+  dropped into each game's ☰ menu (under the account chip) and the versus **Stats** screen.
+  `[data-xp-level]` slots get just the number.
 - **Server:** `users.xp bigint` (auto-`ALTER`) + **`xpSync`** action in `api/account.js`. XP is
   **monotonic** — the account keeps `max(local, stored)`, so it follows the email across devices and
   can never drop. Same `reset`/`claim` semantics as `achSync` (guest XP is adopted only into an account

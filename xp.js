@@ -72,12 +72,12 @@
       }).then(x => x.json());
       if (r && r.ok && typeof r.xp === 'number') {
         try { if (resetting) localStorage.removeItem('pl_xp_rst'); localStorage.setItem('pl_xp_owner', a.sub); } catch (e) {}
-        if (r.xp !== total) { total = r.xp; persist(); mount(); }   // server is authoritative (max-merge)
+        if (r.xp !== total) { total = r.xp; lastShownXp = total; persist(); mount(); }   // server is authoritative (max-merge) — no gain animation for a cross-device restore
       }
     } catch (e) {}
   }
   function queueSync() { clearTimeout(syncTimer); syncTimer = setTimeout(serverSync, 500); }
-  function signOut() { total = 0; try { localStorage.removeItem('pl_xp'); localStorage.removeItem('pl_xp_owner'); } catch (e) {} mount(); }
+  function signOut() { total = 0; lastShownXp = 0; try { localStorage.removeItem('pl_xp'); localStorage.removeItem('pl_xp_owner'); } catch (e) {} mount(); }
 
   // ---- styles (injected so this file is drop-in) -------------------------
   const css = `
@@ -96,34 +96,40 @@
     background:linear-gradient(90deg, var(--accent2,#19c6ff), var(--gold,#ffce3a)); box-shadow:0 0 10px rgba(25,198,255,.5); transition:width .6s cubic-bezier(.2,.8,.2,1); }
   .xp-bar .xb-need{ font-size:10px; color:var(--dim,#56627a); margin-top:4px; font-family:'Oswald',sans-serif; letter-spacing:.5px; }
 
-  .xp-gain{ position:fixed; left:50%; bottom:20px; transform:translateX(-50%); z-index:335; display:none; align-items:center; gap:9px;
-    padding:10px 18px; border-radius:999px; border:1px solid rgba(255,206,58,.4);
-    background:linear-gradient(180deg, rgba(20,31,48,.96), rgba(9,15,25,.97)); backdrop-filter:blur(6px);
-    box-shadow:0 12px 34px rgba(0,0,0,.5), 0 0 20px rgba(255,206,58,.16); pointer-events:none; }
-  .xp-gain .xg-amt{ font-family:'Oswald',sans-serif; font-weight:700; font-size:19px; letter-spacing:.5px; color:var(--gold,#ffce3a); }
-  .xp-gain .xg-txt{ font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted,#7e8da3); }
+  /* The animated, Pokémon-style gain HUD: slides up from the bottom, fills the bar,
+     and on each level boundary flashes + bumps the level number, then wraps to empty. */
+  .xp-hud{ position:fixed; left:50%; bottom:8vh; z-index:340; display:none; width:min(340px,86vw);
+    padding:13px 16px 15px; border-radius:15px; border:1px solid rgba(255,206,58,.4);
+    background:linear-gradient(180deg, rgba(20,31,48,.96), rgba(9,15,25,.97)); backdrop-filter:blur(7px);
+    box-shadow:0 16px 46px rgba(0,0,0,.55), 0 0 26px rgba(255,206,58,.14); pointer-events:none; }
+  .xp-hud .xh-top{ display:flex; align-items:center; gap:9px; margin-bottom:8px; }
+  .xp-hud .xh-ico{ font-size:22px; line-height:1; filter:drop-shadow(0 0 6px rgba(255,206,58,.45)); }
+  .xp-hud .xh-lv{ font-family:'Oswald',sans-serif; font-weight:700; font-size:17px; letter-spacing:.5px; color:var(--ink,#eaf2fb); transform-origin:left center; }
+  .xp-hud .xh-rank{ font-family:'Oswald',sans-serif; font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--accent2,#19c6ff); }
+  .xp-hud .xh-amt{ margin-left:auto; font-family:'Oswald',sans-serif; font-weight:700; font-size:16px; letter-spacing:.5px; color:var(--gold,#ffce3a); }
+  .xp-hud .xh-track{ position:relative; height:12px; border-radius:7px; overflow:hidden; background:rgba(120,150,190,.18);
+    box-shadow:inset 0 1px 3px rgba(0,0,0,.5); }
+  .xp-hud .xh-fill{ position:absolute; inset:0 auto 0 0; width:0%; border-radius:7px;
+    background:linear-gradient(90deg, var(--accent2,#19c6ff), var(--gold,#ffce3a)); box-shadow:0 0 12px rgba(25,198,255,.6); }
+  .xp-hud .xh-shine{ position:absolute; inset:0; border-radius:7px; opacity:0; pointer-events:none;
+    background:linear-gradient(90deg, transparent, rgba(255,255,255,.85), transparent); }
+  .xp-hud .xh-need{ font-size:10px; color:var(--dim,#56627a); margin-top:5px; font-family:'Oswald',sans-serif; letter-spacing:.5px; }
+  .xp-hud .xh-spark{ position:absolute; top:50%; left:50%; width:6px; height:6px; border-radius:50%;
+    background:var(--gold,#ffce3a); box-shadow:0 0 8px var(--gold,#ffce3a); pointer-events:none; }
+  .xp-hud.leveled{ border-color:rgba(255,206,58,.85); box-shadow:0 16px 46px rgba(0,0,0,.55), 0 0 40px rgba(255,206,58,.4); }`;
 
-  .xp-lvl{ position:fixed; inset:0; z-index:345; display:none; align-items:center; justify-content:center; pointer-events:none; }
-  .xp-lvl .xl-card{ position:relative; text-align:center; padding:26px 42px; border-radius:18px;
-    border:1px solid rgba(255,206,58,.5);
-    background:linear-gradient(180deg, rgba(20,31,48,.95), rgba(9,15,25,.97)); backdrop-filter:blur(8px);
-    box-shadow:0 24px 70px rgba(0,0,0,.6), 0 0 44px rgba(255,206,58,.25); }
-  .xp-lvl .xl-tag{ font-family:'Oswald',sans-serif; font-size:12px; letter-spacing:4px; text-transform:uppercase; color:var(--accent2,#19c6ff); }
-  .xp-lvl .xl-num{ font-family:'Oswald',sans-serif; font-weight:700; font-size:64px; line-height:1; margin:6px 0 2px;
-    background:linear-gradient(180deg,#fff,var(--gold,#ffce3a)); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
-  .xp-lvl .xl-rank{ font-family:'Oswald',sans-serif; font-size:17px; letter-spacing:1px; color:var(--ink,#eaf2fb); }
-  .xp-lvl .xl-rank .xl-ico{ margin-right:6px; }`;
-
-  let chromeReady = false, gainEl, lvlEl, gainTimer;
+  let chromeReady = false, hud, fillEl, shineEl, lvEl, rankEl, amtEl, icoEl, needEl, gainTimer;
   function ensureChrome() {
     if (chromeReady) return;
     const s = document.createElement('style'); s.textContent = css; document.head.appendChild(s);
-    gainEl = document.createElement('div'); gainEl.className = 'xp-gain';
-    gainEl.innerHTML = '<span class="xg-amt"></span><span class="xg-txt"></span>';
-    document.body.appendChild(gainEl);
-    lvlEl = document.createElement('div'); lvlEl.className = 'xp-lvl';
-    lvlEl.innerHTML = '<div class="xl-card"><div class="xl-tag">Level Up</div><div class="xl-num"></div><div class="xl-rank"></div></div>';
-    document.body.appendChild(lvlEl);
+    hud = document.createElement('div'); hud.className = 'xp-hud';
+    hud.innerHTML = `<div class="xh-top"><span class="xh-ico"></span><span class="xh-lv"></span><span class="xh-rank"></span><span class="xh-amt"></span></div>
+      <div class="xh-track"><div class="xh-fill"></div><div class="xh-shine"></div></div>
+      <div class="xh-need"></div>`;
+    document.body.appendChild(hud);
+    fillEl = hud.querySelector('.xh-fill'); shineEl = hud.querySelector('.xh-shine');
+    lvEl = hud.querySelector('.xh-lv'); rankEl = hud.querySelector('.xh-rank');
+    amtEl = hud.querySelector('.xh-amt'); icoEl = hud.querySelector('.xh-ico'); needEl = hud.querySelector('.xh-need');
     chromeReady = true;
   }
 
@@ -145,52 +151,118 @@
     document.querySelectorAll('[data-xp-level]').forEach(el => { el.textContent = L; });
   }
 
-  // ---- gain toast + level-up celebration ---------------------------------
-  let pendingGain = 0, levelAtBatchStart = null;
+  // ---- animated (Pokémon-style) gain sequence ----------------------------
+  // `lastShownXp` = the XP the HUD bar last rendered; the sequence animates from there to
+  // the live `total`, filling the bar and — for every level boundary it crosses — flashing,
+  // bumping the level number, and wrapping the bar to empty. Handles 0, 1, or many level-ups.
+  let lastShownXp = total, pendingGain = 0, animBusy = false;
+
+  function pctInto(xp) {
+    const L = levelFromXp(xp), c0 = cumToReach(L), c1 = cumToReach(L + 1);
+    return { L: L, c0: c0, span: c1 - c0, pct: Math.max(0, Math.min(100, ((xp - c0) / (c1 - c0)) * 100)) };
+  }
+  function setHudLevel(L) {
+    const rk = rankFor(L);
+    icoEl.textContent = rk.icon; lvEl.textContent = 'Level ' + L; rankEl.textContent = rk.name;
+    const c0 = cumToReach(L), c1 = cumToReach(L + 1);
+    needEl.textContent = `${(Math.max(c0, Math.min(c1, animShownXp)) - c0).toLocaleString()} / ${(c1 - c0).toLocaleString()} XP to Level ${L + 1}`;
+  }
+  let animShownXp = total;
+
+  // Break [from → to] into per-level segments (each capped at its level boundary).
+  function segments(from, to) {
+    const segs = []; let x = from, guard = 0;
+    while (guard++ < 400) {
+      const L = levelFromXp(x), boundary = cumToReach(L + 1);
+      if (to >= boundary) { segs.push({ from: x, to: boundary, level: L, levelEnd: true }); x = boundary; }
+      else { segs.push({ from: x, to: to, level: L, levelEnd: false }); break; }
+      if (x >= to) break;
+    }
+    return segs;
+  }
+
   function flushGain() {
     ensureChrome();
-    const amt = pendingGain; pendingGain = 0;
-    const before = levelAtBatchStart; levelAtBatchStart = null;
-    if (amt <= 0) return;
-    gainEl.querySelector('.xg-amt').textContent = '+' + amt.toLocaleString() + ' XP';
-    gainEl.querySelector('.xg-txt').textContent = 'Player XP';
-    gainEl.style.display = 'flex';
-    if (window.gsap) {
-      gsap.killTweensOf(gainEl);
-      // keep xPercent:-50 so gsap's transform preserves the CSS horizontal centering
-      gsap.fromTo(gainEl, { y: 24, opacity: 0, xPercent: -50 }, { y: 0, opacity: 1, xPercent: -50, duration: .4, ease: 'back.out(1.7)' });
+    if (animBusy) return;                     // a sequence is running; it'll catch up on finish
+    const from = lastShownXp, to = total;
+    if (to <= from) { pendingGain = 0; return; }
+    const gained = pendingGain; pendingGain = 0;
+    animBusy = true;
+    animShownXp = from;
+    const segs = segments(from, to);
+    const totalLevels = levelFromXp(to) - levelFromXp(from);
+
+    // show the HUD (seeded at the starting level/fill)
+    const start = pctInto(from);
+    setHudLevel(start.L); fillEl.style.width = start.pct + '%'; amtEl.textContent = '+' + gained.toLocaleString() + ' XP';
+    hud.style.display = 'block'; hud.classList.remove('leveled');
+
+    const done = () => {
+      animBusy = false;
+      lastShownXp = to; animShownXp = to;
+      clearTimeout(hud._t);
+      hud._t = setTimeout(() => {
+        const hide = () => { hud.style.display = 'none'; };
+        if (window.gsap) gsap.to(hud, { y: 18, opacity: 0, xPercent: -50, duration: .35, ease: 'power2.in', onComplete: hide });
+        else hide();
+      }, 1500);
+      if (total > lastShownXp) { pendingGain += (total - lastShownXp); setTimeout(flushGain, 60); }   // more arrived mid-animation
+    };
+
+    if (!window.gsap) {                        // no GSAP: jump to final state
+      const end = pctInto(to); setHudLevel(end.L); fillEl.style.width = end.pct + '%';
+      if (totalLevels > 0) { try { chime(); } catch (e) {} }
+      hud.style.display = 'block'; done(); return;
     }
-    clearTimeout(gainEl._t);
-    gainEl._t = setTimeout(() => {
-      const hide = () => { gainEl.style.display = 'none'; };
-      if (window.gsap) gsap.to(gainEl, { y: 16, opacity: 0, xPercent: -50, duration: .3, ease: 'power2.in', onComplete: hide });
-      else hide();
-    }, 2200);
-    const now = levelFromXp(total);
-    if (before != null && now > before) setTimeout(() => celebrateLevel(now), 500);
+
+    const tl = gsap.timeline({ onComplete: done });
+    tl.fromTo(hud, { y: 30, opacity: 0, xPercent: -50 }, { y: 0, opacity: 1, xPercent: -50, duration: .35, ease: 'back.out(1.6)' });
+    segs.forEach(seg => {
+      const c0 = cumToReach(seg.level), span = cumToReach(seg.level + 1) - c0;
+      const proxy = { v: seg.from };
+      const frac = (seg.to - seg.from) / span;                     // how much of this level we fill
+      tl.add(() => setHudLevel(seg.level));
+      tl.to(proxy, {
+        v: seg.to, ease: 'none', duration: Math.max(.28, Math.min(1.15, frac * 1.15)),
+        onUpdate: () => { animShownXp = proxy.v; fillEl.style.width = (((proxy.v - c0) / span) * 100) + '%'; needEl.textContent = `${Math.round(proxy.v - c0).toLocaleString()} / ${span.toLocaleString()} XP to Level ${seg.level + 1}`; },
+      });
+      if (seg.levelEnd) {
+        tl.add(() => levelUp(seg.level + 1, totalLevels >= 2));     // flash + bump + chime, then bar wraps to 0
+        tl.set(fillEl, { width: '0%' });
+        tl.to({}, { duration: .34 });                              // small beat before the next fill
+      }
+    });
   }
-  function celebrateLevel(L) {
-    ensureChrome();
-    const rk = rankFor(L);
-    lvlEl.querySelector('.xl-num').textContent = 'LV ' + L;
-    lvlEl.querySelector('.xl-rank').innerHTML = `<span class="xl-ico">${rk.icon}</span>${rk.name}`;
-    lvlEl.style.display = 'flex';
-    try { chime(); } catch (e) {}
-    const card = lvlEl.querySelector('.xl-card');
-    if (window.gsap) {
-      gsap.fromTo(card, { scale: .7, opacity: 0, y: 14 }, { scale: 1, opacity: 1, y: 0, duration: .55, ease: 'back.out(1.8)' });
-      gsap.to(card, { scale: .9, opacity: 0, duration: .4, delay: 2, ease: 'power2.in', onComplete: () => { lvlEl.style.display = 'none'; } });
-    } else setTimeout(() => { lvlEl.style.display = 'none'; }, 2200);
+
+  // Mini level-up celebration, played inline on the HUD (repeats for each level in a multi-up).
+  function levelUp(L, big) {
+    setHudLevel(L);
+    try { chime(big); } catch (e) {}
+    if (!window.gsap) return;
+    hud.classList.add('leveled');
+    gsap.fromTo(shineEl, { opacity: 0, x: '-40%' }, { opacity: 1, x: '40%', duration: .45, ease: 'power1.out', onComplete: () => gsap.to(shineEl, { opacity: 0, duration: .2 }) });
+    gsap.fromTo(lvEl, { scale: 1.5, color: '#ffce3a' }, { scale: 1, color: '#eaf2fb', duration: .5, ease: 'back.out(2.2)', clearProps: 'color' });
+    gsap.fromTo(hud, { scale: 1.05 }, { scale: 1, duration: .4, ease: 'elastic.out(1,.5)' });
+    // spark burst from the end of the bar
+    const track = hud.querySelector('.xh-track'), rect = track.getBoundingClientRect();
+    const n = big ? 14 : 9;
+    for (let i = 0; i < n; i++) {
+      const sp = document.createElement('span'); sp.className = 'xh-spark'; track.appendChild(sp);
+      const ang = (Math.random() * Math.PI) - Math.PI / 2, dist = 26 + Math.random() * 34;
+      gsap.set(sp, { left: '92%', top: '50%' });
+      gsap.to(sp, { x: Math.cos(ang) * dist, y: Math.sin(ang) * dist - 8, opacity: 0, scale: .3, duration: .55 + Math.random() * .25, ease: 'power2.out', onComplete: () => sp.remove() });
+    }
   }
 
   // ---- sound: short rising arpeggio (respects XP.muted / Ach.muted) ------
   let actx;
-  function chime() {
+  function chime(big) {
     if (XP.muted || (window.Ach && Ach.muted)) return;
     try {
       actx = actx || new (window.AudioContext || window.webkitAudioContext)();
       const now = actx.currentTime;
-      [392, 523.25, 659.25, 783.99].forEach((f, i) => {
+      const notes = big ? [392, 523.25, 659.25, 783.99, 1046.5] : [392, 523.25, 659.25, 783.99];
+      notes.forEach((f, i) => {
         const o = actx.createOscillator(), g = actx.createGain();
         o.type = 'triangle'; o.frequency.value = f;
         const t = now + i * 0.07;
@@ -205,16 +277,15 @@
   function award(amount, reason, opts) {
     amount = Math.max(0, Math.round(Number(amount) || 0));
     if (!amount) return;
-    if (levelAtBatchStart == null) levelAtBatchStart = levelFromXp(total);
     total += amount;
     persist();
     mount();
     queueSync();
-    if (!(opts && opts.silent)) {
-      pendingGain += amount;
-      clearTimeout(gainTimer);
-      gainTimer = setTimeout(flushGain, 850);   // batch several awards from one build into one toast
-    }
+    if (opts && opts.silent) { lastShownXp = total; return; }   // credited without the animation
+    pendingGain += amount;
+    // batch the several awards that fire in one build/career/match into a single animated run
+    clearTimeout(gainTimer);
+    gainTimer = setTimeout(flushGain, 320);
   }
 
   // ---- auto-hook the achievements engine: each unlock grants XP ----------
@@ -259,12 +330,19 @@
   // ---- local-only test bar (never appears on the live site) --------------
   if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) {
     const add = () => {
-      const b = document.createElement('button');
-      b.textContent = '＋ 75 XP';
-      b.style.cssText = 'position:fixed;right:12px;bottom:12px;z-index:400;font:600 12px Oswald,sans-serif;letter-spacing:.5px;' +
-        'color:#eaf2fb;background:#10202e;border:1px solid #ffce3a;border-radius:9px;padding:9px 12px;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.5);';
-      b.onclick = () => award(75, 'test');
-      document.body.appendChild(b);
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'position:fixed;right:12px;bottom:12px;z-index:400;display:flex;gap:8px;';
+      const mk = (txt, amt) => {
+        const b = document.createElement('button');
+        b.textContent = txt;
+        b.style.cssText = 'font:600 12px Oswald,sans-serif;letter-spacing:.5px;color:#eaf2fb;background:#10202e;' +
+          'border:1px solid #ffce3a;border-radius:9px;padding:9px 12px;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.5);';
+        b.onclick = () => award(amt, 'test');
+        return b;
+      };
+      wrap.appendChild(mk('＋ 75 XP', 75));            // usually a partial fill
+      wrap.appendChild(mk('＋ 400 XP', 400));           // crosses one or more levels (multi-up)
+      document.body.appendChild(wrap);
     };
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', add); else add();
   }
