@@ -5,6 +5,7 @@
     { "source": "/versus", "destination": "/versus.html" },
     { "source": "/hoops", "destination": "/build-a-baller.html" },
     { "source": "/versus-hoops", "destination": "/versus-hoops.html" },
+    { "source": "/xp", "destination": "/xp-demo.html" },
     { "source": "/privacy", "destination": "/privacy.html" }
   ]
 }
