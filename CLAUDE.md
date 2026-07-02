@@ -141,6 +141,28 @@ so run it **after** `fetch-data.js`).
   is false and the UI shows a "sign-in coming soon" hint instead of a broken button. The client id is
   public; the only secret-ish piece is the per-device session token.
 
+### Player XP + Levels (shipped)
+Cross-game progression that rewards *playing*, not just first-time achievements.
+- **`xp.js`** — shared drop-in module (like `achievements.js`), loaded `defer` **after** it on every
+  game + versus page (and `index.html` for display). Exposes `window.XP`. Self-contained (injects its
+  own CSS). Persists to localStorage **`pl_xp`** `{xp}` (version-wiped via `pl_xp_ver`), syncs to the
+  Google account (source of truth), and auto-wraps `Ach.unlock` so **every achievement also grants XP**
+  (normal 40, challenge 120).
+- **Curve:** XP to reach level `L` = `25·(L-1)·(L+2)` (L→L+1 costs 100, 150, 200, 250…). `RANKS` give a
+  flavor title per band (Rookie Ball → Prospect → … → Immortal). No hard cap.
+- **Earning** (`XP.award(amount, reason)`): finishing a build (`20 + max(0, ovr−60)`), simulating a
+  career (`40 + 150 HOF + max(0, ovr−70) + 12·rings`, capped), a 1v1 result (win 55 / loss 18), and
+  every achievement unlock. Awards inside one build **batch** into a single "+N XP" toast; crossing a
+  level fires a center-screen level-up celebration + chime.
+- **UI:** `XP.mount()` fills any `[data-xp-bar]` slot with a level chip + progress bar — dropped into
+  each game's ☰ menu (under the account chip) and the versus **Stats** screen. `[data-xp-level]` slots
+  get just the number.
+- **Server:** `users.xp bigint` (auto-`ALTER`) + **`xpSync`** action in `api/account.js`. XP is
+  **monotonic** — the account keeps `max(local, stored)`, so it follows the email across devices and
+  can never drop. Same `reset`/`claim` semantics as `achSync` (guest XP is adopted only into an account
+  with none yet). Sign-out zeroes the local copy (`XP.signOut()`).
+- Same **trust-the-client** caveat as the leaderboard/Elo — XP is reported from the browser.
+
 ### Known caveat — anti-cheat
 Scores are submitted from the browser; the server only clamps `ovr` 1–99 and name length, so the OVR
 is currently trust-the-client. Harden later by recomputing OVR server-side from the submitted `build`

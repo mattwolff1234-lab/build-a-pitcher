@@ -19,6 +19,7 @@
 <meta name="twitter:image" content="/icon-512.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="/achievements.js" defer></script>
+<script src="/xp.js" defer></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-TVL2XEQ2Q7"></script>
@@ -786,6 +787,7 @@
     <div class="overlay-head"><span class="overlay-title">Menu</span><button class="overlay-close" data-close="menu">✕</button></div>
     <div class="overlay-body">
       <div id="acctSlot"></div>
+      <div data-xp-bar></div>
       <div class="menu-sec">Play</div>
       <a class="menu-item" href="/">🏠 Home</a>
       <button class="menu-item" id="miDaily">🎯 Daily Challenge</button>
@@ -1250,7 +1252,7 @@ function saveAccount(a) {
   if (changed) { try { localStorage.removeItem(dcKey()); } catch (e) {} updateDailyBtn(); }   // new identity -> reset device daily gate
   syncAccountDates();   // pull this account's true daily status (re-locks if already played today)
 }
-function clearAccount() { account = null; try { localStorage.removeItem('pl_account'); } catch (e) {} try { localStorage.removeItem(dcKey()); } catch (e) {} try { google.accounts.id.disableAutoSelect(); } catch (e) {} renderAcct(); updateDailyBtn(); if (window.Ach) Ach.signOut(); }
+function clearAccount() { account = null; try { localStorage.removeItem('pl_account'); } catch (e) {} try { localStorage.removeItem(dcKey()); } catch (e) {} try { google.accounts.id.disableAutoSelect(); } catch (e) {} renderAcct(); updateDailyBtn(); if (window.Ach) Ach.signOut(); if (window.XP) XP.signOut(); }
 
 function googleConfigured() { return GOOGLE_CLIENT_ID && GOOGLE_CLIENT_ID.indexOf('REPLACE_WITH') !== 0; }
 function initGoogle(tries) {
@@ -2242,6 +2244,7 @@ function parseHeightIn(s) {
 }
 // Fires when all slots are filled (called from finish()).
 function checkBuildAchievements() {
+  if (window.XP) XP.award(20 + Math.max(0, Math.round((Number(state.finalOvr) || 0) - 60)), 'build');
   if (!window.Ach) return;
   const f = state.filled, ovr = state.finalOvr;
   Ach.unlock('draft_root');                                   // first/any completed build
@@ -2261,6 +2264,7 @@ function checkBuildAchievements() {
 }
 // Fires after a simulated career (called from finishPlaythrough()).
 function checkCareerAchievements(t, verdict, votePct) {
+  if (window.XP) { const x = 40 + (t && t.hallOfFame ? 150 : 0) + Math.max(0, Math.round((Number(state.finalOvr) || 0) - 70)) + Math.min(60, (Number(t && t.rings) || 0) * 12); XP.award(x, 'career'); }
   if (!window.Ach) return;
   Ach.unlock('sim_root');
   if (t.rings >= 1) Ach.unlock('ring1');

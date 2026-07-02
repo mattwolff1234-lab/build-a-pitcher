@@ -99,6 +99,9 @@ function ensure() {
       await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS pvp_streak_hoops int NOT NULL DEFAULT 0`;
       await sql`ALTER TABLE pvp_history ADD COLUMN IF NOT EXISTS sport text`;
       await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS achievements jsonb NOT NULL DEFAULT '{}'::jsonb`;
+      // Cross-game player XP (drives the account Level). Monotonic; server keeps the max of
+      // local-vs-stored so progress follows the email across devices and can't be lowered.
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS xp bigint NOT NULL DEFAULT 0`;
       await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS current_streak int NOT NULL DEFAULT 0`;
       await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS best_streak int NOT NULL DEFAULT 0`;
       await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_active_date date`;
@@ -346,6 +349,22 @@ module.exports = async (req, res) => {
         }
         await sql`UPDATE users SET achievements = ${JSON.stringify(merged)}::jsonb WHERE google_sub = ${body.sub}`;
         return res.status(200).json({ ok: true, achievements: merged });
+      }
+
+      // Sync cross-game player XP. XP is monotonic: the account keeps the MAX of the caller's
+      // local total and what's stored, so it follows the email across devices and never drops.
+      if (action === 'xpSync') {
+        if (!(await authed(body.sub, body.sessionToken))) return res.status(401).json({ ok: false, error: 'Not signed in' });
+        const incoming = Math.max(0, Math.min(1e12, Math.round(Number(body.xp) || 0)));
+        const stored = Number(((await sql`SELECT xp FROM users WHERE google_sub = ${body.sub}`)[0] || {}).xp) || 0;
+        // reset=true wipes the account copy (version wipe). claim=true (pre-sign-in guest XP)
+        // is only adopted into an account that has none yet — mirrors achSync/pvpClaim.
+        let merged;
+        if (body.reset === true) merged = incoming;
+        else if (body.claim === true && stored > 0) merged = stored;
+        else merged = Math.max(stored, incoming);
+        await sql`UPDATE users SET xp = ${merged} WHERE google_sub = ${body.sub}`;
+        return res.status(200).json({ ok: true, xp: merged });
       }
 
       if (action === 'pvpStats') {

@@ -7,6 +7,7 @@
 <meta name="theme-color" content="#0a1320">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="/achievements.js" defer></script>
+<script src="/xp.js" defer></script>
 <script src="https://cdn.ably.com/lib/ably.min-2.js"></script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <!-- Google tag (gtag.js) -->
@@ -546,6 +547,7 @@
         <button class="stab active" id="tabStats">My Stats</button>
         <button class="stab" id="tabHistory">History</button>
       </div>
+      <div data-xp-bar style="margin:10px 0"></div>
       <div id="statsPanel">
         <div id="statsPersonal"></div>
         <div id="statsBoard"></div>
@@ -1817,6 +1819,7 @@ function showForfeitResult(iWon, filled, data={}){
     ? (data.quit ? 'Win by forfeit — quitting still counts as a loss for them.' : 'Timeout win. Run it back?')
     : (data.quit ? 'An abandoned match counts as a forfeit loss.' : 'Fill at least 4 slots before time expires.');
   if (window.Ach) Ach.unlock('versus_root');                       // played a 1v1 (forfeit result)
+  if (window.XP) XP.award(iWon ? 55 : 18, iWon ? '1v1 win' : '1v1');
   iWon ? Sound.win() : Sound.lose();
   gsap.fromTo(card,{ y:24, opacity:0, scale:.92 },{ y:0, opacity:1, scale:1, duration:.5, ease:'back.out(1.5)' });
 
@@ -2067,6 +2070,7 @@ function showResult(iWon, pitcher, batter, winnerRole, script){
 
   if (window.Ach) {
     Ach.unlock('versus_root');                                    // played a 1v1
+    if (window.XP) XP.award(iWon ? 55 : 18, iWon ? '1v1 win' : '1v1');
     const myOvr = myBuild ? myBuild.ovr : 0, opp = oppBuild ? oppBuild.ovr : 0;
     if (iWon && myOvr) {
       const diff = myOvr - opp;
