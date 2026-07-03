@@ -352,6 +352,14 @@
     -webkit-mask-position:center bottom; mask-position:center bottom;
     filter:drop-shadow(0 6px 6px rgba(0,0,0,.4)); }
   .hv-fig.dim { opacity:.18; filter:grayscale(1); }
+  /* name tag rides under the figure: sibling of .hv-fig inside the moving wrapper, so it
+     translates with the player but never inherits the fig's scaleX(-1) mirror */
+  .hv-name { position:absolute; left:50%; top:100%; transform:translate(-50%,3px); z-index:2;
+    font-family:'Oswald',sans-serif; font-size:10px; font-weight:600; letter-spacing:1.2px;
+    text-transform:uppercase; color:#eaf1fa; background:rgba(8,14,24,.78);
+    border:1px solid rgba(255,255,255,.22); border-radius:999px; padding:2px 9px;
+    white-space:nowrap; max-width:150%; overflow:hidden; text-overflow:ellipsis; pointer-events:none; }
+  #hvSkipBtn { margin-top:12px; }
   .hv-hoop { position:absolute; bottom:13%; height:60%; aspect-ratio:543/724; pointer-events:none; z-index:12; }
   .hv-hoop.l { left:-2%; transform:scaleX(-1); } .hv-hoop.r { right:-2%; }
   #hvBall { position:absolute; left:0; top:0; width:22px; height:22px; border-radius:50%; z-index:20;
@@ -631,8 +639,8 @@
       <div class="hv-key l"></div><div class="hv-key r"></div>
       <img class="hv-hoop l" src="hoops-anim/hoop.png" alt="">
       <img class="hv-hoop r" src="hoops-anim/hoop.png" alt="">
-      <div class="hv-figwrap" id="hvOffW"><div class="hv-fig" id="hvOff"></div></div>
-      <div class="hv-figwrap" id="hvDefW"><div class="hv-fig" id="hvDef"></div></div>
+      <div class="hv-figwrap" id="hvOffW"><div class="hv-fig" id="hvOff"></div><div class="hv-name" id="hvOffName"></div></div>
+      <div class="hv-figwrap" id="hvDefW"><div class="hv-fig" id="hvDef"></div><div class="hv-name" id="hvDefName"></div></div>
       <div id="hvBall"><i id="hvSeam"></i></div>
       <div id="hvNetFlash"></div>
       <div class="hv-pop" id="hvPop"></div>
@@ -644,6 +652,7 @@
         <div class="wa-count" id="waCount">building…</div>
       </div>
     </div>
+    <button class="btn ghost" id="hvSkipBtn" style="display:none" onclick="hvSkipSim()">⏩ Skip to result</button>
   </div>
 
   <!-- Challenge screen (opened via a shared challenge link) -->
@@ -1748,8 +1757,12 @@ function showWaitArena(){
   $('hvOff').classList.toggle('dim', !minePitcher);
   $('hvDef').classList.toggle('dim', minePitcher);
   gsap.set('#hvOffW',{ x:W*0.24, y:0 }); gsap.set('#hvDefW',{ x:W*0.62, y:0 });
+  $('hvOffName').textContent = minePitcher ? (displayName()||'You').slice(0,14) : 'Opponent';
+  $('hvDefName').textContent = minePitcher ? 'Opponent' : (displayName()||'You').slice(0,14);
+  $('hvOffName').style.borderColor=''; $('hvDefName').style.borderColor='';
   gsap.set('#hvBall',{ opacity:0 }); gsap.set('#hvNetFlash',{ opacity:0 });
   $('hvPop').style.opacity=0; $('hvCall').innerHTML=''; $('hvSb').style.display='none';
+  $('hvSkipBtn').style.display='none';
   $('waTitle').textContent = 'Waiting for your opponent…';
   $('waitArena').classList.add('show');
   waClockLeft = Math.max(0, clockLeft);   // shared shot clock was frozen at finish; count it down for display
@@ -1904,24 +1917,28 @@ function playAtBat(){
   // matchup header (with each player's name)
   const pName = escapeHTML(pitcher.name || 'Player A') + (myRole==='pitcher'?' (You)':'');
   const bName = escapeHTML(batter.name || 'Player B') + (myRole==='batter'?' (You)':'');
-  const pc = brightTeam(pitcher.team), bc = brightTeam(batter.team);
+  const pc = brightTeam(pitcher.team);
+  const bc = hvDistinct(pc, brightTeam(batter.team));   // same/similar team colors → shift side B's hue
   $('matchup').innerHTML =
     `<div class="side"><div class="who" style="color:${pc}">🏀 ${pName}</div><div class="o" style="color:${pc}">${pitcher.ovr}</div></div>`+
     `<div class="mid">VS</div>`+
     `<div class="side"><div class="who" style="color:${bc}">🏀 ${bName}</div><div class="o" style="color:${bc}">${batter.ovr}</div></div>`;
 
   // live scoreboard (side A left, side B right); long thrillers play a touch faster to stay ≤20s
-  hvGame = { pc, bc, pitcher, batter, scoreA:0, scoreB:0, speed: script.poss.length>9 ? 3.0 : HV_SPEED };
+  hvGame = { pc, bc, pitcher, batter, scoreA:0, scoreB:0, script, iWon, winnerRole,
+             speed: script.poss.length>9 ? 3.0 : HV_SPEED };
   $('hvSb').style.display='flex';
   $('hvSA').textContent='0'; $('hvSB').textContent='0';
   $('hvSA').style.color=pc; $('hvSB').style.color=bc;
   gsap.set('#hvBall',{ opacity:0 }); $('hvPop').style.opacity=0; $('hvCall').innerHTML='';
+  $('hvSkipBtn').style.display='inline-block';   // skip is LOCAL-only: your opponent keeps watching
 
   // play the possessions back to back; the last one is always the winner's game-winner
   let i=0;
   const next = ()=>{
-    if(matchResolved) return;                       // a forfeit/disconnect path resolved it mid-game
+    if(matchResolved) return;                       // a forfeit/disconnect/skip path resolved it mid-game
     if(i>=script.poss.length){
+      $('hvSkipBtn').style.display='none';
       hvFlash(`GAME · ${script.winScore}–${script.loseScore}`, winnerRole==='pitcher'?pc:bc);
       setTimeout(()=>showResult(iWon, pitcher, batter, winnerRole, script), 1500);
       return;
@@ -1929,6 +1946,37 @@ function playAtBat(){
     hvRunPossession(script.poss[i++], next);
   };
   setTimeout(next, 500);
+}
+// Both team colors run through brightTeam, but two builds can pick the same (or similar) teams —
+// nudge side B's hue ~150° so the two silhouettes are always tellable apart.
+function hvDistinct(pcHex, bcHex){
+  const rgb = c => { const m=/^#([0-9a-f]{6})$/i.exec(c||''); if(!m) return null;
+    const n=parseInt(m[1],16); return [n>>16&255, n>>8&255, n&255]; };
+  const a=rgb(pcHex), b=rgb(bcHex);
+  if(!a || !b) return bcHex;
+  if(Math.abs(a[0]-b[0])+Math.abs(a[1]-b[1])+Math.abs(a[2]-b[2]) >= 120) return bcHex;
+  const [r,g,bl]=b.map(v=>v/255), mx=Math.max(r,g,bl), mn=Math.min(r,g,bl), d=mx-mn;
+  let h=0;
+  if(d>0){ h = mx===r ? ((g-bl)/d+(g<bl?6:0)) : mx===g ? (bl-r)/d+2 : (r-g)/d+4; h/=6; }
+  return `hsl(${Math.round(((h+0.42)%1)*360)} 75% 60%)`;
+}
+// ⏩ Skip the sim (this side only — the animation is a local playback of the seeded result, so
+// skipping here never affects what the opponent sees). Jump straight to the final score + result.
+function hvSkipSim(){
+  if(!hvGame || !hvGame.script || matchResolved) return;
+  const g = hvGame;
+  if(g.activeTl){ try{ g.activeTl.kill(); }catch(e){} }
+  gsap.killTweensOf('#hvOffW,#hvDefW,#hvBall,#hvSeam,#hvNetFlash,#hvCourt,#hvPop,#hvSA,#hvSB');
+  gsap.set('#hvBall',{ opacity:0 }); gsap.set('#hvNetFlash',{ opacity:0 });
+  gsap.set('#hvOffW',{ y:0, scaleY:1, scale:1, rotation:0 });
+  gsap.set('#hvDefW',{ y:0, scaleY:1, scale:1, rotation:0 });
+  gsap.set('#hvCourt',{ x:0 });
+  $('hvPop').style.opacity=0; $('hvCall').innerHTML='';
+  const aFinal = g.winnerRole==='pitcher' ? g.script.winScore : g.script.loseScore;
+  const bFinal = g.winnerRole==='pitcher' ? g.script.loseScore : g.script.winScore;
+  $('hvSA').textContent=aFinal; $('hvSB').textContent=bFinal;
+  $('hvSkipBtn').style.display='none';
+  showResult(g.iWon, g.pitcher, g.batter, g.winnerRole, g.script);   // sets matchResolved → pending timeouts bail
 }
 function atBatRng(pitcher, batter){
   const n = ((seed || 1) ^ Math.imul(pitcher.ovr || 0, 2654435761) ^ Math.imul(batter.ovr || 0, 1597334677)) >>> 0;
@@ -2043,6 +2091,12 @@ function hvRunPossession(p, done){
   const offCol = p.side==='p' ? hvGame.pc : hvGame.bc;
   const defCol = p.side==='p' ? hvGame.bc : hvGame.pc;
   $('hvOff').style.background=offCol; $('hvDef').style.background=defCol;
+  // name tags: whoever has the ball is in the hvOff wrapper this possession
+  const offPl = p.side==='p' ? hvGame.pitcher : hvGame.batter;
+  const defPl = p.side==='p' ? hvGame.batter  : hvGame.pitcher;
+  $('hvOffName').textContent = (offPl.name||'Player').slice(0,14);
+  $('hvDefName').textContent = (defPl.name||'Player').slice(0,14);
+  $('hvOffName').style.borderColor = offCol; $('hvDefName').style.borderColor = defCol;
   const poss=$('hvPoss'); poss.textContent = dir>0 ? '▶' : '◀'; poss.style.color = offCol;
   const cToX=c=>c-figW/2;
   const guardGap=W*0.15;
@@ -2066,6 +2120,7 @@ function hvRunPossession(p, done){
   const trackDef=()=>gsap.set('#hvDefW',{ x: gsap.getProperty('#hvOffW','x') + dir*guardGap });
   const tl=gsap.timeline({ onComplete(){ if(done) setTimeout(done,220); }});
   tl.timeScale((hvGame && hvGame.speed) || HV_SPEED);
+  if(hvGame) hvGame.activeTl = tl;   // so Skip can kill the running possession cleanly
 
   // check-up beat → drive (steady pose cycle) → moves → blow-by → rise
   tl.to('#hvOffW',{ y:-5, duration:.16, yoyo:true, repeat:1, ease:'sine.inOut' })
