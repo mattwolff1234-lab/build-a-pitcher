@@ -6,6 +6,7 @@
 <title>Hoops Face Off · GoatLab 1v1</title>
 <meta name="theme-color" content="#0a1320">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/MotionPathPlugin.min.js"></script>
 <script src="/achievements.js" defer></script>
 <script src="/xp.js" defer></script>
 <script src="https://cdn.ably.com/lib/ably.min-2.js"></script>
@@ -319,45 +320,56 @@
   .mini-spin { display:inline-block; width:12px; height:12px; border-radius:50%; border:2px solid rgba(255,255,255,.18);
     border-top-color:var(--accent); animation:spin .8s linear infinite; vertical-align:-1px; margin-right:6px; }
 
-  /* ---------- at-bat ---------- */
+  /* ---------- the 1v1 game (half-court-to-11 on a full court) ---------- */
   #atbatScreen { min-height:70vh; justify-content:center; }
-  .diamond { position:relative; width:100%; max-width:680px; height:380px; border-radius:18px; overflow:hidden;
+  .hv-sb { display:flex; align-items:center; gap:14px; margin-bottom:10px;
+    font-family:'Oswald',sans-serif; user-select:none; }
+  .hv-sb b { font-size:30px; line-height:1; min-width:38px; text-align:center; }
+  .hv-sb .hv-tag { display:flex; flex-direction:column; align-items:center; gap:1px;
+    font-size:10px; letter-spacing:2.5px; color:var(--muted); text-transform:uppercase; }
+  .hv-sb .hv-tag i { font-style:normal; font-size:13px; }
+  .hv-court { position:relative; width:100%; max-width:680px; aspect-ratio:980/500; border-radius:16px; overflow:hidden;
     border:1px solid var(--line); background:
-      radial-gradient(120% 80% at 50% 120%, #1f6b2e 0%, #14502160 45%, transparent 70%),
-      linear-gradient(180deg,#0b1b2e,#04070d); }
-  .crowd { position:absolute; top:0; left:0; right:0; height:64px; background:repeating-linear-gradient(90deg,#1a2335 0 6px,#222d44 6px 12px); opacity:.5; }
-  .mound { position:absolute; left:14%; bottom:30%; width:120px; height:30px; background:radial-gradient(circle,#7a5a36,#5a3f24); border-radius:50%; opacity:.8; }
-  .plate { position:absolute; right:16%; bottom:18%; width:26px; height:26px; background:#e9eef6; transform:rotate(45deg); border-radius:4px; opacity:.85; }
-  .silho { position:absolute; bottom:30%; height:150px; width:110px; mask-size:contain; mask-repeat:no-repeat; mask-position:center bottom;
-    -webkit-mask-size:contain; -webkit-mask-repeat:no-repeat; -webkit-mask-position:center bottom; filter:drop-shadow(0 8px 16px rgba(0,0,0,.5)); }
-  .silho.p { left:9%; -webkit-mask-image:url(baller-figure.png); mask-image:url(baller-figure.png); }
-  .silho.b { right:9%; transform:rotateY(180deg); transform-origin:center bottom; -webkit-mask-image:url(baller-figure.png); mask-image:url(baller-figure.png); }
-  .ball { position:absolute; width:16px; height:16px; border-radius:50%; background:radial-gradient(circle at 35% 30%,#fff,#cdd3da);
-    box-shadow:0 0 10px rgba(255,255,255,.6); left:18%; bottom:42%; opacity:0; z-index:5; }
-  .callout { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; }
-  .callout span { font-family:'Oswald',sans-serif; font-weight:700; font-size:56px; letter-spacing:2px; text-transform:uppercase;
-    opacity:0; text-shadow:0 6px 24px rgba(0,0,0,.6); text-align:center; }
-  .pitch-info { position:absolute; left:0; right:0; top:14px; text-align:center; font-family:'Oswald',sans-serif;
-    letter-spacing:2px; font-size:13px; color:#cbd6e6; opacity:0; text-transform:uppercase; }
-  .pitch-seq { display:flex; justify-content:center; align-items:center; gap:10px;
-    margin-top:10px; opacity:0; min-height:52px; flex-wrap:wrap; }
-  .pitch-dot { display:flex; flex-direction:column; align-items:center; gap:3px; flex:0 0 auto; }
-  .pitch-dot .pd-num { width:30px; height:30px; border-radius:50%; border:2px solid rgba(255,255,255,.18);
-    background:rgba(4,7,13,.8); display:flex; align-items:center; justify-content:center;
-    font-family:'Oswald',sans-serif; font-size:11px; font-weight:700; color:var(--dim); }
-  .pitch-dot .pd-call { font-family:'Oswald',sans-serif; font-size:8.5px; letter-spacing:.5px;
-    text-transform:uppercase; text-align:center; white-space:nowrap; color:var(--dim); opacity:0; line-height:1.2; max-width:48px; overflow:hidden; text-overflow:ellipsis; }
-  .pitch-dot.strike .pd-num, .pitch-dot.k .pd-num { border-color:var(--pitch); color:var(--pitch); background:rgba(255,122,24,.18); }
-  .pitch-dot.strike .pd-call, .pitch-dot.k .pd-call { color:var(--pitch); }
-  .pitch-dot.ball .pd-num { border-color:var(--gold); color:var(--gold); background:rgba(255,206,58,.15); }
-  .pitch-dot.ball .pd-call { color:var(--gold); }
-  .pitch-dot.hit .pd-num { border-color:var(--bat); color:var(--bat); background:rgba(25,198,255,.15); }
-  .pitch-dot.hit .pd-call { color:var(--bat); }
-  .pitch-dot.inplay .pd-num { border-color:var(--accent2); color:var(--accent2); background:rgba(25,198,255,.15); }
-  .pitch-dot.inplay .pd-call { color:var(--accent2); }
-  .pitch-dot.active.strike .pd-num, .pitch-dot.active.k .pd-num { box-shadow:0 0 14px rgba(255,122,24,.65); }
-  .pitch-dot.active.ball .pd-num { box-shadow:0 0 14px rgba(255,206,58,.65); }
-  .pitch-dot.active.hit .pd-num, .pitch-dot.active.inplay .pd-num { box-shadow:0 0 14px rgba(25,198,255,.65); }
+      radial-gradient(120% 100% at 50% 0%, rgba(8,14,26,.42), transparent 44%),
+      radial-gradient(130% 90% at 50% 112%, rgba(0,0,0,.38), transparent 60%),
+      repeating-linear-gradient(90deg,#c99b63 0 44px,#c1924f 44px 88px);
+    box-shadow:inset 0 0 0 3px rgba(255,255,255,.08); }
+  .hv-baseline { position:absolute; left:0; right:0; bottom:13%; height:3px; background:rgba(255,255,255,.20); }
+  .hv-mid { position:absolute; left:50%; top:6%; bottom:6%; width:3px; margin-left:-1.5px; background:rgba(255,255,255,.16); }
+  .hv-circle { position:absolute; left:50%; top:50%; width:20%; aspect-ratio:1; transform:translate(-50%,-50%);
+    border:3px solid rgba(255,255,255,.16); border-radius:50%; }
+  .hv-key { position:absolute; bottom:13%; width:20%; height:52%; border:3px solid rgba(255,255,255,.22);
+    border-bottom:none; background:rgba(210,120,60,.14); }
+  .hv-key.l { left:0; border-left:none; } .hv-key.r { right:0; border-right:none; }
+  .hv-arc3 { position:absolute; bottom:13%; width:38%; height:76%; border:3px solid rgba(255,255,255,.13); }
+  .hv-arc3.l { left:-12%; border-left:none; border-radius:0 50% 50% 0 / 0 50% 50% 0; }
+  .hv-arc3.r { right:-12%; border-right:none; border-radius:50% 0 0 50% / 50% 0 0 50%; }
+  .hv-figwrap { position:absolute; bottom:13%; left:0; height:56%; aspect-ratio:543/724; will-change:transform; z-index:8; }
+  #hvOffW { z-index:9; }   /* the ball-handler always reads in front of the defender */
+  .hv-fig { width:100%; height:100%;
+    -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat;
+    -webkit-mask-size:contain; mask-size:contain;
+    -webkit-mask-position:center bottom; mask-position:center bottom;
+    filter:drop-shadow(0 6px 6px rgba(0,0,0,.4)); }
+  .hv-fig.dim { opacity:.18; filter:grayscale(1); }
+  .hv-hoop { position:absolute; bottom:13%; height:60%; aspect-ratio:543/724; pointer-events:none; z-index:12; }
+  .hv-hoop.l { left:-2%; transform:scaleX(-1); } .hv-hoop.r { right:-2%; }
+  #hvBall { position:absolute; left:0; top:0; width:22px; height:22px; border-radius:50%; z-index:20;
+    background:radial-gradient(circle at 35% 30%,#ffbb74,#e8792a 68%,#b8551a);
+    box-shadow:0 2px 6px rgba(0,0,0,.5); opacity:0; will-change:transform; }
+  #hvSeam { position:absolute; inset:0; border-radius:50%; overflow:hidden; display:block; }
+  #hvSeam::before { content:''; position:absolute; left:0; right:0; top:46%; height:8%; background:rgba(70,25,6,.5); }
+  #hvSeam::after { content:''; position:absolute; top:0; bottom:0; left:46%; width:8%; background:rgba(70,25,6,.35); }
+  .hv-tr { position:absolute; width:9px; height:9px; border-radius:50%; z-index:19; pointer-events:none;
+    background:radial-gradient(circle,#ffc27a,#e8792a 70%); }
+  #hvNetFlash { position:absolute; width:40px; height:40px; border-radius:50%; z-index:13; opacity:0; pointer-events:none;
+    border:3px solid rgba(255,255,255,.95); box-shadow:0 0 18px rgba(255,220,150,.9), inset 0 0 12px rgba(255,220,150,.7); }
+  .hv-pop { position:absolute; left:50%; top:20%; transform:translateX(-50%); z-index:30;
+    font-family:'Oswald',sans-serif; font-size:clamp(26px,5.4vw,44px); font-weight:700; letter-spacing:3px;
+    color:#ffd34d; text-shadow:0 3px 0 rgba(0,0,0,.4),0 0 22px rgba(255,180,60,.8); opacity:0; pointer-events:none; white-space:nowrap; }
+  .hv-call { position:absolute; left:50%; bottom:6%; transform:translateX(-50%); z-index:30; pointer-events:none; }
+  .hv-call span { font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:2px; text-transform:uppercase;
+    padding:4px 13px; border-radius:999px; background:rgba(10,18,30,.72); border:1px solid rgba(25,198,255,.35); color:#9fdcff; display:inline-block; }
   /* waiting-for-opponent overlay (shown on the arena before the at-bat) */
   .wait-arena { position:absolute; left:0; right:0; bottom:18px; display:none; flex-direction:column; align-items:center; gap:9px; z-index:6; }
   .wait-arena.show { display:flex; }
@@ -366,7 +378,6 @@
   .wait-arena .wa-bar { width:min(70%,300px); height:8px; border-radius:6px; background:rgba(255,255,255,.12); overflow:hidden; }
   .wait-arena .wa-fill { height:100%; width:0%; border-radius:6px; background:linear-gradient(90deg,var(--accent),var(--accent2)); transition:width .35s ease; }
   .wait-arena .wa-count { font-family:'Oswald',sans-serif; font-size:12px; letter-spacing:1px; color:var(--muted); }
-  .silho.dim { opacity:.18; filter:grayscale(1); }
   .matchup { width:100%; max-width:680px; display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
   .matchup .side { display:flex; flex-direction:column; align-items:center; gap:2px; }
   .matchup .side .who { font-family:'Oswald',sans-serif; font-size:13px; letter-spacing:1px; text-transform:uppercase; }
@@ -611,17 +622,26 @@
     <div class="slots" id="slots"></div>
   </div>
 
-  <!-- 4. At-bat -->
+  <!-- 4. The game (first to 11) -->
   <div class="screen" id="atbatScreen">
     <div class="matchup" id="matchup"></div>
-    <div class="diamond" id="diamond">
-      <div class="crowd"></div>
-      <div class="pitch-info" id="pitchInfo"></div>
-      <div class="mound"></div><div class="plate"></div>
-      <div class="silho p" id="silhoP"></div>
-      <div class="silho b" id="silhoB"></div>
-      <div class="ball" id="ball"></div>
-      <div class="callout"><span id="callout"></span></div>
+    <div class="hv-sb" id="hvSb" style="display:none">
+      <b id="hvSA">0</b>
+      <span class="hv-tag">First to 11<i id="hvPoss">·</i></span>
+      <b id="hvSB">0</b>
+    </div>
+    <div class="hv-court" id="hvCourt">
+      <div class="hv-baseline"></div><div class="hv-mid"></div><div class="hv-circle"></div>
+      <div class="hv-arc3 l"></div><div class="hv-arc3 r"></div>
+      <div class="hv-key l"></div><div class="hv-key r"></div>
+      <img class="hv-hoop l" src="hoops-anim/hoop.png" alt="">
+      <img class="hv-hoop r" src="hoops-anim/hoop.png" alt="">
+      <div class="hv-figwrap" id="hvOffW"><div class="hv-fig" id="hvOff"></div></div>
+      <div class="hv-figwrap" id="hvDefW"><div class="hv-fig" id="hvDef"></div></div>
+      <div id="hvBall"><i id="hvSeam"></i></div>
+      <div id="hvNetFlash"></div>
+      <div class="hv-pop" id="hvPop"></div>
+      <div class="hv-call" id="hvCall"></div>
       <div class="wait-arena" id="waitArena">
         <div class="wa-spin"></div>
         <div class="wa-title" id="waTitle">Waiting for your opponent…</div>
@@ -629,7 +649,6 @@
         <div class="wa-count" id="waCount">building…</div>
       </div>
     </div>
-    <div class="pitch-seq" id="pitchSeq"></div>
   </div>
 
   <!-- Challenge screen (opened via a shared challenge link) -->
@@ -1725,12 +1744,17 @@ function showWaitArena(){
   const pitcherSide = minePitcher ? meSide : oppSide;
   const batterSide  = minePitcher ? oppSide : meSide;
   $('matchup').innerHTML = `<div class="side">${pitcherSide}</div><div class="mid">VS</div><div class="side">${batterSide}</div>`;
-  $('silhoP').style.background = brightTeam(minePitcher ? myBuild.team : 'FA');
-  $('silhoB').style.background = brightTeam(!minePitcher ? myBuild.team : 'FA');
-  $('silhoP').classList.toggle('dim', !minePitcher);
-  $('silhoB').classList.toggle('dim', minePitcher);
-  gsap.set('#ball', { opacity:0 }); $('callout').textContent=''; $('pitchInfo').style.opacity=0;
-  $('pitchSeq').innerHTML=''; gsap.set('#pitchSeq', { opacity:0 });
+  // your fighter ready on your side of the court, opponent's slot greyed out
+  const W = $('hvCourt').getBoundingClientRect().width;
+  hvPose($('hvOff'),'dribble3'); hvPose($('hvDef'),'def2');
+  hvFace($('hvOff'),1); hvFace($('hvDef'),-1);
+  $('hvOff').style.background = brightTeam(minePitcher ? myBuild.team : 'FA');
+  $('hvDef').style.background = brightTeam(!minePitcher ? myBuild.team : 'FA');
+  $('hvOff').classList.toggle('dim', !minePitcher);
+  $('hvDef').classList.toggle('dim', minePitcher);
+  gsap.set('#hvOffW',{ x:W*0.24, y:0 }); gsap.set('#hvDefW',{ x:W*0.62, y:0 });
+  gsap.set('#hvBall',{ opacity:0 }); gsap.set('#hvNetFlash',{ opacity:0 });
+  $('hvPop').style.opacity=0; $('hvCall').innerHTML=''; $('hvSb').style.display='none';
   $('waTitle').textContent = 'Waiting for your opponent…';
   $('waitArena').classList.add('show');
   waClockLeft = Math.max(0, clockLeft);   // shared shot clock was frozen at finish; count it down for display
@@ -1870,9 +1894,9 @@ function playAtBat(){
   if(matchResolved) return;
   showScreen('atbatScreen');
   waitingArena=false; stopWaitClock(); $('waitArena').classList.remove('show');
-  $('silhoP').classList.remove('dim'); $('silhoB').classList.remove('dim');
-  const pitcher = myRole==='pitcher' ? myBuild : oppBuild;
-  const batter  = myRole==='pitcher' ? oppBuild : myBuild;
+  $('hvOff').classList.remove('dim'); $('hvDef').classList.remove('dim');
+  const pitcher = myRole==='pitcher' ? myBuild : oppBuild;   // side A — attacks the RIGHT hoop
+  const batter  = myRole==='pitcher' ? oppBuild : myBuild;   // side B — attacks the LEFT hoop
   const abRng = atBatRng(pitcher, batter);
   // winner: higher OVR; tie -> seeded coin (identical on both phones)
   let winnerRole;
@@ -1880,7 +1904,7 @@ function playAtBat(){
   else if(pitcher.ovr>batter.ovr)winnerRole='pitcher';
   else winnerRole = abRng()<0.5?'pitcher':'batter';
   const iWon = winnerRole===myRole;
-  const script = makePitchSequence(pitcher, batter, winnerRole, abRng);
+  const script = buildGameScript(pitcher, batter, winnerRole, abRng);
 
   // matchup header (with each player's name)
   const pName = escapeHTML(pitcher.name || 'Player A') + (myRole==='pitcher'?' (You)':'');
@@ -1890,109 +1914,269 @@ function playAtBat(){
     `<div class="side"><div class="who" style="color:${pc}">🏀 ${pName}</div><div class="o" style="color:${pc}">${pitcher.ovr}</div></div>`+
     `<div class="mid">VS</div>`+
     `<div class="side"><div class="who" style="color:${bc}">🏀 ${bName}</div><div class="o" style="color:${bc}">${batter.ovr}</div></div>`;
-  $('silhoP').style.background = brightTeam(pitcher.team);
-  $('silhoB').style.background = brightTeam(batter.team);
 
-  const ball=$('ball'), call=$('callout'); call.style.opacity=0; call.textContent='';
-  gsap.set(ball,{ opacity:0, left:'18%', bottom:'42%', scale:1 });
-  gsap.set('#silhoP',{ x:0, rotation:0 }); gsap.set('#silhoB',{ x:0, rotation:0, rotationY:180 });
-  renderPitchSeq(script);
-  gsap.set('#pitchSeq', { opacity:1 });
+  // live scoreboard (side A left, side B right); long thrillers play a touch faster to stay ≤20s
+  hvGame = { pc, bc, pitcher, batter, scoreA:0, scoreB:0, speed: script.poss.length>9 ? 2.75 : HV_SPEED };
+  $('hvSb').style.display='flex';
+  $('hvSA').textContent='0'; $('hvSB').textContent='0';
+  $('hvSA').style.color=pc; $('hvSB').style.color=bc;
+  gsap.set('#hvBall',{ opacity:0 }); $('hvPop').style.opacity=0; $('hvCall').innerHTML='';
 
-  const tl = gsap.timeline();
-  script.pitches.forEach((pitch, idx) => appendPitch(tl, pitch, idx));
-  tl.add(()=> setTimeout(()=>showResult(iWon, pitcher, batter, winnerRole, script), 1300));
+  // play the possessions back to back; the last one is always the winner's game-winner
+  let i=0;
+  const next = ()=>{
+    if(matchResolved) return;                       // a forfeit/disconnect path resolved it mid-game
+    if(i>=script.poss.length){
+      hvFlash(`GAME · ${script.winScore}–${script.loseScore}`, winnerRole==='pitcher'?pc:bc);
+      setTimeout(()=>showResult(iWon, pitcher, batter, winnerRole, script), 1500);
+      return;
+    }
+    hvRunPossession(script.poss[i++], next);
+  };
+  setTimeout(next, 500);
 }
 function atBatRng(pitcher, batter){
   const n = ((seed || 1) ^ Math.imul(pitcher.ovr || 0, 2654435761) ^ Math.imul(batter.ovr || 0, 1597334677)) >>> 0;
   return mulberry32(n || 1);
 }
-function funcVel(ovr){ return Math.max(4, Math.round((ovr-70)*0.7)+8); }
-function makePitchSequence(pitcher, batter, winnerRole, rr){
-  // pitcher/batter are just side A/B (both hoopers). The higher-OVR player (winnerRole) scores the
-  // deciding bucket; the beats are seeded so both phones see the same possession.
-  const moves=['Crossover','Hesi pull-up','Step-back','Euro-step','Spin move','Behind-the-back','Jab + go','Snatch-back'];
-  const nextMove = () => moves[Math.floor(rr()*moves.length)];
-  const beat = (call, klass, result, opts={}) => Object.assign({
-    call, klass, result, type:nextMove(), velo:0, swing:false, final:false
-  }, opts);
-  const disparity = Math.abs((pitcher.ovr || 0) - (batter.ovr || 0));
+/* ---------- first-to-11 game engine (seeded — identical on both phones) ---------- */
+if (window.MotionPathPlugin) gsap.registerPlugin(MotionPathPlugin);
+let hvGame = null;
+const HV_SPEED = 2.3;                      // timeScale: whole game fits in ~15-20s
+const HV_DRIVES = ['drive1','drive2','drive3','drive4'];
+const HV_MOVES = [
+  {n:'Crossover',       poses:['cross1','cross2'],        juke:0.045, bite:0.075},
+  {n:'Hesi pull',       poses:['lowdribble1','dribble1'], juke:0.020, bite:0.035},
+  {n:'Behind-the-back', poses:['dribble2','dribble3'],    juke:0.035, bite:0.060},
+  {n:'Spin move',       poses:['lowdribble2','drive4'],   juke:0.040, bite:0.065},
+];
+const HV_FINISHES = {
+  pullup:  {n:'Pull-up jumper',  pose:'shoot2', pts:2, dist:0.20, rise:50},
+  three:   {n:'Step-back THREE', pose:'three1', pts:3, dist:0.26, rise:42},
+  floater: {n:'Silky floater',   pose:'shoot1', pts:2, dist:0.13, rise:58},
+  dunk:    {n:'POSTER dunk',     pose:'dunk1',  pts:2, dist:0.05, rise:104},
+};
+// Native art direction of each pose: +1 the figure faces image-right, -1 image-left.
+// hvPose() combines this with the attack direction so the player ALWAYS faces where the ball goes.
+const HV_FACING = { drive1:1,drive2:1,drive3:1,drive4:1, dribble1:1,dribble2:1,dribble3:1,
+  lowdribble1:1, lowdribble2:-1, cross1:-1, cross2:-1,
+  shoot1:1, shoot2:1, shoot3:1, three1:-1, dunk1:-1, sprint1:-1,
+  def1:1, def2:1, def3:1, idle1:1, pass1:1, pass2:1 };
+function hvApplyFlip(el){ const d=+(el.dataset.dir||1), f=HV_FACING[el.dataset.pose]||1;
+  el.style.transform=`scaleX(${d*f})`; }
+function hvPose(el,name){ el.dataset.pose=name;
+  el.style.webkitMaskImage=`url(hoops-anim/${name}.png)`; el.style.maskImage=`url(hoops-anim/${name}.png)`;
+  hvApplyFlip(el); }
+function hvFace(el,dir){ el.dataset.dir=dir; hvApplyFlip(el); }
+
+// The box score: winner reaches 11; loser's total shrinks with the OVR gap. We only ANIMATE the
+// makes (+ a miss or two for drama) — skipped empty possessions don't change the score, so the
+// on-screen progression is still the true game. Every random pick uses the seeded rng.
+function buildGameScript(pitcher, batter, winnerRole, rr){
+  const rpick = arr => arr[Math.floor(rr()*arr.length)];
+  const gap = Math.abs((pitcher.ovr||0)-(batter.ovr||0));
+  let loserPts = gap<=1?9 : gap<=3?8 : gap<=6?6 : gap<=9?4 : gap<=14?2 : 0;
+  if(loserPts>0 && rr()<0.35) loserPts = Math.max(0, loserPts-1);
+  const mkPts = target => { const out=[]; let s=0;
+    while(s<target){ const three = (target-s)>=3 && rr()<0.5; const p = three?3:2; out.push(p); s+=p; }
+    return out; };
+  const winPts = mkPts(11), losePts = mkPts(loserPts);
+  const fin2 = () => { const r=rr(); return r<0.34?'dunk':r<0.7?'pullup':'floater'; };
+  const mkPoss = (side, pts) => ({ side, made:true, pts, finKey: pts===3?'three':fin2(),
+    nMoves: rr()<0.35?2:1, mvs:null });
+  const wSide = winnerRole==='pitcher'?'p':'b', lSide = wSide==='p'?'b':'p';
+  const wPoss = winPts.map(p=>mkPoss(wSide,p)), lPoss = losePts.map(p=>mkPoss(lSide,p));
+  // interleave: spread the loser's buckets among the winner's; winner always gets the last one
+  const poss=[]; let wi=0, li=0;
+  while(wi<wPoss.length || li<lPoss.length){
+    const wLeft=wPoss.length-wi, lLeft=lPoss.length-li;
+    if(wi>=wPoss.length){ poss.push(lPoss[li++]); continue; }
+    if(li>=lPoss.length || wLeft<=1 && lLeft>0){          // save the winner's last make for the end
+      if(lLeft>0){ poss.push(lPoss[li++]); continue; }
+    }
+    if(lLeft>0 && rr()<lLeft/(wLeft+lLeft)) poss.push(lPoss[li++]);
+    else poss.push(wPoss[wi++]);
+  }
+  // sprinkle 1-2 misses (not in the final slot) if the reel has room
+  const missBudget = poss.length>=8 ? 1 : 2;
+  for(let m=0;m<missBudget;m++){
+    const at = 1+Math.floor(rr()*Math.max(1,poss.length-2));
+    poss.splice(at,0,{ side: rr()<0.5?'p':'b', made:false, pts:0,
+      finKey: rr()<0.4?'three':'pullup', nMoves:1, missType: rr()<0.5?'rattle':'clank' });
+  }
+  poss.forEach(p=>{ p.mvs = Array.from({length:p.nMoves},()=>rpick(HV_MOVES)); });
+  // the possession list is the source of truth — mkPts can overshoot its target by a bucket,
+  // so the banner/summary must use the REAL sums or they'd disagree with the animated scoreboard
+  const winScore = winPts.reduce((a,b)=>a+b,0), loseScore = losePts.reduce((a,b)=>a+b,0);
   const winnerName = (winnerRole==='pitcher' ? pitcher.name : batter.name) || 'The winner';
-  const finishes=[
-    { call:'Pull-up THREE',  result:'three',  fc:'SPLASH! 3' },
-    { call:'Throws it DOWN', result:'dunk',   fc:'POSTER!' },
-    { call:'Silky floater',  result:'bucket', fc:'BUCKET!' },
-    { call:'And-one finish', result:'andone', fc:'AND ONE!' },
-  ];
-  const fin = finishes[Math.floor(rr()*finishes.length)];
-  const last = beat(fin.call, 'hit', fin.result, { swing:true, contact:true, final:true, finalCall:fin.fc });
+  const closeness = loseScore>=8 ? ' in a thriller' : loseScore<=2 ? ' in a blowout' : '';
+  return { poss, winScore, loseScore, summary:`${winnerName} takes it ${winScore}–${loseScore}${closeness}` };
+}
 
-  if(disparity >= 10){
-    return { outcome:'win', summary:`${winnerName} cooks for an easy bucket`, finalCall:fin.fc,
-      pitches:[ beat('Sizes up','strike','setup'), last ] };
-  }
-  return { outcome:'win', summary:`${winnerName} takes over late and scores`, finalCall:fin.fc,
-    pitches:[ beat('Trade buckets','ball','setup'), beat('Defender contests','strike','setup', { swing:true }), last ] };
+/* ---------- possession choreography (GSAP, runs at HV_SPEED) ---------- */
+function hvCourtPx(){ const c=$('hvCourt').getBoundingClientRect(); return {W:c.width,H:c.height}; }
+function hvRectIn(el){ const c=$('hvCourt').getBoundingClientRect(), r=el.getBoundingClientRect();
+  return {x:r.left-c.left, y:r.top-c.top, w:r.width, h:r.height}; }
+function hvFlash(txt,color){ const p=$('hvPop'); p.textContent=txt; p.style.color=color||'#ffd34d';
+  gsap.fromTo(p,{opacity:0,scale:.45,y:12},{opacity:1,scale:1,y:0,duration:.3,ease:'back.out(2.4)'});
+  gsap.to(p,{opacity:0,y:-8,duration:.35,delay:.7,ease:'power2.in'}); }
+function hvCallout(txt){ const c=$('hvCall'); c.innerHTML=`<span>${txt}</span>`;
+  gsap.fromTo(c.firstChild,{opacity:0,y:6},{opacity:1,y:0,duration:.22,ease:'back.out(2)'}); }
+function hvSpawnTrail(x,y){ const d=document.createElement('div'); d.className='hv-tr';
+  d.style.left=(x+3)+'px'; d.style.top=(y+3)+'px'; $('hvCourt').appendChild(d);
+  gsap.to(d,{opacity:0,scale:.3,duration:.4,ease:'power1.out',onComplete(){ d.remove(); }}); }
+function hvFloorBounce(dir, floorY){
+  const fb=gsap.timeline();
+  fb.to('#hvBall',{y:floorY,duration:.4,ease:'power1.in'})
+    .to('#hvBall',{scaleY:.62,scaleX:1.25,duration:.06,ease:'power1.out'})
+    .to('#hvBall',{scaleY:1,scaleX:1,duration:.08})
+    .to('#hvBall',{y:floorY-46,x:`+=${dir*40}`,duration:.24,ease:'power1.out'},'<')
+    .to('#hvBall',{y:floorY,duration:.24,ease:'power1.in'})
+    .to('#hvBall',{scaleY:.74,scaleX:1.15,duration:.05},'-=.02')
+    .to('#hvBall',{scaleY:1,scaleX:1,duration:.07})
+    .to('#hvBall',{y:floorY-16,x:`+=${dir*26}`,duration:.16,ease:'power1.out'},'<')
+    .to('#hvBall',{y:floorY,duration:.16,ease:'power1.in'})
+    .to('#hvBall',{x:`+=${dir*44}`,duration:.4,ease:'power1.out'})
+    .to('#hvBall',{opacity:0,duration:.25},'-=.25');
+  return fb;
 }
-function renderPitchSeq(script){
-  $('pitchSeq').innerHTML = script.pitches.map((p,i) =>
-    `<div class="pitch-dot" id="pitchPill${i}"><div class="pd-num">${i+1}</div><div class="pd-call">-</div></div>`
-  ).join('');
-}
-function activatePitch(idx){
-  const pill = $('pitchPill' + idx);
-  if(!pill) return;
-  document.querySelectorAll('.pitch-dot.active').forEach(d => {
-    d.classList.remove('active');
-    gsap.to(d.querySelector('.pd-num'), { scale:1, duration:.2, ease:'power2.out' });
+function hvRunPossession(p, done){
+  gsap.killTweensOf('#hvOffW,#hvDefW,#hvBall,#hvSeam,#hvNetFlash,#hvCourt');
+  const {W,H}=hvCourtPx();
+  const figW=H*0.56*(543/724);
+  const dir = p.side==='p' ? 1 : -1;                 // side A (pitcher slot) attacks right
+  const offCol = p.side==='p' ? hvGame.pc : hvGame.bc;
+  const defCol = p.side==='p' ? hvGame.bc : hvGame.pc;
+  $('hvOff').style.background=offCol; $('hvDef').style.background=defCol;
+  const poss=$('hvPoss'); poss.textContent = dir>0 ? '▶' : '◀'; poss.style.color = offCol;
+  const cToX=c=>c-figW/2;
+  const guardGap=W*0.15;
+  const rimAbsX = dir>0 ? W*0.82 : W*0.18;
+  const fin = HV_FINISHES[p.finKey];
+  const isDunk = p.finKey==='dunk';
+  let shooterC = rimAbsX - dir*W*fin.dist;
+  const lo=figW/2+W*0.03, hi=W-figW/2-W*0.03;
+  shooterC=Math.max(lo,Math.min(hi,shooterC));
+  const startC = Math.max(lo,Math.min(hi, rimAbsX - dir*W*0.45));
+
+  // hard reset (positions + every transform + layering)
+  hvFace($('hvOff'),dir); hvFace($('hvDef'),-dir);
+  hvPose($('hvOff'),'dribble3'); hvPose($('hvDef'),'def2');
+  gsap.set('#hvOffW',{ x:cToX(startC), y:0, scale:1, rotation:0, scaleY:1 });
+  gsap.set('#hvDefW',{ x:cToX(startC+dir*guardGap), y:0, scale:1, rotation:0 });
+  gsap.set('#hvBall',{ opacity:0, scale:1, scaleX:1, scaleY:1, zIndex:20 });
+  gsap.set('#hvSeam',{ rotation:0 });
+  gsap.set('#hvNetFlash',{ opacity:0 });
+
+  const trackDef=()=>gsap.set('#hvDefW',{ x: gsap.getProperty('#hvOffW','x') + dir*guardGap });
+  const tl=gsap.timeline({ onComplete(){ if(done) setTimeout(done,220); }});
+  tl.timeScale((hvGame && hvGame.speed) || HV_SPEED);
+
+  // check-up beat → drive (steady pose cycle) → moves → blow-by → rise
+  tl.to('#hvOffW',{ y:-5, duration:.16, yoyo:true, repeat:1, ease:'sine.inOut' })
+    .to('#hvDefW',{ y:-4, duration:.16, yoyo:true, repeat:1, ease:'sine.inOut' },'<.05');
+  const driveTo = shooterC - dir*W*0.05;
+  tl.add(()=>hvPose($('hvOff'),'drive1'))
+    .to('#hvOffW',{ x:cToX(driveTo), duration:.95, ease:'power1.inOut',
+      onUpdate(){ hvPose($('hvOff'),HV_DRIVES[Math.floor(this.time()*9)%HV_DRIVES.length]); trackDef(); }})
+    .to('#hvOffW',{ y:-8, duration:.14, yoyo:true, repeat:5, ease:'sine.inOut' },'<')
+    .to('#hvDefW',{ y:-5, duration:.155, yoyo:true, repeat:5, ease:'sine.inOut' },'<');
+  p.mvs.forEach(mv=>{
+    tl.add(()=>{ hvPose($('hvOff'),mv.poses[0]); hvCallout(mv.n); })
+      .to('#hvDefW',{ x:`-=${dir*W*mv.bite}`, rotation:-dir*12, duration:.18, ease:'power3.out' })
+      .to('#hvOffW',{ x:`+=${dir*W*mv.juke}`, y:-4, duration:.16, ease:'power2.out' },'<')
+      .add(()=>hvPose($('hvOff'),mv.poses[1]))
+      .to('#hvOffW',{ y:0, duration:.14, ease:'power2.in' })
+      .to('#hvDefW',{ x:()=>gsap.getProperty('#hvOffW','x')+dir*guardGap, rotation:0, duration:.26, ease:'power2.inOut' },'<');
   });
-  pill.classList.add('active');
-  const num = pill.querySelector('.pd-num');
-  gsap.fromTo(num, { scale:1 }, { scale:1.25, duration:.22, ease:'back.out(2.5)' });
-  gsap.to(num, { scale:1.05, duration:.2, delay:.22, ease:'power2.inOut' });
-}
-function resolvePitch(idx, pitch){
-  const pill = $('pitchPill' + idx);
-  if(!pill) return;
-  pill.className = 'pitch-dot active ' + pitch.klass;
-  const call = pill.querySelector('.pd-call');
-  call.textContent = pitch.call;
-  gsap.fromTo(call, { opacity:0, y:4 }, { opacity:1, y:0, duration:.22, ease:'power2.out' });
-}
-function appendPitch(tl, pitch, idx){
-  const ball = $('ball');
-  tl.add(() => {
-      $('pitchInfo').textContent = pitch.type;   // the dribble move
-      activatePitch(idx);
-      if(!pitch.final) { $('callout').textContent=''; $('callout').style.opacity=0; }
-    }, idx ? '+=.34' : 0)
-    .to('#pitchInfo',{ opacity:1, duration:.18 })
-    .set(ball,{ opacity:1, left:'24%', bottom:'26%', scale:1 })
-    .fromTo('#silhoP',{ rotation:-5 },{ rotation:6, duration:.26, ease:'power2.in' })
-    .to('#silhoP',{ rotation:0, duration:.12 })
-    .to(ball,{ left:'48%', bottom:'22%', duration:.3, ease:'sine.inOut' });   // dribble toward the lane
+  tl.add(()=>hvPose($('hvOff'),'drive3'))
+    .to('#hvOffW',{ x:cToX(shooterC), duration:.3, ease:'power2.in' })
+    .to('#hvDefW',{ x:()=>gsap.getProperty('#hvOffW','x')-dir*W*0.085, rotation:dir*8, duration:.32, ease:'power2.out' },'<');
+  tl.add(()=>{ hvPose($('hvOff'),fin.pose); hvCallout(fin.n); })
+    .to('#hvOffW',{ scaleY:.94, y:2, duration:.11, ease:'power2.out' })
+    .to('#hvOffW',{ scaleY:1.02, y:-fin.rise, duration:.3, ease:'power2.out' })
+    .to('#hvOffW',{ scaleY:1, y:-fin.rise-6, duration:.16, ease:'sine.out' })
+    .to('#hvDefW',{ y:-fin.rise*0.55, rotation:0, duration:.28, ease:'power2.out' },'<.05')
+    .add(()=>{ isDunk ? hvDunk(p,dir,tl) : hvShot(p,dir,fin,tl); });
 
-  if(pitch.swing){   // defender contest
-    tl.to('#silhoB',{ rotation:-14, duration:.1, ease:'power3.out' },'<.2')
-      .to('#silhoB',{ rotation:0, duration:.22 });
+  const hoopEl = dir>0 ? document.querySelector('.hv-hoop.r') : document.querySelector('.hv-hoop.l');
+  function rimPoint(){ const tr=hvRectIn(hoopEl);
+    return { x:tr.x+tr.w*(dir>0?0.30:0.70), y:tr.y+tr.h*0.30, net:tr.h*0.17 }; }
+  function landPlayers(sub, at){
+    sub.to('#hvOffW',{ y:0, scaleY:1, scale:1, duration:.32, ease:'power2.inOut' }, at || '+=.35')
+       .to('#hvOffW',{ scaleY:.965, duration:.07, yoyo:true, repeat:1 },'>-.08')
+       .to('#hvDefW',{ y:0, rotation:0, duration:.32, ease:'power2.inOut' },'<')
+       .add(()=>hvPose($('hvOff'),'idle1'));
   }
-
-  if(pitch.final && pitch.contact){   // the bucket: ball rises to the rim, then drops through
-    tl.add(()=> { Sound.crack(); resolvePitch(idx, pitch); })
-      .to(ball,{ left:'80%', bottom:'72%', scale:.82, duration:.5, ease:'power2.out' })
-      .to(ball,{ bottom:'14%', scale:.66, duration:.3, ease:'power1.in' })
-      .add(()=> showCall(pitch.finalCall || 'BUCKET!', '#ff8a3c'))
-      .to('#silhoP',{ rotation:6, duration:.3 },'<');
-  } else {
-    tl.add(()=> { Sound.catch(); resolvePitch(idx, pitch); })
-      .to(ball,{ left:'58%', bottom:'18%', scale:.9, duration:.16, ease:'power2.in' });
+  function scoreIt(){
+    if(p.side==='p'){ hvGame.scoreA+=fin.pts; $('hvSA').textContent=hvGame.scoreA; gsap.fromTo('#hvSA',{scale:1.7},{scale:1,duration:.5,ease:'back.out(2.2)'}); }
+    else            { hvGame.scoreB+=fin.pts; $('hvSB').textContent=hvGame.scoreB; gsap.fromTo('#hvSB',{scale:1.7},{scale:1,duration:.5,ease:'back.out(2.2)'}); }
+    hvFlash(fin.pts===3?'SPLASH · 3':(isDunk?'POSTER!':'BUCKET · '+fin.pts), offCol);
+    Sound.crack();
+  }
+  function netSplash(r){
+    gsap.set('#hvNetFlash',{ left:(r.x-20+11)+'px', top:(r.y-20+11)+'px' });
+    gsap.fromTo('#hvNetFlash',{opacity:.95,scale:.3},{opacity:0,scale:1.5,duration:.5,ease:'power2.out'});
+  }
+  function hvShot(p,dir,fin,tl){
+    const o=hvRectIn($('hvOffW')), r=rimPoint(), H2=hvCourtPx().H;
+    const relX=o.x+o.w*(dir>0?0.64:0.36), relY=o.y+o.h*0.10;
+    const apexX=(relX+r.x)/2, apexY=Math.min(relY,r.y)-Math.abs(r.x-relX)*0.30-40;
+    const floorY=H2*0.87-11;
+    hvPose($('hvOff'),'def1');                       // follow-through (ball-less pose)
+    gsap.set('#hvBall',{opacity:1,x:relX,y:relY,zIndex:20});
+    gsap.to('#hvSeam',{ rotation:dir*720, duration:.6, ease:'none' });
+    const flight=.62 + fin.dist*.5;
+    const shot=gsap.timeline();
+    shot.to('#hvBall',{duration:flight, ease:'none',
+      motionPath:{ path:[{x:relX,y:relY},{x:apexX,y:apexY},{x:r.x,y:r.y-6}], curviness:1.35 },
+      onUpdate: fin.pts===3 ? function(){ if((this.progress()*100|0)%7===0) hvSpawnTrail(gsap.getProperty('#hvBall','x'), gsap.getProperty('#hvBall','y')); } : null });
+    if(p.made){
+      shot.set('#hvBall',{zIndex:11})
+          .to('#hvBall',{y:r.y+r.net*0.9, x:r.x+dir*3, scale:.86, duration:.18, ease:'power2.in'})
+          .add(()=>{ netSplash(r); scoreIt(); },'-=.12')
+          .to('#hvBall',{y:r.y+r.net*1.35, opacity:0, duration:.2, ease:'power1.in'});
+      landPlayers(shot);
+    } else if(p.missType==='rattle'){
+      shot.set('#hvBall',{zIndex:11})
+          .to('#hvBall',{y:r.y+r.net*0.45, x:r.x-dir*4, scale:.86, duration:.13, ease:'power2.in'})
+          .to('#hvBall',{x:r.x+dir*7, duration:.09, ease:'power1.inOut'})
+          .to('#hvBall',{x:r.x-dir*5, duration:.08, ease:'power1.inOut'})
+          .set('#hvBall',{zIndex:20})
+          .to('#hvBall',{y:r.y-30, x:r.x-dir*26, scale:1, duration:.24, ease:'power2.out'})
+          .add(()=>{ hvFlash('IN AND OUT!','#c9d3e0'); Sound.catch(); },'-=.1')
+          .add(hvFloorBounce(-dir, floorY));
+      landPlayers(shot, '<.2');
+    } else {
+      shot.to('#hvBall',{x:r.x-dir*30, y:r.y-36, duration:.16, ease:'power2.out'})
+          .add(()=>{ hvFlash('CLANK','#c9d3e0'); Sound.catch();
+            gsap.fromTo(hoopEl,{x:0},{x:dir*4,duration:.06,yoyo:true,repeat:3,ease:'none',onComplete(){gsap.set(hoopEl,{x:0});}}); },'-=.12')
+          .add(hvFloorBounce(-dir, floorY));
+      landPlayers(shot, '<.2');
+    }
+    tl.add(shot);
+  }
+  function hvDunk(p,dir,tl){
+    const r=rimPoint();
+    const dunkX=cToX(r.x - dir*figW*0.18);
+    const slam=gsap.timeline();
+    slam.to('#hvOffW',{ x:dunkX, duration:.26, ease:'power1.inOut' })
+        .add(()=>{ gsap.set('#hvBall',{opacity:1,x:r.x,y:r.y-12,scale:.9,zIndex:11}); })
+        .to('#hvBall',{ y:r.y+r.net*1.6, duration:.13, ease:'power3.in' })
+        .add(()=>{
+          netSplash(r); scoreIt();
+          gsap.fromTo(hoopEl,{y:0},{y:5,duration:.07,yoyo:true,repeat:5,ease:'none',onComplete(){gsap.set(hoopEl,{y:0});}});
+          gsap.fromTo('#hvCourt',{x:0},{x:-5,duration:.05,yoyo:true,repeat:5,ease:'none',onComplete(){gsap.set('#hvCourt',{x:0});}});
+        })
+        .to('#hvBall',{ y:r.y+r.net*2.2, opacity:0, duration:.2, ease:'power1.in' });
+    landPlayers(slam);
+    tl.add(slam);
   }
 }
-function showCall(text, color){
-  const el=$('callout'); el.textContent=text; el.style.color=color;
-  gsap.fromTo(el,{ opacity:0, scale:.5 },{ opacity:1, scale:1, duration:.45, ease:'back.out(2)' });
-  gsap.fromTo('#diamond',{ x:-6 },{ x:0, duration:.5, ease:'elastic.out(1,0.4)' });
-}
+// warm the pose masks so the first possession doesn't flicker on slow connections
+(function(){ ['drive1','drive2','drive3','drive4','dribble1','dribble2','dribble3','lowdribble1',
+  'lowdribble2','cross1','cross2','shoot1','shoot2','three1','dunk1','def1','def2','idle1','hoop']
+  .forEach(n=>{ const i=new Image(); i.src='hoops-anim/'+n+'.png'; }); })();
 
 /* ---------- rematch ---------- */
 function resetRematchUI(){
@@ -2232,6 +2416,17 @@ initGoogle();
 refreshStats().then(updateRatingChip);
 checkChallengeURL();  // show challenge screen immediately if URL has ?ch= (no Ably needed for the screen)
 goOnline();  // connect + wire the friend-challenge inbox (global presence is joined lazily on search)
+// dev harness: /versus-hoops.html?animtest=1&seed=5&aovr=95&bovr=88 plays the game animation with
+// fake builds — no Ably, no matchmaking, and friendlyMode means no Elo is reported.
+(function(){
+  const q=new URLSearchParams(location.search);
+  if(q.get('animtest')!=='1') return;
+  friendlyMode = true;
+  myRole='pitcher'; seed=(+q.get('seed'))||12345;
+  myBuild  = { name:'Tester A', ovr:(+q.get('aovr'))||95, team:'LAL', elo:1000 };
+  oppBuild = { name:'Tester B', ovr:(+q.get('bovr'))||88, team:'BOS', elo:1000 };
+  setTimeout(playAtBat, 400);
+})();
 // leave the queue if the tab closes while waiting
 window.addEventListener('pagehide', () => {
   if (clientId) { try { navigator.sendBeacon('/api/match-hoops', JSON.stringify({ action:'leave', id: clientId })); } catch(e){} }
