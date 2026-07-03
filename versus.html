@@ -367,6 +367,16 @@
   .wait-arena .wa-fill { height:100%; width:0%; border-radius:6px; background:linear-gradient(90deg,var(--accent),var(--accent2)); transition:width .35s ease; }
   .wait-arena .wa-count { font-family:'Oswald',sans-serif; font-size:12px; letter-spacing:1px; color:var(--muted); }
   .silho.dim { opacity:.18; filter:grayscale(1); }
+  /* name tags under the two figures — separate siblings (NOT nested in the masked/mirrored
+     silhouettes), anchored to each figure's fixed spot so they never mirror with silhoB */
+  .silho-name { position:absolute; bottom:calc(30% - 27px); width:110px; display:flex;
+    justify-content:center; pointer-events:none; z-index:4; }
+  .silho-name.p { left:9%; } .silho-name.b { right:9%; }
+  .silho-name span { font-family:'Oswald',sans-serif; font-size:10px; font-weight:600;
+    letter-spacing:1.2px; text-transform:uppercase; color:#eaf1fa; background:rgba(8,14,24,.78);
+    border:1px solid rgba(255,255,255,.22); border-radius:999px; padding:2px 9px;
+    white-space:nowrap; max-width:150px; overflow:hidden; text-overflow:ellipsis; }
+  #abSkipBtn { margin-top:12px; }
   .matchup { width:100%; max-width:680px; display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
   .matchup .side { display:flex; flex-direction:column; align-items:center; gap:2px; }
   .matchup .side .who { font-family:'Oswald',sans-serif; font-size:13px; letter-spacing:1px; text-transform:uppercase; }
@@ -620,6 +630,8 @@
       <div class="mound"></div><div class="plate"></div>
       <div class="silho p" id="silhoP"></div>
       <div class="silho b" id="silhoB"></div>
+      <div class="silho-name p" id="abNameP"><span></span></div>
+      <div class="silho-name b" id="abNameB"><span></span></div>
       <div class="ball" id="ball"></div>
       <div class="callout"><span id="callout"></span></div>
       <div class="wait-arena" id="waitArena">
@@ -630,6 +642,7 @@
       </div>
     </div>
     <div class="pitch-seq" id="pitchSeq"></div>
+    <button class="btn ghost" id="abSkipBtn" style="display:none" onclick="abSkipSim()">⏩ Skip to result</button>
   </div>
 
   <!-- Challenge screen (opened via a shared challenge link) -->
@@ -1754,6 +1767,10 @@ function showWaitArena(){
   $('silhoB').style.background = brightTeam(!minePitcher ? myBuild.team : 'FA');
   $('silhoP').classList.toggle('dim', !minePitcher);
   $('silhoB').classList.toggle('dim', minePitcher);
+  $('abNameP').firstChild.textContent = minePitcher ? (displayName()||'You').slice(0,14) : 'Opponent';
+  $('abNameB').firstChild.textContent = minePitcher ? 'Opponent' : (displayName()||'You').slice(0,14);
+  $('abNameP').firstChild.style.borderColor=''; $('abNameB').firstChild.style.borderColor='';
+  $('abSkipBtn').style.display='none';
   gsap.set('#ball', { opacity:0 }); $('callout').textContent=''; $('pitchInfo').style.opacity=0;
   $('pitchSeq').innerHTML=''; gsap.set('#pitchSeq', { opacity:0 });
   $('waTitle').textContent = 'Waiting for the ' + (minePitcher ? 'Batter' : 'Pitcher') + '…';
@@ -1915,18 +1932,55 @@ function playAtBat(){
     `<div class="side"><div class="who" style="color:var(--pitch)">⚾ ${pName}</div><div class="o" style="color:var(--pitch)">${pitcher.ovr}</div></div>`+
     `<div class="mid">VS</div>`+
     `<div class="side"><div class="who" style="color:var(--bat)">🏏 ${bName}</div><div class="o" style="color:var(--bat)">${batter.ovr}</div></div>`;
-  $('silhoP').style.background = brightTeam(pitcher.team);
-  $('silhoB').style.background = brightTeam(batter.team);
+  const pTint = brightTeam(pitcher.team);
+  const bTint = distinctTint(pTint, brightTeam(batter.team));   // same/similar team colors → shift batter's hue
+  $('silhoP').style.background = pTint;
+  $('silhoB').style.background = bTint;
+  // name tags under the figures
+  $('abNameP').firstChild.textContent = (pitcher.name||'Pitcher').slice(0,14);
+  $('abNameB').firstChild.textContent = (batter.name||'Batter').slice(0,14);
+  $('abNameP').firstChild.style.borderColor = pTint;
+  $('abNameB').firstChild.style.borderColor = bTint;
 
   const ball=$('ball'), call=$('callout'); call.style.opacity=0; call.textContent='';
   gsap.set(ball,{ opacity:0, left:'18%', bottom:'42%', scale:1 });
   gsap.set('#silhoP',{ x:0, rotation:0 }); gsap.set('#silhoB',{ x:0, rotation:0, rotationY:180 });
   renderPitchSeq(script);
   gsap.set('#pitchSeq', { opacity:1 });
+  $('abSkipBtn').style.display='inline-block';   // skip is LOCAL-only: your opponent keeps watching
 
   const tl = gsap.timeline();
   script.pitches.forEach((pitch, idx) => appendPitch(tl, pitch, idx));
-  tl.add(()=> setTimeout(()=>showResult(iWon, pitcher, batter, winnerRole, script), 1300));
+  tl.add(()=> { $('abSkipBtn').style.display='none';
+    setTimeout(()=>showResult(iWon, pitcher, batter, winnerRole, script), 1300); });
+  abGame = { tl, iWon, pitcher, batter, winnerRole, script };
+}
+let abGame = null;
+// Both tints run through brightTeam, but two builds can pick the same (or similar) MLB teams —
+// nudge the batter's hue ~150° so the two silhouettes are always tellable apart.
+function distinctTint(pHex, bHex){
+  const rgb = c => { const m=/^#([0-9a-f]{6})$/i.exec(c||''); if(!m) return null;
+    const n=parseInt(m[1],16); return [n>>16&255, n>>8&255, n&255]; };
+  const a=rgb(pHex), b=rgb(bHex);
+  if(!a || !b) return bHex;
+  if(Math.abs(a[0]-b[0])+Math.abs(a[1]-b[1])+Math.abs(a[2]-b[2]) >= 120) return bHex;
+  const [r,g,bl]=b.map(v=>v/255), mx=Math.max(r,g,bl), mn=Math.min(r,g,bl), d=mx-mn;
+  let h=0;
+  if(d>0){ h = mx===r ? ((g-bl)/d+(g<bl?6:0)) : mx===g ? (bl-r)/d+2 : (r-g)/d+4; h/=6; }
+  return `hsl(${Math.round(((h+0.42)%1)*360)} 75% 60%)`;
+}
+// ⏩ Skip the at-bat (this side only — it's a local playback of the seeded result, so skipping
+// never affects what the opponent sees). Jump straight to the result screen.
+function abSkipSim(){
+  if(!abGame || matchResolved) return;
+  const g = abGame;
+  try{ g.tl.kill(); }catch(e){}
+  gsap.killTweensOf('#ball,#silhoP,#silhoB,#pitchInfo,#callout,#diamond');
+  gsap.set('#ball',{ opacity:0 });
+  gsap.set('#silhoP',{ x:0, rotation:0 }); gsap.set('#silhoB',{ x:0, rotation:0, rotationY:180 });
+  $('callout').style.opacity=0; $('pitchInfo').style.opacity=0;
+  $('abSkipBtn').style.display='none';
+  showResult(g.iWon, g.pitcher, g.batter, g.winnerRole, g.script);   // sets matchResolved → pending timeout bails
 }
 function atBatRng(pitcher, batter){
   const n = ((seed || 1) ^ Math.imul(pitcher.ovr || 0, 2654435761) ^ Math.imul(batter.ovr || 0, 1597334677)) >>> 0;
@@ -2308,6 +2362,17 @@ initGoogle();
 refreshStats().then(updateRatingChip);
 checkChallengeURL();  // show challenge screen immediately if URL has ?ch= (no Ably needed for the screen)
 goOnline();  // connect + wire the friend-challenge inbox (global presence is joined lazily on search)
+// dev harness: /versus.html?animtest=1&seed=5&aovr=95&bovr=88&ateam=LAD&bteam=LAD plays the at-bat
+// with fake builds — no Ably, no matchmaking, and friendlyMode means no Elo is reported.
+(function(){
+  const q=new URLSearchParams(location.search);
+  if(q.get('animtest')!=='1') return;
+  friendlyMode = true;
+  myRole='pitcher'; seed=(+q.get('seed'))||12345;
+  myBuild  = { name:'Tester A', ovr:(+q.get('aovr'))||95, team:q.get('ateam')||'LAD', elo:1000 };
+  oppBuild = { name:'Tester B', ovr:(+q.get('bovr'))||88, team:q.get('bteam')||'NYY', elo:1000 };
+  setTimeout(playAtBat, 400);
+})();
 // leave the queue if the tab closes while waiting
 window.addEventListener('pagehide', () => {
   if (clientId) { try { navigator.sendBeacon('/api/match', JSON.stringify({ action:'leave', id: clientId })); } catch(e){} }
