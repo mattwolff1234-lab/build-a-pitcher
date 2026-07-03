@@ -330,9 +330,10 @@
   .plate { position:absolute; right:16%; bottom:18%; width:26px; height:26px; background:#e9eef6; transform:rotate(45deg); border-radius:4px; opacity:.85; }
   .silho { position:absolute; bottom:30%; height:150px; width:110px; mask-size:contain; mask-repeat:no-repeat; mask-position:center bottom;
     -webkit-mask-size:contain; -webkit-mask-repeat:no-repeat; -webkit-mask-position:center bottom; filter:drop-shadow(0 8px 16px rgba(0,0,0,.5)); }
-  .silho.p { left:9%; -webkit-mask-image:url(pitcher-figure.png); mask-image:url(pitcher-figure.png); }
-  .silho.b { right:9%; transform:rotateY(180deg); transform-origin:center bottom; -webkit-mask-image:url(batter-figure.png); mask-image:url(batter-figure.png); }
-  .ball { position:absolute; width:16px; height:16px; border-radius:50%; background:radial-gradient(circle at 35% 30%,#fff,#cdd3da);
+  .silho.p { left:9%; }    /* pose masks + facing are set by abPose()/abFace() */
+  .silho.b { right:9%; }
+  .ball { position:absolute; width:19px; height:19px; border-radius:50%;
+    background:url(baseball-anim/bb-ball.png) center/contain no-repeat;
     box-shadow:0 0 10px rgba(255,255,255,.6); left:18%; bottom:42%; opacity:0; z-index:5; }
   .callout { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; }
   .callout span { font-family:'Oswald',sans-serif; font-weight:700; font-size:56px; letter-spacing:2px; text-transform:uppercase;
@@ -1775,6 +1776,8 @@ function showWaitArena(){
     ? `<div class="who" style="color:var(--bat)">🏏 ${escapeHTML(displayName())} (You)</div><div class="o" style="color:var(--bat)">${myBuild.ovr}</div>`
     : `<div class="who" style="color:var(--bat)">🏏 Batter</div><div class="o" style="color:var(--bat)">?</div>`;
   $('matchup').innerHTML = `<div class="side">${pitcherSide}</div><div class="mid">VS</div><div class="side">${batterSide}</div>`;
+  abFace($('silhoP'),1); abFace($('silhoB'),-1);
+  abPose($('silhoP'),'windup'); abPose($('silhoB'),'stance1');
   $('silhoP').style.background = brightTeam(minePitcher ? myBuild.team : 'FA');
   $('silhoB').style.background = brightTeam(!minePitcher ? myBuild.team : 'FA');
   $('silhoP').classList.toggle('dim', !minePitcher);
@@ -1955,8 +1958,10 @@ function playAtBat(){
   $('abNameB').firstChild.style.borderColor = bTint;
 
   const ball=$('ball'), call=$('callout'); call.style.opacity=0; call.textContent='';
-  gsap.set(ball,{ opacity:0, left:'18%', bottom:'42%', scale:1 });
-  gsap.set('#silhoP',{ x:0, rotation:0 }); gsap.set('#silhoB',{ x:0, rotation:0, rotationY:180 });
+  gsap.set(ball,{ opacity:0, left:'18%', bottom:'42%', scale:1, rotation:0 });
+  gsap.set('#silhoP',{ x:0, rotation:0 }); gsap.set('#silhoB',{ x:0, rotation:0 });
+  abFace($('silhoP'),1); abFace($('silhoB'),-1);               // pitcher throws right, batter faces left
+  abPose($('silhoP'),'windup'); abPose($('silhoB'),'stance1');
   renderPitchSeq(script);
   gsap.set('#pitchSeq', { opacity:1 });
   setCount(0,0); $('abCount').classList.add('show');
@@ -1990,7 +1995,8 @@ function abSkipSim(){
   try{ g.tl.kill(); }catch(e){}
   gsap.killTweensOf('#ball,#silhoP,#silhoB,#pitchInfo,#callout,#diamond');
   gsap.set('#ball',{ opacity:0 });
-  gsap.set('#silhoP',{ x:0, rotation:0 }); gsap.set('#silhoB',{ x:0, rotation:0, rotationY:180 });
+  gsap.set('#silhoP',{ x:0, rotation:0 }); gsap.set('#silhoB',{ x:0, rotation:0 });
+  abPose($('silhoP'),'followthrough'); abPose($('silhoB'),'stance1');
   $('callout').style.opacity=0; $('pitchInfo').style.opacity=0;
   $('abSkipBtn').style.display='none';
   showResult(g.iWon, g.pitcher, g.batter, g.winnerRole, g.script);   // sets matchResolved → pending timeout bails
@@ -1999,6 +2005,21 @@ function atBatRng(pitcher, batter){
   const n = ((seed || 1) ^ Math.imul(pitcher.ovr || 0, 2654435761) ^ Math.imul(batter.ovr || 0, 1597334677)) >>> 0;
   return mulberry32(n || 1);
 }
+/* ---------- pose-swapped figures (baseball-anim/*.png, baked by make-baseball-anim.py) ---------- */
+// Native art direction of each pose: +1 faces image-right, -1 image-left. abPose() combines this
+// with the figure's assigned direction so poses always face the right way (windup art faces left!).
+const BB_FACING = { windup:-1, release:1, followthrough:1,
+  stance1:1, stance2:1, load:1, contact:1, swingfollow:1 };
+// The flip is set through gsap (scaleX) so it composes with the rotation/x tweens on the same element.
+function abApplyFlip(el){ const d=+(el.dataset.dir||1), f=BB_FACING[el.dataset.pose]||1;
+  gsap.set(el,{ scaleX:d*f }); }
+function abPose(el,name){ el.dataset.pose=name;
+  el.style.webkitMaskImage=`url(baseball-anim/${name}.png)`; el.style.maskImage=`url(baseball-anim/${name}.png)`;
+  abApplyFlip(el); }
+function abFace(el,dir){ el.dataset.dir=dir; abApplyFlip(el); }
+// warm the pose masks so the first pitch doesn't flicker
+(function(){ Object.keys(BB_FACING).concat(['bb-ball']).forEach(n=>{ const i=new Image(); i.src='baseball-anim/'+n+'.png'; }); })();
+
 // Pull a named slot rating out of a build (the quick-build slots travel with the match message).
 function slotVal(build, label, fb){
   const s = build && Array.isArray(build.slots) ? build.slots.find(x=>x && x.slot===label) : null;
@@ -2116,48 +2137,52 @@ function appendPitch(tl, pitch, idx){
   tl.add(() => {
       activatePitch(idx);
       $('pitchInfo').style.opacity=0;                       // don't telegraph the pitch pre-windup
+      abPose($('silhoP'),'windup'); abPose($('silhoB'),'stance1');   // reset the figures for this pitch
       if(!pitch.final) { $('callout').textContent=''; $('callout').style.opacity=0; }
     }, idx ? '+=.42' : 0)
-    .set(ball,{ opacity:0, left:'18%', bottom:'42%', scale:1 })
-    .set('#silhoB',{ rotation:0, x:0, rotationY:180 })
-    .fromTo('#silhoP',{ rotation:-6 },{ rotation:7, duration:.30, ease:'power2.in' })   // windup + drive
-    .add(()=>{ // the type + velocity read appears AT release, like a broadcast gun
+    .set(ball,{ opacity:0, left:'21%', bottom:'52%', scale:1, rotation:0 })
+    .set('#silhoB',{ rotation:0, x:0 })
+    .to('#silhoP',{ rotation:-4, duration:.30, ease:'power2.in' })   // gathers into the leg lift
+    .add(()=>{ // stride + release: pose swap, ball leaves the hand, radar-gun banner
+      abPose($('silhoP'),'release'); abPose($('silhoB'),'load');
       $('pitchInfo').textContent = `${pitch.type} · ${pitch.velo} MPH`;
       gsap.to('#pitchInfo',{ opacity:1, duration:.15 });
     })
-    .to('#silhoP',{ rotation:0, duration:.12 })
+    .to('#silhoP',{ rotation:0, duration:.1 })
     .set(ball,{ opacity:1 },'<')
-    .to(ball,{ left:'72%', bottom:crossY, duration:flight, ease:'power1.in' },'<');
+    .to(ball,{ left:'72%', bottom:crossY, rotation:540, duration:flight, ease:'power1.in' },'<')
+    .add(()=>abPose($('silhoP'),'followthrough'), '<.13');   // arm whips through after the ball is gone
 
   if(pitch.swing){
-    // swing starts just before the ball arrives, whatever the pitch speed
-    tl.to('#silhoB',{ rotation:-22, duration:.1, ease:'power3.out' }, '<' + Math.max(0, flight-.12).toFixed(2));
+    // the swing fires into the contact pose just before the ball arrives, whatever the speed
+    tl.add(()=>abPose($('silhoB'),'contact'), '<' + Math.max(0, flight-.10).toFixed(2));
   }
 
   if(pitch.result === 'groundout'){
-    tl.add(()=> { Sound.crack(); resolvePitch(idx, pitch); })
-      .to(ball,{ left:'46%', bottom:'8%', scale:.75, duration:.55, ease:'power2.out' })
-      .add(()=> showCall('GROUND OUT!', 'var(--pitch)'))
-      .to('#silhoB',{ rotation:12, x:5, duration:.32, ease:'power1.in' },'<');
+    tl.add(()=> { Sound.crack(); resolvePitch(idx, pitch); abPose($('silhoB'),'swingfollow'); })
+      .to(ball,{ left:'46%', bottom:'8%', scale:.75, rotation:'+=360', duration:.55, ease:'power2.out' })
+      .add(()=> showCall('GROUND OUT!', 'var(--pitch)'));
   } else if(pitch.result === 'strikeout'){
-    tl.add(()=> { Sound.catch(); resolvePitch(idx, pitch); })
+    tl.add(()=> { Sound.catch(); resolvePitch(idx, pitch);
+        if(pitch.swing) abPose($('silhoB'),'swingfollow');   // swung through it; looking = frozen in the load
+      })
       .to(ball,{ left:'82%', bottom:'30%', scale:.8, duration:.16, ease:'power2.in' })
       .add(()=> showCall('STRIKEOUT!', 'var(--pitch)'))
-      .to('#silhoB',{ rotation:14, x:6, duration:.35, ease:'power1.in' },'<');
+      .to(ball,{ opacity:0, duration:.15 });
   } else if(pitch.result === 'hit'){
-    tl.add(()=> { Sound.crack(); resolvePitch(idx, pitch); })
-      .to(ball,{ left:'-10%', bottom:'86%', scale:1.3, duration:.85, ease:'power2.out' })
-      .add(()=> showCall('HOME RUN!', 'var(--bat)'))
-      .to('#silhoB',{ rotation:8, duration:.3 },'<');
+    tl.add(()=> { Sound.crack(); resolvePitch(idx, pitch); abPose($('silhoB'),'swingfollow'); })
+      .to(ball,{ left:'-10%', bottom:'86%', scale:1.3, rotation:'+=720', duration:.85, ease:'power2.out' })
+      .add(()=> showCall('HOME RUN!', 'var(--bat)'));
   } else if(pitch.result === 'foul'){
     // foul tick: the ball deflects up and back behind the plate
-    tl.add(()=> { Sound.crack(); resolvePitch(idx, pitch); })
-      .to(ball,{ left:'60%', bottom:'80%', scale:.7, duration:.42, ease:'power2.out' })
+    tl.add(()=> { Sound.crack(); resolvePitch(idx, pitch); abPose($('silhoB'),'swingfollow'); })
+      .to(ball,{ left:'60%', bottom:'80%', scale:.7, rotation:'+=300', duration:.42, ease:'power2.out' })
       .to(ball,{ opacity:0, duration:.18 },'-=.12');
   } else {
     tl.add(()=> { Sound.catch(); resolvePitch(idx, pitch); })
       .to(ball,{ left:'82%', bottom:crossY, scale:.8, duration:.14, ease:'power2.in' })
-      .to(ball,{ opacity:0, duration:.12 });
+      .to(ball,{ opacity:0, duration:.12 })
+      .add(()=>abPose($('silhoB'),'stance1'), '+=.1');   // took the pitch — settle back into the stance
   }
 }
 function showCall(text, color){
