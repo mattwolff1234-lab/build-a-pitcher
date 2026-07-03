@@ -376,6 +376,17 @@
     letter-spacing:1.2px; text-transform:uppercase; color:#eaf1fa; background:rgba(8,14,24,.78);
     border:1px solid rgba(255,255,255,.22); border-radius:999px; padding:2px 9px;
     white-space:nowrap; max-width:150px; overflow:hidden; text-overflow:ellipsis; }
+  /* live balls–strikes count (ticks as each pitch resolves at the plate) */
+  .ab-count { position:absolute; top:10px; left:12px; z-index:5; display:none;
+    flex-direction:column; align-items:center; gap:0; padding:5px 12px 6px; border-radius:10px;
+    background:rgba(8,14,24,.78); border:1px solid rgba(255,255,255,.18); }
+  .ab-count.show { display:flex; }
+  .ab-count span { font-family:'Oswald',sans-serif; font-size:8.5px; letter-spacing:2px;
+    text-transform:uppercase; color:var(--muted); }
+  .ab-count b { font-family:'Oswald',sans-serif; font-size:22px; line-height:1.1; color:#eaf1fa; }
+  .ab-count b i { font-style:normal; }
+  .ab-count b i:first-child { color:var(--gold); }      /* balls */
+  .ab-count b i:last-child { color:var(--pitch); }      /* strikes */
   #abSkipBtn { margin-top:12px; }
   .matchup { width:100%; max-width:680px; display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
   .matchup .side { display:flex; flex-direction:column; align-items:center; gap:2px; }
@@ -632,6 +643,7 @@
       <div class="silho b" id="silhoB"></div>
       <div class="silho-name p" id="abNameP"><span></span></div>
       <div class="silho-name b" id="abNameB"><span></span></div>
+      <div class="ab-count" id="abCount"><span>Count</span><b><i id="cntB">0</i>–<i id="cntS">0</i></b></div>
       <div class="ball" id="ball"></div>
       <div class="callout"><span id="callout"></span></div>
       <div class="wait-arena" id="waitArena">
@@ -1770,7 +1782,7 @@ function showWaitArena(){
   $('abNameP').firstChild.textContent = minePitcher ? (displayName()||'You').slice(0,14) : 'Opponent';
   $('abNameB').firstChild.textContent = minePitcher ? 'Opponent' : (displayName()||'You').slice(0,14);
   $('abNameP').firstChild.style.borderColor=''; $('abNameB').firstChild.style.borderColor='';
-  $('abSkipBtn').style.display='none';
+  $('abSkipBtn').style.display='none'; $('abCount').classList.remove('show');
   gsap.set('#ball', { opacity:0 }); $('callout').textContent=''; $('pitchInfo').style.opacity=0;
   $('pitchSeq').innerHTML=''; gsap.set('#pitchSeq', { opacity:0 });
   $('waTitle').textContent = 'Waiting for the ' + (minePitcher ? 'Batter' : 'Pitcher') + '…';
@@ -1947,6 +1959,7 @@ function playAtBat(){
   gsap.set('#silhoP',{ x:0, rotation:0 }); gsap.set('#silhoB',{ x:0, rotation:0, rotationY:180 });
   renderPitchSeq(script);
   gsap.set('#pitchSeq', { opacity:1 });
+  setCount(0,0); $('abCount').classList.add('show');
   $('abSkipBtn').style.display='inline-block';   // skip is LOCAL-only: your opponent keeps watching
 
   const tl = gsap.timeline();
@@ -1986,72 +1999,82 @@ function atBatRng(pitcher, batter){
   const n = ((seed || 1) ^ Math.imul(pitcher.ovr || 0, 2654435761) ^ Math.imul(batter.ovr || 0, 1597334677)) >>> 0;
   return mulberry32(n || 1);
 }
-function funcVel(ovr){ return Math.max(4, Math.round((ovr-70)*0.7)+8); }
+// Pull a named slot rating out of a build (the quick-build slots travel with the match message).
+function slotVal(build, label, fb){
+  const s = build && Array.isArray(build.slots) ? build.slots.find(x=>x && x.slot===label) : null;
+  const v = s ? Number(s.value) : NaN;
+  return Number.isFinite(v) && v>0 ? v : fb;
+}
+// Fastball mph anchored to the build's REAL Velocity rating: 60→93, 80→96, 99→99, boosted 125→103.
+function fbMph(velo){ return 84 + velo*0.155; }
+const PITCH_TYPES = [
+  { n:'Four-Seam', off:0,   w:.30 },
+  { n:'Sinker',    off:-2,  w:.12 },
+  { n:'Cutter',    off:-4,  w:.12 },
+  { n:'Slider',    off:-7,  w:.18 },
+  { n:'Changeup',  off:-9,  w:.14 },
+  { n:'Curveball', off:-13, w:.14 },
+];
+// A real seeded at-bat: the count evolves pitch by pitch (strike% = pitcher Command vs batter
+// Discipline), fouls can't add a third strike, 3-ball counts force a painted strike (no walks —
+// the winner is already decided), and the ending matches the predetermined winner.
 function makePitchSequence(pitcher, batter, winnerRole, rr){
-  const types=['Four-Seam','Slider','Curveball','Changeup','Sinker','Cutter'];
-  const nextType = () => types[Math.floor(rr()*types.length)];
-  const nextVelo = () => 90 + Math.floor(rr()*funcVel(pitcher.ovr));
-  const pitch = (call, klass, result, opts={}) => Object.assign({
-    call, klass, result, type:nextType(), velo:nextVelo(), swing:false, final:false
-  }, opts);
-  const disparity = (pitcher.ovr || 0) - (batter.ovr || 0);
-
-  if(winnerRole === 'pitcher'){
-    if(disparity >= 8){
-      return {
-        outcome:'strikeout',
-        summary:'Pitcher wins on a 3-pitch strikeout',
-        finalCall:'STRIKEOUT!',
-        pitches:[
-          pitch('Strike 1','strike','strike', { swing:false }),
-          pitch('Strike 2','strike','strike', { swing:true }),
-          pitch('Strike 3','k','strikeout', { swing:true, final:true })
-        ]
-      };
-    }
-    if(rr() < 0.55){
-      const earlyBall = rr() < 0.5;
-      return {
-        outcome:'strikeout',
-        summary:'Pitcher wins by strikeout',
-        finalCall:'STRIKEOUT!',
-        pitches: earlyBall
-          ? [
-              pitch('Ball 1','ball','ball'),
-              pitch('Strike 1','strike','strike', { swing:false }),
-              pitch('Foul','strike','foul', { swing:true }),
-              pitch('Strike 3','k','strikeout', { swing:true, final:true })
-            ]
-          : [
-              pitch('Strike 1','strike','strike', { swing:true }),
-              pitch('Ball 1','ball','ball'),
-              pitch('Strike 2','strike','strike', { swing:false }),
-              pitch('Strike 3','k','strikeout', { swing:true, final:true })
-            ]
-      };
-    }
-    return {
-      outcome:'groundout',
-      summary:'Pitcher wins on a groundout',
-      finalCall:'GROUND OUT!',
-      pitches:[
-        pitch('Strike 1','strike','strike', { swing:false }),
-        pitch('Ball 1','ball','ball'),
-        pitch('Grounder','inplay','groundout', { swing:true, contact:true, final:true })
-      ]
-    };
-  }
-
-  return {
-    outcome:'hit',
-    summary:'Batter wins on a crushed home run',
-    finalCall:'HOME RUN!',
-    pitches:[
-      pitch('Ball 1','ball','ball'),
-      pitch('Strike 1','strike','strike', { swing:false }),
-      pitch('Crushed','hit','hit', { swing:true, contact:true, final:true })
-    ]
+  const velo = slotVal(pitcher,'Velocity', 40 + (pitcher.ovr||75)*0.45);
+  const cmd  = slotVal(pitcher,'Command',  pitcher.ovr||75);
+  const disc = slotVal(batter, 'Discipline', batter.ovr||75);
+  const fb   = fbMph(velo);
+  const pickType = putaway => {
+    if(putaway){ const P=['Four-Seam','Four-Seam','Slider','Curveball']; const n=P[Math.floor(rr()*P.length)];
+      return PITCH_TYPES.find(t=>t.n===n); }
+    let r=rr(); for(const t of PITCH_TYPES){ if((r-=t.w)<=0) return t; } return PITCH_TYPES[0];
   };
+  const mk=(klass,call,result,opts={})=>{
+    const t=pickType(!!opts.putaway);
+    const mph=Math.round(fb + t.off + (rr()*2-1));
+    const missHigh=rr()<0.5;                                     // where a ball misses (seeded)
+    return Object.assign({ call, klass, result, type:t.n, velo:mph, swing:false, final:false,
+      missHigh }, opts);
+  };
+  const disparity=(pitcher.ovr||0)-(batter.ovr||0);
+  const pitcherEnd = winnerRole==='pitcher';
+  const byK = pitcherEnd && rr()<0.7;                            // pitcher wins: 70% K, else groundout
+  const maxP = disparity>=8 && pitcherEnd ? 4 : 6;
+  const strikeBias = Math.min(.72, Math.max(.38, .52 + (cmd-70)*.004 - (disc-70)*.003));
+  let b=0, s=0; const pitches=[];
+  while(true){
+    const n=pitches.length, mustFinish = n>=maxP-1;
+    if(byK && s===2 && (mustFinish || rr()<.6)){
+      const looking = rr()<.35;
+      pitches.push(mk('k','Strike 3','strikeout',{ swing:!looking, final:true, putaway:true, count:{b,s} }));
+      break;
+    }
+    if(!byK && (mustFinish || (n>=2 && rr()<.5))){
+      if(pitcherEnd){ pitches.push(mk('inplay','Grounder','groundout',{ swing:true, contact:true, final:true, count:{b,s} })); }
+      else          { pitches.push(mk('hit','Crushed','hit',{ swing:true, contact:true, final:true, count:{b,s} })); }
+      break;
+    }
+    // a live pitch that moves the count
+    let isStrike = rr()<strikeBias;
+    if(b===3) isStrike=true;                                     // full count: he paints the corner
+    if(byK && (maxP-1-n) <= (2-s)) isStrike=true;                // must reach 2 strikes before the K
+    if(isStrike){
+      if(s<2){
+        const kind=rr(); s++;
+        if(kind<.4)      pitches.push(mk('strike',`Strike ${s}`,'strike',{ swing:false, count:{b,s} }));
+        else if(kind<.7) pitches.push(mk('strike',`Strike ${s}`,'strike',{ swing:true,  count:{b,s} }));
+        else             pitches.push(mk('strike','Foul','foul',{ swing:true, contact:true, count:{b,s} }));
+      } else {
+        pitches.push(mk('strike','Foul','foul',{ swing:true, contact:true, count:{b,s} }));   // 2-strike foul: count holds
+      }
+    } else {
+      b++;
+      pitches.push(mk('ball',`Ball ${b}`,'ball',{ swing:false, count:{b,s} }));
+    }
+  }
+  const cnt = `${b}–${s}`;
+  if(byK) return { outcome:'strikeout', summary:`Pitcher wins by strikeout on a ${cnt} count`, finalCall:'STRIKEOUT!', pitches };
+  if(pitcherEnd) return { outcome:'groundout', summary:`Pitcher wins on a ${cnt} groundout`, finalCall:'GROUND OUT!', pitches };
+  return { outcome:'hit', summary:`Batter wins on a crushed home run (${cnt} count)`, finalCall:'HOME RUN!', pitches };
 }
 function renderPitchSeq(script){
   $('pitchSeq').innerHTML = script.pitches.map((p,i) =>
@@ -2077,24 +2100,38 @@ function resolvePitch(idx, pitch){
   const call = pill.querySelector('.pd-call');
   call.textContent = pitch.call;
   gsap.fromTo(call, { opacity:0, y:4 }, { opacity:1, y:0, duration:.22, ease:'power2.out' });
+  // the count ticks the moment the pitch resolves at the plate (final pitch: the callout is the payoff)
+  if(pitch.count && !pitch.final) setCount(pitch.count.b, pitch.count.s);
+}
+function setCount(b, s){
+  $('cntB').textContent=b; $('cntS').textContent=s;
+  gsap.fromTo('#abCount',{ scale:1.16 },{ scale:1, duration:.3, ease:'back.out(2)' });
 }
 function appendPitch(tl, pitch, idx){
   const ball = $('ball');
+  // flight time comes from the REAL mph (99mph ≈ .34s, a 86mph curveball ≈ .40s)
+  const flight = Math.max(.30, Math.min(.46, 34/Math.max(80, pitch.velo)));
+  // where a non-contact pitch crosses the zone: strikes catch the plate, balls miss high or low
+  const crossY = pitch.contact ? '28%' : pitch.result==='ball' ? (pitch.missHigh?'44%':'24%') : '33%';
   tl.add(() => {
-      $('pitchInfo').textContent = `${pitch.type} · ${pitch.velo} MPH`;
       activatePitch(idx);
+      $('pitchInfo').style.opacity=0;                       // don't telegraph the pitch pre-windup
       if(!pitch.final) { $('callout').textContent=''; $('callout').style.opacity=0; }
-    }, idx ? '+=.34' : 0)
-    .to('#pitchInfo',{ opacity:1, duration:.18 })
+    }, idx ? '+=.42' : 0)
     .set(ball,{ opacity:0, left:'18%', bottom:'42%', scale:1 })
     .set('#silhoB',{ rotation:0, x:0, rotationY:180 })
-    .fromTo('#silhoP',{ rotation:-6 },{ rotation:7, duration:.28, ease:'power2.in' })
+    .fromTo('#silhoP',{ rotation:-6 },{ rotation:7, duration:.30, ease:'power2.in' })   // windup + drive
+    .add(()=>{ // the type + velocity read appears AT release, like a broadcast gun
+      $('pitchInfo').textContent = `${pitch.type} · ${pitch.velo} MPH`;
+      gsap.to('#pitchInfo',{ opacity:1, duration:.15 });
+    })
     .to('#silhoP',{ rotation:0, duration:.12 })
-    .set(ball,{ opacity:1 })
-    .to(ball,{ left:'72%', bottom:pitch.contact?'28%':'34%', duration:.38, ease:'power1.in' });
+    .set(ball,{ opacity:1 },'<')
+    .to(ball,{ left:'72%', bottom:crossY, duration:flight, ease:'power1.in' },'<');
 
   if(pitch.swing){
-    tl.to('#silhoB',{ rotation:-22, duration:.1, ease:'power3.out' },'<.26');
+    // swing starts just before the ball arrives, whatever the pitch speed
+    tl.to('#silhoB',{ rotation:-22, duration:.1, ease:'power3.out' }, '<' + Math.max(0, flight-.12).toFixed(2));
   }
 
   if(pitch.result === 'groundout'){
@@ -2112,9 +2149,14 @@ function appendPitch(tl, pitch, idx){
       .to(ball,{ left:'-10%', bottom:'86%', scale:1.3, duration:.85, ease:'power2.out' })
       .add(()=> showCall('HOME RUN!', 'var(--bat)'))
       .to('#silhoB',{ rotation:8, duration:.3 },'<');
+  } else if(pitch.result === 'foul'){
+    // foul tick: the ball deflects up and back behind the plate
+    tl.add(()=> { Sound.crack(); resolvePitch(idx, pitch); })
+      .to(ball,{ left:'60%', bottom:'80%', scale:.7, duration:.42, ease:'power2.out' })
+      .to(ball,{ opacity:0, duration:.18 },'-=.12');
   } else {
     tl.add(()=> { Sound.catch(); resolvePitch(idx, pitch); })
-      .to(ball,{ left:'82%', bottom:'30%', scale:.8, duration:.14, ease:'power2.in' })
+      .to(ball,{ left:'82%', bottom:crossY, scale:.8, duration:.14, ease:'power2.in' })
       .to(ball,{ opacity:0, duration:.12 });
   }
 }
@@ -2369,8 +2411,10 @@ goOnline();  // connect + wire the friend-challenge inbox (global presence is jo
   if(q.get('animtest')!=='1') return;
   friendlyMode = true;
   myRole='pitcher'; seed=(+q.get('seed'))||12345;
-  myBuild  = { name:'Tester A', ovr:(+q.get('aovr'))||95, team:q.get('ateam')||'LAD', elo:1000 };
-  oppBuild = { name:'Tester B', ovr:(+q.get('bovr'))||88, team:q.get('bteam')||'NYY', elo:1000 };
+  myBuild  = { name:'Tester A', ovr:(+q.get('aovr'))||95, team:q.get('ateam')||'LAD', elo:1000,
+    slots:[ {slot:'Velocity',value:(+q.get('avelo'))||96}, {slot:'Command',value:(+q.get('acmd'))||90} ] };
+  oppBuild = { name:'Tester B', ovr:(+q.get('bovr'))||88, team:q.get('bteam')||'NYY', elo:1000,
+    slots:[ {slot:'Discipline',value:(+q.get('bdisc'))||85} ] };
   setTimeout(playAtBat, 400);
 })();
 // leave the queue if the tab closes while waiting
