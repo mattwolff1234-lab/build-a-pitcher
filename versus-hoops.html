@@ -428,12 +428,7 @@
     .node .val { font-size:18px; }
     .node .who { display:none; }
     .node .preview { font-size:17px; }
-    .diamond { height:300px; }
-    .silho { height:115px; }
-    .pitch-seq { left:8px; right:8px; bottom:8px; gap:7px; }
-    .pitch-dot .pd-num { width:26px; height:26px; font-size:10px; }
-    .pitch-dot .pd-call { font-size:7.5px; max-width:38px; }
-    .callout span { font-size:40px; }
+    .hv-pop { font-size:26px; }
     /* build header: let it wrap and shrink so the clock/OVR/opponent pill always fit */
     .build-top { flex-wrap:wrap; gap:8px 12px; justify-content:space-between; }
     .clock { font-size:24px; }
@@ -1916,7 +1911,7 @@ function playAtBat(){
     `<div class="side"><div class="who" style="color:${bc}">🏀 ${bName}</div><div class="o" style="color:${bc}">${batter.ovr}</div></div>`;
 
   // live scoreboard (side A left, side B right); long thrillers play a touch faster to stay ≤20s
-  hvGame = { pc, bc, pitcher, batter, scoreA:0, scoreB:0, speed: script.poss.length>9 ? 2.75 : HV_SPEED };
+  hvGame = { pc, bc, pitcher, batter, scoreA:0, scoreB:0, speed: script.poss.length>9 ? 3.0 : HV_SPEED };
   $('hvSb').style.display='flex';
   $('hvSA').textContent='0'; $('hvSB').textContent='0';
   $('hvSA').style.color=pc; $('hvSB').style.color=bc;
@@ -1942,7 +1937,7 @@ function atBatRng(pitcher, batter){
 /* ---------- first-to-11 game engine (seeded — identical on both phones) ---------- */
 if (window.MotionPathPlugin) gsap.registerPlugin(MotionPathPlugin);
 let hvGame = null;
-const HV_SPEED = 2.3;                      // timeScale: whole game fits in ~15-20s
+const HV_SPEED = 2.6;                      // timeScale: whole game fits in ~15-18s
 const HV_DRIVES = ['drive1','drive2','drive3','drive4'];
 const HV_MOVES = [
   {n:'Crossover',       poses:['cross1','cross2'],        juke:0.045, bite:0.075},
