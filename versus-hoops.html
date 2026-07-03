@@ -1222,13 +1222,13 @@ function hideChallengeNotif(){
 }
 
 function copyChallengeLinkFn(){
-  const link = location.origin + '/versus?ch=' + encodeURIComponent(personId()) + '&cn=' + encodeURIComponent(displayName()) + '&mode=' + gameMode;
+  const link = location.origin + '/versus-hoops?ch=' + encodeURIComponent(personId()) + '&cn=' + encodeURIComponent(displayName()) + '&mode=' + gameMode;
   const done = () => { const c=$('chalCopied'); if(c){ c.style.display=''; setTimeout(()=>{ if(c) c.style.display='none'; },3000); } };
   if (navigator.clipboard) { navigator.clipboard.writeText(link).then(done).catch(()=>{ prompt('Copy this link:', link); }); }
   else { try { prompt('Copy this link:', link); done(); } catch(e){} }
 }
 function challengeLink(){
-  return location.origin + '/versus?ch=' + encodeURIComponent(personId()) + '&cn=' + encodeURIComponent(displayName()) + '&mode=' + gameMode;
+  return location.origin + '/versus-hoops?ch=' + encodeURIComponent(personId()) + '&cn=' + encodeURIComponent(displayName()) + '&mode=' + gameMode;
 }
 function updateLobbyLink(){
   const link = challengeLink();
