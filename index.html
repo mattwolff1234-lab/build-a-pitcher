@@ -540,7 +540,10 @@ async function onGoogleCredential(resp) {
   try {
     const j = await fetch('/api/account', { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'login', idToken: resp.credential }) }).then(r => r.json());
-    if (j.ok) saveAccount({ sub: j.sub, email: j.email, name: j.name, picture: j.picture, sessionToken: j.sessionToken });
+    if (j.ok) {
+      saveAccount({ sub: j.sub, email: j.email, name: j.name, picture: j.picture, sessionToken: j.sessionToken });
+      try { gtag('event', j.isNew ? 'sign_up' : 'login', { method: 'Google' }); } catch (e) {}
+    }
   } catch (e) {}
 }
 function renderAcct() {

@@ -1271,6 +1271,7 @@ async function onGoogleCredential(resp) {
     if (j.ok) {
       saveAccount({ sub: j.sub, email: j.email, name: j.name, picture: j.picture, sessionToken: j.sessionToken });
       if (typeof j.streak === 'number' && j.streak >= streak.count) { streak.count = j.streak; streak.best = Math.max(streak.best, j.bestStreak || j.streak); saveStreak(); renderStreakChip(); }
+      try { gtag('event', j.isNew ? 'sign_up' : 'login', { method: 'Google' }); } catch (e) {}
       toast('Signed in as ' + (j.name || j.email));
     }
     else toast('Sign-in failed');
@@ -1308,7 +1309,7 @@ async function saveToHof(btn) {
         name: state.simName || 'My Player', ovr: state.finalOvr,
         build: { slots: slimSlots, career: slimCareer, team: teamAb } }) });
     const j = await r.json();
-    if (j.ok) { if (btn) btn.textContent = '✓ Saved'; toast('Saved to your Hall of Fame'); if (Sound.complete) Sound.complete(); }
+    if (j.ok) { if (btn) btn.textContent = '✓ Saved'; toast('Saved to your Hall of Fame'); if (Sound.complete) Sound.complete(); try { gtag('event', 'hof_save', { game: HOF_GAME, ovr: state.finalOvr }); } catch (e) {} }
     else if (r.status === 401) { clearAccount(); toast('Please sign in again'); reset(); }
     else { toast(j.error || 'Save failed'); reset(); }
   } catch (e) { toast('Save failed'); reset(); }
@@ -2612,6 +2613,7 @@ function runCareerPlaythrough() {
 
 function _doCareerSim() {
   state.career = simulateCareer(state.filled, state.finalOvr, state.draftTeamAb);
+  try { gtag('event', 'career_sim', { game: 'batter', ovr: state.finalOvr, hof: state.career.totals.hallOfFame ? 1 : 0 }); } catch (e) {}
   const career = state.career, seasons = career.seasons;
   const ab = state.draftTeamAb;
   state.simTeam = teamInfo(ab);
@@ -2798,6 +2800,7 @@ function finish() {
   renderNodes();
   const avg = weightedOvr(SLOTS.map(s => s.key));
   state.finalOvr = avg;
+  try { gtag('event', 'build_complete', { game: 'batter', ovr: avg }); } catch (e) {}
   state.build = SLOTS.map(s => {
     const f = state.filled[s.key];
     return { slot: s.label, value: f.value, display: String(f.display), player: f.name, team: f.team, legend: !!f.legend, img: f.img, ovr: f.ovr };
@@ -2842,6 +2845,7 @@ async function submitScore() {
     const data = await res.json();
     if (!data.ok) throw new Error(data.error || 'failed');
     myEntryId = data.id;
+    try { gtag('event', 'leaderboard_submit', { game: LEADERBOARD_GAME, ovr: state.finalOvr }); } catch (e) {}
     $('submitRow').style.display = 'none';
     $('submitMsg').textContent = `You're #${data.globalRank} all-time. Open the menu anytime to see the board.`;
     openLeaderboard('global', LEADERBOARD_GAME);

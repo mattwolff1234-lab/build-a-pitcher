@@ -285,9 +285,9 @@ module.exports = async (req, res) => {
           ON CONFLICT (google_sub) DO UPDATE SET
             email = EXCLUDED.email, name = EXCLUDED.name, picture = EXCLUDED.picture,
             session_token = COALESCE(users.session_token, EXCLUDED.session_token)
-          RETURNING session_token, current_streak, best_streak`;
+          RETURNING session_token, current_streak, best_streak, (xmax = 0) AS is_new`;
         return res.status(200).json({ ok: true, sub: profile.sub, email: profile.email, name: profile.name, picture: profile.picture, sessionToken: row.session_token,
-          streak: Number(row.current_streak) || 0, bestStreak: Number(row.best_streak) || 0 });
+          streak: Number(row.current_streak) || 0, bestStreak: Number(row.best_streak) || 0, isNew: row.is_new === true });
       }
 
       if (action === 'save') {
