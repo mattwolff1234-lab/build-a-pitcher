@@ -2025,7 +2025,15 @@ function nextMilestonePreview() {
   const today = todayUTC();
   const d = new Date(today + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() - 1);
   const yd = d.toISOString().slice(0, 10);
-  const projected = streak.lastDate === today ? streak.count : (streak.lastDate === yd ? streak.count + 1 : 1);
+  // Derive from the played-dates history (same source as the streak modal) so the banner can't
+  // understate. Only trust the local counter as a floor when it's actually current (played
+  // today/yesterday); a stale lastDate falls back purely to the history.
+  const played = getPlayedDates();
+  const derived = streaksFromDates(played, today);
+  const countFloor = (streak.lastDate === today || streak.lastDate === yd) ? (Number(streak.count) || 0) : 0;
+  const cur = Math.max(derived.current, countFloor);
+  const playedToday = played.has(today) || streak.lastDate === today;
+  const projected = playedToday ? Math.max(cur, 1) : cur + 1;
   if (STREAK_MILESTONES.includes(projected)) {
     const freeze = FREEZE_MILESTONES.includes(projected) ? ' + a 🧊 Freeze' : '';
     return `Finish today for a 🔥 ${projected}-day streak${freeze}!`;
