@@ -1524,6 +1524,24 @@ function openStreak() {
   openOverlay('streakModal');
   syncAccountDates().then(renderStreakTimeline);   // refresh from the account once it loads
 }
+// Derive the current & best streak straight from the played-dates history (the same source the
+// timeline is drawn from) so the numbers can never disagree with the calendar the user sees.
+// A run is just consecutive played days (matches the timeline's link lines).
+function streaksFromDates(played, today) {
+  if (!played || !played.size) return { current: 0, best: 0 };
+  const days = [...played].sort();
+  let best = 0, run = 0, prev = null;
+  for (const d of days) {
+    run = (prev && addDays(prev, 1) === d) ? run + 1 : 1;
+    if (run > best) best = run;
+    prev = d;
+  }
+  // current = consecutive days ending today (or yesterday, since today may not be played yet)
+  let anchor = played.has(today) ? today : (played.has(addDays(today, -1)) ? addDays(today, -1) : null);
+  let current = 0;
+  while (anchor && played.has(anchor)) { current++; anchor = addDays(anchor, -1); }
+  return { current, best };
+}
 function renderStreakTimeline() {
   const played = getPlayedDates();
   const today = todayUTC();
@@ -1531,13 +1549,22 @@ function renderStreakTimeline() {
   const cap = addDays(today, -44);
   if (start < cap) start = cap;
   const end = addDays(today, 2);
-  $('skCount').textContent = streak.count;
-  $('skBest').textContent = streak.best;
+  // Reconcile the counters with the played-dates history so the numbers always match the timeline
+  // (fixes a stale local counter showing e.g. "1" over a visible multi-day run). Never lowers a
+  // real streak, in case the synced history is incomplete.
+  const derived = streaksFromDates(played, today);
+  const curCount = Math.max(Number(streak.count) || 0, derived.current);
+  const bestCount = Math.max(Number(streak.best) || 0, derived.best, curCount);
+  if (curCount !== streak.count || bestCount !== streak.best) {
+    streak.count = curCount; streak.best = bestCount; saveStreak(); renderStreakChip();
+  }
+  $('skCount').textContent = curCount;
+  $('skBest').textContent = bestCount;
   $('skFreeze').textContent = freezeTokens;
   $('skFreezeWrap').style.display = freezeTokens > 0 ? 'block' : 'none';
-  const next = STREAK_MILESTONES.find(m => m > streak.count);
+  const next = STREAK_MILESTONES.find(m => m > curCount);
   $('skNext').textContent = next
-    ? `${next - streak.count} day${next - streak.count === 1 ? '' : 's'} to a 🔥 ${next}-day streak${FREEZE_MILESTONES.includes(next) ? ' + 🧊 Freeze' : ''}`
+    ? `${next - curCount} day${next - curCount === 1 ? '' : 's'} to a 🔥 ${next}-day streak${FREEZE_MILESTONES.includes(next) ? ' + 🧊 Freeze' : ''}`
     : "You've hit every milestone. Legend. 🐐";
   const MS_BADGE = { 3: '🔥', 7: '🧊', 14: '🧊', 30: '🏆', 100: '🐐' };
   const DOW = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
