@@ -91,6 +91,10 @@ function ensure() {
         created_at timestamptz NOT NULL DEFAULT now()
       )`;
       await sql`ALTER TABLE pvp_history ADD COLUMN IF NOT EXISTS opp_key text`;
+      // Whether the result came from a completed at-bat (true) vs a forfeit/quit claim (false).
+      // A completed result is authoritative and can reverse a wrongful forfeit-loss (see pvpResult).
+      // Existing rows default true so historical results are never retro-reversed.
+      await sql`ALTER TABLE pvp_history ADD COLUMN IF NOT EXISTS decided boolean NOT NULL DEFAULT true`;
       // Separate NBA-1v1 ("hoops") rating board, kept on the same user rows in dedicated columns
       // so basketball ranking never mixes with baseball. (DEFAULT backfills existing rows at 1000.)
       await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS pvp_elo_hoops int NOT NULL DEFAULT 1000`;
@@ -147,6 +151,7 @@ async function hoopsResult(body, key, res) {
   const matchId = String(body.matchId || '').slice(0, 80);
   if (!matchId) return res.status(400).json({ ok: false, error: 'missing matchId' });
   const won = !!body.won;
+  const decided = body.decided !== false;   // completed at-bat vs forfeit/quit claim (see pvpResult)
   const oppElo = Math.max(100, Math.min(4000, Math.round(Number(body.oppElo) || 1000)));
   const myOvr = Math.round(Number(body.ovr) || 0) || null;
   const oppOvr = Math.round(Number(body.oppOvr) || 0) || null;
@@ -174,13 +179,46 @@ async function hoopsResult(body, key, res) {
     // Already settled — usually the winner reported first and we applied this player's loss
     // server-side. Pull the real delta from the recorded history row so the loser's screen
     // shows "-13" instead of "+0".
-    let delta = 0, elo = u.elo;
+    let delta = 0, elo = u.elo, recWon = won, hRow = null;
     try {
-      const [h] = await sql`SELECT elo_before, elo_after FROM pvp_history
-        WHERE match_id = ${matchId} AND player_key = ${key} AND sport = 'hoops'`;
-      if (h) { delta = h.elo_after - h.elo_before; elo = h.elo_after; }
+      const [h] = await sql`SELECT id, won, elo_before, elo_after FROM pvp_history
+        WHERE match_id = ${matchId} AND player_key = ${key} AND sport = 'hoops'
+        ORDER BY created_at DESC LIMIT 1`;
+      if (h) { hRow = h; delta = h.elo_after - h.elo_before; elo = h.elo_after; recWon = !!h.won; }
     } catch (e) {}
-    return res.status(200).json({ ok: true, counted: false, elo, delta, bonus: 0, streak: u.streak, wins: u.wins, losses: u.losses });
+    // Conflict fix (mirrors baseball pvpResult): a completed game win overrides a forfeit/quit claim
+    // that wrongly settled this player as a loss. Reverse both players' hoops ratings.
+    if (decided && won && hRow && hRow.won === false && myOvr && oppOvr && myOvr >= oppOvr) {
+      const oppKeyVal = body.oppKey ? String(body.oppKey).slice(0, 80) : null;
+      const clientOpp = oppKeyVal && /^(acct:|guest:)/.test(oppKeyVal) ? normKey(oppKeyVal) : null;
+      const oppK = recordedOpp || clientOpp;
+      if (oppK && oppK !== key) {
+        try {
+          const [oh] = await sql`SELECT id, won, decided, elo_before, elo_after FROM pvp_history
+            WHERE match_id = ${matchId} AND player_key = ${oppK} AND sport = 'hoops'
+            ORDER BY created_at DESC LIMIT 1`;
+          if (oh && oh.won === true && oh.decided === false) {
+            const uBefore = hRow.elo_before, oBefore = oh.elo_before;
+            const uWin = nextElo(uBefore, oBefore, true).delta;
+            const oLoss = nextElo(oBefore, uBefore, false).delta;
+            const uAdj = uWin - (hRow.elo_after - uBefore);
+            const oAdj = oLoss - (oh.elo_after - oBefore);
+            const [uNow] = await sql`SELECT pvp_elo_hoops AS elo, pvp_wins_hoops AS wins, pvp_losses_hoops AS losses FROM users WHERE google_sub = ${key}`;
+            const [oNow] = await sql`SELECT pvp_elo_hoops AS elo, pvp_wins_hoops AS wins, pvp_losses_hoops AS losses FROM users WHERE google_sub = ${oppK}`;
+            if (uNow && oNow) {
+              const uNewElo = Math.max(100, uNow.elo + uAdj);
+              const oNewElo = Math.max(100, oNow.elo + oAdj);
+              await sql`UPDATE users SET pvp_elo_hoops = ${uNewElo}, pvp_wins_hoops = ${uNow.wins + 1}, pvp_losses_hoops = ${Math.max(0, uNow.losses - 1)}, pvp_streak_hoops = 1 WHERE google_sub = ${key}`;
+              await sql`UPDATE users SET pvp_elo_hoops = ${oNewElo}, pvp_wins_hoops = ${Math.max(0, oNow.wins - 1)}, pvp_losses_hoops = ${oNow.losses + 1}, pvp_streak_hoops = 0 WHERE google_sub = ${oppK}`;
+              await sql`UPDATE pvp_history SET won = true, decided = true, elo_after = ${uBefore + uWin} WHERE id = ${hRow.id}`;
+              await sql`UPDATE pvp_history SET won = false, elo_after = ${oBefore + oLoss} WHERE id = ${oh.id}`;
+              return res.status(200).json({ ok: true, counted: true, reversed: true, won: true, elo: uNewElo, delta: uWin, bonus: 0, streak: 1, wins: uNow.wins + 1, losses: Math.max(0, uNow.losses - 1) });
+            }
+          }
+        } catch (e) {}
+      }
+    }
+    return res.status(200).json({ ok: true, counted: false, won: recWon, elo, delta, bonus: 0, streak: u.streak, wins: u.wins, losses: u.losses });
   }
   const { delta } = nextElo(u.elo, oppElo, won);
   const streak = won ? (u.streak || 0) + 1 : 0;
@@ -196,8 +234,8 @@ async function hoopsResult(body, key, res) {
   const settleOpp = recordedOpp || clientOpp;
   const validOppKey = settleOpp && settleOpp !== key ? settleOpp : null;
   try {
-    await sql`INSERT INTO pvp_history (player_key, match_id, won, my_role, my_ovr, opp_name, opp_ovr, opp_key, elo_before, elo_after, sport)
-      VALUES (${key}, ${matchId}, ${won}, 'hooper', ${myOvr}, ${oppName}, ${oppOvr}, ${validOppKey}, ${u.elo}, ${elo}, 'hoops')`;
+    await sql`INSERT INTO pvp_history (player_key, match_id, won, my_role, my_ovr, opp_name, opp_ovr, opp_key, elo_before, elo_after, sport, decided)
+      VALUES (${key}, ${matchId}, ${won}, 'hooper', ${myOvr}, ${oppName}, ${oppOvr}, ${validOppKey}, ${u.elo}, ${elo}, 'hoops', ${decided})`;
   } catch (e) {}
   if (won && validOppKey) {
     try {
@@ -209,13 +247,13 @@ async function hoopsResult(body, key, res) {
           const oppNewElo = Math.max(100, opp.elo + oppDelta);
           await sql`UPDATE users SET pvp_elo_hoops = ${oppNewElo}, pvp_losses_hoops = ${opp.losses + 1}, pvp_streak_hoops = 0 WHERE google_sub = ${validOppKey}`;
           const winnerName = String(body.name || '').slice(0, 40);
-          await sql`INSERT INTO pvp_history (player_key, match_id, won, my_role, my_ovr, opp_name, opp_ovr, opp_key, elo_before, elo_after, sport)
-            VALUES (${validOppKey}, ${matchId}, false, 'hooper', ${oppOvr}, ${winnerName}, ${myOvr}, ${key}, ${opp.elo}, ${oppNewElo}, 'hoops')`;
+          await sql`INSERT INTO pvp_history (player_key, match_id, won, my_role, my_ovr, opp_name, opp_ovr, opp_key, elo_before, elo_after, sport, decided)
+            VALUES (${validOppKey}, ${matchId}, false, 'hooper', ${oppOvr}, ${winnerName}, ${myOvr}, ${key}, ${opp.elo}, ${oppNewElo}, 'hoops', ${decided})`;
         }
       }
     } catch (e) {}
   }
-  return res.status(200).json({ ok: true, counted: true, elo, delta: delta + bonus, bonus, streak, wins, losses });
+  return res.status(200).json({ ok: true, counted: true, won, elo, delta: delta + bonus, bonus, streak, wins, losses });
 }
 async function hoopsLeaderboard(body, res) {
   const limit = Math.max(1, Math.min(100, parseInt(body.limit, 10) || 50));
@@ -383,6 +421,9 @@ module.exports = async (req, res) => {
         const matchId = String(body.matchId || '').slice(0, 80);
         if (!matchId) return res.status(400).json({ ok: false, error: 'missing matchId' });
         const won = !!body.won;
+        // A completed at-bat is authoritative; a forfeit/quit claim is not. Older clients omit this
+        // (undefined → treated as decided so their normal results still settle).
+        const decided = body.decided !== false;
         const oppElo = Math.max(100, Math.min(4000, Math.round(Number(body.oppElo) || 1000)));
         const role = (body.role === 'pitcher' || body.role === 'batter') ? body.role : null;
         const myOvr = Math.round(Number(body.ovr) || 0) || null;
@@ -421,13 +462,54 @@ module.exports = async (req, res) => {
           // Already settled — usually the winner reported first and we applied this player's loss
           // server-side. Pull the real delta from the recorded history row so the loser's screen
           // shows "-13" instead of "+0".
-          let delta = 0, elo = u.elo;
+          let delta = 0, elo = u.elo, recWon = won, hRow = null;
           try {
-            const [h] = await sql`SELECT elo_before, elo_after FROM pvp_history
-              WHERE match_id = ${matchId} AND player_key = ${key} AND sport IS DISTINCT FROM 'hoops'`;
-            if (h) { delta = h.elo_after - h.elo_before; elo = h.elo_after; }
+            const [h] = await sql`SELECT id, won, elo_before, elo_after FROM pvp_history
+              WHERE match_id = ${matchId} AND player_key = ${key} AND sport IS DISTINCT FROM 'hoops'
+              ORDER BY created_at DESC LIMIT 1`;
+            if (h) { hRow = h; delta = h.elo_after - h.elo_before; elo = h.elo_after; recWon = !!h.won; }
           } catch (e) {}
-          return res.status(200).json({ ok: true, counted: false, elo, delta, bonus: 0, streak: u.streak, wins: u.wins, losses: u.losses });
+
+          // Conflict fix: a *completed at-bat* win from this player overrides a forfeit/quit claim
+          // that wrongly settled them as a loss (asymmetric build delivery — the opponent never saw
+          // our build, claimed a quit-win, while we actually finished the at-bat and won). Reverse
+          // both players. Gated tightly so two real (decided) results — which always agree on the
+          // higher-OVR winner — can never trigger it: requires the opponent's settling row to be a
+          // NON-decided (forfeit) win and our OVR to be at least theirs.
+          if (decided && won && hRow && hRow.won === false && myOvr && oppOvr && myOvr >= oppOvr) {
+            const oppKeyVal = body.oppKey ? String(body.oppKey).slice(0, 80) : null;
+            const clientOpp = oppKeyVal && /^(acct:|guest:)/.test(oppKeyVal) ? normKey(oppKeyVal) : null;
+            const oppK = recordedOpp || clientOpp;
+            if (oppK && oppK !== key) {
+              try {
+                const [oh] = await sql`SELECT id, won, decided, elo_before, elo_after FROM pvp_history
+                  WHERE match_id = ${matchId} AND player_key = ${oppK} AND sport IS DISTINCT FROM 'hoops'
+                  ORDER BY created_at DESC LIMIT 1`;
+                if (oh && oh.won === true && oh.decided === false) {
+                  const uBefore = hRow.elo_before, oBefore = oh.elo_before;
+                  const uWin = nextElo(uBefore, oBefore, true).delta;    // what we should have gotten
+                  const oLoss = nextElo(oBefore, uBefore, false).delta;  // what they should have gotten
+                  // apply as a *relative* correction so an intervening match in the race window isn't clobbered
+                  const uAdj = uWin - (hRow.elo_after - uBefore);
+                  const oAdj = oLoss - (oh.elo_after - oBefore);
+                  const [uNow] = await sql`SELECT pvp_elo AS elo, pvp_wins AS wins, pvp_losses AS losses FROM users WHERE google_sub = ${key}`;
+                  const [oNow] = await sql`SELECT pvp_elo AS elo, pvp_wins AS wins, pvp_losses AS losses FROM users WHERE google_sub = ${oppK}`;
+                  if (uNow && oNow) {
+                    const uNewElo = Math.max(100, uNow.elo + uAdj);
+                    const oNewElo = Math.max(100, oNow.elo + oAdj);
+                    await sql`UPDATE users SET pvp_elo = ${uNewElo}, pvp_wins = ${uNow.wins + 1}, pvp_losses = ${Math.max(0, uNow.losses - 1)}, pvp_streak = 1 WHERE google_sub = ${key}`;
+                    await sql`UPDATE users SET pvp_elo = ${oNewElo}, pvp_wins = ${Math.max(0, oNow.wins - 1)}, pvp_losses = ${oNow.losses + 1}, pvp_streak = 0 WHERE google_sub = ${oppK}`;
+                    await sql`UPDATE pvp_history SET won = true, decided = true, elo_after = ${uBefore + uWin} WHERE id = ${hRow.id}`;
+                    await sql`UPDATE pvp_history SET won = false, elo_after = ${oBefore + oLoss} WHERE id = ${oh.id}`;
+                    return res.status(200).json({ ok: true, counted: true, reversed: true, won: true, elo: uNewElo, delta: uWin, bonus: 0, streak: 1, wins: uNow.wins + 1, losses: Math.max(0, uNow.losses - 1) });
+                  }
+                }
+              } catch (e) {}
+            }
+          }
+          // return the *recorded* outcome so a client whose local result disagreed (a forfeit /
+          // both-claim-win race) can reconcile its headline to the Elo it actually got.
+          return res.status(200).json({ ok: true, counted: false, won: recWon, elo, delta, bonus: 0, streak: u.streak, wins: u.wins, losses: u.losses });
         }
         const { delta } = nextElo(u.elo, oppElo, won);
         // win-streak bonus (grows per consecutive win, capped at a 5-win streak)
@@ -444,8 +526,8 @@ module.exports = async (req, res) => {
         const settleOpp = recordedOpp || clientOpp;
         const validOppKey = settleOpp && settleOpp !== key ? settleOpp : null;
         try {
-          await sql`INSERT INTO pvp_history (player_key, match_id, won, my_role, my_ovr, opp_name, opp_ovr, opp_key, elo_before, elo_after)
-            VALUES (${key}, ${matchId}, ${won}, ${role}, ${myOvr}, ${oppName}, ${oppOvr}, ${validOppKey}, ${u.elo}, ${elo})`;
+          await sql`INSERT INTO pvp_history (player_key, match_id, won, my_role, my_ovr, opp_name, opp_ovr, opp_key, elo_before, elo_after, decided)
+            VALUES (${key}, ${matchId}, ${won}, ${role}, ${myOvr}, ${oppName}, ${oppOvr}, ${validOppKey}, ${u.elo}, ${elo}, ${decided})`;
         } catch (e) {}
         // When the winner reports, server-side apply the loss to the opponent so they can't
         // dodge it by refreshing before pvpResult fires on their end.
@@ -461,13 +543,13 @@ module.exports = async (req, res) => {
                 await sql`UPDATE users SET pvp_elo = ${oppNewElo}, pvp_losses = ${opp.pvp_losses + 1}, pvp_streak = 0 WHERE google_sub = ${validOppKey}`;
                 const oppHistRole = role ? (role === 'pitcher' ? 'batter' : 'pitcher') : null;
                 const winnerName = String(body.name || '').slice(0, 40);
-                await sql`INSERT INTO pvp_history (player_key, match_id, won, my_role, my_ovr, opp_name, opp_ovr, opp_key, elo_before, elo_after)
-                  VALUES (${validOppKey}, ${matchId}, false, ${oppHistRole}, ${oppOvr}, ${winnerName}, ${myOvr}, ${key}, ${opp.pvp_elo}, ${oppNewElo})`;
+                await sql`INSERT INTO pvp_history (player_key, match_id, won, my_role, my_ovr, opp_name, opp_ovr, opp_key, elo_before, elo_after, decided)
+                  VALUES (${validOppKey}, ${matchId}, false, ${oppHistRole}, ${oppOvr}, ${winnerName}, ${myOvr}, ${key}, ${opp.pvp_elo}, ${oppNewElo}, ${decided})`;
               }
             }
           } catch (e) {}
         }
-        return res.status(200).json({ ok: true, counted: true, elo, delta: delta + bonus, bonus, streak, wins, losses });
+        return res.status(200).json({ ok: true, counted: true, won, elo, delta: delta + bonus, bonus, streak, wins, losses });
       }
 
       if (action === 'pvpHistory') {
@@ -576,6 +658,63 @@ module.exports = async (req, res) => {
           FROM pvp_history h WHERE h.player_key = ${key}
           ORDER BY h.created_at ASC`;
         return res.status(200).json({ ok: true, user: u || null, count: rows.length, history: rows });
+      }
+
+      // admin: manually reverse one match's Elo/record when a false forfeit/quit claim beat the real
+      // winner's report to the server (the same wrong the live reversal in pvpResult now prevents,
+      // but for matches that were settled before that shipped). Token-gated + idempotent: only acts
+      // if the intended winner is currently recorded as the loser of that match. Uses a relative
+      // correction so ratings that moved in later matches aren't clobbered.
+      if (action === 'pvpFixMatch') {
+        if (body.token !== STATS_TOKEN) return res.status(403).json({ ok: false, error: 'forbidden' });
+        const matchId = String(body.matchId || '').slice(0, 80);
+        const hoops = body.sport === 'hoops';
+        let winnerKey = body.winnerKey ? String(body.winnerKey) : null;
+        if (!winnerKey && body.winnerEmail) {
+          const [wu] = await sql`SELECT google_sub FROM users WHERE lower(email) = lower(${String(body.winnerEmail).trim()})`;
+          winnerKey = wu ? wu.google_sub : null;
+        }
+        if (!matchId || !winnerKey) return res.status(400).json({ ok: false, error: 'matchId and winnerKey/winnerEmail required' });
+        const [wh] = hoops
+          ? await sql`SELECT id, won, elo_before, elo_after, opp_key FROM pvp_history WHERE match_id = ${matchId} AND player_key = ${winnerKey} AND sport = 'hoops' ORDER BY created_at DESC LIMIT 1`
+          : await sql`SELECT id, won, elo_before, elo_after, opp_key FROM pvp_history WHERE match_id = ${matchId} AND player_key = ${winnerKey} AND sport IS DISTINCT FROM 'hoops' ORDER BY created_at DESC LIMIT 1`;
+        if (!wh) return res.status(404).json({ ok: false, error: 'no history row for that winner + match' });
+        if (wh.won === true) return res.status(200).json({ ok: true, alreadyDone: true, note: 'winner already recorded as a win' });
+        const loserKey = body.loserKey ? String(body.loserKey) : wh.opp_key;
+        if (!loserKey) return res.status(400).json({ ok: false, error: 'loserKey unknown (pass loserKey)' });
+        const [lh] = hoops
+          ? await sql`SELECT id, won, elo_before, elo_after FROM pvp_history WHERE match_id = ${matchId} AND player_key = ${loserKey} AND sport = 'hoops' ORDER BY created_at DESC LIMIT 1`
+          : await sql`SELECT id, won, elo_before, elo_after FROM pvp_history WHERE match_id = ${matchId} AND player_key = ${loserKey} AND sport IS DISTINCT FROM 'hoops' ORDER BY created_at DESC LIMIT 1`;
+        if (!lh) return res.status(404).json({ ok: false, error: 'no history row for the loser + match' });
+        const uBefore = wh.elo_before, oBefore = lh.elo_before;
+        const uWin = nextElo(uBefore, oBefore, true).delta;
+        const oLoss = nextElo(oBefore, uBefore, false).delta;
+        const uAdj = uWin - (wh.elo_after - uBefore);   // relative: undo the wrong result + apply the right one
+        const oAdj = oLoss - (lh.elo_after - oBefore);
+        if (hoops) {
+          const [uNow] = await sql`SELECT pvp_elo_hoops AS elo, pvp_wins_hoops AS wins, pvp_losses_hoops AS losses FROM users WHERE google_sub = ${winnerKey}`;
+          const [oNow] = await sql`SELECT pvp_elo_hoops AS elo, pvp_wins_hoops AS wins, pvp_losses_hoops AS losses FROM users WHERE google_sub = ${loserKey}`;
+          if (!uNow || !oNow) return res.status(404).json({ ok: false, error: 'user row missing' });
+          const uNewElo = Math.max(100, uNow.elo + uAdj), oNewElo = Math.max(100, oNow.elo + oAdj);
+          await sql`UPDATE users SET pvp_elo_hoops = ${uNewElo}, pvp_wins_hoops = ${uNow.wins + 1}, pvp_losses_hoops = ${Math.max(0, uNow.losses - 1)} WHERE google_sub = ${winnerKey}`;
+          await sql`UPDATE users SET pvp_elo_hoops = ${oNewElo}, pvp_wins_hoops = ${Math.max(0, oNow.wins - 1)}, pvp_losses_hoops = ${oNow.losses + 1} WHERE google_sub = ${loserKey}`;
+          await sql`UPDATE pvp_history SET won = true, decided = true, elo_after = ${uBefore + uWin} WHERE id = ${wh.id}`;
+          await sql`UPDATE pvp_history SET won = false, elo_after = ${oBefore + oLoss} WHERE id = ${lh.id}`;
+          return res.status(200).json({ ok: true, reversed: true, sport: 'hoops',
+            winner: { key: winnerKey, elo: uNewElo, wins: uNow.wins + 1, losses: Math.max(0, uNow.losses - 1) },
+            loser: { key: loserKey, elo: oNewElo, wins: Math.max(0, oNow.wins - 1), losses: oNow.losses + 1 } });
+        }
+        const [uNow] = await sql`SELECT pvp_elo AS elo, pvp_wins AS wins, pvp_losses AS losses FROM users WHERE google_sub = ${winnerKey}`;
+        const [oNow] = await sql`SELECT pvp_elo AS elo, pvp_wins AS wins, pvp_losses AS losses FROM users WHERE google_sub = ${loserKey}`;
+        if (!uNow || !oNow) return res.status(404).json({ ok: false, error: 'user row missing' });
+        const uNewElo = Math.max(100, uNow.elo + uAdj), oNewElo = Math.max(100, oNow.elo + oAdj);
+        await sql`UPDATE users SET pvp_elo = ${uNewElo}, pvp_wins = ${uNow.wins + 1}, pvp_losses = ${Math.max(0, uNow.losses - 1)} WHERE google_sub = ${winnerKey}`;
+        await sql`UPDATE users SET pvp_elo = ${oNewElo}, pvp_wins = ${Math.max(0, oNow.wins - 1)}, pvp_losses = ${oNow.losses + 1} WHERE google_sub = ${loserKey}`;
+        await sql`UPDATE pvp_history SET won = true, decided = true, elo_after = ${uBefore + uWin} WHERE id = ${wh.id}`;
+        await sql`UPDATE pvp_history SET won = false, elo_after = ${oBefore + oLoss} WHERE id = ${lh.id}`;
+        return res.status(200).json({ ok: true, reversed: true,
+          winner: { key: winnerKey, elo: uNewElo, wins: uNow.wins + 1, losses: Math.max(0, uNow.losses - 1) },
+          loser: { key: loserKey, elo: oNewElo, wins: Math.max(0, oNow.wins - 1), losses: oNow.losses + 1 } });
       }
 
       // admin: look up a player by name and cross-check reported vs logged matches

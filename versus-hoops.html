@@ -954,9 +954,23 @@ async function applyResult(){
   try {
     const r = await fetch('/api/account', { method:'POST', headers:{'content-type':'application/json'},
       body: JSON.stringify(Object.assign({ action:'pvpResult', sport:'hoops', matchId: pr.matchId, won: pr.won, oppElo: pr.oppElo,
-        role: pr.role, ovr: pr.ovr, oppOvr: pr.oppOvr, oppName: pr.oppName || '', oppKey: pr.oppKey || '' }, principal())) }).then(x=>x.json());
-    if (r.ok){ myStats = { elo:r.elo, wins:r.wins, losses:r.losses, streak:r.streak||0 }; renderRatingResult(r); }
+        role: pr.role, ovr: pr.ovr, oppOvr: pr.oppOvr, oppName: pr.oppName || '', oppKey: pr.oppKey || '', decided: pr.decided !== false }, principal())) }).then(x=>x.json());
+    if (r.ok){
+      myStats = { elo:r.elo, wins:r.wins, losses:r.losses, streak:r.streak||0 };
+      // Server is authoritative: reconcile the headline to the recorded outcome so a rare
+      // forfeit / both-claim-win race never shows "YOU WIN" above a rating drop.
+      if (typeof r.won === 'boolean' && r.won !== pr.won) reconcileResultDisplay(r.won, pr.oppName);
+      renderRatingResult(r);
+    }
   } catch(e){}
+}
+function reconcileResultDisplay(won, oppName){
+  const nm = oppName || 'your opponent';
+  const card=$('resultCard'); if(card) card.className='result-card '+(won?'win':'lose');
+  const head=$('resultHead'); if(head) head.textContent = won ? 'YOU WIN' : 'YOU LOSE';
+  const sub=$('resultSub'); if(sub) sub.textContent = won
+    ? `You beat ${nm}. Run it back?`
+    : `${nm} settled this one first — rating adjusted to match.`;
 }
 function renderRatingResult(r){
   const el = $('ratingResult'); if (!el) return;
@@ -1866,7 +1880,7 @@ function showForfeitResult(iWon, filled, data={}){
   if (friendlyMode) {
     $('ratingResult').innerHTML = '<div class="prompt" style="color:var(--accent2);font-size:14px;margin-top:4px">⚔️ Friendly Match · No Elo Change</div>';
   } else {
-    pendingResult = { matchId, won:iWon, oppElo, role:myRole, ovr:(myBuild ? myBuild.ovr : 0), oppOvr:(oppBuild ? oppBuild.ovr : 0), oppName:oppForfeitName, oppKey:(oppBuild && oppBuild.key ? oppBuild.key : '') };
+    pendingResult = { matchId, won:iWon, oppElo, role:myRole, ovr:(myBuild ? myBuild.ovr : 0), oppOvr:(oppBuild ? oppBuild.ovr : 0), oppName:oppForfeitName, oppKey:(oppBuild && oppBuild.key ? oppBuild.key : ''), decided: false };
     $('ratingResult').innerHTML = '';
     applyResult();
   }
@@ -2326,7 +2340,7 @@ function showResult(iWon, pitcher, batter, winnerRole, script){
   if (friendlyMode) {
     $('ratingResult').innerHTML = '<div class="prompt" style="color:var(--accent2);font-size:14px;margin-top:4px">⚔️ Friendly Match · No Elo Change</div>';
   } else {
-    pendingResult = { matchId, won: iWon, oppElo, role: 'hooper', ovr: (myBuild ? myBuild.ovr : 0), oppOvr: (oppBuild ? oppBuild.ovr : 0), oppName: oppName, oppKey: (oppBuild && oppBuild.key ? oppBuild.key : '') };
+    pendingResult = { matchId, won: iWon, oppElo, role: 'hooper', ovr: (myBuild ? myBuild.ovr : 0), oppOvr: (oppBuild ? oppBuild.ovr : 0), oppName: oppName, oppKey: (oppBuild && oppBuild.key ? oppBuild.key : ''), decided: true };
     $('ratingResult').innerHTML = '';
     applyResult();
   }
