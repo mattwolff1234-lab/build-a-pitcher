@@ -174,13 +174,14 @@ async function hoopsResult(body, key, res) {
     // Already settled — usually the winner reported first and we applied this player's loss
     // server-side. Pull the real delta from the recorded history row so the loser's screen
     // shows "-13" instead of "+0".
-    let delta = 0, elo = u.elo;
+    let delta = 0, elo = u.elo, recWon = won;
     try {
-      const [h] = await sql`SELECT elo_before, elo_after FROM pvp_history
-        WHERE match_id = ${matchId} AND player_key = ${key} AND sport = 'hoops'`;
-      if (h) { delta = h.elo_after - h.elo_before; elo = h.elo_after; }
+      const [h] = await sql`SELECT won, elo_before, elo_after FROM pvp_history
+        WHERE match_id = ${matchId} AND player_key = ${key} AND sport = 'hoops'
+        ORDER BY created_at DESC LIMIT 1`;
+      if (h) { delta = h.elo_after - h.elo_before; elo = h.elo_after; recWon = !!h.won; }
     } catch (e) {}
-    return res.status(200).json({ ok: true, counted: false, elo, delta, bonus: 0, streak: u.streak, wins: u.wins, losses: u.losses });
+    return res.status(200).json({ ok: true, counted: false, won: recWon, elo, delta, bonus: 0, streak: u.streak, wins: u.wins, losses: u.losses });
   }
   const { delta } = nextElo(u.elo, oppElo, won);
   const streak = won ? (u.streak || 0) + 1 : 0;
@@ -215,7 +216,7 @@ async function hoopsResult(body, key, res) {
       }
     } catch (e) {}
   }
-  return res.status(200).json({ ok: true, counted: true, elo, delta: delta + bonus, bonus, streak, wins, losses });
+  return res.status(200).json({ ok: true, counted: true, won, elo, delta: delta + bonus, bonus, streak, wins, losses });
 }
 async function hoopsLeaderboard(body, res) {
   const limit = Math.max(1, Math.min(100, parseInt(body.limit, 10) || 50));
@@ -421,13 +422,16 @@ module.exports = async (req, res) => {
           // Already settled — usually the winner reported first and we applied this player's loss
           // server-side. Pull the real delta from the recorded history row so the loser's screen
           // shows "-13" instead of "+0".
-          let delta = 0, elo = u.elo;
+          let delta = 0, elo = u.elo, recWon = won;
           try {
-            const [h] = await sql`SELECT elo_before, elo_after FROM pvp_history
-              WHERE match_id = ${matchId} AND player_key = ${key} AND sport IS DISTINCT FROM 'hoops'`;
-            if (h) { delta = h.elo_after - h.elo_before; elo = h.elo_after; }
+            const [h] = await sql`SELECT won, elo_before, elo_after FROM pvp_history
+              WHERE match_id = ${matchId} AND player_key = ${key} AND sport IS DISTINCT FROM 'hoops'
+              ORDER BY created_at DESC LIMIT 1`;
+            if (h) { delta = h.elo_after - h.elo_before; elo = h.elo_after; recWon = !!h.won; }
           } catch (e) {}
-          return res.status(200).json({ ok: true, counted: false, elo, delta, bonus: 0, streak: u.streak, wins: u.wins, losses: u.losses });
+          // return the *recorded* outcome so a client whose local result disagreed (a forfeit /
+          // both-claim-win race) can reconcile its headline to the Elo it actually got.
+          return res.status(200).json({ ok: true, counted: false, won: recWon, elo, delta, bonus: 0, streak: u.streak, wins: u.wins, losses: u.losses });
         }
         const { delta } = nextElo(u.elo, oppElo, won);
         // win-streak bonus (grows per consecutive win, capped at a 5-win streak)
@@ -467,7 +471,7 @@ module.exports = async (req, res) => {
             }
           } catch (e) {}
         }
-        return res.status(200).json({ ok: true, counted: true, elo, delta: delta + bonus, bonus, streak, wins, losses });
+        return res.status(200).json({ ok: true, counted: true, won, elo, delta: delta + bonus, bonus, streak, wins, losses });
       }
 
       if (action === 'pvpHistory') {

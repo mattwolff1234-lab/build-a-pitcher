@@ -981,8 +981,23 @@ async function applyResult(){
     const r = await fetch('/api/account', { method:'POST', headers:{'content-type':'application/json'},
       body: JSON.stringify(Object.assign({ action:'pvpResult', matchId: pr.matchId, won: pr.won, oppElo: pr.oppElo,
         role: pr.role, ovr: pr.ovr, oppOvr: pr.oppOvr, oppName: pr.oppName || '', oppKey: pr.oppKey || '' }, principal())) }).then(x=>x.json());
-    if (r.ok){ myStats = { elo:r.elo, wins:r.wins, losses:r.losses, streak:r.streak||0 }; renderRatingResult(r); }
+    if (r.ok){
+      myStats = { elo:r.elo, wins:r.wins, losses:r.losses, streak:r.streak||0 };
+      // The server is authoritative on the outcome. If the opponent settled this match the other
+      // way first (a rare forfeit / both-claim-win race), the locally-shown headline can contradict
+      // the Elo change — reconcile it so "YOU WIN" never sits above a rating drop.
+      if (typeof r.won === 'boolean' && r.won !== pr.won) reconcileResultDisplay(r.won, pr.oppName);
+      renderRatingResult(r);
+    }
   } catch(e){}
+}
+function reconcileResultDisplay(won, oppName){
+  const nm = oppName || 'your opponent';
+  const card=$('resultCard'); if(card) card.className='result-card '+(won?'win':'lose');
+  const head=$('resultHead'); if(head) head.textContent = won ? 'YOU WIN' : 'YOU LOSE';
+  const sub=$('resultSub'); if(sub) sub.textContent = won
+    ? `You beat ${nm}. Run it back?`
+    : `${nm} settled this one first — rating adjusted to match.`;
 }
 function renderRatingResult(r){
   const el = $('ratingResult'); if (!el) return;
