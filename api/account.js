@@ -660,6 +660,63 @@ module.exports = async (req, res) => {
         return res.status(200).json({ ok: true, user: u || null, count: rows.length, history: rows });
       }
 
+      // admin: manually reverse one match's Elo/record when a false forfeit/quit claim beat the real
+      // winner's report to the server (the same wrong the live reversal in pvpResult now prevents,
+      // but for matches that were settled before that shipped). Token-gated + idempotent: only acts
+      // if the intended winner is currently recorded as the loser of that match. Uses a relative
+      // correction so ratings that moved in later matches aren't clobbered.
+      if (action === 'pvpFixMatch') {
+        if (body.token !== STATS_TOKEN) return res.status(403).json({ ok: false, error: 'forbidden' });
+        const matchId = String(body.matchId || '').slice(0, 80);
+        const hoops = body.sport === 'hoops';
+        let winnerKey = body.winnerKey ? String(body.winnerKey) : null;
+        if (!winnerKey && body.winnerEmail) {
+          const [wu] = await sql`SELECT google_sub FROM users WHERE lower(email) = lower(${String(body.winnerEmail).trim()})`;
+          winnerKey = wu ? wu.google_sub : null;
+        }
+        if (!matchId || !winnerKey) return res.status(400).json({ ok: false, error: 'matchId and winnerKey/winnerEmail required' });
+        const [wh] = hoops
+          ? await sql`SELECT id, won, elo_before, elo_after, opp_key FROM pvp_history WHERE match_id = ${matchId} AND player_key = ${winnerKey} AND sport = 'hoops' ORDER BY created_at DESC LIMIT 1`
+          : await sql`SELECT id, won, elo_before, elo_after, opp_key FROM pvp_history WHERE match_id = ${matchId} AND player_key = ${winnerKey} AND sport IS DISTINCT FROM 'hoops' ORDER BY created_at DESC LIMIT 1`;
+        if (!wh) return res.status(404).json({ ok: false, error: 'no history row for that winner + match' });
+        if (wh.won === true) return res.status(200).json({ ok: true, alreadyDone: true, note: 'winner already recorded as a win' });
+        const loserKey = body.loserKey ? String(body.loserKey) : wh.opp_key;
+        if (!loserKey) return res.status(400).json({ ok: false, error: 'loserKey unknown (pass loserKey)' });
+        const [lh] = hoops
+          ? await sql`SELECT id, won, elo_before, elo_after FROM pvp_history WHERE match_id = ${matchId} AND player_key = ${loserKey} AND sport = 'hoops' ORDER BY created_at DESC LIMIT 1`
+          : await sql`SELECT id, won, elo_before, elo_after FROM pvp_history WHERE match_id = ${matchId} AND player_key = ${loserKey} AND sport IS DISTINCT FROM 'hoops' ORDER BY created_at DESC LIMIT 1`;
+        if (!lh) return res.status(404).json({ ok: false, error: 'no history row for the loser + match' });
+        const uBefore = wh.elo_before, oBefore = lh.elo_before;
+        const uWin = nextElo(uBefore, oBefore, true).delta;
+        const oLoss = nextElo(oBefore, uBefore, false).delta;
+        const uAdj = uWin - (wh.elo_after - uBefore);   // relative: undo the wrong result + apply the right one
+        const oAdj = oLoss - (lh.elo_after - oBefore);
+        if (hoops) {
+          const [uNow] = await sql`SELECT pvp_elo_hoops AS elo, pvp_wins_hoops AS wins, pvp_losses_hoops AS losses FROM users WHERE google_sub = ${winnerKey}`;
+          const [oNow] = await sql`SELECT pvp_elo_hoops AS elo, pvp_wins_hoops AS wins, pvp_losses_hoops AS losses FROM users WHERE google_sub = ${loserKey}`;
+          if (!uNow || !oNow) return res.status(404).json({ ok: false, error: 'user row missing' });
+          const uNewElo = Math.max(100, uNow.elo + uAdj), oNewElo = Math.max(100, oNow.elo + oAdj);
+          await sql`UPDATE users SET pvp_elo_hoops = ${uNewElo}, pvp_wins_hoops = ${uNow.wins + 1}, pvp_losses_hoops = ${Math.max(0, uNow.losses - 1)} WHERE google_sub = ${winnerKey}`;
+          await sql`UPDATE users SET pvp_elo_hoops = ${oNewElo}, pvp_wins_hoops = ${Math.max(0, oNow.wins - 1)}, pvp_losses_hoops = ${oNow.losses + 1} WHERE google_sub = ${loserKey}`;
+          await sql`UPDATE pvp_history SET won = true, decided = true, elo_after = ${uBefore + uWin} WHERE id = ${wh.id}`;
+          await sql`UPDATE pvp_history SET won = false, elo_after = ${oBefore + oLoss} WHERE id = ${lh.id}`;
+          return res.status(200).json({ ok: true, reversed: true, sport: 'hoops',
+            winner: { key: winnerKey, elo: uNewElo, wins: uNow.wins + 1, losses: Math.max(0, uNow.losses - 1) },
+            loser: { key: loserKey, elo: oNewElo, wins: Math.max(0, oNow.wins - 1), losses: oNow.losses + 1 } });
+        }
+        const [uNow] = await sql`SELECT pvp_elo AS elo, pvp_wins AS wins, pvp_losses AS losses FROM users WHERE google_sub = ${winnerKey}`;
+        const [oNow] = await sql`SELECT pvp_elo AS elo, pvp_wins AS wins, pvp_losses AS losses FROM users WHERE google_sub = ${loserKey}`;
+        if (!uNow || !oNow) return res.status(404).json({ ok: false, error: 'user row missing' });
+        const uNewElo = Math.max(100, uNow.elo + uAdj), oNewElo = Math.max(100, oNow.elo + oAdj);
+        await sql`UPDATE users SET pvp_elo = ${uNewElo}, pvp_wins = ${uNow.wins + 1}, pvp_losses = ${Math.max(0, uNow.losses - 1)} WHERE google_sub = ${winnerKey}`;
+        await sql`UPDATE users SET pvp_elo = ${oNewElo}, pvp_wins = ${Math.max(0, oNow.wins - 1)}, pvp_losses = ${oNow.losses + 1} WHERE google_sub = ${loserKey}`;
+        await sql`UPDATE pvp_history SET won = true, decided = true, elo_after = ${uBefore + uWin} WHERE id = ${wh.id}`;
+        await sql`UPDATE pvp_history SET won = false, elo_after = ${oBefore + oLoss} WHERE id = ${lh.id}`;
+        return res.status(200).json({ ok: true, reversed: true,
+          winner: { key: winnerKey, elo: uNewElo, wins: uNow.wins + 1, losses: Math.max(0, uNow.losses - 1) },
+          loser: { key: loserKey, elo: oNewElo, wins: Math.max(0, oNow.wins - 1), losses: oNow.losses + 1 } });
+      }
+
       // admin: look up a player by name and cross-check reported vs logged matches
       if (action === 'pvpUserLookup') {
         if (body.token !== STATS_TOKEN) return res.status(403).json({ ok: false, error: 'forbidden' });
