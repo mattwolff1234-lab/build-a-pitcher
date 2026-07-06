@@ -292,6 +292,7 @@
   .rcard .pos { font-size:10px; color:var(--muted); margin-top:2px; letter-spacing:.5px; }
   .rcard .yr { font-family:'Oswald',sans-serif; font-size:11px; color:var(--accent); font-weight:600; }
   .rcard .legend-tag { font-family:'Oswald',sans-serif; font-size:11px; font-weight:600; color:var(--legend); letter-spacing:1px; }
+  .rcard .prime-tag { font-family:'Oswald',sans-serif; font-size:11px; font-weight:700; color:#ffb02e; letter-spacing:1px; text-shadow:0 0 8px rgba(255,176,46,.45); }
   .rcard.win { border-color:#fff; box-shadow:0 0 0 2px rgba(255,255,255,.5),0 0 26px rgba(25,198,255,.55); }
   /* tier coloring - border + OVR + a faint glow, like the main game */
   .rcard.t-grey    { --tc:#9aa6b8; border-color:#9aa6b8; }
@@ -1440,13 +1441,18 @@ function pool(){
 function randPlayer(){
   const p = pool(), legs = DATA[myRole].legends || [];
   if (legs.length && rng() < 0.03){ const a = legs.filter(x=>!buildState.used.has(x.name)); if (a.length) return a[Math.floor(rng()*a.length)]; }
+  // era "Prime" cards - same odds for both players (not in Legends-only mode)
+  const eps = DATA[myRole].eraPrimes || [];
+  if (gameMode !== 'legends' && eps.length && rng() < 0.05){ const a = eps.filter(x=>!buildState.used.has(x.name)); if (a.length) return a[Math.floor(rng()*a.length)]; }
   // best-of-2 lifts the average so builds feel good; symmetric for both players
   let best=null;
   for (let i=0;i<2;i++){ let q,t=0; do{ q=p[Math.floor(rng()*p.length)]; }while(buildState.used.has(q.name)&&++t<40); if(!best||q.ovr>best.ovr)best=q; }
   return best;
 }
 function rcardHTML(p){ const t=borderTier(p);
-  const meta = p.legend ? `<div class="legend-tag">★ LEGEND</div>` : `<div class="yr">${escapeHTML(p.year||'')}</div>`;
+  const meta = p.legend ? `<div class="legend-tag">★ LEGEND</div>`
+    : p.prime ? `<div class="prime-tag">🔥 PRIME ${escapeHTML(p.year||'')}</div>`
+    : `<div class="yr">${escapeHTML(p.year||'')}</div>`;
   return `<div class="rcard t-${t}">
     <img src="${headshot(p)}" loading="lazy" onerror="this.onerror=null;this.src='${SILHOUETTE}'">
     <div class="nm">${escapeHTML(p.name)}</div>
@@ -1610,14 +1616,15 @@ const TIER_COL = { grey:'#9aa6b8', bronze:'#d28b4e', silver:'#cdd6e2', gold:'#ff
 function land(p){
   buildState.landed=p;
   $('landedImg').src=headshot(p); $('landedImg').onerror=function(){this.onerror=null;this.src=SILHOUETTE;};
-  $('landedName').textContent = gameMode==='hard' ? p.name : `${p.name} · ${p.ovr} OVR`;
+  const pn = (p.prime ? `🔥 ${p.year ? p.year + ' ' : ''}` : '') + p.name;
+  $('landedName').textContent = gameMode==='hard' ? pn : `${pn} · ${p.ovr} OVR`;
   $('landedOvr').textContent = gameMode==='hard' ? '?' : p.ovr; $('landedLi').classList.add('show');
   const tcol = TIER_COL[borderTier(p)] || '#c8d0da';
   $('landedOvr').style.color = tcol; $('landedImg').style.boxShadow = `0 0 14px ${tcol}66`;
   $('landedImg').style.border = `2px solid ${tcol}`;
   $('spinBtn').disabled=true;
   // power-ups (one use each per match)
-  const hasPrime = !p.legend && DATA[myRole].prime && !!DATA[myRole].prime[p.name] && !buildState.boostedThisLand;
+  const hasPrime = !p.legend && !p.prime && DATA[myRole].prime && !!DATA[myRole].prime[p.name] && !buildState.boostedThisLand;
   $('powerups').classList.add('show');
   $('respinBtn').disabled = buildState.respinUsed;
   $('boostBtn').disabled = buildState.boostUsed || !hasPrime;
