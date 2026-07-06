@@ -158,6 +158,7 @@
   @keyframes legendPulse{0%,100%{box-shadow:0 0 12px rgba(163,102,255,.65),inset 0 0 10px rgba(163,102,255,.22);}
     50%{box-shadow:0 0 24px rgba(163,102,255,1),inset 0 0 16px rgba(163,102,255,.4);}}
   .legend-tag{font-family:'Oswald',sans-serif; font-size:11px; font-weight:600; color:var(--legend); letter-spacing:1px;}
+  .prime-tag{font-family:'Oswald',sans-serif; font-size:11px; font-weight:700; color:#ffb02e; letter-spacing:1px; text-shadow:0 0 8px rgba(255,176,46,.45);}
 
   /* ---------- controls ---------- */
   .controls { display:flex; gap:10px; justify-content:center; margin:14px 0; flex-wrap:wrap; }
@@ -1413,11 +1414,28 @@ function pickWeighted(rng) {
   return DATA.pool[lo];
 }
 const LEGEND_ODDS = 0.04;
+const PRIME_ODDS = 0.05;   // real special-edition "Prime" cards as a rare spin, like the hoops era Primes
+function reelPrimes() {
+  // spinnable Primes = real special-edition cards (not the synthesized +6 award fill-ins), diamond+,
+  // and only for CURRENT-pool players - retired greats' special cards stay purple legends
+  if (!DATA._reelPrimes) {
+    const poolNames = new Set(DATA.pool.map(p => p.name));
+    DATA._reelPrimes = Object.values(DATA.prime || {})
+      .filter(p => !p.synthPrime && p.ovr >= 85 && poolNames.has(p.name))
+      .map(p => Object.assign({}, p, { prime: true }));
+  }
+  return DATA._reelPrimes;
+}
 function randHitter(rng) {
   const rand = rng || Math.random;
   const legs = DATA.legends || [];
   if (legs.length && rand() < LEGEND_ODDS) {
     const avail = legs.filter(p => !state.used.has(p.name));
+    if (avail.length) return avail[Math.floor(rand() * avail.length)];
+  }
+  const primes = reelPrimes();
+  if (primes.length && rand() < PRIME_ODDS) {
+    const avail = primes.filter(p => !state.used.has(p.name));
     if (avail.length) return avail[Math.floor(rand() * avail.length)];
   }
   let p, tries = 0;
@@ -1429,7 +1447,9 @@ function borderTier(p) { return p.legend ? 'legend' : tier(p.ovr); }
 
 function cardHTML(p) {
   const t = borderTier(p);
-  const meta = p.legend ? `<div class="legend-tag">★ LEGEND</div>` : `<div class="yr">${p.year || ''}</div>`;
+  const meta = p.legend ? `<div class="legend-tag">★ LEGEND</div>`
+    : p.prime ? `<div class="prime-tag">⚡ PRIME ${p.year || ''}</div>`
+    : `<div class="yr">${p.year || ''}</div>`;
   return `<div class="reel-card t-${t}">
     <img src="${headshot(p)}" alt="" loading="lazy" onerror="this.onerror=null;this.src='${SILHOUETTE}'">
     <div class="nm">${p.name}</div>
@@ -1555,8 +1575,9 @@ function land(p) {
   $('landedOvr').textContent = ratingsHidden() ? '?' : p.ovr;
   $('landedOvr').className = 'big-ov c-' + t;
 
-  const hasPrime = !p.legend && !!DATA.prime[p.name] && !state.boostedThisLand;
-  $('primeBadge').style.display = state.boostedThisLand ? 'inline-block' : 'none';
+  const hasPrime = !p.legend && !p.prime && !!DATA.prime[p.name] && !state.boostedThisLand;
+  $('primeBadge').textContent = 'PRIME' + (p.prime && p.year ? ' ' + p.year : '');
+  $('primeBadge').style.display = (state.boostedThisLand || p.prime) ? 'inline-block' : 'none';
   $('respinBtn').disabled = state.respinUsed;
   $('respinBtn').textContent = state.respinUsed ? 'Re-spin ✕' : 'Re-spin';
   $('boostBtn').disabled = state.boostUsed || !hasPrime;
@@ -1573,6 +1594,7 @@ function land(p) {
 
   // landing sound by rarity
   if (p.legend) Sound.legend();
+  else if (p.prime && !state.boostedThisLand) Sound.prime();
   else { const tt = tier(p.ovr); if (tt === 'diamond') Sound.diamond(); else if (tt === 'gold') Sound.gold(); else Sound.land(); }
 
   gsap.fromTo($('landed'), { y: 10, opacity: 0 }, { y: 0, opacity: 1, duration: .4, ease: 'power3.out', delay: .15 });
@@ -1678,6 +1700,7 @@ function assign(slotKey) {
   state.filled[slotKey] = {
     name: p.name, value: slotNumeric(p, s), display: slotDisplay(p, s),
     ovr: p.ovr, legend: !!p.legend, team: p.team, img: headshot(p),
+    prime: !!p.prime, year: p.year || '',
   };
   state.used.add(p.name);
   (state.dealtCards || (state.dealtCards = [])).push(p);   // for the daily "best possible build"
@@ -2838,7 +2861,7 @@ function finish() {
   try { gtag('event', 'build_complete', { game: 'batter', ovr: avg }); } catch (e) {}
   state.build = SLOTS.map(s => {
     const f = state.filled[s.key];
-    return { slot: s.label, value: f.value, display: String(f.display), player: f.name, team: f.team, legend: !!f.legend, img: f.img, ovr: f.ovr };
+    return { slot: s.label, value: f.value, display: String(f.display), player: f.name, team: f.team, legend: !!f.legend, img: f.img, ovr: f.ovr, prime: !!f.prime, year: f.year || '' };
   });
   state.career = null;
   state.draftTeamAb = null;
