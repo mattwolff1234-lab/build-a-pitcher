@@ -322,7 +322,9 @@
   }
 
   // ---- auto-hook the achievements engine: each unlock grants XP ----------
-  const ACH_XP = 40, ACH_XP_CHAL = 120;   // challenge tiles are worth more
+  // 40 normal / 120 challenge, unless the achievement def carries its own `xp`
+  // (e.g. Gotta Catch 'Em All pays a jackpot for completing a full card pool).
+  const ACH_XP = 40, ACH_XP_CHAL = 120;
   function hookAch() {
     if (!window.Ach || Ach.__xpHooked) return false;
     const orig = Ach.unlock;
@@ -331,7 +333,7 @@
       const r = orig.apply(this, arguments);
       if (!had && Ach.has(id)) {
         const a = (Ach.all || []).find(x => x.id === id);
-        award(a && a.chal ? ACH_XP_CHAL : ACH_XP, 'achievement');
+        award(a && a.xp ? a.xp : (a && a.chal ? ACH_XP_CHAL : ACH_XP), 'achievement');
       }
       return r;
     };

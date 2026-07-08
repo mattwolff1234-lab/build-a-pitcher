@@ -23,7 +23,7 @@
     { id: 'collect1', cat: 'draft', icon: '📇', name: 'Card Collector I', desc: 'Collect 25 unique players in your Binder (players you assign are collected forever).', col: 2, row: 2, parent: 'offcharts' },
     { id: 'collect2', cat: 'draft', icon: '🗃️', name: 'Card Collector II', desc: 'Collect 150 unique players in your Binder.', col: 3, row: 2, parent: 'collect1' },
     { id: 'collect3', cat: 'draft', icon: '🏛️', name: 'The Archivist', desc: 'Collect 400 unique players in your Binder.', col: 4, row: 2, parent: 'collect2', chal: true },
-    { id: 'collect_all', cat: 'draft', icon: '🎒', name: "Gotta Catch 'Em All", desc: "Collect EVERY player in one game's entire card pool.", col: 5, row: 2, parent: 'collect3', chal: true },
+    { id: 'collect_all', cat: 'draft', icon: '🎒', name: "Gotta Catch 'Em All", desc: "Collect EVERY player in one game's entire card pool. Pays a 10,000 XP jackpot.", col: 5, row: 2, parent: 'collect3', chal: true, xp: 10000 },
     { id: 'heist', cat: 'draft', icon: '🦝', name: 'The Heist', desc: 'Snag a neighbor, then Boost that same card.', col: 1, row: 3, parent: 'draft_root' },
     { id: 'triple1', cat: 'draft', icon: '🎰', name: 'Triple Threat I', desc: 'Use all 3 power-ups in one build.', col: 1, row: 4, parent: 'draft_root' },
     { id: 'triple2', cat: 'draft', icon: '🎲', name: 'Triple Threat II', desc: 'Use all 3 power-ups in a single turn.', col: 2, row: 4, parent: 'triple1' },
