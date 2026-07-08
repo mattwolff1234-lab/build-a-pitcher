@@ -1044,6 +1044,51 @@ module.exports = async (req, res) => {
           accounts_granted: updated, total_grants: grants, by_achievement: byAch });
       }
 
+      // One-time, token-gated: restore account XP from server evidence, for accounts zeroed by
+      // the old fresh-profile reset bug. Computes a conservative FLOOR of what the account must
+      // have earned — achievement unlocks (40 XP each, 120 for challenge tiles), daily-challenge
+      // submissions (build-finish + career-sim XP per play), and the 1v1 record (55/win, 18/loss)
+      // — and raises users.xp to it where it's lower. Never lowers anyone (XP stays monotonic).
+      // Run achBackfill FIRST so restored unlocks count. Defaults to dryRun:true.
+      if (action === 'xpBackfill') {
+        if (body.token !== STATS_TOKEN) return res.status(403).json({ ok: false, error: 'forbidden' });
+        const dryRun = body.dryRun !== false;
+        const ACH_XP = 40, ACH_XP_CHAL = 120;
+        const CHAL = new Set(['the_goat', 'beyond', 'k3', 'w3', 'unanimous', 'ring3', 'billion',
+          'streak3', 'elo3', 'mismatch3', 'grind3', 'completionist']);
+        // per-account daily evidence: each submission = a finished build (20 + max(0, ovr-60))
+        // + the career sim that always follows it (40 + max(0, ovr-70))
+        const dailyXp = {};
+        try {
+          const dailies = await sql`SELECT player_key,
+              sum(60 + GREATEST(0, ovr - 60) + GREATEST(0, ovr - 70))::int AS xp
+            FROM daily_scores WHERE player_key LIKE 'acct:%' GROUP BY player_key`;
+          for (const d of dailies) dailyXp[d.player_key.slice(5)] = Number(d.xp) || 0;
+        } catch (e) {}
+        const users = await sql`SELECT google_sub, email, name, xp, achievements,
+            pvp_wins, pvp_losses, pvp_wins_hoops, pvp_losses_hoops
+          FROM users WHERE google_sub NOT LIKE 'guest:%'`;
+        const rows = [];
+        let granted = 0, totalXp = 0;
+        for (const u of users) {
+          const ach = (u.achievements && typeof u.achievements === 'object') ? u.achievements : {};
+          let floor = 0;
+          for (const id in ach) floor += CHAL.has(id) ? ACH_XP_CHAL : ACH_XP;
+          floor += dailyXp[u.google_sub] || 0;
+          floor += 55 * ((u.pvp_wins || 0) + (u.pvp_wins_hoops || 0));
+          floor += 18 * ((u.pvp_losses || 0) + (u.pvp_losses_hoops || 0));
+          const cur = Number(u.xp) || 0;
+          if (floor <= cur) continue;
+          granted++;
+          totalXp += floor - cur;
+          rows.push({ email: u.email, name: u.name, xp_before: cur, xp_after: floor });
+          if (!dryRun) await sql`UPDATE users SET xp = ${floor} WHERE google_sub = ${u.google_sub}`;
+        }
+        rows.sort((a, b) => (b.xp_after - b.xp_before) - (a.xp_after - a.xp_before));
+        return res.status(200).json({ ok: true, dryRun, accounts_scanned: users.length,
+          accounts_raised: granted, total_xp_granted: totalXp, rows: rows.slice(0, 100) });
+      }
+
       return res.status(400).json({ ok: false, error: 'Unknown action' });
     }
 
