@@ -2907,7 +2907,7 @@ function addNews(news, h) {
 function flashTk(id) { const el = $(id); el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); }
 
 // Headlines generated from a season's events.
-function seasonHeadlines(s, idx, total, P, fallbackTeam) {
+function seasonHeadlines(s, idx, total, P, fallbackTeam, finished = true) {
   const teamName = TEAM_NAMES[s.team] || fallbackTeam;
   const team = 'the ' + teamName;
   const h = [];
@@ -2926,7 +2926,7 @@ function seasonHeadlines(s, idx, total, P, fallbackTeam) {
   if (s.goldGlove) h.push({ text: `${P} wins a <b>Gold Glove</b>.` });
   if (s.hurt && !s.mvp) h.push({ text: `${P} battles injury, limited to ${s.pa} plate appearances.` });
   if (s.struggling && !s.exit) h.push({ text: `${P} slumps to a ${s.ops.toFixed(3).replace(/^0\./, '.')} OPS and is fighting to keep his roster spot.` });
-  if (idx === total - 1) {
+  if (idx === total - 1 && finished) {
     if (s.exit === 'released') h.push({ text: `${P} is <b>released</b> after a ${s.ops.toFixed(3).replace(/^0\./, '.')}-OPS season and can't catch on elsewhere - career over.`, big: true });
     else if (s.exit === 'pushed-out') h.push({ text: `${P} loses his job to a younger bat and <b>walks away</b> after ${total} seasons.`, big: true });
     else h.push({ text: `${P} announces his <b>retirement</b> after ${total} seasons.`, big: true });
@@ -3059,7 +3059,7 @@ function _doCareerSim() {
     runH += s.h; runHR += s.hr; runWar += s.war; runMoney += s.salary;
     $('tkK').textContent = runH.toLocaleString(); $('tkW').textContent = runHR; $('tkWar').textContent = runWar.toFixed(1);
     $('tkMoney').textContent = fmtMoney(runMoney);
-    const heads = seasonHeadlines(s, i - 1, seasons.length, P, T);
+    const heads = seasonHeadlines(s, i - 1, seasons.length, P, T, !career.pendingDecision);
     let milestone = false;
     for (const m of hMiles) if (beforeH < m && runH >= m) { heads.push({ text: `${P} collects his <b>${m.toLocaleString()}th career hit</b>.`, big: true }); flashTk('tkK'); milestone = true; }
     for (const m of hrMiles) if (beforeHR < m && runHR >= m) { heads.push({ text: `${P} launches career home run <b>#${m}</b>.`, big: true }); flashTk('tkW'); milestone = true; }
