@@ -896,7 +896,7 @@ let account=null; try { account = JSON.parse(localStorage.getItem('pl_account') 
 let myStats=null;            // {elo,wins,losses} - set for guests AND signed-in users
 let pendingResult=null;      // {matchId, won, oppElo} captured at game end
 function myElo(){ return myStats ? myStats.elo : 1000; }
-function saveAccount(a){ account=a; try{ localStorage.setItem('pl_account', JSON.stringify(a)); }catch(e){} if(window.Ach) Ach.sync(); }
+function saveAccount(a){ account=a; try{ localStorage.setItem('pl_account', JSON.stringify(a)); }catch(e){} if(window.Ach) Ach.sync(); if(window.XP) XP.sync(); }
 
 // device-guest identity
 let guestId, guestName;
@@ -925,14 +925,14 @@ let gsiReady=false;
 async function onGoogleCredential(resp){
   try {
     const j = await fetch('/api/account', { method:'POST', headers:{'content-type':'application/json'},
-      body: JSON.stringify({ action:'login', idToken: resp.credential }) }).then(x=>x.json());
+      body: JSON.stringify({ action:'login', idToken: resp.credential, guestId }) }).then(x=>x.json());
     if (j.ok){
       saveAccount({ sub:j.sub, email:j.email, name:j.name, picture:j.picture, sessionToken:j.sessionToken });
       try { gtag('event', j.isNew ? 'sign_up' : 'login', { method:'Google' }); } catch(e){}
       // give a friendlier default handle from the Google first name (never the full name),
       // but only if they're still on the auto-generated "Player####" placeholder.
       if (/^Player\d+$/.test(guestName) && j.name){ setGuestName(String(j.name).trim().split(/\s+/)[0]); }
-      // carry the guest rating onto the account (only if the account has never played)
+      // merge this device's guest rating/record into the account
       try { await fetch('/api/account', { method:'POST', headers:{'content-type':'application/json'},
         body: JSON.stringify({ action:'pvpClaim', sub:j.sub, sessionToken:j.sessionToken, guestId }) }); } catch(e){}
       await refreshStats(); updateRatingChip();

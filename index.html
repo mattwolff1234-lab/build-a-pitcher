@@ -525,7 +525,7 @@ setInterval(spawnCard, 4200);
 const GOOGLE_CLIENT_ID = '349698720898-t9bpb8fp7ks6scf8ci8mmoeec1lpm3d3.apps.googleusercontent.com';
 let account = null;
 try { account = JSON.parse(localStorage.getItem('pl_account') || 'null'); } catch (e) {}
-function saveAccount(a) { account = a; try { localStorage.setItem('pl_account', JSON.stringify(a)); } catch (e) {} renderAcct(); }
+function saveAccount(a) { account = a; try { localStorage.setItem('pl_account', JSON.stringify(a)); } catch (e) {} renderAcct(); if (window.XP) XP.sync(); }
 function clearAccount() { account = null; try { localStorage.removeItem('pl_account'); } catch (e) {} try { google.accounts.id.disableAutoSelect(); } catch (e) {} renderAcct(); if (window.XP) XP.signOut(); }
 function escapeHTML(s) { return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
 
@@ -538,8 +538,10 @@ function initGoogle(tries) {
 }
 async function onGoogleCredential(resp) {
   try {
+    // pass the device guest id (if the games created one) so guest progress merges onto the account
+    let gid = null; try { gid = localStorage.getItem('pl_guestId'); } catch (e) {}
     const j = await fetch('/api/account', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'login', idToken: resp.credential }) }).then(r => r.json());
+      body: JSON.stringify({ action: 'login', idToken: resp.credential, guestId: gid || undefined }) }).then(r => r.json());
     if (j.ok) {
       saveAccount({ sub: j.sub, email: j.email, name: j.name, picture: j.picture, sessionToken: j.sessionToken });
       try { gtag('event', j.isNew ? 'sign_up' : 'login', { method: 'Google' }); } catch (e) {}

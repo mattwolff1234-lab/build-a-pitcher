@@ -1254,6 +1254,7 @@ function saveAccount(a) {
   const changed = !account || account.sub !== a.sub;
   account = a; try { localStorage.setItem('pl_account', JSON.stringify(a)); } catch (e) {} renderAcct();
   if (window.Ach) Ach.sync();
+  if (window.XP) XP.sync();   // restore/merge the account's XP right away (not just on next award)
   if (changed) { try { localStorage.removeItem(dcKey()); } catch (e) {} updateDailyBtn(); }   // new identity -> reset device daily gate
   syncAccountDates();   // pull this account's true daily status (re-locks if already played today)
 }
@@ -1271,7 +1272,7 @@ function initGoogle(tries) {
 async function onGoogleCredential(resp) {
   try {
     const r = await fetch('/api/account', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'login', idToken: resp.credential }) });
+      body: JSON.stringify({ action: 'login', idToken: resp.credential, guestId: getOrCreateGuestId() }) });
     const j = await r.json();
     if (j.ok) {
       saveAccount({ sub: j.sub, email: j.email, name: j.name, picture: j.picture, sessionToken: j.sessionToken });
@@ -2147,8 +2148,8 @@ async function finishDailyChallenge(ovr, name, build) {
     checkStreakMilestone(streak.count);
     if (account) {
       try {
-        const r = await fetch('/api/account', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'updateStreak', sub: account.sub, sessionToken: account.sessionToken }) });
-        const j = await r.json(); if (j.ok) { streak.count = j.streak; streak.best = j.best; saveStreak(); renderStreakChip(); }
+        const r = await fetch('/api/account', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'updateStreak', sub: account.sub, sessionToken: account.sessionToken, count: streak.count }) });
+        const j = await r.json(); if (j.ok) { streak.count = Math.max(j.streak, streak.count); streak.best = Math.max(j.best, streak.best, streak.count); saveStreak(); renderStreakChip(); }
       } catch (e) {}
     }
   }

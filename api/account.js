@@ -139,6 +139,22 @@ function nextElo(elo, oppElo, won, k = 32) {
 // Small win-streak bonus: +2 Elo per consecutive win, stops growing at a 5-win streak (max +10).
 const STREAK_BONUS = 2, STREAK_CAP = 5;
 
+// Walk a list of played dates ('YYYY-MM-DD') and return { current, best } daily streaks —
+// current is the consecutive run ending today (or yesterday, when today isn't played yet).
+// Mirrors the client's streaksFromDates so both sides agree with the visible calendar.
+function streaksFromDates(dates, today) {
+  const days = [...new Set(dates)].sort();
+  if (!days.length) return { current: 0, best: 0 };
+  const shift = (s, n) => { const d = new Date(s + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+  let best = 0, run = 0, prev = null;
+  for (const d of days) { run = (prev && shift(prev, 1) === d) ? run + 1 : 1; if (run > best) best = run; prev = d; }
+  const set = new Set(days);
+  let anchor = set.has(today) ? today : (set.has(shift(today, -1)) ? shift(today, -1) : null);
+  let current = 0;
+  while (anchor && set.has(anchor)) { current++; anchor = shift(anchor, -1); }
+  return { current, best };
+}
+
 // ---- NBA 1v1 ("hoops") rating: a fully separate Elo board kept on the same user rows in dedicated
 // *_hoops columns. These run ONLY when the client sends sport:'hoops'; the baseball pvp* actions
 // below are byte-for-byte unchanged. Same Elo math, streak bonus, and opponent-loss apply. ----
@@ -323,9 +339,37 @@ module.exports = async (req, res) => {
           ON CONFLICT (google_sub) DO UPDATE SET
             email = EXCLUDED.email, name = EXCLUDED.name, picture = EXCLUDED.picture,
             session_token = COALESCE(users.session_token, EXCLUDED.session_token)
-          RETURNING session_token, current_streak, best_streak, (xmax = 0) AS is_new`;
+          RETURNING session_token, current_streak, best_streak, last_active_date, (xmax = 0) AS is_new`;
+        let streakOut = Number(row.current_streak) || 0, bestOut = Number(row.best_streak) || 0;
+        // Adopt this device's guest daily-challenge history into the account, so days played
+        // before signing in keep counting toward the streak/calendar. Days the account already
+        // has stay put; then the streak counters are recomputed from the merged calendar (they
+        // only ever go UP here — a break is applied by updateStreak on actual play, not login).
+        if (body.guestId) {
+          try {
+            const gKey = 'guest:' + String(body.guestId).slice(0, 80);
+            const aKey = 'acct:' + profile.sub;
+            await sql`UPDATE daily_scores d SET player_key = ${aKey} WHERE d.player_key = ${gKey}
+              AND NOT EXISTS (SELECT 1 FROM daily_scores a WHERE a.player_key = ${aKey}
+                AND a.game = d.game AND a.challenge_date = d.challenge_date)`;
+            const played = await sql`SELECT DISTINCT challenge_date::text AS d FROM daily_scores WHERE player_key = ${aKey}`;
+            if (played.length) {
+              const today = new Date().toISOString().slice(0, 10);
+              const s = streaksFromDates(played.map(r => r.d), today);
+              const lastPlayed = played.map(r => r.d).sort().pop();
+              const storedLast = row.last_active_date ? String(row.last_active_date).slice(0, 10) : null;
+              const newCur = Math.max(streakOut, s.current);
+              const newBest = Math.max(bestOut, s.best, newCur);
+              const newLast = (!storedLast || lastPlayed > storedLast) ? lastPlayed : storedLast;
+              if (newCur !== streakOut || newBest !== bestOut || newLast !== storedLast) {
+                await sql`UPDATE users SET current_streak = ${newCur}, best_streak = ${newBest}, last_active_date = ${newLast} WHERE google_sub = ${profile.sub}`;
+              }
+              streakOut = newCur; bestOut = newBest;
+            }
+          } catch (e) {}
+        }
         return res.status(200).json({ ok: true, sub: profile.sub, email: profile.email, name: profile.name, picture: profile.picture, sessionToken: row.session_token,
-          streak: Number(row.current_streak) || 0, bestStreak: Number(row.best_streak) || 0, isNew: row.is_new === true });
+          streak: streakOut, bestStreak: bestOut, isNew: row.is_new === true });
       }
 
       if (action === 'save') {
@@ -349,7 +393,8 @@ module.exports = async (req, res) => {
       }
 
       // Bump the signed-in user's daily streak (UTC). Increments if they last played yesterday,
-      // resets to 1 on a gap, no-ops if already counted today. Returns the authoritative streak.
+      // resets to 1 on a gap. Cross-checks the daily-challenge calendar and the client's counter
+      // (never lowers either) so signing in mid-streak can't clobber it. Returns the final streak.
       if (action === 'updateStreak') {
         if (!(await authed(body.sub, body.sessionToken))) return res.status(401).json({ ok: false, error: 'Not signed in' });
         const now = new Date();
@@ -358,11 +403,25 @@ module.exports = async (req, res) => {
         const yd = y.toISOString().slice(0, 10);
         const [u] = await sql`SELECT last_active_date, current_streak, best_streak FROM users WHERE google_sub = ${body.sub}`;
         const last = u && u.last_active_date ? String(u.last_active_date).slice(0, 10) : null;
-        if (last === today) return res.status(200).json({ ok: true, streak: (u && u.current_streak) || 0, best: (u && u.best_streak) || 0, firstToday: false });
-        const streak = last === yd ? (((u && u.current_streak) || 0) + 1) : 1;
+        const firstToday = last !== today;
+        let streak = last === today ? ((u && u.current_streak) || 0)
+          : (last === yd ? (((u && u.current_streak) || 0) + 1) : 1);
+        // Also derive from the daily-challenge calendar itself (covers guest days merged in at
+        // login and plays recorded on other devices) — take whichever run is longer.
+        try {
+          const played = await sql`SELECT DISTINCT challenge_date::text AS d FROM daily_scores WHERE player_key = ${'acct:' + body.sub}`;
+          if (played.length) streak = Math.max(streak, streaksFromDates(played.map(r => r.d), today).current);
+        } catch (e) {}
+        // The client's counter can legitimately be AHEAD of ours: it counts days played signed-out
+        // before this sign-in and Streak Freeze tokens (a freeze bridges one missed day; the server
+        // doesn't track them). Never lower it — same trust-the-client model as the leaderboard.
+        const clientCount = Math.max(0, Math.min(100000, Math.round(Number(body.count) || 0)));
+        streak = Math.max(streak, clientCount);
         const best = Math.max((u && u.best_streak) || 0, streak);
-        await sql`UPDATE users SET current_streak = ${streak}, best_streak = ${best}, last_active_date = ${today} WHERE google_sub = ${body.sub}`;
-        return res.status(200).json({ ok: true, streak, best, firstToday: true });
+        if (firstToday || streak !== ((u && u.current_streak) || 0) || best !== ((u && u.best_streak) || 0)) {
+          await sql`UPDATE users SET current_streak = ${streak}, best_streak = ${best}, last_active_date = ${today} WHERE google_sub = ${body.sub}`;
+        }
+        return res.status(200).json({ ok: true, streak, best, firstToday });
       }
 
       // Merge the caller's achievements with what's stored on their account (union, keeping the
@@ -370,37 +429,40 @@ module.exports = async (req, res) => {
       if (action === 'achSync') {
         if (!(await authed(body.sub, body.sessionToken))) return res.status(401).json({ ok: false, error: 'Not signed in' });
         const incoming = (body.achievements && typeof body.achievements === 'object') ? body.achievements : {};
-        // reset=true replaces the account copy with the caller's current set (used for version wipes);
-        // otherwise merge (union, earliest unlock time wins) so progress follows the email across devices.
-        const base = body.reset === true ? {} : ((await sql`SELECT achievements FROM users WHERE google_sub = ${body.sub}`)[0] || {}).achievements || {};
-        // claim=true marks pre-sign-in guest progress: adopt it only into an account with no
-        // unlocks yet (mirrors pvpClaim), so a shared device's guest board can never pollute an
-        // established account — but a long-time guest keeps their board on first sign-in.
-        const adopt = (body.claim === true && Object.keys(base).length > 0) ? {} : incoming;
+        // ALWAYS merge (union, earliest unlock time wins). body.reset — the old launch-time
+        // "version wipe" — is deliberately ignored: cached clients set it from any FRESH browser
+        // profile too, which replaced the account's board with an empty one (the "signed in on a
+        // new device and lost everything" bug). Likewise the old claim gate (adopt guest unlocks
+        // only into an empty account) silently discarded a signed-out session's progress; unlocks
+        // earned on this device merge in regardless.
+        const base = ((await sql`SELECT achievements FROM users WHERE google_sub = ${body.sub}`)[0] || {}).achievements || {};
         const merged = Object.assign({}, base);
         let n = 0;
-        for (const k in adopt) {
+        for (const k in incoming) {
           if (n++ > 200) break;
           if (typeof k !== 'string' || !k || k.length > 40) continue;
-          const t = String(adopt[k] || '').slice(0, 40);
+          const t = String(incoming[k] || '').slice(0, 40);
           if (!merged[k] || (t && t < merged[k])) merged[k] = t || merged[k] || new Date().toISOString();
         }
         await sql`UPDATE users SET achievements = ${JSON.stringify(merged)}::jsonb WHERE google_sub = ${body.sub}`;
         return res.status(200).json({ ok: true, achievements: merged });
       }
 
-      // Sync cross-game player XP. XP is monotonic: the account keeps the MAX of the caller's
-      // local total and what's stored, so it follows the email across devices and never drops.
+      // Sync cross-game player XP. XP is monotonic on the account — it follows the email across
+      // devices and can never drop. Signed-out (guest) XP is ADDED on first sync after sign-in.
       if (action === 'xpSync') {
         if (!(await authed(body.sub, body.sessionToken))) return res.status(401).json({ ok: false, error: 'Not signed in' });
         const incoming = Math.max(0, Math.min(1e12, Math.round(Number(body.xp) || 0)));
         const stored = Number(((await sql`SELECT xp FROM users WHERE google_sub = ${body.sub}`)[0] || {}).xp) || 0;
-        // reset=true wipes the account copy (version wipe). claim=true (pre-sign-in guest XP)
-        // is only adopted into an account that has none yet — mirrors achSync/pvpClaim.
-        let merged;
-        if (body.reset === true) merged = incoming;
-        else if (body.claim === true && stored > 0) merged = stored;
-        else merged = Math.max(stored, incoming);
+        // body.reset (the old launch-time version wipe) is deliberately IGNORED: cached clients
+        // send it from any fresh browser profile, which zeroed the account's XP on first sync
+        // after sign-in. XP stays monotonic on the account.
+        // claim=true = XP earned on this device while signed out (the local copy is zeroed on
+        // sign-out, so it's all new): ADD it to the account instead of throwing it away.
+        // Otherwise the local copy mirrors this account — keep the max.
+        const merged = body.claim === true
+          ? Math.min(1e12, stored + incoming)
+          : Math.max(stored, incoming);
         await sql`UPDATE users SET xp = ${merged} WHERE google_sub = ${body.sub}`;
         return res.status(200).json({ ok: true, xp: merged });
       }
@@ -563,40 +625,43 @@ module.exports = async (req, res) => {
         return res.status(200).json({ ok: true, history: rows });
       }
 
-      // Carry a device-guest's rating onto a Google account the first time they sign in.
-      // Baseball and hoops claim independently, each only onto a side the account hasn't played
-      // yet (so we never clobber an existing rating). Claimed match history is re-keyed so it
-      // follows the account; the guest row is only deleted once nothing unclaimed is left on it.
+      // Carry a device-guest's rating onto a Google account at sign-in. The guest record MERGES
+      // into the account even if the account has already played (the old "only onto a never-played
+      // account" gate silently threw away everything earned while signed out): W/L are added, the
+      // rating moves by the guest's net delta from the 1000 start (a fresh account lands exactly on
+      // the guest rating), and the guest streak — their most recent games — carries over. The guest
+      // row is consumed atomically (DELETE .. RETURNING) so a repeated/concurrent claim is a no-op,
+      // and claimed match history is re-keyed so it follows the account.
       if (action === 'pvpClaim') {
         if (!(await authed(body.sub, body.sessionToken))) return res.status(401).json({ ok: false, error: 'Not signed in' });
         const gid = body.guestId ? ('guest:' + String(body.guestId).slice(0, 48)) : null;
-        const [acct] = await sql`SELECT pvp_elo AS elo, pvp_wins AS wins, pvp_losses AS losses,
-          pvp_elo_hoops AS helo, pvp_wins_hoops AS hwins, pvp_losses_hoops AS hlosses FROM users WHERE google_sub = ${body.sub}`;
-        const [g] = gid ? await sql`SELECT pvp_elo AS elo, pvp_wins AS wins, pvp_losses AS losses, pvp_streak AS streak,
-          pvp_elo_hoops AS helo, pvp_wins_hoops AS hwins, pvp_losses_hoops AS hlosses, pvp_streak_hoops AS hstreak
-          FROM users WHERE google_sub = ${gid}` : [];
         let claimedBase = false, claimedHoops = false;
-        if (acct && g) {
-          if (acct.wins === 0 && acct.losses === 0 && (g.wins > 0 || g.losses > 0)) {
-            await sql`UPDATE users SET pvp_elo = ${g.elo}, pvp_wins = ${g.wins}, pvp_losses = ${g.losses}, pvp_streak = ${g.streak} WHERE google_sub = ${body.sub}`;
-            await sql`UPDATE pvp_history SET player_key = ${body.sub} WHERE player_key = ${gid} AND sport IS DISTINCT FROM 'hoops'`;
-            claimedBase = true;
-          }
-          if (acct.hwins === 0 && acct.hlosses === 0 && (g.hwins > 0 || g.hlosses > 0)) {
-            await sql`UPDATE users SET pvp_elo_hoops = ${g.helo}, pvp_wins_hoops = ${g.hwins}, pvp_losses_hoops = ${g.hlosses}, pvp_streak_hoops = ${g.hstreak} WHERE google_sub = ${body.sub}`;
-            await sql`UPDATE pvp_history SET player_key = ${body.sub} WHERE player_key = ${gid} AND sport = 'hoops'`;
-            claimedHoops = true;
-          }
-          const baseLeft = (g.wins > 0 || g.losses > 0) && !claimedBase;
-          const hoopsLeft = (g.hwins > 0 || g.hlosses > 0) && !claimedHoops;
-          if ((claimedBase || claimedHoops) && !baseLeft && !hoopsLeft) {
+        const [g] = gid ? await sql`DELETE FROM users WHERE google_sub = ${gid}
+          AND (pvp_wins > 0 OR pvp_losses > 0 OR pvp_wins_hoops > 0 OR pvp_losses_hoops > 0)
+          RETURNING pvp_elo AS elo, pvp_wins AS wins, pvp_losses AS losses, pvp_streak AS streak,
+            pvp_elo_hoops AS helo, pvp_wins_hoops AS hwins, pvp_losses_hoops AS hlosses, pvp_streak_hoops AS hstreak` : [];
+        if (g) {
+          const [acct] = await sql`SELECT pvp_elo AS elo, pvp_wins AS wins, pvp_losses AS losses,
+            pvp_elo_hoops AS helo, pvp_wins_hoops AS hwins, pvp_losses_hoops AS hlosses FROM users WHERE google_sub = ${body.sub}`;
+          if (acct) {
+            if (g.wins > 0 || g.losses > 0) {
+              const elo = Math.max(100, Math.min(4000, acct.elo + (g.elo - 1000)));
+              await sql`UPDATE users SET pvp_elo = ${elo}, pvp_wins = ${acct.wins + g.wins}, pvp_losses = ${acct.losses + g.losses}, pvp_streak = ${g.streak} WHERE google_sub = ${body.sub}`;
+              await sql`UPDATE pvp_history SET player_key = ${body.sub} WHERE player_key = ${gid} AND sport IS DISTINCT FROM 'hoops'`;
+              claimedBase = true;
+            }
+            if (g.hwins > 0 || g.hlosses > 0) {
+              const helo = Math.max(100, Math.min(4000, acct.helo + (g.helo - 1000)));
+              await sql`UPDATE users SET pvp_elo_hoops = ${helo}, pvp_wins_hoops = ${acct.hwins + g.hwins}, pvp_losses_hoops = ${acct.hlosses + g.hlosses}, pvp_streak_hoops = ${g.hstreak} WHERE google_sub = ${body.sub}`;
+              await sql`UPDATE pvp_history SET player_key = ${body.sub} WHERE player_key = ${gid} AND sport = 'hoops'`;
+              claimedHoops = true;
+            }
             await sql`UPDATE pvp_history SET opp_key = ${body.sub} WHERE opp_key = ${gid}`;
-            await sql`DELETE FROM users WHERE google_sub = ${gid}`;  // retire the guest identity
           }
         }
-        const src = claimedBase ? g : acct;
+        const [after] = await sql`SELECT pvp_elo AS elo, pvp_wins AS wins, pvp_losses AS losses FROM users WHERE google_sub = ${body.sub}`;
         return res.status(200).json({ ok: true, claimed: claimedBase || claimedHoops, claimedHoops,
-          elo: src ? src.elo : 1000, wins: src ? src.wins : 0, losses: src ? src.losses : 0 });
+          elo: after ? after.elo : 1000, wins: after ? after.wins : 0, losses: after ? after.losses : 0 });
       }
 
       if (action === 'pvpLeaderboard') {
@@ -977,6 +1042,51 @@ module.exports = async (req, res) => {
         }
         return res.status(200).json({ ok: true, dryRun, accounts_scanned: users.length,
           accounts_granted: updated, total_grants: grants, by_achievement: byAch });
+      }
+
+      // One-time, token-gated: restore account XP from server evidence, for accounts zeroed by
+      // the old fresh-profile reset bug. Computes a conservative FLOOR of what the account must
+      // have earned — achievement unlocks (40 XP each, 120 for challenge tiles), daily-challenge
+      // submissions (build-finish + career-sim XP per play), and the 1v1 record (55/win, 18/loss)
+      // — and raises users.xp to it where it's lower. Never lowers anyone (XP stays monotonic).
+      // Run achBackfill FIRST so restored unlocks count. Defaults to dryRun:true.
+      if (action === 'xpBackfill') {
+        if (body.token !== STATS_TOKEN) return res.status(403).json({ ok: false, error: 'forbidden' });
+        const dryRun = body.dryRun !== false;
+        const ACH_XP = 40, ACH_XP_CHAL = 120;
+        const CHAL = new Set(['the_goat', 'beyond', 'k3', 'w3', 'unanimous', 'ring3', 'billion',
+          'streak3', 'elo3', 'mismatch3', 'grind3', 'completionist']);
+        // per-account daily evidence: each submission = a finished build (20 + max(0, ovr-60))
+        // + the career sim that always follows it (40 + max(0, ovr-70))
+        const dailyXp = {};
+        try {
+          const dailies = await sql`SELECT player_key,
+              sum(60 + GREATEST(0, ovr - 60) + GREATEST(0, ovr - 70))::int AS xp
+            FROM daily_scores WHERE player_key LIKE 'acct:%' GROUP BY player_key`;
+          for (const d of dailies) dailyXp[d.player_key.slice(5)] = Number(d.xp) || 0;
+        } catch (e) {}
+        const users = await sql`SELECT google_sub, email, name, xp, achievements,
+            pvp_wins, pvp_losses, pvp_wins_hoops, pvp_losses_hoops
+          FROM users WHERE google_sub NOT LIKE 'guest:%'`;
+        const rows = [];
+        let granted = 0, totalXp = 0;
+        for (const u of users) {
+          const ach = (u.achievements && typeof u.achievements === 'object') ? u.achievements : {};
+          let floor = 0;
+          for (const id in ach) floor += CHAL.has(id) ? ACH_XP_CHAL : ACH_XP;
+          floor += dailyXp[u.google_sub] || 0;
+          floor += 55 * ((u.pvp_wins || 0) + (u.pvp_wins_hoops || 0));
+          floor += 18 * ((u.pvp_losses || 0) + (u.pvp_losses_hoops || 0));
+          const cur = Number(u.xp) || 0;
+          if (floor <= cur) continue;
+          granted++;
+          totalXp += floor - cur;
+          rows.push({ email: u.email, name: u.name, xp_before: cur, xp_after: floor });
+          if (!dryRun) await sql`UPDATE users SET xp = ${floor} WHERE google_sub = ${u.google_sub}`;
+        }
+        rows.sort((a, b) => (b.xp_after - b.xp_before) - (a.xp_after - a.xp_before));
+        return res.status(200).json({ ok: true, dryRun, accounts_scanned: users.length,
+          accounts_raised: granted, total_xp_granted: totalXp, rows: rows.slice(0, 100) });
       }
 
       return res.status(400).json({ ok: false, error: 'Unknown action' });

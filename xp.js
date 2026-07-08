@@ -47,9 +47,13 @@
     else {
       localStorage.setItem('pl_xp_ver', XP_VER);
       localStorage.removeItem('pl_xp');
-      localStorage.setItem('pl_xp_rst', XP_VER);   // also wipe the account copy on next sync
       total = 0;
     }
+    // A version bump wipes LOCAL data only. The old 'pl_xp_rst' flag propagated the wipe to the
+    // account (reset:true on next sync) — but it was also set by every FRESH browser profile,
+    // which zeroed the account's XP the moment you signed in on a new device/tab. Never again;
+    // clear any stale flag so old installs can't re-trigger it either.
+    localStorage.removeItem('pl_xp_rst');
   } catch (e) { total = 0; }
   const persist = () => { try { localStorage.setItem('pl_xp', JSON.stringify({ xp: total })); } catch (e) {} };
 
@@ -59,20 +63,36 @@
   async function serverSync() {
     const a = acct();
     if (!a || !a.sub || !a.sessionToken) return;
-    let owner = null, resetting = false;
-    try { owner = localStorage.getItem('pl_xp_owner'); resetting = localStorage.getItem('pl_xp_rst') === XP_VER; } catch (e) {}
-    // Same claim logic as achievements: if the local cache belongs to this account, push it up;
-    // otherwise it's guest (or another account's) XP — the server adopts it only into an account
-    // that has none yet, so a shared device's guest XP can't inflate an established account.
-    const claiming = owner !== a.sub && !resetting;
+    let owner = null;
+    try { owner = localStorage.getItem('pl_xp_owner'); } catch (e) {}
+    // Local XP with no owner = earned while signed out (sign-out zeroes the local copy, so it's
+    // all new) → send as a CLAIM and the server ADDS it to the account. Owned by this account →
+    // plain sync (server keeps the max). Owned by a DIFFERENT account (rare — an account switch
+    // that skipped sign-out) → that XP isn't ours to push; drop it and adopt the account's copy.
+    if (owner && owner !== a.sub) { total = 0; lastShownXp = 0; persist(); }
+    const claiming = !owner;
+    // A claim is ADDED to the account server-side, so it must run once even with several tabs
+    // open at sign-in: take a short-lived cross-tab lock and let the losers simply retry later
+    // (next award / storage event / page load) — by then the winner has recorded pl_xp_owner
+    // and they fall through to a plain max-merge sync.
+    let push = total;
+    if (claiming) {
+      try {
+        const lock = Number(localStorage.getItem('pl_xp_claim')) || 0;
+        if (Date.now() - lock < 15000) return;
+        localStorage.setItem('pl_xp_claim', String(Date.now()));
+        // claim the freshest persisted total — this tab's in-memory copy can trail XP just earned in another tab
+        push = Math.max(push, Number(JSON.parse(localStorage.getItem('pl_xp') || '{}').xp) || 0);
+      } catch (e) {}
+    }
     try {
       const r = await fetch('/api/account', {
         method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ action: 'xpSync', sub: a.sub, sessionToken: a.sessionToken, xp: total, reset: resetting, claim: claiming }),
+        body: JSON.stringify({ action: 'xpSync', sub: a.sub, sessionToken: a.sessionToken, xp: push, claim: claiming }),
       }).then(x => x.json());
       if (r && r.ok && typeof r.xp === 'number') {
-        try { if (resetting) localStorage.removeItem('pl_xp_rst'); localStorage.setItem('pl_xp_owner', a.sub); } catch (e) {}
-        if (r.xp !== total) { total = r.xp; lastShownXp = total; persist(); mount(); }   // server is authoritative (max-merge) — no gain animation for a cross-device restore
+        try { localStorage.setItem('pl_xp_owner', a.sub); localStorage.removeItem('pl_xp_claim'); } catch (e) {}
+        if (r.xp !== total) { total = r.xp; lastShownXp = total; persist(); mount(); }   // server is authoritative — no gain animation for a cross-device restore
       }
     } catch (e) {}
   }
@@ -338,7 +358,15 @@
   else mount();
   // pull the account's XP shortly after load (give Google auto-sign-in time to set pl_account)
   setTimeout(serverSync, 1600);
-  window.addEventListener('storage', e => { if (e.key === 'pl_account') serverSync(); });
+  // React to sign-in/out happening in ANOTHER tab. On sign-out, mirror XP.signOut locally (so this
+  // tab can't re-persist the old total and later double-claim it). On sign-in, sync after a beat:
+  // the tab that signed in claims first and records pl_xp_owner, so by the time we run we see the
+  // owner and do a plain max-merge instead of racing a second (double-counting) claim.
+  window.addEventListener('storage', e => {
+    if (e.key !== 'pl_account') return;
+    if (!acct()) { total = 0; lastShownXp = 0; try { localStorage.removeItem('pl_xp'); localStorage.removeItem('pl_xp_owner'); } catch (err) {} mount(); return; }
+    setTimeout(serverSync, 1200 + Math.random() * 800);
+  });
 
   // ---- local-only test bar (never appears on the live site) --------------
   if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) {
