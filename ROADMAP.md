@@ -53,9 +53,10 @@
 - **⏩ Skip to verdict** on career playback (rows/headlines still render; sounds muted while skipping).
 - Removed dead mod-3 `dailyGameFor` from the baller (its daily is always-on by design).
 
-Known gap carried over: strip FILLER cards use unseeded `randPitcher()` even in dailies, so the
-**Snag power-up was never deterministic in the Daily Challenge** (one-line fix: pass the seeded
-rng into the filler draws — shifts that day's snag neighbors at deploy time).
+~~Known gap~~ FIXED 2026-07-08: Snag is now deterministic in the Daily Challenge. Only the two
+snag-able neighbor cards (`targetIndex ± 1`) are seeded — keyed `pl-daily-snag-<date>-<landed
+player>` so the main dailyRng stream (and the day's landing sequence) was untouched by the deploy.
+The other 42 strip fillers remain cosmetic-random by design.
 
 ## 3. RECOMMENDED NEXT — Tier 1 (highest impact per effort)
 

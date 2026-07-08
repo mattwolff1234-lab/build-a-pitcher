@@ -1559,7 +1559,14 @@ function spin() {
   const strip = [];
   const STRIP_LEN = 45;
   const targetIndex = STRIP_LEN - 6;
-  for (let i = 0; i < STRIP_LEN; i++) strip.push(i === targetIndex ? target : randHitter());
+  // Daily: the two SNAG-able neighbors are seeded from the date + landed card, so everyone who
+  // lands this player gets the same Snag options. The rest of the strip is cosmetic and stays
+  // random - and the main dailyRng stream is untouched, so the landing sequence doesn't shift.
+  const snagRng = dailyMode ? seededRandom(`pl-daily-snag-${todayUTC()}-${target.name}`) : null;
+  for (let i = 0; i < STRIP_LEN; i++) {
+    const seedNeighbor = snagRng && (i === targetIndex - 1 || i === targetIndex + 1);
+    strip.push(i === targetIndex ? target : randHitter(seedNeighbor ? snagRng : undefined));
+  }
 
   const track = $('track');
   gsap.set(track, { x: 0, filter: 'none' });
