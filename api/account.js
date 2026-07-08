@@ -323,6 +323,14 @@ module.exports = async (req, res) => {
   try {
     await ensure();
 
+    // The token-gated admin backfills are also reachable via GET (handy where only fetches are
+    // possible): ?action=achBackfill|xpBackfill&token=...&apply=1 — apply=1 ⇒ dryRun:false.
+    const qAction = req.query && req.query.action;
+    if (req.method === 'GET' && (qAction === 'achBackfill' || qAction === 'xpBackfill')) {
+      req.method = 'POST';
+      req.body = { action: qAction, token: req.query.token, dryRun: req.query.apply !== '1' };
+    }
+
     if (req.method === 'POST') {
       const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
       const action = body.action;
