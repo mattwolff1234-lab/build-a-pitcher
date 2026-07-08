@@ -377,6 +377,10 @@
   .beat-strip.win { color:#43e97b; } .beat-strip.lose { color:#ff7a7a; }
   .shared-intro { color:var(--muted); font-size:13.5px; line-height:1.5; margin-bottom:12px; text-align:center; }
   .shared-actions { display:flex; gap:8px; justify-content:center; margin-top:14px; flex-wrap:wrap; }
+  .skip-row { display:flex; justify-content:flex-end; margin:6px 0 0; }
+  .skip-career { font-family:'Oswald',sans-serif; font-size:11px; font-weight:600; letter-spacing:1px; color:var(--muted);
+    background:rgba(255,255,255,.04); border:1px solid var(--line); border-radius:999px; padding:4px 12px; cursor:pointer; }
+  .skip-career:hover { color:var(--ink); border-color:var(--accent2); }
 
   /* ---------- draft overlay ---------- */
   .draft-overlay { position:fixed; inset:0; z-index:200; display:none; align-items:center; justify-content:center;
@@ -773,6 +777,7 @@
           <div><b id="tkWar">0.0</b><span>WAR</span></div>
           <div><b id="tkMoney">$0</b><span>Earned</span></div>
         </div>
+        <div class="skip-row"><button id="skipCareerBtn" class="skip-career" style="display:none">⏩ Skip to verdict</button></div>
         <div class="career-cols">
           <div id="careerLog" class="career-log"></div>
           <div id="careerNews" class="career-news"></div>
@@ -1201,7 +1206,7 @@ async function init() {
   renderNodes();
   initTilt();
   startIdleReel();
-  $('spinBtn').onclick = spin;
+  $('spinBtn').onclick = () => { if (state.spinning) return stopSpin(); spin(); };
   $('respinBtn').onclick = respin;
   $('boostBtn').onclick = boost;
   $('snagLeftBtn').onclick = () => snag(-1);
@@ -1565,6 +1570,16 @@ function spin() {
   const frameW = track.parentElement.clientWidth;
   const offset = centerOffset(targetIndex, frameW);
   animateReelTo(offset, 3.2, 'power4.out', () => land(target));
+  // tap-to-stop: the landing card was decided above, so braking early changes nothing but the wait
+  $('spinBtn').textContent = '⏹ Stop';
+  $('spinBtn').disabled = false;
+}
+
+let reelTween = null;
+function stopSpin() {
+  if (!state.spinning || !reelTween) return;
+  Sound.click();
+  if (reelTween.progress) reelTween.progress(1);   // jump to the end — fires the tween's onComplete
 }
 
 function centerOffset(index, frameW) { return index * CARD_W - (frameW / 2) + 75 + 14; }
@@ -1572,7 +1587,7 @@ function centerOffset(index, frameW) { return index * CARD_W - (frameW / 2) + 75
 function animateReelTo(offset, duration, ease, onDone) {
   const track = $('track');
   let prevX = gsap.getProperty(track, 'x'), prevT = performance.now(), lastTickX = prevX;
-  gsap.to(track, {
+  reelTween = gsap.to(track, {
     x: -offset, duration, ease,
     onUpdate: () => {
       const x = gsap.getProperty(track, 'x'), t = performance.now();
@@ -1583,7 +1598,7 @@ function animateReelTo(offset, duration, ease, onDone) {
       track.style.filter = b > 0.4 ? `blur(${b.toFixed(1)}px)` : 'none';
       if (Math.abs(x - lastTickX) >= CARD_W) { Sound.tick(speed / 7); lastTickX = x; }  // ticker (pitch by speed)
     },
-    onComplete: () => { track.style.filter = 'none'; state.spinning = false; onDone(); },
+    onComplete: () => { track.style.filter = 'none'; state.spinning = false; reelTween = null; onDone(); },
   });
 }
 
@@ -1633,6 +1648,7 @@ function land(p) {
   $('snagRightBtn').disabled = !canSnag || !state.strip[state.targetIndex + 1];
 
   $('landed').classList.add('show');
+  $('spinBtn').textContent = 'Spin';
   $('spinBtn').disabled = true;
   renderNodes();
   revealWin(p);
@@ -1766,6 +1782,7 @@ function assign(slotKey) {
 
   if (openSlots().length === 0) finish();
   else {
+    $('spinBtn').textContent = 'Spin';
     $('spinBtn').disabled = false;
     startIdleReel();
     // Mobile: glide back up to the Spin button so you can spin again without scrolling all the
@@ -2737,6 +2754,10 @@ function _doCareerSim() {
   let runH = 0, runHR = 0, runWar = 0, runMoney = 0;
   const hMiles = [1000, 2000, 3000], hrMiles = [100, 200, 300, 400, 500];
   const delay = clamp(3400 / seasons.length, 130, 320);
+  let careerSkip = false;
+  const skipBtn = $('skipCareerBtn');
+  skipBtn.style.display = 'inline-block';
+  skipBtn.onclick = () => { careerSkip = true; Sound.click(); };   // fast-forward the remaining seasons
   let i = 0;
   function step() {
     if (i >= seasons.length) return finishPlaythrough(career);
@@ -2770,10 +2791,12 @@ function _doCareerSim() {
     for (const m of hrMiles) if (beforeHR < m && runHR >= m) { heads.push({ text: `${P} launches career home run <b>#${m}</b>.`, big: true }); flashTk('tkW'); milestone = true; }
     heads.forEach(h => addNews(news, h));
 
-    if (s.trade) Sound.swap();
-    else if (s.mvp || s.hr40 || s.ring || milestone) Sound.gold();
-    else Sound.tick(0.35);
-    setTimeout(step, delay);
+    if (!careerSkip) {   // skipping: no per-season chatter, the verdict fanfare still plays
+      if (s.trade) Sound.swap();
+      else if (s.mvp || s.hr40 || s.ring || milestone) Sound.gold();
+      else Sound.tick(0.35);
+    }
+    setTimeout(step, careerSkip ? 0 : delay);
   }
   step();
 }
@@ -2815,6 +2838,7 @@ function careerTier(t, ovr) {
 }
 
 function finishPlaythrough(career) {
+  $('skipCareerBtn').style.display = 'none';
   const t = career.totals;
   const verdict = careerTier(t, state.finalOvr);
 
@@ -3231,6 +3255,7 @@ function reset() {
   $('done').classList.remove('show');
   $('career').style.display = 'none';
   $('landed').classList.remove('show');
+  $('spinBtn').textContent = 'Spin';
   $('spinBtn').disabled = false;
   updatePowerups();
   renderNodes();
