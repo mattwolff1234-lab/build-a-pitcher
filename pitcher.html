@@ -21,6 +21,7 @@
 <script src="/achievements.js" defer></script>
 <script src="/xp.js" defer></script>
 <script src="/collection.js" defer></script>
+<script src="/quests.js" defer></script>
 <script src="/share-card.js" defer></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <!-- Google tag (gtag.js) -->
@@ -825,6 +826,7 @@
       <button class="menu-item" id="miHof">🏛️ My Hall of Fame</button>
       <button class="menu-item" id="miAch">🏅 Achievements<span class="mi-chev" data-ach-count style="margin-left:auto;font-family:'Oswald',sans-serif;font-size:12px;color:var(--gold)">0/0</span></button>
       <button class="menu-item" id="miCol">📇 My Collection<span class="mi-chev" data-col-count style="margin-left:auto;font-family:'Oswald',sans-serif;font-size:12px;color:var(--gold)">0</span></button>
+      <button class="menu-item" id="miQuests">🎯 Daily Quests<span class="mi-chev" data-quest-count style="margin-left:auto;font-family:'Oswald',sans-serif;font-size:12px;color:var(--gold)">0/3</span></button>
       <div class="menu-sec">Compete</div>
       <button class="menu-item" id="miLb">🏆 Leaderboard</button>
       <a class="menu-item" href="/versus#stats">📊 1v1 Stats</a>
@@ -1259,6 +1261,7 @@ async function init() {
   $('miHof').onclick = () => { closeOverlay('menu'); openHof(); };
   $('miAch').onclick = () => { closeOverlay('menu'); Sound.click(); window.Ach && Ach.open(); };
   $('miCol').onclick = () => { closeOverlay('menu'); Sound.click(); window.Collection && Collection.open(LEADERBOARD_GAME); };
+  $('miQuests').onclick = () => { closeOverlay('menu'); Sound.click(); window.Quests && Quests.open(); };
   $('saveHofBtn').onclick = () => saveToHof($('saveHofBtn'));
   $('miLb').onclick = () => { closeOverlay('menu'); openLeaderboard('global'); };
   $('miHow').onclick = () => { closeOverlay('menu'); openOverlay('howModal'); };
@@ -1295,6 +1298,7 @@ async function init() {
   else if (h === 'daily') setTimeout(startDailyChallenge, 350);
   else if (h === 'streak') setTimeout(openStreak, 200);
   else if (h === 'collection' || h === 'binder') { const o = () => (window.Collection ? Collection.open(LEADERBOARD_GAME) : setTimeout(o, 120)); o(); }
+  else if (h === 'quests') { const o = () => (window.Quests ? Quests.open() : setTimeout(o, 120)); o(); }
 
   // ?b=<scoreId> — a shared build link: show that career + the "Beat this career" challenge
   const sharedId = new URLSearchParams(location.search).get('b');
@@ -2245,6 +2249,7 @@ function assign(slotKey) {
   state.used.add(p.name);
   (state.dealtCards || (state.dealtCards = [])).push(p);   // for the daily "best possible build"
   if (window.Collection) Collection.record(LEADERBOARD_GAME, { name: p.name, tier: p.legend ? 'legend' : tier(p.ovr), prime: !!p.prime, legend: !!p.legend });
+  if (window.Quests) Quests.event('assign', { game: LEADERBOARD_GAME, legend: !!p.legend, prime: !!p.prime, rating: Number(slotNumeric(p, s)) || 0 });
   if (window.Ach) {
     if (state.turnPowers && state.turnPowers.size >= 3) Ach.unlock('triple2');   // all 3 power-ups this turn
     if (state.snaggedThisLand && state.boostedThisLand) Ach.unlock('heist');     // snagged then boosted same card
@@ -2969,6 +2974,7 @@ function checkSlotAchievements(slotKey, p, s) {
 // Fires when all 9 slots are filled (called from finish()).
 function checkBuildAchievements() {
   if (window.XP) XP.award(20 + Math.max(0, Math.round((Number(state.finalOvr) || 0) - 60)), 'build');
+  if (window.Quests) Quests.event('build', { game: LEADERBOARD_GAME, ovr: Number(state.finalOvr) || 0, vals: SLOTS.map(s => Number(state.filled[s.key].value) || 0), legends: SLOTS.filter(s => state.filled[s.key].legend).length, powers: (state.respinUsed ? 1 : 0) + (state.boostUsed ? 1 : 0) + (state.snagUsed ? 1 : 0), daily: !!dailyMode, hard: !!hardMode });
   if (!window.Ach) return;
   const f = state.filled, ovr = state.finalOvr;
   Ach.unlock('draft_root');                                   // first/any completed build
@@ -2991,6 +2997,7 @@ function checkBuildAchievements() {
 // Fires after a simulated career (called from finishPlaythrough()).
 function checkCareerAchievements(t, verdict, votePct) {
   if (window.XP) { const x = 40 + (t && t.hallOfFame ? 150 : 0) + Math.max(0, Math.round((Number(state.finalOvr) || 0) - 70)) + Math.min(60, (Number(t && t.rings) || 0) * 12); XP.award(x, 'career'); }
+  if (window.Quests) Quests.event('career', { game: LEADERBOARD_GAME, ovr: Number(state.finalOvr) || 0, hof: !!(t && t.hallOfFame), rings: Number(t && t.rings) || 0, earnings: Number(t && t.earnings) || 0, votePct: Number(votePct) || 0 });
   if (!window.Ach) return;
   Ach.unlock('sim_root');
   if (t.k >= 1000) Ach.unlock('k1');
