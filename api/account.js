@@ -106,6 +106,9 @@ function ensure() {
       // Cross-game player XP (drives the account Level). Monotonic; server keeps the max of
       // local-vs-stored so progress follows the email across devices and can't be lowered.
       await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS xp bigint NOT NULL DEFAULT 0`;
+      // Player card collection ("The Binder"): { pitcher:{ "Name":{t,c,f,p,l} }, batter:{…}, baller:{…} }.
+      // Union-merged on sync (like achievements) so the binder follows the email across devices.
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS collection jsonb NOT NULL DEFAULT '{}'::jsonb`;
       await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS current_streak int NOT NULL DEFAULT 0`;
       await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS best_streak int NOT NULL DEFAULT 0`;
       await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_active_date date`;
@@ -473,6 +476,42 @@ module.exports = async (req, res) => {
           : Math.max(stored, incoming);
         await sql`UPDATE users SET xp = ${merged} WHERE google_sub = ${body.sub}`;
         return res.status(200).json({ ok: true, xp: merged });
+      }
+
+      // Merge the caller's card collection with the account's (union per game+player: max use
+      // count, earliest first-collected time, best rarity tier, sticky prime/legend flags).
+      // Same always-merge posture as achSync — a fresh device can never wipe the account's binder.
+      if (action === 'collectionSync') {
+        if (!(await authed(body.sub, body.sessionToken))) return res.status(401).json({ ok: false, error: 'Not signed in' });
+        const GAMES = ['pitcher', 'batter', 'baller'];
+        const TIER_RANK = { legend: 5, diamond: 4, gold: 3, silver: 2, bronze: 1, grey: 0 };
+        const incoming = (body.collection && typeof body.collection === 'object') ? body.collection : {};
+        const base = ((await sql`SELECT collection FROM users WHERE google_sub = ${body.sub}`)[0] || {}).collection || {};
+        const merged = {};
+        for (const g of GAMES) {
+          const mb = (base[g] && typeof base[g] === 'object') ? base[g] : {};
+          merged[g] = mb;
+          const inc = (incoming[g] && typeof incoming[g] === 'object') ? incoming[g] : {};
+          let n = Object.keys(mb).length;
+          for (const name in inc) {
+            if (typeof name !== 'string' || !name || name.length > 60) continue;
+            const e = inc[name];
+            if (!e || typeof e !== 'object') continue;
+            if (!mb[name] && n >= 3000) continue;   // per-game entry cap (pools are ~hundreds)
+            const cur = mb[name] || {};
+            if (!mb[name]) n++;
+            const t = TIER_RANK[e.t] != null ? e.t : 'grey';
+            mb[name] = {
+              t: (TIER_RANK[cur.t] || 0) >= (TIER_RANK[t] || 0) && cur.t ? cur.t : t,
+              c: Math.min(1e6, Math.max(Number(cur.c) || 0, Math.max(0, Math.round(Number(e.c) || 0)))),
+              f: (cur.f && (!e.f || String(cur.f) < String(e.f))) ? cur.f : String(e.f || cur.f || new Date().toISOString()).slice(0, 40),
+              ...(cur.p || e.p ? { p: 1 } : {}),
+              ...(cur.l || e.l ? { l: 1 } : {}),
+            };
+          }
+        }
+        await sql`UPDATE users SET collection = ${JSON.stringify(merged)}::jsonb WHERE google_sub = ${body.sub}`;
+        return res.status(200).json({ ok: true, collection: merged });
       }
 
       if (action === 'pvpStats') {

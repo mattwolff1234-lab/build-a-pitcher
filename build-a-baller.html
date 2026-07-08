@@ -20,6 +20,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="/achievements.js" defer></script>
 <script src="/xp.js" defer></script>
+<script src="/collection.js" defer></script>
+<script src="/share-card.js" defer></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-TVL2XEQ2Q7"></script>
@@ -187,6 +189,9 @@
   .landed-info .big-ov { font-family:'Oswald',sans-serif; font-size:34px; font-weight:700; margin-top:4px; line-height:1; }
   .prime-badge { font-family:'Oswald',sans-serif; display:inline-block; font-size:11px; font-weight:700; color:#1a1205;
     background:linear-gradient(90deg,var(--gold),var(--accent)); padding:2px 9px; border-radius:20px; margin-left:8px;
+    vertical-align:middle; letter-spacing:1px; }
+  .new-badge { font-family:'Oswald',sans-serif; display:inline-block; font-size:11px; font-weight:700; color:#04140a;
+    background:linear-gradient(90deg,#43e97b,#38f9d7); padding:2px 9px; border-radius:20px; margin-left:8px;
     vertical-align:middle; letter-spacing:1px; }
   .hint { color:var(--muted); font-size:12.5px; margin:12px 0 0; text-align:center; letter-spacing:.4px; }
 
@@ -367,6 +372,11 @@
   .cc-trophies { padding:11px 14px; text-align:center; font-size:15px; background:#0c131e; border-top:1px solid rgba(120,160,210,.12); min-height:20px; }
   .cc-trophies .none { font-size:11px; color:var(--dim); letter-spacing:1px; text-transform:uppercase; }
   .cc-hint { text-align:center; font-size:10.5px; color:var(--dim); padding:8px; letter-spacing:.5px; }
+  .cc-share-row { display:flex; justify-content:center; padding:10px 0 2px; }
+  .beat-strip { text-align:center; font-family:'Oswald',sans-serif; font-size:14px; letter-spacing:.6px; padding:10px; border-top:1px solid var(--line); }
+  .beat-strip.win { color:#43e97b; } .beat-strip.lose { color:#ff7a7a; }
+  .shared-intro { color:var(--muted); font-size:13.5px; line-height:1.5; margin-bottom:12px; text-align:center; }
+  .shared-actions { display:flex; gap:8px; justify-content:center; margin-top:14px; flex-wrap:wrap; }
 
   /* ---------- draft overlay ---------- */
   .draft-overlay { position:fixed; inset:0; z-index:200; display:none; align-items:center; justify-content:center;
@@ -699,7 +709,7 @@
       <div class="landed-top">
         <img id="landedImg" src="" alt="">
         <div class="landed-info">
-          <h2 id="landedName">-<span id="primeBadge" class="prime-badge" style="display:none">PRIME</span></h2>
+          <h2 id="landedName">-<span id="primeBadge" class="prime-badge" style="display:none">PRIME</span><span id="newBadge" class="new-badge" style="display:none">NEW</span></h2>
           <div class="sub" id="landedSub">-</div>
           <div class="big-ov" id="landedOvr">-</div>
         </div>
@@ -797,6 +807,7 @@
       <div class="menu-sec">Your Stuff</div>
       <button class="menu-item" id="miHof">🏛️ My Hall of Fame</button>
       <button class="menu-item" id="miAch">🏅 Achievements<span class="mi-chev" data-ach-count style="margin-left:auto;font-family:'Oswald',sans-serif;font-size:12px;color:var(--gold)">0/0</span></button>
+      <button class="menu-item" id="miCol">📇 My Collection<span class="mi-chev" data-col-count style="margin-left:auto;font-family:'Oswald',sans-serif;font-size:12px;color:var(--gold)">0</span></button>
       <div class="menu-sec">Compete</div>
       <button class="menu-item" id="miLb">🏆 Leaderboard</button>
       <a class="menu-item" href="/versus-hoops#stats">📊 1v1 Stats</a>
@@ -907,6 +918,20 @@
       <div class="dr-arch" id="drArch"></div>
     </div>
     <div class="draft-skip" id="draftSkip">Tap anywhere to continue -></div>
+  </div>
+</div>
+
+<div id="sharedModal" class="overlay">
+  <div class="overlay-card panel">
+    <div class="overlay-head"><span class="overlay-title">⚔️ Shared Career</span><button class="overlay-close" data-close="sharedModal">✕</button></div>
+    <div class="overlay-body">
+      <div id="sharedIntro" class="shared-intro"></div>
+      <div id="sharedCard" class="career-card" style="display:block"></div>
+      <div class="shared-actions">
+        <button id="beatBtn" class="primary">🔥 Beat this career</button>
+        <button id="sharedCloseBtn" class="ghost-btn">Just browse</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1165,6 +1190,15 @@ async function init() {
   buildWeights();
   buildSegments();
   buildPips();
+  // register this game's full card pool with the Collection binder (retry until the deferred module loads)
+  (function regPool() {
+    if (!window.Collection) return setTimeout(regPool, 250);
+    const names = new Set(), list = [];
+    const add = (p, isLegend) => { if (!p || !p.name || names.has(p.name)) return; names.add(p.name); list.push({ name: p.name, tier: isLegend ? 'legend' : tier(p.ovr) }); };
+    (DATA.pool || []).forEach(p => add(p, false));
+    (DATA.legends || []).forEach(p => add(p, true));
+    Collection.setPool(LEADERBOARD_GAME, list);
+  })();
   $('loading').style.display = 'none';
   $('game').style.display = 'block';
   if (hardMode) document.querySelector('header .tag').textContent = 'Hard Mode 🙈';
@@ -1226,10 +1260,16 @@ async function init() {
 
   // deep-link from the home-page menu, e.g. /batting#daily, /batting#streak
   $('miAch').onclick = () => { closeOverlay('menu'); Sound.click(); window.Ach && Ach.open(); };
+  $('miCol').onclick = () => { closeOverlay('menu'); Sound.click(); window.Collection && Collection.open(LEADERBOARD_GAME); };
   const h = (location.hash || '').replace('#', '').toLowerCase();
   if (h === 'daily') setTimeout(startDailyChallenge, 350);
   else if (h === 'streak') setTimeout(openStreak, 200);
   else if (h === 'achievements' || h === 'ach') { const o = () => (window.Ach ? Ach.open() : setTimeout(o, 120)); o(); }
+  else if (h === 'collection' || h === 'binder') { const o = () => (window.Collection ? Collection.open(LEADERBOARD_GAME) : setTimeout(o, 120)); o(); }
+
+  // ?b=<scoreId> — a shared build link: show that career + the "Beat this career" challenge
+  const sharedId = new URLSearchParams(location.search).get('b');
+  if (sharedId) loadSharedBuild(sharedId);
 }
 
 function toast(msg) {
@@ -1255,10 +1295,11 @@ function saveAccount(a) {
   account = a; try { localStorage.setItem('pl_account', JSON.stringify(a)); } catch (e) {} renderAcct();
   if (window.Ach) Ach.sync();
   if (window.XP) XP.sync();   // restore/merge the account's XP right away (not just on next award)
+  if (window.Collection) Collection.sync();
   if (changed) { try { localStorage.removeItem(dcKey()); } catch (e) {} updateDailyBtn(); }   // new identity -> reset device daily gate
   syncAccountDates();   // pull this account's true daily status (re-locks if already played today)
 }
-function clearAccount() { account = null; try { localStorage.removeItem('pl_account'); } catch (e) {} try { localStorage.removeItem(dcKey()); } catch (e) {} try { google.accounts.id.disableAutoSelect(); } catch (e) {} renderAcct(); updateDailyBtn(); if (window.Ach) Ach.signOut(); if (window.XP) XP.signOut(); }
+function clearAccount() { account = null; try { localStorage.removeItem('pl_account'); } catch (e) {} try { localStorage.removeItem(dcKey()); } catch (e) {} try { google.accounts.id.disableAutoSelect(); } catch (e) {} renderAcct(); updateDailyBtn(); if (window.Ach) Ach.signOut(); if (window.XP) XP.signOut(); if (window.Collection) Collection.signOut(); }
 
 function googleConfigured() { return GOOGLE_CLIENT_ID && GOOGLE_CLIENT_ID.indexOf('REPLACE_WITH') !== 0; }
 function initGoogle(tries) {
@@ -1572,6 +1613,9 @@ function land(p) {
   $('landedOvr').textContent = ratingsHidden() ? '?' : p.ovr;
   $('landedOvr').className = 'big-ov c-' + t;
 
+  // never-collected card → NEW badge (collected = assigned into a build at least once)
+  $('newBadge').style.display = (window.Collection && !Collection.has(LEADERBOARD_GAME, p.name)) ? 'inline-block' : 'none';
+
   const hasPrime = !p.legend && !p.prime && !!DATA.prime[p.name] && !state.boostedThisLand;
   $('primeBadge').textContent = 'PRIME' + (p.prime && p.year ? ' ' + p.year : '');
   $('primeBadge').style.display = (state.boostedThisLand || p.prime) ? 'inline-block' : 'none';
@@ -1701,6 +1745,7 @@ function assign(slotKey) {
   };
   state.used.add(p.name);
   (state.dealtCards || (state.dealtCards = [])).push(p);   // for the daily "best possible build"
+  if (window.Collection) Collection.record(LEADERBOARD_GAME, { name: p.name, tier: p.legend ? 'legend' : tier(p.ovr), prime: !!p.prime, legend: !!p.legend });
   state.landed = null;
   state.boostedThisLand = false;
   Sound.assign();
@@ -2766,14 +2811,7 @@ function finishPlaythrough(career) {
   const verdict = careerTier(t, state.finalOvr);
 
   // HOF vote reveal
-  let voteLine = '', votePct = 0;
-  if (t.hallOfFame) {
-    const pct = clamp(round(75 + (t.hofScore - 78) * 0.18 + t.mvp * 1.2, 1), 75, 99.6);
-    votePct = pct;
-    const firstBallot = pct >= 90 || t.mvp >= 3;
-    const goat = state.finalOvr >= 99;
-    voteLine = `${goat ? 'Hall of Fame · ' : ''}${firstBallot ? 'First ballot · ' : ''}${pct}% of the vote`;
-  }
+  const { voteLine, votePct } = hofVoteLine(t, state.finalOvr);
   checkCareerAchievements(t, verdict, votePct);
 
   const v = $('careerVerdict');
@@ -2792,6 +2830,16 @@ function finishPlaythrough(career) {
   }
 
   buildCard(career, verdict, voteLine);
+  // "Beat this career" — shared-link challenge verdict (higher OVR wins, WS breaks ties)
+  if (beatTarget) {
+    const b = beatTarget; beatTarget = null;
+    const win = state.finalOvr > b.ovr || (state.finalOvr === b.ovr && (Number(t.war) || 0) >= (Number(b.war) || 0));
+    $('careerCard').insertAdjacentHTML('beforeend',
+      `<div class="beat-strip ${win ? 'win' : 'lose'}">⚔️ vs ${escapeHTML(b.name)}: ${win
+        ? `YOU WIN — ${state.finalOvr} OVR tops their ${b.ovr}`
+        : `not this time — ${state.finalOvr} OVR vs their ${b.ovr}`}</div>`);
+    try { gtag('event', 'beat_result', { game: LEADERBOARD_GAME, won: win ? 1 : 0 }); } catch (e) {}
+  }
   setTimeout(() => {
     $('careerCard').style.display = 'block';
     gsap.fromTo($('careerCard'), { y: 14, opacity: 0, scale: .97 }, { y: 0, opacity: 1, scale: 1, duration: .55, ease: 'back.out(1.5)' });
@@ -2807,31 +2855,50 @@ function fmtMoney(v) {
   return '$' + Math.round(v / 1e3) + 'K';
 }
 
-// Shareable career card + trophy case.
-function buildCard(career, verdict, voteLine) {
-  const t = career.totals, team = teamInfo(career.finalTeam || (state.simTeam && state.simTeam.abbr) || state.draftTeamAb), name = state.simName;
+// HOF vote line, shared by the finish flow and the shared-build viewer.
+function hofVoteLine(t, ovr) {
+  if (!t.hallOfFame) return { voteLine: '', votePct: 0 };
+  const pct = clamp(round(75 + (t.hofScore - 78) * 0.18 + t.mvp * 1.2, 1), 75, 99.6);
+  const firstBallot = pct >= 90 || t.mvp >= 3;
+  return { votePct: pct, voteLine: `${ovr >= 99 ? 'Hall of Fame · ' : ''}${firstBallot ? 'First ballot · ' : ''}${pct}% of the vote` };
+}
+
+// Trophy shelf pieces, shared by the DOM card and the canvas share image.
+function trophyParts(t) {
   const trophies = [];
   for (let i = 0; i < t.mvp; i++) trophies.push('🏆');
   for (let i = 0; i < t.rings; i++) trophies.push('💍');
   if (t.allStar) trophies.push(`⭐ ${t.allStar}`);
   if (t.allNba) trophies.push(`🏀 ${t.allNba}`);
   if (t.dpoy) trophies.push(`🛡️ ${t.dpoy}`);
-  const trophyHtml = trophies.length ? trophies.join('&nbsp; ') : '<span class="none">No major hardware</span>';
-  const yrs = `${career.seasons[0].age}–${career.seasons[career.seasons.length - 1].age}`;
+  return trophies;
+}
 
-  $('careerCard').innerHTML = `
+// Pure career-card markup — used for YOUR card and for cards arriving via /p/<id> share links.
+// d = { career, verdict, voteLine, name, ovr, teamAb }
+function careerCardHTML(d) {
+  const career = d.career, t = career.totals;
+  const team = teamInfo(career.finalTeam || d.teamAb);
+  const trophies = trophyParts(t);
+  const trophyHtml = trophies.length ? trophies.join('&nbsp; ') : '<span class="none">No major hardware</span>';
+  const hasSeasons = Array.isArray(career.seasons) && career.seasons.length > 0;
+  const roleLine = [career.role,
+    hasSeasons ? `age ${career.seasons[0].age}–${career.seasons[career.seasons.length - 1].age}` : '',
+    hasSeasons ? `${career.seasons.length} seasons` : ''].filter(Boolean).join(' · ');
+
+  return `
     <div class="cc-top" style="background:linear-gradient(135deg, ${team.color}, ${shade(team.color, -34)});">
       <div class="cc-meta">
         <div class="cc-team">${escapeHTML(team.name)}</div>
-        <div class="cc-name">${escapeHTML(name)}</div>
-        <div class="cc-role">${career.role} · age ${yrs} · ${career.seasons.length} seasons</div>
+        <div class="cc-name">${escapeHTML(d.name)}</div>
+        <div class="cc-role">${roleLine}</div>
       </div>
       <div class="cc-badge">
         <div class="cc-logo"><img src="${team.logo}" alt="${escapeHTML(team.name)} logo" onerror="this.parentElement.style.display='none'"></div>
-        <div class="cc-ovr">${state.finalOvr}</div>
+        <div class="cc-ovr">${d.ovr}</div>
       </div>
     </div>
-    <div class="cc-verdict" style="color:${verdictColor(verdict.cls)}">${verdict.txt}${voteLine ? `<div class="cc-vote">${voteLine}</div>` : ''}</div>
+    <div class="cc-verdict" style="color:${verdictColor(d.verdict.cls)}">${d.verdict.txt}${d.voteLine ? `<div class="cc-vote">${d.voteLine}</div>` : ''}</div>
     <div class="cc-line">
       <div><b>${t.ppg}</b><span>PPG</span></div>
       <div><b>${t.rpg}</b><span>RPG</span></div>
@@ -2841,8 +2908,96 @@ function buildCard(career, verdict, voteLine) {
       <div><b>${(t.tpPct * 100).toFixed(1)}</b><span>3P%</span></div>
     </div>
     <div class="cc-trophies">${trophyHtml}</div>
-    <div class="cc-money" style="text-align:center; padding:6px 0 2px; font-family:'Oswald',sans-serif; font-size:20px; font-weight:700; color:var(--gold); letter-spacing:.5px;">💰 ${fmtMoney(t.earnings)} <span style="font-size:11px; color:var(--muted); font-weight:600; letter-spacing:1px;">CAREER EARNINGS</span></div>
-    <div class="cc-hint">📸 Screenshot to share your hooper</div>`;
+    <div class="cc-money" style="text-align:center; padding:6px 0 2px; font-family:'Oswald',sans-serif; font-size:20px; font-weight:700; color:var(--gold); letter-spacing:.5px;">💰 ${fmtMoney(t.earnings)} <span style="font-size:11px; color:var(--muted); font-weight:600; letter-spacing:1px;">CAREER EARNINGS</span></div>`;
+}
+
+// Shareable career card + trophy case.
+function buildCard(career, verdict, voteLine) {
+  $('careerCard').innerHTML = careerCardHTML({
+    career, verdict, voteLine,
+    name: state.simName, ovr: state.finalOvr,
+    teamAb: (state.simTeam && state.simTeam.abbr) || state.draftTeamAb,
+  }) + `
+    <div class="cc-share-row"><button id="ccShareBtn" class="primary">📤 Share this card</button></div>
+    <div class="cc-hint">Shares a card image — submit to the leaderboard first and your link goes with it</div>`;
+  const sb = $('ccShareBtn');
+  if (sb) sb.onclick = shareCareerCard;
+}
+
+// Render the finished card to a PNG and open the native share sheet (falls back to
+// download + link copy on desktop, and to the old X text intent if canvas fails).
+async function shareCareerCard() {
+  if (!state.career) return;
+  const t = state.career.totals;
+  if (!window.ShareCard) { shareBuild({ game: LEADERBOARD_GAME, ovr: state.finalOvr, name: state.simName }); return; }
+  const verdict = careerTier(t, state.finalOvr);
+  const team = teamInfo(state.career.finalTeam || (state.simTeam && state.simTeam.abbr) || state.draftTeamAb);
+  const url = myEntryId ? `https://goat-lab.app/p/${myEntryId}` : 'https://goat-lab.app';
+  const btn = $('ccShareBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Rendering…'; }
+  const res = await ShareCard.share({
+    name: state.simName || 'My Hooper',
+    teamName: team.name, teamColor: team.color,
+    ovr: state.finalOvr,
+    verdict: verdict.txt, verdictColor: verdictColor(verdict.cls),
+    voteLine: hofVoteLine(t, state.finalOvr).voteLine,
+    subtitle: '',
+    metaLine: `${state.career.role} · ${state.career.seasons.length} seasons`,
+    stats: [[t.ppg, 'PPG'], [t.rpg, 'RPG'], [t.apg, 'APG'],
+      [t.war.toFixed(1), 'WS'], [t.pts.toLocaleString(), 'PTS'], [(t.tpPct * 100).toFixed(1), '3P%']],
+    trophies: trophyParts(t).slice(0, 12).join(' '),
+    earnings: fmtMoney(t.earnings),
+    gameEmoji: '🏀', url,
+    text: `I built ${state.simName || 'a hooper'} — a ${state.finalOvr} OVR${t.hallOfFame ? ' Hall of Fame' : ''} hooper on GoatLab. Beat my career:`,
+    filename: 'goatlab-hooper.png',
+  });
+  if (btn) { btn.disabled = false; btn.textContent = '📤 Share this card'; }
+  if (res.mode === 'shared') toast('Shared! 🎉');
+  else if (res.mode === 'download') toast(res.copied ? 'Card saved — link copied to clipboard' : 'Card image saved');
+  else if (res.mode === 'failed') shareBuild({ game: LEADERBOARD_GAME, ovr: state.finalOvr, name: state.simName });
+  try { gtag('event', 'share_card', { game: LEADERBOARD_GAME, ovr: state.finalOvr, mode: res.mode }); } catch (e) {}
+}
+
+// ?b=<scoreId> — someone opened a shared build link: show their career card + "Beat this career".
+let beatTarget = null;
+async function loadSharedBuild(id) {
+  try {
+    const res = await fetch(`/api/score?action=build&id=${encodeURIComponent(id)}`);
+    const data = await res.json();
+    if (!data.ok || !data.entry) return;
+    const entry = data.entry;
+    if (entry.game && entry.game !== LEADERBOARD_GAME) {   // wrong game page for this build — hop over
+      const path = entry.game === 'batter' ? '/batting' : entry.game === 'baller' ? '/hoops' : '/pitching';
+      location.replace(`${path}?b=${entry.id}`);
+      return;
+    }
+    const b = entry.build || {};
+    const career = (b.career && b.career.totals) ? b.career : null;
+    const candidate = { name: entry.name || 'this build', ovr: entry.ovr, war: career ? (Number(career.totals.war) || 0) : 0 };
+    if (career) {
+      const verdict = careerTier(career.totals, entry.ovr);
+      $('sharedCard').innerHTML = careerCardHTML({
+        career, verdict,
+        voteLine: hofVoteLine(career.totals, entry.ovr).voteLine,
+        name: entry.name, ovr: entry.ovr, teamAb: career.finalTeam,
+      });
+    } else {
+      $('sharedCard').innerHTML = `<div class="cc-top" style="background:linear-gradient(135deg,#2b3948,#141d28);">
+        <div class="cc-meta"><div class="cc-team">GoatLab build</div><div class="cc-name">${escapeHTML(entry.name || 'A player')}</div>
+        <div class="cc-role">career details unavailable for this older build</div></div>
+        <div class="cc-badge"><div class="cc-ovr">${entry.ovr}</div></div></div>`;
+    }
+    $('sharedIntro').innerHTML = `Someone challenged you with <b>${escapeHTML(candidate.name)}</b> — a ${entry.ovr} OVR career. Spin your own build and try to top it.`;
+    $('beatBtn').onclick = () => {
+      beatTarget = candidate;
+      closeOverlay('sharedModal');
+      toast(`⚔️ Beat ${candidate.name}: build your hooper + run the career`);
+      try { gtag('event', 'beat_start', { game: LEADERBOARD_GAME }); } catch (e) {}
+    };
+    $('sharedCloseBtn').onclick = () => closeOverlay('sharedModal');
+    openOverlay('sharedModal');
+    try { gtag('event', 'shared_view', { game: LEADERBOARD_GAME }); } catch (e) {}
+  } catch (e) {}
 }
 
 let myEntryId = null;
@@ -2954,7 +3109,7 @@ function miniFigureHTML(entry, slots) {
   return `<div class="bd-fig" style="${dim}" title="Built figure">${layers}</div>`;
 }
 function shareBuild(entry) {
-  const kind = 'baller';
+  const kind = entry.game === 'batter' ? 'batter' : entry.game === 'pitcher' ? 'pitcher' : 'hooper';
   const url = 'https://goat-lab.app';
   const txt = `I built a ${entry.ovr} OVR ${kind}${entry.name ? ` - "${entry.name}"` : ''} on GoatLab. Think you can do better?`;
   window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(txt)}&url=${encodeURIComponent(url)}`, '_blank', 'noopener');

@@ -125,6 +125,16 @@ module.exports = async (req, res) => {
   try {
     await ensure();
 
+    // GET ?action=build&id=<scoreId> — one submitted build, career included (powers /p/<id> share links).
+    if (req.method !== 'POST' && (req.query && req.query.action) === 'build') {
+      const id = parseInt(req.query && req.query.id, 10);
+      if (!id || id < 1) return res.status(400).json({ ok: false, error: 'Bad id' });
+      const [row] = await sql`SELECT id, name, ovr, game, build, created_at FROM scores WHERE id = ${id}`;
+      if (!row) return res.status(404).json({ ok: false, error: 'Not found' });
+      res.setHeader('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=604800');   // rows are immutable
+      return res.status(200).json({ ok: true, entry: { ...row, id: Number(row.id) } });
+    }
+
     // GET ?action=stats[&game=pitcher|batter|all] — total builds, GOAT (99 OVR) count, + live play counter.
     if (req.method !== 'POST' && (req.query && req.query.action) === 'stats') {
       const g = req.query && req.query.game;
