@@ -341,6 +341,11 @@
   .dec-opt:hover { border-color:var(--accent2); background:rgba(25,198,255,.12); transform:translateY(-1px); }
   .dec-opt b { font-family:'Oswald',sans-serif; font-size:15px; letter-spacing:.5px; }
   .dec-opt small { font-size:12px; color:var(--muted); }
+  .dec-fx-row { display:flex; flex-wrap:wrap; gap:5px; margin-top:8px; }
+  .dec-fx { font-family:'Oswald',sans-serif; font-size:10.5px; letter-spacing:.4px; padding:2px 8px; border-radius:6px; white-space:nowrap; }
+  .dec-fx.up { color:#4ade80; background:rgba(74,222,128,.12); border:1px solid rgba(74,222,128,.32); }
+  .dec-fx.down { color:#ff6b6b; background:rgba(255,107,107,.1); border:1px solid rgba(255,107,107,.32); }
+  .dec-fx.neu { color:var(--muted); background:rgba(120,150,190,.1); border:1px solid var(--line); }
 
   /* live ticker */
   .career-ticker { display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:rgba(120,160,210,.12);
@@ -776,7 +781,7 @@
 
       <div id="preSim" class="pre-sim">
         <input id="nameInput" maxlength="20" placeholder="Name your hitter" autocomplete="off">
-        <label class="dec-toggle"><input type="checkbox" id="decChk"> 🎬 Career Decisions <small>— shape the story mid-career</small></label>
+        <label class="dec-toggle"><input type="checkbox" id="decChk"> 🎬 Career Decisions <small>(shape the story mid-career)</small></label>
         <button id="simBtn" class="primary">▶ Simulate Career</button>
       </div>
 
@@ -2381,7 +2386,7 @@ function startDailyCountdown(el) {
   stopDailyCountdown();
   const tick = () => {
     const ms = msToNextDaily();
-    if (ms <= 0) { stopDailyCountdown(); el.textContent = '✨ New daily ready — refresh!'; return; }
+    if (ms <= 0) { stopDailyCountdown(); el.textContent = '✨ New daily ready. Refresh!'; return; }
     el.textContent = '🔒 Next puzzle in ' + fmtCountdown(ms);
   };
   tick(); _dailyCountdown = setInterval(tick, 1000);
@@ -2451,74 +2456,77 @@ function batterRole(vals) {
    a separate |decisions-v1 stream, choices consumed positionally, sim halts at
    an unanswered event and re-runs with the pick appended. choices == null
    (toggle off) is byte-identical to the classic sim. */
+// Each option carries `fx`: the concrete stat effects shown to the player as
+// pills [direction, label]. These MUST mirror applyChoice() below so the tags
+// tell the truth about what the choice does.
 const CAREER_EVENTS = {
   media: { title: 'Rookie Media Day', icon: '🎙️', def: 'business',
-    flavor: 'Camp opens and every mic in the state is pointed at the new bat. How do you play it?',
+    flavor: 'Camp opens and every mic in the state is pointed at the new bat. How do you want to play it?',
     options: [
-      { key: 'spotlight', label: 'Embrace the spotlight', hint: 'Sponsors love a star who loves the camera.' },
-      { key: 'business', label: 'All business', hint: 'Short answers. Long cage sessions.' },
-      { key: 'villain', label: 'Give them a villain', hint: 'Talk now, back it up in October.' },
+      { key: 'spotlight', label: 'Embrace the spotlight', hint: 'Sponsors love a star who loves the camera.', fx: [['up', 'Earnings'], ['up', 'HOF vote']] },
+      { key: 'business', label: 'All business', hint: 'Short answers, long cage sessions.', fx: [['up', 'Performance'], ['down', 'Earnings']] },
+      { key: 'villain', label: 'Give them a villain', hint: 'Talk now, back it up in October.', fx: [['up', 'Clutch'], ['up', 'Earnings'], ['down', 'HOF vote']] },
     ] },
   viral_rookie: { title: 'Accidentally Famous', icon: '📱', def: 'lowkey',
     flavor: 'Your helmet flies off rounding second and you faceplant into the bag. The clip hits 40 million views overnight.',
     options: [
-      { key: 'lean', label: 'Lean into it', hint: 'Slide head-first into every base forever.' },
-      { key: 'lowkey', label: 'Laugh it off, lock in', hint: 'Funny once. Back to work.' },
-      { key: 'merch', label: 'Drop the merch', hint: '"Helmet Optional" tees by Friday.' },
+      { key: 'lean', label: 'Lean into it', hint: 'Slide head-first into every base forever.', fx: [['up', 'Earnings'], ['up', 'HOF vote']] },
+      { key: 'lowkey', label: 'Laugh it off, lock in', hint: 'Funny once. Back to work.', fx: [['up', 'Performance']] },
+      { key: 'merch', label: 'Drop the merch', hint: '"Helmet Optional" tees by Friday.', fx: [['up', 'Earnings'], ['down', 'HOF vote']] },
     ] },
   gear: { title: 'Signature Deal', icon: '🪵', def: 'focus',
     flavor: 'A bat company calls: they want a signature model with your name burned into the barrel.',
     options: [
-      { key: 'sign', label: 'Sign the deal', hint: 'Money in the bank, your barrel in every dugout.' },
-      { key: 'focus', label: 'Stay locked in', hint: 'No distractions until the résumé is done.' },
-      { key: 'charity', label: 'Design it, donate it', hint: 'Every bat funds youth ball back home.' },
+      { key: 'sign', label: 'Sign the deal', hint: 'Money in the bank, your barrel in every dugout.', fx: [['up', 'Big earnings']] },
+      { key: 'focus', label: 'Stay locked in', hint: 'No distractions until the job is done.', fx: [['up', 'Performance']] },
+      { key: 'charity', label: 'Design it, donate it', hint: 'Every bat funds youth ball back home.', fx: [['up', 'HOF vote'], ['up', 'Earnings']] },
     ] },
   presser: { title: 'The Presser', icon: '🎤', def: 'robot',
     flavor: 'After a brutal series you give the most painfully honest press conference of the year. By midnight it\'s everywhere.',
     options: [
-      { key: 'comedy', label: 'Roll with the jokes', hint: 'The late-night shows come calling.' },
-      { key: 'robot', label: '"We\'re on to next week"', hint: 'Full robot mode. Nothing to see here.' },
-      { key: 'fireback', label: 'Fire back at the critics', hint: 'Bulletin-board material — for you.' },
+      { key: 'comedy', label: 'Roll with the jokes', hint: 'The late-night shows come calling.', fx: [['up', 'HOF vote'], ['up', 'Earnings']] },
+      { key: 'robot', label: '"We\'re on to next week"', hint: 'Full robot mode. Nothing to see here.', fx: [['up', 'Performance']] },
+      { key: 'fireback', label: 'Fire back at the critics', hint: 'Bulletin-board material, for you.', fx: [['up', 'Clutch'], ['down', 'HOF vote']] },
     ] },
   viral_celebration: { title: 'The Bat Flip', icon: '🕺', def: 'tone',
-    flavor: 'Your home-run celebration — the flip, the slow walk, the stare — is suddenly all over the internet.',
+    flavor: 'Your home-run celebration (the flip, the slow walk, the stare) is suddenly all over the internet.',
     options: [
-      { key: 'trademark', label: 'Trademark it', hint: 'Kids do it at recess. Get paid for it.' },
-      { key: 'tone', label: 'Tone it down', hint: 'Respect the game, keep the edge.' },
-      { key: 'teach', label: 'Teach the bleachers', hint: 'The whole stadium does it now.' },
+      { key: 'trademark', label: 'Trademark it', hint: 'Kids do it at recess. Get paid for it.', fx: [['up', 'Earnings']] },
+      { key: 'tone', label: 'Tone it down', hint: 'Respect the game, keep the edge.', fx: [['up', 'Performance'], ['up', 'HOF vote']] },
+      { key: 'teach', label: 'Teach the bleachers', hint: 'The whole stadium does it now.', fx: [['up', 'HOF vote']] },
     ] },
   national: { title: 'Swing for the Flag', icon: '🌎', def: 'rest',
     flavor: 'Your country wants you hitting cleanup at the World Classic this winter.',
     options: [
-      { key: 'play', label: 'Swing for the flag', hint: 'A legacy moment. The body pays the interest.' },
-      { key: 'rest', label: 'Protect the body', hint: 'Summer at-bats pay the bills.' },
-      { key: 'captain', label: 'Go as the captain', hint: 'Lead the whole squad. Heavy is the crown.' },
+      { key: 'play', label: 'Swing for the flag', hint: 'A legacy moment. The body pays the interest.', fx: [['up', 'HOF vote'], ['down', 'Performance']] },
+      { key: 'rest', label: 'Protect the body', hint: 'Summer at-bats pay the bills.', fx: [['up', 'Performance']] },
+      { key: 'captain', label: 'Go as the captain', hint: 'Lead the whole squad. Heavy is the crown.', fx: [['up', 'Clutch'], ['up', 'HOF vote'], ['down', 'Performance']] },
     ] },
   mentor: { title: 'The Phenom', icon: '🧑‍🏫', def: 'focus',
-    flavor: 'The org\'s top prospect just got called up… and asked for the locker next to yours.',
+    flavor: 'The org\'s top prospect just got called up and asked for the locker next to yours.',
     options: [
-      { key: 'mentor', label: 'Take them under your wing', hint: 'Legacy is what they say about you later.' },
-      { key: 'focus', label: 'Compete with them', hint: 'Iron sharpens iron. Yours first.' },
+      { key: 'mentor', label: 'Take them under your wing', hint: 'Legacy is what they say about you later.', fx: [['up', 'HOF vote']] },
+      { key: 'focus', label: 'Compete with them', hint: 'Iron sharpens iron. Yours first.', fx: [['up', 'Performance']] },
     ] },
   injury: { title: 'Injury Crossroads', icon: '🏥', def: 'surgery',
     flavor: 'The hamstring finally gives out mid-season. The doc lays out two roads.',
     options: [
-      { key: 'surgery', label: 'Get the surgery', hint: 'Lose most of this season, save the ones after.' },
-      { key: 'gut', label: 'Play through it', hint: 'Tape it up and pray. Sluggers don\'t sit.' },
+      { key: 'surgery', label: 'Get the surgery', hint: 'Sit now, come back fresh.', fx: [['up', '+1 career season'], ['down', 'Miss most of this year']] },
+      { key: 'gut', label: 'Play through it', hint: 'Tape it up and pray. Sluggers don\'t sit.', fx: [['down', 'Lasting decline'], ['down', 'Fewer games now']] },
     ] },
   fa: { title: 'Free Agency', icon: '💼', def: 'loyal',
-    flavor: 'Your first big contract hits the table — three teams, three futures.',
+    flavor: 'Your first big contract hits the table: three teams, three futures.',
     options: [
-      { key: 'loyal', label: 'Stay loyal', hint: 'Hometown discount. Statue outside the park someday.' },
-      { key: 'ring', label: 'Chase the ring', hint: 'Join a juggernaut. October or bust.' },
-      { key: 'money', label: 'Max the bag', hint: 'Highest bidder wins. Standings optional.' },
+      { key: 'loyal', label: 'Stay loyal', hint: 'Hometown discount. Statue outside the park someday.', fx: [['up', 'HOF vote'], ['up', 'Performance'], ['down', 'Earnings']] },
+      { key: 'ring', label: 'Chase the ring', hint: 'Join a juggernaut. October or bust.', fx: [['up', 'Ring odds'], ['down', 'Earnings']] },
+      { key: 'money', label: 'Max the bag', hint: 'Highest bidder wins. Standings optional.', fx: [['up', 'Big earnings'], ['down', 'Ring odds']] },
     ] },
   twilight: { title: 'The Twilight Call', icon: '🌇', def: 'ride',
     flavor: 'The offseason phone stays quiet longer these days. What\'s the move?',
     options: [
-      { key: 'walk', label: 'Walk away on top', hint: 'Leave them wanting one more.' },
-      { key: 'ride', label: 'One last ride', hint: 'Run it back. One more summer.' },
-      { key: 'farewell', label: 'Farewell tour', hint: 'Tell the world it\'s the last lap — and soak it in.' },
+      { key: 'walk', label: 'Walk away on top', hint: 'Leave them wanting one more.', fx: [['up', 'HOF vote'], ['neu', 'Retire now']] },
+      { key: 'ride', label: 'One last ride', hint: 'Run it back. One more summer.', fx: [['neu', 'One more season']] },
+      { key: 'farewell', label: 'Farewell tour', hint: 'Tell the world it\'s the last lap and soak it in.', fx: [['up', 'Earnings'], ['up', 'HOF vote'], ['neu', 'Farewell season'], ['down', 'Late decline']] },
     ] },
 };
 
@@ -2964,16 +2972,18 @@ function showDecisionModal(pd, onPick) {
   $('decFlavor').textContent = pd.flavor;
   const wrap = $('decOpts');
   wrap.innerHTML = '';
+  const arrow = { up: '▲', down: '▼', neu: '•' };
   pd.options.forEach(o => {
     const b = document.createElement('button');
     b.className = 'dec-opt';
-    b.innerHTML = `<b>${o.label}</b><small>${o.hint}</small>`;
+    const fx = (o.fx || []).map(([dir, txt]) => `<span class="dec-fx ${dir}">${arrow[dir]} ${txt}</span>`).join('');
+    b.innerHTML = `<b>${o.label}</b><small>${o.hint}</small>${fx ? `<div class="dec-fx-row">${fx}</div>` : ''}`;
     b.onclick = () => { Sound.click(); closeOverlay('decisionModal'); onPick(o.key); };
     wrap.appendChild(b);
   });
-  Sound.gold();
+  Sound.whoosh();   // soft cue, not a celebratory chime — this is a quiet fork in the road
   openOverlay('decisionModal');
-  gsap.fromTo(wrap.children, { y: 10, opacity: 0 }, { y: 0, opacity: 1, duration: .3, stagger: .08, delay: .15, ease: 'power2.out' });
+  gsap.fromTo(wrap.children, { y: 12, opacity: 0 }, { y: 0, opacity: 1, duration: .34, stagger: .09, delay: .12, ease: 'power2.out' });
 }
 
 function _doCareerSim() {
@@ -3133,8 +3143,8 @@ function finishPlaythrough(career) {
     const win = state.finalOvr > b.ovr || (state.finalOvr === b.ovr && (Number(t.war) || 0) >= (Number(b.war) || 0));
     $('careerCard').insertAdjacentHTML('beforeend',
       `<div class="beat-strip ${win ? 'win' : 'lose'}">⚔️ vs ${escapeHTML(b.name)}: ${win
-        ? `YOU WIN — ${state.finalOvr} OVR tops their ${b.ovr}`
-        : `not this time — ${state.finalOvr} OVR vs their ${b.ovr}`}</div>`);
+        ? `YOU WIN · ${state.finalOvr} OVR tops their ${b.ovr}`
+        : `not this time · ${state.finalOvr} OVR vs their ${b.ovr}`}</div>`);
     try { gtag('event', 'beat_result', { game: LEADERBOARD_GAME, won: win ? 1 : 0 }); } catch (e) {}
   }
   setTimeout(() => {
@@ -3216,7 +3226,7 @@ function buildCard(career, verdict, voteLine) {
     teamAb: (state.simTeam && state.simTeam.abbr) || state.draftTeamAb,
   }) + `
     <div class="cc-share-row"><button id="ccShareBtn" class="primary">📤 Share this card</button></div>
-    <div class="cc-hint">Shares a card image — submit to the leaderboard first and your link goes with it</div>`;
+    <div class="cc-hint">Shares a card image. Submit to the leaderboard first and your link goes with it</div>`;
   const sb = $('ccShareBtn');
   if (sb) sb.onclick = shareCareerCard;
 }
@@ -3245,12 +3255,12 @@ async function shareCareerCard() {
     trophies: trophyParts(t).slice(0, 12).join(' '),
     earnings: fmtMoney(t.earnings),
     gameEmoji: '⚾', url,
-    text: `I built ${state.simName || 'a batter'} — a ${state.finalOvr} OVR${t.hallOfFame ? ' Hall of Fame' : ''} batter on GoatLab. Beat my career:`,
+    text: `I built ${state.simName || 'a batter'}: a ${state.finalOvr} OVR${t.hallOfFame ? ' Hall of Fame' : ''} batter on GoatLab. Beat my career:`,
     filename: 'goatlab-batter.png',
   });
   if (btn) { btn.disabled = false; btn.textContent = '📤 Share this card'; }
   if (res.mode === 'shared') toast('Shared! 🎉');
-  else if (res.mode === 'download') toast(res.copied ? 'Card saved — link copied to clipboard' : 'Card image saved');
+  else if (res.mode === 'download') toast(res.copied ? 'Card saved, link copied to clipboard' : 'Card image saved');
   else if (res.mode === 'failed') shareBuild({ game: LEADERBOARD_GAME, ovr: state.finalOvr, name: state.simName });
   try { gtag('event', 'share_card', { game: LEADERBOARD_GAME, ovr: state.finalOvr, mode: res.mode }); } catch (e) {}
 }
@@ -3284,7 +3294,7 @@ async function loadSharedBuild(id) {
         <div class="cc-role">career details unavailable for this older build</div></div>
         <div class="cc-badge"><div class="cc-ovr">${entry.ovr}</div></div></div>`;
     }
-    $('sharedIntro').innerHTML = `Someone challenged you with <b>${escapeHTML(candidate.name)}</b> — a ${entry.ovr} OVR career. Spin your own build and try to top it.`;
+    $('sharedIntro').innerHTML = `Someone challenged you with <b>${escapeHTML(candidate.name)}</b>, a ${entry.ovr} OVR career. Spin your own build and try to top it.`;
     $('beatBtn').onclick = () => {
       beatTarget = candidate;
       closeOverlay('sharedModal');

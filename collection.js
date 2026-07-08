@@ -184,7 +184,7 @@
     const s = document.createElement('style'); s.textContent = css; document.head.appendChild(s);
     ov = document.createElement('div'); ov.className = 'col-ov';
     ov.innerHTML = `<div class="col-card">
-      <div class="col-head"><span class="col-title">📇 THE BINDER — YOUR COLLECTION</span><button class="col-x" aria-label="Close">✕</button></div>
+      <div class="col-head"><span class="col-title">📇 THE BINDER · YOUR COLLECTION</span><button class="col-x" aria-label="Close">✕</button></div>
       <div class="col-tabs"></div>
       <div class="col-sum"></div>
       <div class="col-body"></div>
@@ -220,7 +220,7 @@
 
     const body = ov.querySelector('.col-body');
     if (!n && !pool) {
-      body.innerHTML = `<div class="col-empty">No ${g.noun} collected yet — every player you assign into a build gets added here, forever. ${g.id === ACTIVE && !pool ? 'Visit that game once to see its full checklist.' : ''}</div>`;
+      body.innerHTML = `<div class="col-empty">No ${g.noun} collected yet. Every player you assign into a build gets added here, forever. ${g.id === ACTIVE && !pool ? 'Visit that game once to see its full checklist.' : ''}</div>`;
       return;
     }
 
@@ -247,7 +247,7 @@
         }${locked ? Array(Math.min(locked, 400)).fill('<span class="col-chip locked">???</span>').join('') : ''}</div>
       </div>`;
     }
-    if (!html) html = `<div class="col-empty">Nothing here yet — spin and assign players to start your collection.</div>`;
+    if (!html) html = `<div class="col-empty">Nothing here yet. Spin and assign players to start your collection.</div>`;
     if (!pool) html += `<div class="col-note">Open ${g.label} once to load its full checklist and see how many cards are still out there.</div>`;
     body.innerHTML = html;
   }

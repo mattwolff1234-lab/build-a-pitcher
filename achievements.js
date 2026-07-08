@@ -42,7 +42,7 @@
     { id: 'ring1', cat: 'career', icon: '💍', name: 'Ring Bearer', desc: 'Win a World Series.', col: 1, row: 11, parent: 'sim_root' },
     { id: 'ring2', cat: 'career', icon: '💍', name: 'Dynasty', desc: 'Win 3 World Series rings.', col: 2, row: 11, parent: 'ring1' },
     { id: 'ring3', cat: 'career', icon: '👑', name: 'Dynasty II', desc: 'Win 5 World Series rings.', col: 3, row: 11, parent: 'ring2', chal: true },
-    { id: 'billion', cat: 'career', icon: '💰', name: 'Billion Dollar Player', desc: 'Earn $1,000,000,000 in career earnings — any sport.', col: 1, row: 10, parent: 'sim_root', chal: true },
+    { id: 'billion', cat: 'career', icon: '💰', name: 'Billion Dollar Player', desc: 'Earn $1,000,000,000 in career earnings, any sport.', col: 1, row: 10, parent: 'sim_root', chal: true },
     // ---- 1v1 ----
     { id: 'versus_root', cat: 'versus', icon: '⚔️', name: 'Step in the Ring', desc: 'Play a 1v1 Face Off match.', col: 0, row: 15 },
     { id: 'streak1', cat: 'versus', icon: '📈', name: 'On a Heater I', desc: 'Win 3 matches in a row.', col: 1, row: 13, parent: 'versus_root' },
@@ -398,7 +398,7 @@
 
   function fillTip(a) {
     tip.className = 'ach-tip ' + (isDone(a.id) ? (a.chal ? 'chalk' : 'unlocked') : 'locked');
-    tip.querySelector('.tn').textContent = a.future && !isDone(a.id) ? a.name + ' — ???' : a.name;
+    tip.querySelector('.tn').textContent = a.future && !isDone(a.id) ? a.name + ' · ???' : a.name;
     tip.querySelector('.td').textContent = a.desc;
     tip.querySelector('.ts').textContent = isDone(a.id) ? '✓ Unlocked' : (a.future ? 'Coming soon' : 'Locked');
     tip.style.display = 'block';

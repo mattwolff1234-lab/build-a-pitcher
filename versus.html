@@ -998,7 +998,7 @@ function reconcileResultDisplay(won, oppName){
   const head=$('resultHead'); if(head) head.textContent = won ? 'YOU WIN' : 'YOU LOSE';
   const sub=$('resultSub'); if(sub) sub.textContent = won
     ? `You beat ${nm}. Run it back?`
-    : `${nm} settled this one first — rating adjusted to match.`;
+    : `${nm} settled this one first. Rating adjusted to match.`;
 }
 function renderRatingResult(r){
   const el = $('ratingResult'); if (!el) return;
@@ -1896,7 +1896,7 @@ function showForfeitResult(iWon, filled, data={}){
     ? (data.quit ? `${oppName} left the match.` : `${oppName} forfeited after ${filled} slot${filled===1?'':'s'} filled.`)
     : (data.quit ? 'You disconnected mid-match.' : `You forfeited after ${filled} slot${filled===1?'':'s'} filled.`);
   $('resultSub').textContent = iWon
-    ? (data.quit ? 'Win by forfeit — quitting still counts as a loss for them.' : 'Timeout win. Run it back?')
+    ? (data.quit ? 'Win by forfeit. Quitting still counts as a loss for them.' : 'Timeout win. Run it back?')
     : (data.quit ? 'An abandoned match counts as a forfeit loss.' : 'Fill at least 4 slots before time expires.');
   if (window.Ach) Ach.unlock('versus_root');                       // played a 1v1 (forfeit result)
   if (window.XP) XP.award(iWon ? 55 : 18, iWon ? '1v1 win' : '1v1');

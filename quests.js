@@ -226,7 +226,7 @@
       </div>`;
     }).join('');
     sweepEl.className = 'dq-sweep' + (s.sweep ? ' done' : '');
-    sweepEl.innerHTML = s.sweep ? `🧹 Clean Sweep! +${SWEEP_XP} XP earned` : `🧹 Clean Sweep — finish all 3 for +${SWEEP_XP} XP`;
+    sweepEl.innerHTML = s.sweep ? `🧹 Clean Sweep! +${SWEEP_XP} XP earned` : `🧹 Clean Sweep · finish all 3 for +${SWEEP_XP} XP`;
   }
 
   function open() {
@@ -315,14 +315,14 @@
     for (const q of completed) {
       const t = TIERS[q.tier];
       if (window.XP) XP.award(t.xp, 'quest');
-      showToast(q.icon, q.name, `${t.label} quest — +${t.xp} XP`);
+      showToast(q.icon, q.name, `${t.label} quest · +${t.xp} XP`);
       try { gtag('event', 'quest_complete', { quest: q.id, tier: q.tier }); } catch (e) {}
     }
     // toasts queue one after another, so the sweep celebration lands last on its own
     if (!s.sweep && qs.every(q => s.done[q.id])) {
       s.sweep = true; changed = true;
       if (window.XP) XP.award(SWEEP_XP, 'quest sweep');
-      showToast('🧹', 'Clean Sweep!', `All 3 daily quests — +${SWEEP_XP} XP`);
+      showToast('🧹', 'Clean Sweep!', `All 3 daily quests · +${SWEEP_XP} XP`);
       try { gtag('event', 'quest_sweep', {}); } catch (e) {}
     }
     if (changed) save(s);
