@@ -183,7 +183,7 @@
     ov.innerHTML = `
       <div class="dq-card">
         <div class="dq-head">
-          <span class="dt">🎯 <b>Daily</b> Quests</span>
+          <span class="dt">📜 <b>Daily</b> Quests</span>
           <span class="dq-timer"></span>
           <button class="dq-x" aria-label="Close">✕</button>
         </div>
