@@ -199,13 +199,23 @@
   /* opts: { name, teamName, teamColor, ovr, verdict, verdictColor, voteLine,
              subtitle, metaLine, stats:[[val,label]..], trophies, earnings,
              gameEmoji, url, text, filename } */
+  // Native share is mobile-only: desktop Chrome/Edge on Windows report
+  // canShare({files}) as true, then resolve navigator.share() as if it worked
+  // while showing nothing useful — the user just sees a "Shared!" toast.
+  // Desktop always takes the download + copy-link path instead.
+  function isMobile() {
+    if (navigator.userAgentData && typeof navigator.userAgentData.mobile === 'boolean') return navigator.userAgentData.mobile;
+    if (/android|iphone|ipad|ipod/i.test(navigator.userAgent)) return true;
+    return navigator.maxTouchPoints > 1 && /mac/i.test(navigator.platform); // iPadOS masquerades as a Mac
+  }
+
   async function share(opts) {
     let blob;
     try { blob = await toBlob(await render(opts)); }
     catch (e) { return { mode: 'failed' }; }
     const text = (opts.text || '') + (opts.url ? (opts.text ? '\n' : '') + opts.url : '');
     const file = (typeof File !== 'undefined') ? new File([blob], opts.filename || 'goatlab-career.png', { type: 'image/png' }) : null;
-    if (file && navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+    if (isMobile() && file && navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
       try {
         await navigator.share({ files: [file], text });
         return { mode: 'shared' };
