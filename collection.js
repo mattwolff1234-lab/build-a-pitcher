@@ -64,6 +64,7 @@
     pools[game] = out;
     try { localStorage.setItem('pl_col_pool_' + game, JSON.stringify(out)); } catch (e) {}
     refreshBadges();
+    checkAchievements();   // a data refresh can shrink the pool → a full set may already be complete
   }
 
   const bucket = game => (col[game] || (col[game] = {}));
@@ -89,6 +90,7 @@
       if (r && r.ok && r.collection && typeof r.collection === 'object') {
         try { localStorage.setItem('pl_col_owner', a.sub); } catch (e) {}
         col = r.collection; save(); refreshBadges();
+        checkAchievements();   // a restored account binder can already be complete on this device
         if (ov && ov.classList.contains('show')) render();
       }
     } catch (e) {}
@@ -127,6 +129,17 @@
     if (n >= 25) Ach.unlock('collect1');
     if (n >= 150) Ach.unlock('collect2');
     if (n >= 400) Ach.unlock('collect3');
+    // Gotta Catch 'Em All: every player in one game's full pool, verified name-by-name
+    // (count can include players who later rotated out of the pool, so count alone isn't proof).
+    if (!Ach.has('collect_all')) {
+      for (const g of GAMES) {
+        const pool = pools[g.id];
+        if (pool && pool.length && count(g.id) >= pool.length && pool.every(p => has(g.id, p[0]))) {
+          Ach.unlock('collect_all');
+          break;
+        }
+      }
+    }
   }
 
   function refreshBadges() {
