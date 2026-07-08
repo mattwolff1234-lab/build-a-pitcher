@@ -502,6 +502,11 @@
       <div style="margin-top:18px; display:none;" id="cancelWrap">
         <button class="btn ghost" id="cancelBtn" style="font-size:13px; padding:9px 18px;">Cancel</button>
       </div>
+      <div style="margin-top:16px; display:none;" id="ghostOffer">
+        <div style="font-size:12.5px;color:var(--muted);margin-bottom:9px;">Nobody's around right now.</div>
+        <button class="btn" id="ghostBtn" style="font-size:13px;padding:11px 22px;">👻 Face a Ghost</button>
+        <div style="color:var(--dim);font-size:11px;margin-top:7px;letter-spacing:.2px;">a real recent build · Elo still counts</div>
+      </div>
       <div style="margin-top:16px;" id="statsWrap">
         <button class="btn ghost" id="statsBtn" style="font-size:13px; padding:9px 18px;">📊 My Stats</button>
         <button class="btn ghost" id="achBtn" style="font-size:13px; padding:9px 18px;">🏅 Achievements</button>
@@ -860,6 +865,7 @@ let chalWaitTimeout=null;
 let DATA={};               // role -> data json
 let myBuild=null, oppBuild=null, atBatStarted=false, matchResolved=false;
 let claimTimeout=null, waitTimeout=null;
+let isGhost=false, ghostTimer=null;   // Ghost = async match vs a real recent build when the lobby is empty
 
 /* ---------- account + Elo rating ----------
    Two ways to have a rating:
@@ -1289,6 +1295,9 @@ async function findMatch(){
   try { gtag('event', 'versus_search', { game: 'versus_hoops' }); } catch(e){}
 
   searching = true;
+  // after ~20s alone, offer a Ghost match (a real recent build) so an empty lobby isn't a dead end
+  if (ghostTimer) clearTimeout(ghostTimer);
+  ghostTimer = setTimeout(() => { if (searching) { $('ghostOffer').style.display = 'block'; Sound.whoosh(); } }, 20000);
   // subscribe to my invite channel BEFORE asking the server (so I can't miss a hand-off)
   inviteCh = ably.channels.get('hoops:invite:' + clientId);
   inviteCh.subscribe('match', msg => {
@@ -1324,7 +1333,7 @@ async function attemptMatch(){
   retryTimer = setTimeout(attemptMatch, 3000);
 }
 
-function stopSearch(){ searching=false; if (retryTimer){ clearTimeout(retryTimer); retryTimer=null; } }
+function stopSearch(){ searching=false; if (retryTimer){ clearTimeout(retryTimer); retryTimer=null; } if (ghostTimer){ clearTimeout(ghostTimer); ghostTimer=null; } if ($('ghostOffer')) $('ghostOffer').style.display='none'; }
 function setStatus(t){ $('mmStatus').textContent = t; }
 function failBack(){ $('findBtn').style.display='inline-block'; $('mmSpin').style.display='none'; $('cancelWrap').style.display='none'; $('statsWrap').style.display='block'; }
 
@@ -1336,9 +1345,42 @@ async function cancelSearch(){
   failBack(); setStatus('');
 }
 
+/* ---------- Ghost match (async vs a real recent build) ---------- */
+const GHOST_NAMES = ['The Phantom', 'Anonymous', 'A Challenger', 'Ghost Runner', 'The Stranger', 'Nobody', 'Mystery Build', 'The Visitor'];
+async function fetchGhostBuild(){
+  try {
+    const r = await fetch(`/api/score?action=ghost&game=baller&min=87&max=95`).then(x=>x.json());
+    return (r && r.ghost) ? r.ghost : null;
+  } catch(e){ return null; }
+}
+async function startGhostMatch(){
+  resetMatch();                       // clears any prior match/timers (and isGhost)
+  gameMode = 'classic';
+  isGhost = true; friendlyMode = false;   // a ghost is a real build → Elo counts
+  try { gtag('event', 'versus_ghost_start', { game: 'versus_hoops' }); } catch(e){}
+  if (clientId) { try { fetch('/api/match-hoops',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'leave',id:clientId})}); } catch(e){} }
+  if (inviteCh) { inviteCh.unsubscribe(); try{ inviteCh.detach(); }catch(e){} inviteCh=null; }
+  setOnlineStatus('playing');
+  myRole = Math.random() < 0.5 ? 'pitcher' : 'batter';   // vestigial label; both build hoopers
+  oppRole = myRole === 'pitcher' ? 'batter' : 'pitcher';
+  matchId = 'ghost:' + Math.random().toString(16).slice(2, 10);
+  seed = (Math.random() * 0xffffffff) >>> 0;
+  rng = mulberry32(seed || 1);
+  oppId = 'ghost';
+  const g = await fetchGhostBuild();
+  const slots = (g && g.build && Array.isArray(g.build.slots)) ? g.build.slots : [];
+  const ovr = g ? Math.round(Number(g.ovr) || 90) : (87 + Math.floor(Math.random() * 9));
+  const name = g ? String(g.name || 'A Challenger') : GHOST_NAMES[Math.floor(Math.random() * GHOST_NAMES.length)];
+  oppBuild = { role: oppRole, ovr, name, team: slots.length ? modalTeam(slots) : '', slots,
+    elo: myElo(), key: 'ghost:' + (g ? g.id : seed), ghost: true };
+  oppPresent = true; oppPresenceName = name; oppPresenceElo = 0;
+  await loadData(myRole);
+  beginRoleReveal();
+}
+
 function resetMatch(){
   stopSearch();
-  lobbyWaiting=false; _poolCache={};
+  lobbyWaiting=false; _poolCache={}; isGhost=false;
   friendlyMode=false; pendingChallenge=null;
   if ($('challengeNotif')) { gsap.killTweensOf($('challengeNotif')); $('challengeNotif').style.display='none'; }
   myBuild=null; oppBuild=null; atBatStarted=false; matchResolved=false; oppPresent=false; waitingArena=false;
@@ -1394,9 +1436,9 @@ function captureOppPresence(data){
 }
 function updateOppChip(){
   const nm = $('oppChipName'); if (!nm) return;
-  nm.textContent = oppPresenceName || 'Opponent';
+  nm.textContent = (isGhost ? '👻 ' : '') + (oppPresenceName || 'Opponent');
   const el = $('oppChipElo');
-  el.textContent = oppPresenceElo ? ('⚡ ' + oppPresenceElo + ' Rating') : '';
+  el.textContent = isGhost ? 'Ghost · a real recent build' : (oppPresenceElo ? ('⚡ ' + oppPresenceElo + ' Rating') : '');
 }
 function beginRoleReveal(){
   showScreen('roleScreen');
@@ -1914,7 +1956,7 @@ let oppProg={filled:0,total:9};
 function updateOppProgress(d){ oppProg=d; updateOppPill(); updateWaitArena(); }
 function updateOppPill(){
   const pill=$('oppPill');
-  if(oppBuild){ pill.textContent='Opponent: ready ✓'; pill.style.color='#7CE38B'; }
+  if(oppBuild){ pill.textContent=(isGhost?'👻 Ghost':'Opponent')+': ready ✓'; pill.style.color='#7CE38B'; }
   else if(oppPresent){ pill.textContent=`Opponent: building ${oppProg.filled}/${oppProg.total}`; pill.style.color='var(--muted)'; }
   else { pill.textContent='Opponent: connecting…'; pill.style.color='var(--muted)'; }
   updateWaitArena();
@@ -1944,8 +1986,8 @@ function playAtBat(){
   const script = buildGameScript(pitcher, batter, winnerRole, abRng);
 
   // matchup header (with each player's name)
-  const pName = escapeHTML(pitcher.name || 'Player A') + (myRole==='pitcher'?' (You)':'');
-  const bName = escapeHTML(batter.name || 'Player B') + (myRole==='batter'?' (You)':'');
+  const pName = escapeHTML(pitcher.name || 'Player A') + (myRole==='pitcher'?' (You)':(isGhost?' 👻':''));
+  const bName = escapeHTML(batter.name || 'Player B') + (myRole==='batter'?' (You)':(isGhost?' 👻':''));
   const pc = brightTeam(pitcher.team);
   const bc = hvDistinct(pc, brightTeam(batter.team));   // same/similar team colors → shift side B's hue
   $('matchup').innerHTML =
@@ -2328,7 +2370,8 @@ function showResult(iWon, pitcher, batter, winnerRole, script){
   const sequenceLine = script && script.summary ? script.summary : `${winName} wins`;
   $('resultLine').textContent = `${sequenceLine} · ${pitcher.ovr} OVR vs ${batter.ovr} OVR`;
   const oppName = (oppBuild && oppBuild.name) ? oppBuild.name : 'your opponent';
-  $('resultSub').textContent = iWon ? `You beat ${oppName}. Run it back?` : `${oppName} got you. Build a better one.`;
+  const oppTag = isGhost ? ' (Ghost)' : '';
+  $('resultSub').textContent = iWon ? `You beat ${oppName}${oppTag}. Run it back?` : `${oppName}${oppTag} got you. Build a better one.`;
   iWon ? Sound.win() : Sound.lose();
   gsap.fromTo(card,{ y:24, opacity:0, scale:.92 },{ y:0, opacity:1, scale:1, duration:.5, ease:'back.out(1.5)' });
 
@@ -2440,6 +2483,7 @@ async function loadStats(){
 
 /* ---------- wiring ---------- */
 $('findBtn').onclick = () => { Sound.click(); findMatch(); };
+$('ghostBtn').onclick = () => { Sound.click(); startGhostMatch(); };
 $('cancelBtn').onclick = () => cancelSearch();
 $('statsBtn').onclick = () => { Sound.click(); openStats(); };
 $('achBtn').onclick = () => { Sound.click(); window.Ach && Ach.open(); };
@@ -2462,9 +2506,10 @@ document.querySelectorAll('#statsSportToggle .stab').forEach(b => {
 // deep-link: /versus#stats opens the stats page straight away (from the hamburger menus)
 if (location.hash === '#stats') openStats();
 if (location.hash === '#achievements' || location.hash === '#ach') { const o = () => (window.Ach ? Ach.open() : setTimeout(o, 120)); o(); }
-$('newMatchBtn').onclick = () => { Sound.click(); findMatch(); };
+$('newMatchBtn').onclick = () => { Sound.click(); if (isGhost) startGhostMatch(); else findMatch(); };
 $('rematchBtn').onclick = () => {
   Sound.click();
+  if (isGhost){ startGhostMatch(); return; }   // run another ghost immediately (no live channel to rematch on)
   if (matchResolved && matchId && matchCh){
     if (rematchOppOffer && !rematchOffered){ acceptOppRematch(); }
     else if (rematchOffered){ resetRematchUI(); }   // cancel pending offer
@@ -2509,6 +2554,8 @@ goOnline();  // connect + wire the friend-challenge inbox (global presence is jo
   oppBuild = { name:'Tester B', ovr:(+q.get('bovr'))||88, team:'BOS', elo:1000 };
   setTimeout(playAtBat, 400);
 })();
+// dev harness: /versus-hoops.html?ghost=1 runs the REAL ghost flow end-to-end (no 20s wait, no live opp)
+(function(){ if(new URLSearchParams(location.search).get('ghost')==='1') setTimeout(startGhostMatch, 300); })();
 // leave the queue if the tab closes while waiting
 window.addEventListener('pagehide', () => {
   if (clientId) { try { navigator.sendBeacon('/api/match-hoops', JSON.stringify({ action:'leave', id: clientId })); } catch(e){} }

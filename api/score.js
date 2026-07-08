@@ -135,6 +135,23 @@ module.exports = async (req, res) => {
       return res.status(200).json({ ok: true, entry: { ...row, id: Number(row.id) } });
     }
 
+    // GET ?action=ghost&game=&min=&max= — a random recent build in an OVR band, slots only (no
+    // career), for the 1v1 "Ghost" opponent when a lobby is empty. Public read like action=build.
+    if (req.method !== 'POST' && (req.query && req.query.action) === 'ghost') {
+      const game = gameOf(req.query && req.query.game);
+      const min = Math.max(1, Math.min(150, Math.round(Number(req.query && req.query.min) || 87)));
+      const max = Math.max(min, Math.min(150, Math.round(Number(req.query && req.query.max) || 95)));
+      const rows = await sql`
+        SELECT id, name, ovr, jsonb_build_object('slots', build->'slots') AS build
+        FROM scores
+        WHERE game = ${game} AND ovr BETWEEN ${min} AND ${max}
+          AND jsonb_typeof(build->'slots') = 'array'
+        ORDER BY created_at DESC LIMIT 150`;
+      if (!rows.length) return res.status(200).json({ ok: true, ghost: null });
+      const g = rows[Math.floor(Math.random() * rows.length)];
+      return res.status(200).json({ ok: true, ghost: { ...g, id: Number(g.id) } });
+    }
+
     // GET ?action=stats[&game=pitcher|batter|all] — total builds, GOAT (99 OVR) count, + live play counter.
     if (req.method !== 'POST' && (req.query && req.query.action) === 'stats') {
       const g = req.query && req.query.game;
