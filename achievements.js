@@ -90,9 +90,13 @@
     else {
       localStorage.setItem('pl_ach_ver', ACH_VER);
       localStorage.removeItem('pl_achievements');
-      localStorage.setItem('pl_ach_rst', ACH_VER); // also wipe the account copy on next sync
       done = {};
     }
+    // A version bump wipes LOCAL data only. The old 'pl_ach_rst' flag propagated the wipe to the
+    // account (reset:true on next sync) — but it was also set by every FRESH browser profile,
+    // which erased the account's board the moment you signed in on a new device/tab. Never again;
+    // clear any stale flag so old installs can't re-trigger it either.
+    localStorage.removeItem('pl_ach_rst');
   } catch (e) { done = {}; }
   const save = () => { try { localStorage.setItem('pl_achievements', JSON.stringify(done)); } catch (e) {} };
 
@@ -102,21 +106,21 @@
   async function serverSync() {
     const a = acct();
     if (!a || !a.sub || !a.sessionToken) return;
-    let owner = null, resetting = false;
-    try { owner = localStorage.getItem('pl_ach_owner'); resetting = localStorage.getItem('pl_ach_rst') === ACH_VER; } catch (e) {}
-    // If the local cache already belongs to this account, push its unlocks up (covers offline play).
-    // Otherwise it's guest progress (or a different account's) — send it as a CLAIM: the server
-    // adopts it only into an account with no unlocks yet (like pvpClaim for the 1v1 rating), so a
-    // long-time guest keeps their board on first sign-in but can never pollute an established account.
-    const sameOwner = owner === a.sub;
-    const claiming = !sameOwner && !resetting;
+    let owner = null;
+    try { owner = localStorage.getItem('pl_ach_owner'); } catch (e) {}
+    // Local unlocks always MERGE into the account server-side (union, earliest time wins) — the
+    // old claim gate discarded a signed-out session's unlocks if the account already had any.
+    // One guard: if the local board belongs to a DIFFERENT account (an account switch that
+    // skipped sign-out), it isn't ours to push — drop it and adopt this account's board.
+    if (owner && owner !== a.sub) { done = {}; save(); refreshBadges(); }
+    const claiming = !owner;
     try {
       const r = await fetch('/api/account', {
         method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ action: 'achSync', sub: a.sub, sessionToken: a.sessionToken, achievements: done, reset: resetting, claim: claiming }),
+        body: JSON.stringify({ action: 'achSync', sub: a.sub, sessionToken: a.sessionToken, achievements: done, claim: claiming }),
       }).then(x => x.json());
       if (r && r.ok && r.achievements) {
-        try { if (resetting) localStorage.removeItem('pl_ach_rst'); localStorage.setItem('pl_ach_owner', a.sub); } catch (e) {}
+        try { localStorage.setItem('pl_ach_owner', a.sub); } catch (e) {}
         // unlocks the account has that this device didn't = progress coming back (restore/backfill,
         // or signing in on a new device) — celebrate it instead of silently updating the board
         const gained = Object.keys(r.achievements).filter(k => byId[k] && !done[k]).length;
@@ -518,8 +522,20 @@
   else refreshBadges();
   // pull the account's achievements shortly after load (give Google auto-sign-in time to set pl_account)
   setTimeout(serverSync, 1500);
-  // re-sync if the user signs in/out in another tab or via the menu
-  window.addEventListener('storage', e => { if (e.key === 'pl_account') serverSync(); });
+  // React to sign-in/out happening in ANOTHER tab. Sign-out clears this tab's board too (mirrors
+  // Ach.signOut, so a guest doesn't inherit it); sign-in syncs after a beat so the tab that signed
+  // in merges first and this one just pulls the result.
+  window.addEventListener('storage', e => {
+    if (e.key !== 'pl_account') return;
+    if (!acct()) {
+      done = {};
+      try { localStorage.removeItem('pl_achievements'); localStorage.removeItem('pl_ach_owner'); } catch (err) {}
+      refreshBadges();
+      if (chromeReady && built && ov && ov.classList.contains('show')) render();
+      return;
+    }
+    setTimeout(serverSync, 1200 + Math.random() * 800);
+  });
 
   // ---- local-only test bar (never appears on the live site) ----
   if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) {
