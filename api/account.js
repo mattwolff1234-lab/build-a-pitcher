@@ -112,6 +112,27 @@ function ensure() {
       await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS current_streak int NOT NULL DEFAULT 0`;
       await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS best_streak int NOT NULL DEFAULT 0`;
       await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_active_date date`;
+      // ---- Monthly Elo seasons (baseball 1v1). Dormant until SEASON1_START_MS; then the first
+      // ranked game of a season rolls a player over (squash + placements). pvp_season = the season
+      // NUMBER a player's live pvp_elo/wins/losses belongs to (0 = never rolled / pre-season). ----
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS pvp_season int NOT NULL DEFAULT 0`;
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS pvp_placement_games int NOT NULL DEFAULT 0`;
+      // Per-season standings: upserted every result → the live current-season board AND the frozen
+      // history (past-season rows stop being written once the month passes).
+      await sql`CREATE TABLE IF NOT EXISTS pvp_seasons (
+        season int NOT NULL,
+        player_key text NOT NULL,
+        name text,
+        elo int NOT NULL DEFAULT 1000,
+        wins int NOT NULL DEFAULT 0,
+        losses int NOT NULL DEFAULT 0,
+        peak_elo int NOT NULL DEFAULT 1000,
+        placed boolean NOT NULL DEFAULT false,
+        updated_at timestamptz NOT NULL DEFAULT now(),
+        PRIMARY KEY (season, player_key)
+      )`;
+      await sql`CREATE INDEX IF NOT EXISTS idx_pvp_seasons_board ON pvp_seasons (season, elo DESC)`;
+      await sql`CREATE INDEX IF NOT EXISTS idx_pvp_seasons_player ON pvp_seasons (player_key)`;
       await sql`CREATE INDEX IF NOT EXISTS idx_pvp_history_player ON pvp_history (player_key, created_at DESC)`;
       await sql`CREATE INDEX IF NOT EXISTS idx_pvp_history_opp_key ON pvp_history (opp_key) WHERE opp_key IS NOT NULL`;
     })().catch(e => { ready = null; throw e; });   // don't cache a transient failure forever
@@ -141,6 +162,70 @@ function nextElo(elo, oppElo, won, k = 32) {
 }
 // Small win-streak bonus: +2 Elo per consecutive win, stops growing at a 5-win streak (max +10).
 const STREAK_BONUS = 2, STREAK_CAP = 5;
+
+// ---- Monthly Elo seasons ----------------------------------------------------
+// Season 1 kickoff (one editable constant; MUST match SEASON1_START_MS in versus.html). Everything
+// season-related is DORMANT until this instant — before it, seasonInfo().number is 0 and pvpResult
+// touches no season columns, so live behavior is unchanged.
+const SEASON1_START_MS = Date.UTC(2026, 6, 15);   // 2026-07-15 00:00 UTC (July = month 6)
+const N_PLACEMENT = 5;          // placement games at the start of each season
+const SQUASH = 0.5;             // how far last season's Elo is pulled toward 1000 to seed placements
+const K_PLACEMENT = 48;         // higher K during placements so 5 games move you decisively
+// Each season is one UTC month measured from the anchor. Both client and server compute this
+// identically from Date.now(), so the countdown and the authoritative rollover agree.
+function addUTCMonths(ms, k) { const d = new Date(ms); d.setUTCMonth(d.getUTCMonth() + k); return d.getTime(); }
+function seasonInfo(nowMs) {
+  if (nowMs < SEASON1_START_MS) return { number: 0, startMs: null, endMs: SEASON1_START_MS };
+  const a = new Date(SEASON1_START_MS), n = new Date(nowMs);
+  let m = (n.getUTCFullYear() - a.getUTCFullYear()) * 12 + (n.getUTCMonth() - a.getUTCMonth());
+  if (nowMs < addUTCMonths(SEASON1_START_MS, m)) m -= 1;   // day-of-month hasn't ticked over yet
+  return { number: m + 1, startMs: addUTCMonths(SEASON1_START_MS, m), endMs: addUTCMonths(SEASON1_START_MS, m + 1) };
+}
+const placementStartElo = prevElo => 1000 + Math.round((prevElo - 1000) * SQUASH);
+
+// Apply one match result to a player's season-aware Elo state. PURE (no DB). When seasons are
+// dormant (`cur < 1`) it returns the classic lifetime result and leaves season fields at 0, so
+// pvpResult stays byte-identical to pre-season behavior. `u` = { elo, wins, losses, streak,
+// season, placement_games } from the users row.
+function applyMatch(u, won, oppElo, cur) {
+  let elo = u.elo, wins = u.wins, losses = u.losses, streak = u.streak || 0;
+  let season = u.season || 0, placement = u.placement_games || 0;
+  let rolledOver = false;
+  if (cur >= 1 && season !== cur) {
+    // first game of a new season → squash last season's Elo toward 1000, reset record + placements
+    elo = placementStartElo(elo);
+    wins = 0; losses = 0; streak = 0; placement = 0; season = cur; rolledOver = true;
+  }
+  const inPlacement = cur >= 1 && placement < N_PLACEMENT;
+  const k = inPlacement ? K_PLACEMENT : 32;
+  const { delta } = nextElo(elo, oppElo, won, k);
+  const newStreak = (won && !inPlacement) ? streak + 1 : 0;             // no streaks during placements
+  const bonus = (won && !inPlacement) ? Math.min(newStreak, STREAK_CAP) * STREAK_BONUS : 0;
+  return {
+    elo: Math.max(100, elo + delta + bonus),
+    startElo: elo,                                    // elo this match was actually played from (post-squash)
+    wins: wins + (won ? 1 : 0),
+    losses: losses + (won ? 0 : 1),
+    streak: newStreak,
+    season,
+    placement_games: cur >= 1 ? placement + 1 : 0,
+    placed: cur >= 1 && (placement + 1) >= N_PLACEMENT,
+    delta, bonus, rolledOver, inPlacement,
+  };
+}
+// Upsert a player's row in the current season's standings (also the frozen history once the month
+// passes). peak_elo climbs and never drops.
+async function upsertSeason(season, key, name, r) {
+  try {
+    await sql`INSERT INTO pvp_seasons (season, player_key, name, elo, wins, losses, peak_elo, placed)
+      VALUES (${season}, ${key}, ${name || null}, ${r.elo}, ${r.wins}, ${r.losses}, ${r.elo}, ${r.placed})
+      ON CONFLICT (season, player_key) DO UPDATE SET
+        name = COALESCE(EXCLUDED.name, pvp_seasons.name),
+        elo = EXCLUDED.elo, wins = EXCLUDED.wins, losses = EXCLUDED.losses,
+        peak_elo = GREATEST(pvp_seasons.peak_elo, EXCLUDED.elo),
+        placed = EXCLUDED.placed, updated_at = now()`;
+  } catch (e) {}
+}
 
 // Walk a list of played dates ('YYYY-MM-DD') and return { current, best } daily streaks —
 // current is the consecutive run ending today (or yesterday, when today isn't played yet).
@@ -518,9 +603,11 @@ module.exports = async (req, res) => {
         const key = await pvpKey(body);
         if (!key) return res.status(401).json({ ok: false, error: 'Not signed in' });
         if (body.sport === 'hoops') return hoopsStats(key, res);
-        const [u] = await sql`SELECT pvp_elo AS elo, pvp_wins AS wins, pvp_losses AS losses, pvp_streak AS streak FROM users WHERE google_sub = ${key}`;
+        const [u] = await sql`SELECT pvp_elo AS elo, pvp_wins AS wins, pvp_losses AS losses, pvp_streak AS streak, pvp_season AS season, pvp_placement_games AS placement_games FROM users WHERE google_sub = ${key}`;
         if (!u) return res.status(401).json({ ok: false, error: 'Not signed in' });
-        return res.status(200).json({ ok: true, elo: u.elo, wins: u.wins, losses: u.losses, streak: u.streak });
+        // season/placementGames let the chip show a live band or "Placement N/5"; the client computes
+        // the season number + countdown itself from the shared SEASON1_START_MS, so no extra fetch.
+        return res.status(200).json({ ok: true, elo: u.elo, wins: u.wins, losses: u.losses, streak: u.streak, season: u.season || 0, placementGames: u.placement_games || 0 });
       }
 
       if (action === 'pvpResult') {
@@ -562,8 +649,9 @@ module.exports = async (req, res) => {
               ON CONFLICT (match_id, role) DO NOTHING`;
           } catch (e) {}
         }
-        const [u] = await sql`SELECT pvp_elo AS elo, pvp_wins AS wins, pvp_losses AS losses, pvp_streak AS streak FROM users WHERE google_sub = ${key}`;
+        const [u] = await sql`SELECT pvp_elo AS elo, pvp_wins AS wins, pvp_losses AS losses, pvp_streak AS streak, pvp_season AS season, pvp_placement_games AS placement_games, name FROM users WHERE google_sub = ${key}`;
         if (!u) return res.status(401).json({ ok: false, error: 'Not signed in' });
+        const curSeason = seasonInfo(Date.now()).number;   // 0 = dormant (pre-kickoff)
         // dedupe: only the first report for this (match, player) counts
         const ins = await sql`INSERT INTO pvp_results (match_id, google_sub) VALUES (${matchId}, ${key})
           ON CONFLICT DO NOTHING RETURNING match_id`;
@@ -620,13 +708,17 @@ module.exports = async (req, res) => {
           // both-claim-win race) can reconcile its headline to the Elo it actually got.
           return res.status(200).json({ ok: true, counted: false, won: recWon, elo, delta, bonus: 0, streak: u.streak, wins: u.wins, losses: u.losses });
         }
-        const { delta } = nextElo(u.elo, oppElo, won);
-        // win-streak bonus (grows per consecutive win, capped at a 5-win streak)
-        const streak = won ? (u.streak || 0) + 1 : 0;
-        const bonus = won ? Math.min(streak, STREAK_CAP) * STREAK_BONUS : 0;
-        const elo = Math.max(100, u.elo + delta + bonus);
-        const wins = u.wins + (won ? 1 : 0), losses = u.losses + (won ? 0 : 1);
-        await sql`UPDATE users SET pvp_elo = ${elo}, pvp_wins = ${wins}, pvp_losses = ${losses}, pvp_streak = ${streak} WHERE google_sub = ${key}`;
+        // Season-aware settle: dormant (curSeason<1) reproduces the classic K=32 + streak result and
+        // writes no season columns; active seasons roll the player over on their first game of the
+        // month (squash + reset), apply K=48 no-streak during the 5 placements, then normal Elo.
+        const r = applyMatch(u, won, oppElo, curSeason);
+        const { elo, wins, losses, streak, bonus, delta } = r;
+        if (curSeason >= 1) {
+          await sql`UPDATE users SET pvp_elo = ${elo}, pvp_wins = ${wins}, pvp_losses = ${losses}, pvp_streak = ${streak}, pvp_season = ${r.season}, pvp_placement_games = ${r.placement_games} WHERE google_sub = ${key}`;
+          await upsertSeason(curSeason, key, u.name, r);
+        } else {
+          await sql`UPDATE users SET pvp_elo = ${elo}, pvp_wins = ${wins}, pvp_losses = ${losses}, pvp_streak = ${streak} WHERE google_sub = ${key}`;
+        }
         // Prefer the recorded opponent; else the client-reported oppKey (normalized so account keys,
         // sent as `acct:<sub>`, match the raw `<sub>` stored in users — a bug that previously made
         // the loss-apply silently no-op for signed-in opponents).
@@ -636,7 +728,7 @@ module.exports = async (req, res) => {
         const validOppKey = settleOpp && settleOpp !== key ? settleOpp : null;
         try {
           await sql`INSERT INTO pvp_history (player_key, match_id, won, my_role, my_ovr, opp_name, opp_ovr, opp_key, elo_before, elo_after, decided)
-            VALUES (${key}, ${matchId}, ${won}, ${role}, ${myOvr}, ${oppName}, ${oppOvr}, ${validOppKey}, ${u.elo}, ${elo}, ${decided})`;
+            VALUES (${key}, ${matchId}, ${won}, ${role}, ${myOvr}, ${oppName}, ${oppOvr}, ${validOppKey}, ${r.startElo}, ${elo}, ${decided})`;
         } catch (e) {}
         // When the winner reports, server-side apply the loss to the opponent so they can't
         // dodge it by refreshing before pvpResult fires on their end.
@@ -645,20 +737,29 @@ module.exports = async (req, res) => {
             const oppIns = await sql`INSERT INTO pvp_results (match_id, google_sub)
               VALUES (${matchId}, ${validOppKey}) ON CONFLICT DO NOTHING RETURNING match_id`;
             if (oppIns.length) {
-              const [opp] = await sql`SELECT pvp_elo, pvp_wins, pvp_losses FROM users WHERE google_sub = ${validOppKey}`;
+              const [opp] = await sql`SELECT pvp_elo AS elo, pvp_wins AS wins, pvp_losses AS losses, pvp_streak AS streak, pvp_season AS season, pvp_placement_games AS placement_games, name FROM users WHERE google_sub = ${validOppKey}`;
               if (opp) {
-                const { delta: oppDelta } = nextElo(opp.pvp_elo, u.elo, false);
-                const oppNewElo = Math.max(100, opp.pvp_elo + oppDelta);
-                await sql`UPDATE users SET pvp_elo = ${oppNewElo}, pvp_losses = ${opp.pvp_losses + 1}, pvp_streak = 0 WHERE google_sub = ${validOppKey}`;
+                // Same season-aware machinery for the settled opponent (a loss vs the winner's rating),
+                // so an opponent crossing a season boundary isn't mutated without a rollover.
+                const or = applyMatch(opp, false, u.elo, curSeason);
+                if (curSeason >= 1) {
+                  await sql`UPDATE users SET pvp_elo = ${or.elo}, pvp_wins = ${or.wins}, pvp_losses = ${or.losses}, pvp_streak = ${or.streak}, pvp_season = ${or.season}, pvp_placement_games = ${or.placement_games} WHERE google_sub = ${validOppKey}`;
+                  await upsertSeason(curSeason, validOppKey, opp.name, or);
+                } else {
+                  await sql`UPDATE users SET pvp_elo = ${or.elo}, pvp_losses = ${or.losses}, pvp_streak = 0 WHERE google_sub = ${validOppKey}`;
+                }
                 const oppHistRole = role ? (role === 'pitcher' ? 'batter' : 'pitcher') : null;
                 const winnerName = String(body.name || '').slice(0, 40);
                 await sql`INSERT INTO pvp_history (player_key, match_id, won, my_role, my_ovr, opp_name, opp_ovr, opp_key, elo_before, elo_after, decided)
-                  VALUES (${validOppKey}, ${matchId}, false, ${oppHistRole}, ${oppOvr}, ${winnerName}, ${myOvr}, ${key}, ${opp.pvp_elo}, ${oppNewElo}, ${decided})`;
+                  VALUES (${validOppKey}, ${matchId}, false, ${oppHistRole}, ${oppOvr}, ${winnerName}, ${myOvr}, ${key}, ${or.startElo}, ${or.elo}, ${decided})`;
               }
             }
           } catch (e) {}
         }
-        return res.status(200).json({ ok: true, counted: true, won, elo, delta: delta + bonus, bonus, streak, wins, losses });
+        const out = { ok: true, counted: true, won, elo, delta: delta + bonus, bonus, streak, wins, losses };
+        // season extras let the client render placement progress / "placed" instead of a raw Elo delta
+        if (curSeason >= 1) { out.season = curSeason; out.placementGames = r.placement_games; out.placed = r.placed; out.inPlacement = r.inPlacement; }
+        return res.status(200).json(out);
       }
 
       if (action === 'pvpHistory') {
@@ -686,6 +787,7 @@ module.exports = async (req, res) => {
         const [g] = gid ? await sql`DELETE FROM users WHERE google_sub = ${gid}
           AND (pvp_wins > 0 OR pvp_losses > 0 OR pvp_wins_hoops > 0 OR pvp_losses_hoops > 0)
           RETURNING pvp_elo AS elo, pvp_wins AS wins, pvp_losses AS losses, pvp_streak AS streak,
+            pvp_season AS season, pvp_placement_games AS placement,
             pvp_elo_hoops AS helo, pvp_wins_hoops AS hwins, pvp_losses_hoops AS hlosses, pvp_streak_hoops AS hstreak` : [];
         if (g) {
           const [acct] = await sql`SELECT pvp_elo AS elo, pvp_wins AS wins, pvp_losses AS losses,
@@ -693,8 +795,13 @@ module.exports = async (req, res) => {
           if (acct) {
             if (g.wins > 0 || g.losses > 0) {
               const elo = Math.max(100, Math.min(4000, acct.elo + (g.elo - 1000)));
-              await sql`UPDATE users SET pvp_elo = ${elo}, pvp_wins = ${acct.wins + g.wins}, pvp_losses = ${acct.losses + g.losses}, pvp_streak = ${g.streak} WHERE google_sub = ${body.sub}`;
+              // carry the guest's season/placement so placements done as a guest survive sign-in
+              await sql`UPDATE users SET pvp_elo = ${elo}, pvp_wins = ${acct.wins + g.wins}, pvp_losses = ${acct.losses + g.losses}, pvp_streak = ${g.streak}, pvp_season = ${g.season || 0}, pvp_placement_games = ${g.placement || 0} WHERE google_sub = ${body.sub}`;
               await sql`UPDATE pvp_history SET player_key = ${body.sub} WHERE player_key = ${gid} AND sport IS DISTINCT FROM 'hoops'`;
+              // re-key the guest's season standings onto the account (drop any that would collide with
+              // a season the account already has a row for, then re-key the rest — no PK violation)
+              await sql`DELETE FROM pvp_seasons WHERE player_key = ${gid} AND season IN (SELECT season FROM pvp_seasons WHERE player_key = ${body.sub})`;
+              await sql`UPDATE pvp_seasons SET player_key = ${body.sub} WHERE player_key = ${gid}`;
               claimedBase = true;
             }
             if (g.hwins > 0 || g.hlosses > 0) {
@@ -714,6 +821,26 @@ module.exports = async (req, res) => {
       if (action === 'pvpLeaderboard') {
         if (body.sport === 'hoops') return hoopsLeaderboard(body, res);
         const limit = Math.max(1, Math.min(100, parseInt(body.limit, 10) || 50));
+        // ?season=N → that season's final standings from pvp_seasons (only PLACED players rank);
+        // no season param → the existing live board off users (= current lifetime/season Elo).
+        const wantSeason = parseInt(body.season, 10);
+        if (wantSeason >= 1) {
+          const rows = await sql`SELECT name, elo, wins, losses FROM pvp_seasons
+            WHERE season = ${wantSeason} AND placed = true
+            ORDER BY elo DESC, (wins + losses) DESC LIMIT ${limit}`;
+          let me = null;
+          const key = await pvpKey(body);
+          if (key) {
+            const [u] = await sql`SELECT name, elo, wins, losses, placed FROM pvp_seasons WHERE season = ${wantSeason} AND player_key = ${key}`;
+            if (u && u.placed) {
+              const [{ ahead }] = await sql`SELECT count(*)::int AS ahead FROM pvp_seasons WHERE season = ${wantSeason} AND placed = true AND elo > ${u.elo}`;
+              me = { rank: ahead + 1, name: u.name, elo: u.elo, wins: u.wins, losses: u.losses };
+            } else if (u) {
+              me = { rank: null, name: u.name, elo: u.elo, wins: u.wins, losses: u.losses };
+            }
+          }
+          return res.status(200).json({ ok: true, rows, me, season: wantSeason });
+        }
         const rows = await sql`SELECT name, pvp_elo AS elo, pvp_wins AS wins, pvp_losses AS losses
           FROM users WHERE (pvp_wins + pvp_losses) > 0
           ORDER BY pvp_elo DESC, (pvp_wins + pvp_losses) DESC LIMIT ${limit}`;
@@ -731,6 +858,25 @@ module.exports = async (req, res) => {
           }
         }
         return res.status(200).json({ ok: true, rows, me });
+      }
+
+      // The caller's season-by-season history (for the Seasons tab). Each row carries the player's
+      // final band Elo + their worldwide rank that season (placed players only).
+      if (action === 'pvpSeasonHistory') {
+        const key = await pvpKey(body);
+        if (!key) return res.status(401).json({ ok: false, error: 'Not signed in' });
+        const rows = await sql`SELECT season, name, elo, wins, losses, peak_elo AS peak, placed
+          FROM pvp_seasons WHERE player_key = ${key} ORDER BY season DESC`;
+        const seasons = [];
+        for (const s of rows) {
+          let rank = null;
+          if (s.placed) {
+            const [{ ahead }] = await sql`SELECT count(*)::int AS ahead FROM pvp_seasons WHERE season = ${s.season} AND placed = true AND elo > ${s.elo}`;
+            rank = ahead + 1;
+          }
+          seasons.push({ season: s.season, elo: s.elo, wins: s.wins, losses: s.losses, peak: s.peak, placed: s.placed, rank });
+        }
+        return res.status(200).json({ ok: true, seasons });
       }
 
       // private read of the balance log (token-gated; for diagnosing pitcher-vs-batter win rate)

@@ -160,6 +160,14 @@
     color:var(--muted); cursor:pointer; transition:color .15s; }
   .stab.active { color:var(--accent2); border-bottom-color:var(--accent2); }
   .stab:hover:not(.active) { color:var(--ink); }
+  .season-bar { font-size:12.5px; line-height:1.5; color:var(--muted); text-align:center; padding:9px 12px; margin:0 0 12px;
+    border:1px solid rgba(255,206,58,.28); border-radius:11px; background:linear-gradient(180deg, rgba(255,206,58,.08), rgba(9,15,25,.4)); }
+  .season-bar b { color:var(--ink); font-family:'Oswald',sans-serif; letter-spacing:.5px; }
+  .seasons-row { display:flex; align-items:center; gap:11px; padding:11px 13px; border-radius:11px; margin-bottom:8px;
+    border:1px solid var(--line); background:linear-gradient(180deg, rgba(25,198,255,.05), rgba(9,15,25,.4)); }
+  .seasons-row .sr-num { font-family:'Oswald',sans-serif; font-size:12px; letter-spacing:1px; color:var(--muted); min-width:62px; }
+  .seasons-row .sr-rank { margin-left:auto; font-family:'Oswald',sans-serif; font-size:14px; color:var(--ink); }
+  .seasons-row .sr-rank span { color:var(--muted); font-size:11px; }
 
   /* ---------- role reveal ---------- */
   #roleScreen { justify-content:center; align-items:center; min-height:74vh; text-align:center; }
@@ -495,6 +503,7 @@
     </div>
     <div class="live-ticker" id="liveTicker" style="display:none"><span class="lt-dot"></span><span id="ltText">…</span></div>
     <div class="vs-card">
+      <div class="season-bar" data-season-bar style="display:none"></div>
       <div id="ratingChip" class="rating-chip"></div>
       <button class="btn" id="findBtn">⚔️ Find Match</button>
       <div style="display:flex;align-items:center;gap:10px;margin:18px 0 14px;">
@@ -573,12 +582,17 @@
       </div>
       <div class="stats-tabs">
         <button class="stab active" id="tabStats">My Stats</button>
+        <button class="stab" id="tabSeasons">Seasons</button>
         <button class="stab" id="tabHistory">History</button>
       </div>
       <div data-xp-bar style="margin:10px 0"></div>
       <div id="statsPanel">
+        <div class="season-bar" data-season-bar style="display:none"></div>
         <div id="statsPersonal"></div>
         <div id="statsBoard"></div>
+      </div>
+      <div id="seasonsPanel" style="display:none">
+        <div id="seasonsBody"><div class="prompt">Loading…</div></div>
       </div>
       <div id="historyPanel" style="display:none">
         <div id="statsHistory"></div>
@@ -787,6 +801,52 @@ function tierBadgeHTML(elo, rank, size=20){
   return `<span class="tier-badge">${batSVG(t.color, t.glow, size)}<span class="tier-name" style="color:${t.color};font-size:${fs}px;letter-spacing:1.5px">${t.name}</span></span>`;
 }
 
+/* ---------- monthly seasons (MUST mirror api/account.js) ---------- */
+const SEASON1_START_MS = Date.UTC(2026, 6, 15);   // 2026-07-15 UTC — keep in sync with the server
+const N_PLACEMENT = 5;
+function addUTCMonths(ms, k){ const d = new Date(ms); d.setUTCMonth(d.getUTCMonth() + k); return d.getTime(); }
+// dev override: /versus?season=<epochMs> pretends "now" is that instant so the season UI can be
+// previewed as if kickoff already passed. Server stays real, so placement data still needs a real season.
+let _seasonNowOverride = 0;
+(function(){ const q = new URLSearchParams(location.search).get('season'); const v = q ? Number(q) : 0; if (v > 0) _seasonNowOverride = v; })();
+function seasonNow(){ return _seasonNowOverride || Date.now(); }
+function seasonInfo(nowMs){
+  nowMs = nowMs || seasonNow();
+  if (nowMs < SEASON1_START_MS) return { number:0, startMs:null, endMs:SEASON1_START_MS };
+  const a = new Date(SEASON1_START_MS), n = new Date(nowMs);
+  let m = (n.getUTCFullYear() - a.getUTCFullYear()) * 12 + (n.getUTCMonth() - a.getUTCMonth());
+  if (nowMs < addUTCMonths(SEASON1_START_MS, m)) m -= 1;
+  return { number:m+1, startMs:addUTCMonths(SEASON1_START_MS, m), endMs:addUTCMonths(SEASON1_START_MS, m+1) };
+}
+function fmtCountdown(ms){
+  if (ms <= 0) return 'soon';
+  const d = Math.floor(ms/86400000), h = Math.floor(ms%86400000/3600000), mn = Math.floor(ms%3600000/60000);
+  if (d > 0) return `${d}d ${h}h`;
+  if (h > 0) return `${h}h ${mn}m`;
+  return `${mn}m`;
+}
+// Combine the season calendar with the player's stored state (myStats.season/placementGames) into a
+// display phase. Before kickoff → 'preseason'; rolled-in + 5 games → 'placed'; else 'placement'.
+function seasonDisplay(){
+  const info = seasonInfo();
+  if (info.number < 1) return { number:0, active:false, endMs:info.endMs, phase:'preseason', placementGames:0 };
+  if (!myStats) return { number:info.number, active:true, endMs:info.endMs, phase:'placed', placementGames:0 };
+  const rolled = (myStats.season || 0) === info.number;
+  const pg = rolled ? (myStats.placementGames || 0) : 0;
+  const phase = (rolled && pg >= N_PLACEMENT) ? 'placed' : 'placement';
+  return { number:info.number, active:true, endMs:info.endMs, phase, placementGames:pg };
+}
+let seasonBarTimer = null;
+function renderSeasonBar(){
+  const d = seasonDisplay();
+  let html;
+  if (!d.active) html = `🏆 <b>Season 1</b> begins in <b>${fmtCountdown(d.endMs - seasonNow())}</b> · your current rating carries into placements`;
+  else if (d.phase === 'placement') html = `🏆 <b>Season ${d.number}</b> · Placement <b>${d.placementGames}/5</b> · win 5 to lock your rank · ends in ${fmtCountdown(d.endMs - seasonNow())}`;
+  else html = `🏆 <b>Season ${d.number}</b> · ends in <b>${fmtCountdown(d.endMs - seasonNow())}</b>`;
+  document.querySelectorAll('[data-season-bar]').forEach(el => { el.innerHTML = html; el.style.display = ''; });
+}
+function startSeasonBar(){ renderSeasonBar(); if (seasonBarTimer) clearInterval(seasonBarTimer); seasonBarTimer = setInterval(renderSeasonBar, 30000); }
+
 const PITCHER_SLOTS = [
   { key:'hr_per_bf', label:'Ground Ball', part:'Ball', ax:30, ay:5, lx:13, ly:9 },
   { key:'pitch_movement', label:'Break', part:'Wrist', ax:29, ay:11, lx:10, ly:27 },
@@ -951,7 +1011,7 @@ async function refreshStats(){
   try {
     const r = await fetch('/api/account', { method:'POST', headers:{'content-type':'application/json'},
       body: JSON.stringify(Object.assign({ action:'pvpStats' }, principal())) }).then(x=>x.json());
-    if (r.ok) myStats = { elo:r.elo, wins:r.wins, losses:r.losses, streak:r.streak||0 };
+    if (r.ok) myStats = { elo:r.elo, wins:r.wins, losses:r.losses, streak:r.streak||0, season:r.season||0, placementGames:r.placementGames||0 };
     else if (account && r.error === 'Not signed in'){ account=null; try{ localStorage.removeItem('pl_account'); }catch(e){} return refreshStats(); }
   } catch(e){}
 }
@@ -966,7 +1026,10 @@ function updateRatingChip(){
   el.appendChild(row);
   const tierRow = document.createElement('div');
   tierRow.style.cssText = 'display:flex;align-items:center;justify-content:center;margin:4px 0 2px';
-  tierRow.innerHTML = tierBadgeHTML(elo, null, 22);
+  const sd = seasonDisplay();
+  tierRow.innerHTML = (sd.active && sd.phase === 'placement')
+    ? `<span class="tier-badge" style="color:#ffce3a;font-family:'Oswald',sans-serif;letter-spacing:1.5px;font-size:14px">🧭 Placement ${sd.placementGames}/5</span>`
+    : tierBadgeHTML(elo, null, 22);
   el.appendChild(tierRow);
   if (account){
     const note = document.createElement('div'); note.className='guest'; note.textContent='✓ Signed in · rating saved to your account';
@@ -1006,8 +1069,49 @@ function reconcileResultDisplay(won, oppName){
     ? `You beat ${nm}. Run it back?`
     : `${nm} settled this one first. Rating adjusted to match.`;
 }
+function addGuestSavePrompt(el){
+  if (!isGuest()) return;
+  const p = document.createElement('div'); p.className='prompt'; p.style.marginTop='4px';
+  p.textContent='Sign in to save it & play on other devices →';
+  const wrap = document.createElement('div'); wrap.id='gsiResult';
+  el.appendChild(p); el.appendChild(wrap);
+  if (gsiReady){ try { google.accounts.id.renderButton(wrap, { theme:'filled_black', size:'large', shape:'pill', text:'signin_with' }); } catch(e){} }
+}
 function renderRatingResult(r){
   const el = $('ratingResult'); if (!el) return;
+  if (window.Ach){   // elo milestones can be reached during placements too
+    if (r.elo >= 1200) Ach.unlock('elo1');
+    if (r.elo >= 1400) Ach.unlock('elo2');
+    if (r.elo >= 1600) Ach.unlock('elo3');
+  }
+  // ---- placement games: hide the raw Elo, show progress / the "placed" reveal ----
+  if (r.inPlacement){
+    const band = getEloTier(r.elo, null);
+    const segs = Array.from({ length: N_PLACEMENT }, (_, i) =>
+      `<span style="flex:1;height:8px;border-radius:4px;background:${i < r.placementGames ? band.color : 'rgba(120,150,190,.2)'}"></span>`).join('');
+    if (r.placed){   // the 5th placement game just locked their band
+      el.innerHTML = `<div class="delta" style="color:${band.color}">✓ PLACEMENTS COMPLETE</div>`
+        + `<div style="font-family:'Oswald',sans-serif;font-size:15px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin:8px 0 2px">Placed into</div>`
+        + `<div class="tier-result" style="display:flex;align-items:center;justify-content:center;margin:2px 0 8px">${tierBadgeHTML(r.elo, null, 30)}</div>`
+        + `<div style="display:flex;gap:5px;margin:6px 0">${segs}</div>`
+        + `<div class="prompt">Season ${r.season} · ${r.wins}W · ${r.losses}L</div>`;
+      const badgeEl = el.querySelector('.tier-badge');
+      if (badgeEl && window.gsap){
+        gsap.fromTo(badgeEl, { scale:0.5, opacity:0 }, { scale:1, opacity:1, duration:0.7, delay:0.3, ease:'back.out(2.4)' });
+        const card = $('resultCard');
+        gsap.fromTo(card, { filter:'brightness(1)' }, { filter:'brightness(1.35)', duration:0.2, delay:0.35, yoyo:true, repeat:3, ease:'power2.inOut', onComplete(){ card.style.filter=''; } });
+      }
+      try { Sound.win(); } catch(e){}
+    } else {
+      const left = N_PLACEMENT - r.placementGames;
+      el.innerHTML = `<div class="delta ${r.won?'up':'down'}">Placement ${r.placementGames}/5 · ${r.won?'WIN':'LOSS'}</div>`
+        + `<div style="display:flex;gap:5px;margin:11px 0">${segs}</div>`
+        + `<div class="prompt">${left} more to lock your Season ${r.season} rank</div>`;
+      if (window.gsap) gsap.fromTo(el.querySelector('.delta'), { y:8, opacity:0 }, { y:0, opacity:1, duration:.5, ease:'power2.out' });
+    }
+    addGuestSavePrompt(el);
+    return;
+  }
   const prev = r.elo - r.delta;
   const dir = r.delta >= 0 ? 'up' : 'down';
   const sign = r.delta >= 0 ? '+' : '';
@@ -2362,23 +2466,28 @@ function showResult(iWon, pitcher, batter, winnerRole, script){
 
 /* ---------- stats page ---------- */
 function switchStatsTab(tab){
-  const isStats = tab !== 'history';
-  $('tabStats').classList.toggle('active', isStats);
-  $('tabHistory').classList.toggle('active', !isStats);
-  $('statsPanel').style.display = isStats ? '' : 'none';
-  $('historyPanel').style.display = isStats ? 'none' : '';
-  if ($('challengeLinkWrap')) $('challengeLinkWrap').style.display = isStats ? '' : 'none';
+  const view = tab === 'history' ? 'history' : tab === 'seasons' ? 'seasons' : 'stats';
+  $('tabStats').classList.toggle('active', view === 'stats');
+  $('tabSeasons').classList.toggle('active', view === 'seasons');
+  $('tabHistory').classList.toggle('active', view === 'history');
+  $('statsPanel').style.display = view === 'stats' ? '' : 'none';
+  $('seasonsPanel').style.display = view === 'seasons' ? '' : 'none';
+  $('historyPanel').style.display = view === 'history' ? '' : 'none';
+  if ($('challengeLinkWrap')) $('challengeLinkWrap').style.display = view === 'stats' ? '' : 'none';
 }
 function openStats(tab='stats'){
   showScreen('statsScreen');
   $('statsPersonal').innerHTML = '<div class="prompt">Loading…</div>';
   $('statsHistory').innerHTML = '<div class="prompt">Loading…</div>';
+  $('seasonsBody').innerHTML = '<div class="prompt">Loading…</div>';
   $('statsBoard').innerHTML = '';
   switchStatsTab(tab);
+  startSeasonBar();
   loadStats();
 }
 let statsView = 'baseball';   // which sport's 1v1 board the stats screen is showing (toggle below)
 async function loadStats(){
+  loadSeasons();   // fire the Seasons tab load in parallel (baseball-only, own render target)
   let data, hist;
   try {
     [data, hist] = await Promise.all([
@@ -2442,6 +2551,38 @@ async function loadStats(){
   }
 }
 
+// The Seasons tab: the caller's season-by-season band + rank, plus a pre-season teaser/countdown.
+async function loadSeasons(){
+  const body = $('seasonsBody'); if (!body) return;
+  const info = seasonInfo();
+  if (statsView !== 'baseball'){ body.innerHTML = `<div class="prompt">Seasons are coming to Hoops soon — for now Hoops uses an all-time rating.</div>`; return; }
+  let res = null;
+  try { res = await fetch('/api/account', { method:'POST', headers:{'content-type':'application/json'},
+    body: JSON.stringify(Object.assign({ action:'pvpSeasonHistory' }, principal())) }).then(x=>x.json()); } catch(e){}
+  const seasons = (res && res.ok && res.seasons) ? res.seasons : [];
+  let html = `<div class="season-bar" data-season-bar></div>`;
+  if (info.number < 1){
+    html += `<div class="prompt" style="margin:2px 0 12px">When <b>Season 1</b> starts, your first <b>5 games are placement matches</b> — your current rating carries in (regressed toward the middle), and those 5 games lock you into a rank band. Each month resets into new placements.</div>`;
+  }
+  if (seasons.length){
+    html += `<div class="lb-head">Your Seasons</div>`;
+    html += seasons.map(s => {
+      const band = getEloTier(s.elo, s.rank);
+      const rankTxt = s.placed ? (s.rank ? `#${s.rank} <span>worldwide</span>` : '') : 'unranked';
+      return `<div class="seasons-row">
+        <span class="sr-num">Season ${s.season}</span>
+        ${batSVG(band.color, band.glow, 16)}<span style="color:${s.placed?band.color:'var(--muted)'};font-family:'Oswald',sans-serif;letter-spacing:1px">${s.placed ? band.name : 'Unranked'}</span>
+        <span style="color:var(--muted);font-size:12px">${s.wins}-${s.losses}</span>
+        <span class="sr-rank">${rankTxt}</span>
+      </div>`;
+    }).join('');
+  } else if (info.number >= 1){
+    html += `<div class="prompt" style="margin-top:10px">No placement games played yet this season — win 5 to lock your rank.</div>`;
+  }
+  body.innerHTML = html;
+  renderSeasonBar();
+}
+
 /* ---------- wiring ---------- */
 $('findBtn').onclick = () => { Sound.click(); findMatch(); };
 $('ghostBtn').onclick = () => { Sound.click(); startGhostMatch(); };
@@ -2450,8 +2591,9 @@ $('statsBtn').onclick = () => { Sound.click(); openStats(); };
 $('achBtn').onclick = () => { Sound.click(); window.Ach && Ach.open(); };
 if ($('resultStatsBtn')) { /* result-screen achievements shortcut added below */ }
 $('resultStatsBtn').onclick = () => { Sound.click(); openStats(); };
-$('statsBack').onclick = () => { showScreen('mmScreen'); updateRatingChip(); };
+$('statsBack').onclick = () => { showScreen('mmScreen'); updateRatingChip(); renderSeasonBar(); };
 $('tabStats').onclick = () => switchStatsTab('stats');
+$('tabSeasons').onclick = () => switchStatsTab('seasons');
 $('tabHistory').onclick = () => { switchStatsTab('history'); };
 document.querySelectorAll('#statsSportToggle .stab').forEach(b => {
   b.onclick = () => {
@@ -2466,6 +2608,7 @@ document.querySelectorAll('#statsSportToggle .stab').forEach(b => {
 });
 // deep-link: /versus#stats opens the stats page straight away (from the hamburger menus)
 if (location.hash === '#stats') openStats();
+if (location.hash === '#seasons') openStats('seasons');
 if (location.hash === '#achievements' || location.hash === '#ach') { const o = () => (window.Ach ? Ach.open() : setTimeout(o, 120)); o(); }
 $('newMatchBtn').onclick = () => { Sound.click(); if (isGhost) startGhostMatch(); else findMatch(); };
 $('rematchBtn').onclick = () => {
@@ -2501,7 +2644,8 @@ document.querySelectorAll('#lobbyModePicker .lmode').forEach(btn => {
 });
 // sign-in + rating on load
 initGoogle();
-refreshStats().then(updateRatingChip);
+refreshStats().then(() => { updateRatingChip(); renderSeasonBar(); });
+startSeasonBar();   // keep the season countdown live on the matchmaking screen
 checkChallengeURL();  // show challenge screen immediately if URL has ?ch= (no Ably needed for the screen)
 goOnline();  // connect + wire the friend-challenge inbox (global presence is joined lazily on search)
 // dev harness: /versus.html?animtest=1&seed=5&aovr=95&bovr=88&ateam=LAD&bteam=LAD plays the at-bat
