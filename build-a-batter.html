@@ -325,6 +325,22 @@
     border:1px solid var(--line); background:rgba(255,255,255,.04); outline:none; }
   .pre-sim input:focus { border-color:var(--accent2); box-shadow:0 0 12px rgba(25,198,255,.3); }
   .pre-sim .primary { flex-basis:100%; }
+  .pre-sim .dec-toggle { flex-basis:100%; display:flex; align-items:center; justify-content:center; gap:7px; font-size:12px;
+    color:var(--muted); cursor:pointer; font-family:'Oswald',sans-serif; letter-spacing:.5px; }
+  .pre-sim .dec-toggle input { accent-color:var(--accent2); cursor:pointer; }
+  .pre-sim .dec-toggle small { color:var(--dim); letter-spacing:0; font-family:'Inter',sans-serif; }
+
+  /* mid-career decision modal */
+  .dec-card { max-width:440px; text-align:center; }
+  .dec-kicker { font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:2.5px; color:var(--accent2); text-transform:uppercase; margin-bottom:6px; }
+  .dec-card h3 { font-family:'Oswald',sans-serif; font-size:24px; letter-spacing:1px; margin:0 0 10px; color:var(--ink); }
+  .dec-flavor { font-size:14px; color:var(--muted); line-height:1.5; margin:0 0 16px; }
+  .dec-opts { display:flex; flex-direction:column; gap:9px; }
+  .dec-opt { display:flex; flex-direction:column; gap:3px; padding:12px 14px; border-radius:12px; cursor:pointer; text-align:left;
+    border:1px solid var(--line); background:linear-gradient(180deg, rgba(25,198,255,.06), rgba(9,15,25,.5)); color:var(--ink); font:inherit; }
+  .dec-opt:hover { border-color:var(--accent2); background:rgba(25,198,255,.12); transform:translateY(-1px); }
+  .dec-opt b { font-family:'Oswald',sans-serif; font-size:15px; letter-spacing:.5px; }
+  .dec-opt small { font-size:12px; color:var(--muted); }
 
   /* live ticker */
   .career-ticker { display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:rgba(120,160,210,.12);
@@ -760,6 +776,7 @@
 
       <div id="preSim" class="pre-sim">
         <input id="nameInput" maxlength="20" placeholder="Name your hitter" autocomplete="off">
+        <label class="dec-toggle"><input type="checkbox" id="decChk"> 🎬 Career Decisions <small>— shape the story mid-career</small></label>
         <button id="simBtn" class="primary">▶ Simulate Career</button>
       </div>
 
@@ -925,6 +942,15 @@
       <div class="dr-arch" id="drArch"></div>
     </div>
     <div class="draft-skip" id="draftSkip">Tap anywhere to continue -></div>
+  </div>
+</div>
+
+<div id="decisionModal" class="overlay locked">
+  <div class="overlay-card panel dec-card">
+    <div class="dec-kicker">📣 Decision · Age <span id="decAge"></span></div>
+    <h3 id="decTitle"></h3>
+    <p class="dec-flavor" id="decFlavor"></p>
+    <div class="dec-opts" id="decOpts"></div>
   </div>
 </div>
 
@@ -1218,6 +1244,8 @@ async function init() {
   if (window.Ach) Ach.muted = Sound.isMuted();
   $('buildTab').onclick = () => Sound.click();
   $('simBtn').onclick = runCareerPlaythrough;
+  $('decChk').checked = careerEventsOn();
+  $('decChk').onchange = e => { try { localStorage.setItem('pl_careerEvents', e.target.checked ? '1' : '0'); } catch (err) {} Sound.click(); };
   $('submitBtn').onclick = submitScore;
   $('nameInput').addEventListener('keydown', e => { if (e.key === 'Enter') runCareerPlaythrough(); });
   document.querySelectorAll('.lb-scope-tab').forEach(t => t.onclick = () => loadLeaderboard(t.dataset.scope, lbGame));
@@ -1245,8 +1273,9 @@ async function init() {
     $('installNowBtn').style.display = 'none';
   };
   document.querySelectorAll('.overlay-close').forEach(b => b.onclick = () => closeOverlay(b.dataset.close));
-  document.querySelectorAll('.overlay').forEach(o => o.addEventListener('click', e => { if (e.target === o) closeOverlay(o.id); }));
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.overlay.show').forEach(o => closeOverlay(o.id)); });
+  // .locked overlays (mid-career decisions) can't be dismissed — the player must choose
+  document.querySelectorAll('.overlay').forEach(o => o.addEventListener('click', e => { if (e.target === o && !o.classList.contains('locked')) closeOverlay(o.id); }));
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.overlay.show:not(.locked)').forEach(o => closeOverlay(o.id)); });
   renderAcct();
   initGoogle();
 
@@ -2417,7 +2446,83 @@ function batterRole(vals) {
   return vals.power >= 80 ? 'Slugger' : vals.speed >= 80 ? 'Speedster' : vals.contact >= 82 ? 'Contact Hitter' : 'Everyday Bat';
 }
 
-function simulateCareer(filled, finalOvr, draftTeamAb) {
+/* ---- mid-career decision events ------------------------------------------
+   Same engine as pitcher.html (see the comment there): pooled story beats via
+   a separate |decisions-v1 stream, choices consumed positionally, sim halts at
+   an unanswered event and re-runs with the pick appended. choices == null
+   (toggle off) is byte-identical to the classic sim. */
+const CAREER_EVENTS = {
+  media: { title: 'Rookie Media Day', icon: '🎙️', def: 'business',
+    flavor: 'Camp opens and every mic in the state is pointed at the new bat. How do you play it?',
+    options: [
+      { key: 'spotlight', label: 'Embrace the spotlight', hint: 'Sponsors love a star who loves the camera.' },
+      { key: 'business', label: 'All business', hint: 'Short answers. Long cage sessions.' },
+      { key: 'villain', label: 'Give them a villain', hint: 'Talk now, back it up in October.' },
+    ] },
+  viral_rookie: { title: 'Accidentally Famous', icon: '📱', def: 'lowkey',
+    flavor: 'Your helmet flies off rounding second and you faceplant into the bag. The clip hits 40 million views overnight.',
+    options: [
+      { key: 'lean', label: 'Lean into it', hint: 'Slide head-first into every base forever.' },
+      { key: 'lowkey', label: 'Laugh it off, lock in', hint: 'Funny once. Back to work.' },
+      { key: 'merch', label: 'Drop the merch', hint: '"Helmet Optional" tees by Friday.' },
+    ] },
+  gear: { title: 'Signature Deal', icon: '🪵', def: 'focus',
+    flavor: 'A bat company calls: they want a signature model with your name burned into the barrel.',
+    options: [
+      { key: 'sign', label: 'Sign the deal', hint: 'Money in the bank, your barrel in every dugout.' },
+      { key: 'focus', label: 'Stay locked in', hint: 'No distractions until the résumé is done.' },
+      { key: 'charity', label: 'Design it, donate it', hint: 'Every bat funds youth ball back home.' },
+    ] },
+  presser: { title: 'The Presser', icon: '🎤', def: 'robot',
+    flavor: 'After a brutal series you give the most painfully honest press conference of the year. By midnight it\'s everywhere.',
+    options: [
+      { key: 'comedy', label: 'Roll with the jokes', hint: 'The late-night shows come calling.' },
+      { key: 'robot', label: '"We\'re on to next week"', hint: 'Full robot mode. Nothing to see here.' },
+      { key: 'fireback', label: 'Fire back at the critics', hint: 'Bulletin-board material — for you.' },
+    ] },
+  viral_celebration: { title: 'The Bat Flip', icon: '🕺', def: 'tone',
+    flavor: 'Your home-run celebration — the flip, the slow walk, the stare — is suddenly all over the internet.',
+    options: [
+      { key: 'trademark', label: 'Trademark it', hint: 'Kids do it at recess. Get paid for it.' },
+      { key: 'tone', label: 'Tone it down', hint: 'Respect the game, keep the edge.' },
+      { key: 'teach', label: 'Teach the bleachers', hint: 'The whole stadium does it now.' },
+    ] },
+  national: { title: 'Swing for the Flag', icon: '🌎', def: 'rest',
+    flavor: 'Your country wants you hitting cleanup at the World Classic this winter.',
+    options: [
+      { key: 'play', label: 'Swing for the flag', hint: 'A legacy moment. The body pays the interest.' },
+      { key: 'rest', label: 'Protect the body', hint: 'Summer at-bats pay the bills.' },
+      { key: 'captain', label: 'Go as the captain', hint: 'Lead the whole squad. Heavy is the crown.' },
+    ] },
+  mentor: { title: 'The Phenom', icon: '🧑‍🏫', def: 'focus',
+    flavor: 'The org\'s top prospect just got called up… and asked for the locker next to yours.',
+    options: [
+      { key: 'mentor', label: 'Take them under your wing', hint: 'Legacy is what they say about you later.' },
+      { key: 'focus', label: 'Compete with them', hint: 'Iron sharpens iron. Yours first.' },
+    ] },
+  injury: { title: 'Injury Crossroads', icon: '🏥', def: 'surgery',
+    flavor: 'The hamstring finally gives out mid-season. The doc lays out two roads.',
+    options: [
+      { key: 'surgery', label: 'Get the surgery', hint: 'Lose most of this season, save the ones after.' },
+      { key: 'gut', label: 'Play through it', hint: 'Tape it up and pray. Sluggers don\'t sit.' },
+    ] },
+  fa: { title: 'Free Agency', icon: '💼', def: 'loyal',
+    flavor: 'Your first big contract hits the table — three teams, three futures.',
+    options: [
+      { key: 'loyal', label: 'Stay loyal', hint: 'Hometown discount. Statue outside the park someday.' },
+      { key: 'ring', label: 'Chase the ring', hint: 'Join a juggernaut. October or bust.' },
+      { key: 'money', label: 'Max the bag', hint: 'Highest bidder wins. Standings optional.' },
+    ] },
+  twilight: { title: 'The Twilight Call', icon: '🌇', def: 'ride',
+    flavor: 'The offseason phone stays quiet longer these days. What\'s the move?',
+    options: [
+      { key: 'walk', label: 'Walk away on top', hint: 'Leave them wanting one more.' },
+      { key: 'ride', label: 'One last ride', hint: 'Run it back. One more summer.' },
+      { key: 'farewell', label: 'Farewell tour', hint: 'Tell the world it\'s the last lap — and soak it in.' },
+    ] },
+};
+
+function simulateCareer(filled, finalOvr, draftTeamAb, choices) {
   const vals = {};
   for (const s of SLOTS) vals[s.key] = filled[s.key].value;
   const seed = SLOTS.map(s => `${s.key}:${vals[s.key]}:${filled[s.key].player || filled[s.key].name}`).join('|');
@@ -2433,9 +2538,80 @@ function simulateCareer(filled, finalOvr, draftTeamAb) {
   const maxAge = Math.round(clamp(30 + vals.frame * 0.13 + randRange(rng, -2, 3), 29, 42));
   let declineDebt = 0, badStreak = 0, peakWar = 0;
 
-  for (let age = startAge; age <= maxAge; age++) {
+  // ---- decision-event machinery (completely inert when choices == null) ----
+  const evOn = Array.isArray(choices);
+  const decisions = [];
+  const mods = { perf: 0, earnMult: 1, clutch: 0, voteBonus: 0, noTrades: false };
+  let pendingDecision = null, choiceIdx = 0, twilightDone = false, injuryAsked = false, decisionTrade = null;
+  let endAge = maxAge;
+  const evPlan = {};
+  if (evOn) {
+    // a FIXED number of draws builds the plan, so it never depends on career length
+    const dRng = seededRandom(seed + '|decisions-v1');
+    const EARLY = ['media', 'viral_rookie', 'gear'], MID = ['presser', 'viral_celebration', 'national', 'mentor'];
+    const early = EARLY[Math.floor(dRng() * EARLY.length)];
+    const earlyYear = 1 + Math.floor(dRng() * 2);                       // season 2 or 3
+    const midA = MID[Math.floor(dRng() * MID.length)];
+    let midB = MID[Math.floor(dRng() * MID.length)];
+    const twoMids = dRng() < 0.45;
+    const midYearA = 3 + Math.floor(dRng() * 3);                        // seasons 4-6
+    const midYearB = 8 + Math.floor(dRng() * 3);                        // seasons 9-11 (long careers only)
+    if (midB === midA) midB = MID[(MID.indexOf(midA) + 1) % MID.length];
+    evPlan[earlyYear] = early;
+    evPlan[midYearA] = midA;
+    if (twoMids) evPlan[midYearB] = midB;
+    delete evPlan[6];                                                    // year 7 belongs to free agency
+  }
+  const takeChoice = () => (choiceIdx < choices.length ? choices[choiceIdx++] : null);
+  const ask = (id, age) => {
+    const d = CAREER_EVENTS[id];
+    pendingDecision = { id, age, title: d.title, icon: d.icon, flavor: d.flavor, options: d.options, def: d.def };
+  };
+  function applyChoice(id, pick, age) {
+    decisions.push({ id, pick, age });
+    const m = mods;
+    if (id === 'media') { if (pick === 'spotlight') { m.earnMult *= 1.15; m.voteBonus += 1.5; } else if (pick === 'business') { m.perf += 0.015; m.earnMult *= 0.92; } else { m.clutch += 4; m.earnMult *= 1.08; m.voteBonus -= 2; } }
+    else if (id === 'viral_rookie') { if (pick === 'lean') { m.earnMult *= 1.12; m.voteBonus += 1; } else if (pick === 'lowkey') m.perf += 0.01; else { m.earnMult *= 1.2; m.voteBonus -= 1; } }
+    else if (id === 'gear') { if (pick === 'sign') m.earnMult *= 1.18; else if (pick === 'focus') m.perf += 0.012; else { m.voteBonus += 2; m.earnMult *= 1.05; } }
+    else if (id === 'presser') { if (pick === 'comedy') { m.voteBonus += 1.5; m.earnMult *= 1.05; } else if (pick === 'robot') m.perf += 0.012; else { m.clutch += 3; m.voteBonus -= 1; } }
+    else if (id === 'viral_celebration') { if (pick === 'trademark') m.earnMult *= 1.15; else if (pick === 'tone') { m.perf += 0.008; m.voteBonus += 0.5; } else m.voteBonus += 1.5; }
+    else if (id === 'national') { if (pick === 'play') { m.voteBonus += 1.5; m.perf -= 0.008; } else if (pick === 'rest') m.perf += 0.008; else { m.clutch += 3; m.voteBonus += 1; m.perf -= 0.012; } }
+    else if (id === 'mentor') { if (pick === 'mentor') m.voteBonus += 2; else m.perf += 0.01; }
+    else if (id === 'fa') {
+      if (pick === 'loyal') { m.voteBonus += 2; m.perf += 0.01; m.earnMult *= 0.9; m.noTrades = true; }
+      else {
+        const from = currentTeam;
+        currentTeam = randTeamAb(rng, from);
+        decisionTrade = { from, to: currentTeam };
+        if (pick === 'ring') { currentTeamQuality = 0.12; m.earnMult *= 0.95; }
+        else { currentTeamQuality = -0.07; m.earnMult *= 1.3; }
+      }
+    }
+    else if (id === 'injury') { if (pick === 'surgery') { declineDebt = 0; endAge += 1; } else { m.perf -= 0.01; declineDebt += 0.03; } }
+    else if (id === 'twilight') { if (pick === 'walk') m.voteBonus += 2.5; else if (pick === 'ride') m.voteBonus += 0.5; else { m.earnMult *= 1.2; m.voteBonus += 1; m.perf -= 0.02; } }
+  }
+
+  for (let age = startAge; age <= endAge; age++) {
+    // decision gates: twilight fires entering the final scheduled season, then
+    // free agency (year 7) or whatever the seeded plan booked for this year
+    if (evOn && !twilightDone && age === endAge && age > startAge) {
+      twilightDone = true;
+      const pick = takeChoice();
+      if (pick == null) { ask('twilight', age); break; }
+      applyChoice('twilight', pick, age);
+      if (pick === 'walk') break;                 // hang 'em up before the final lap
+    }
+    if (evOn) {
+      const evId = (age - startAge) === 6 ? 'fa' : evPlan[age - startAge];
+      if (evId) {
+        const pick = takeChoice();
+        if (pick == null) { ask(evId, age); break; }
+        applyChoice(evId, pick, age);
+      }
+    }
+
     let trade = null;
-    if (age > startAge && tradeCount < 4) {
+    if (age > startAge && tradeCount < 4 && !mods.noTrades) {
       const tradeChance = clamp(0.045 + badStreak * 0.035 + (age > 31 ? 0.018 : 0) + (peakWar > 5.5 ? 0.015 : 0), 0.025, 0.22);
       if (rng() < tradeChance) {
         const from = currentTeam;
@@ -2445,16 +2621,17 @@ function simulateCareer(filled, finalOvr, draftTeamAb) {
         tradeCount++;
       }
     }
+    if (decisionTrade) { trade = decisionTrade; decisionTrade = null; tradeCount++; }   // free-agency move
     const growth = age < 28 ? 1 + (age - startAge) * 0.013 : 1;
     const decline = age > 31 ? 1 - Math.pow(age - 31, 1.35) * 0.022 : 1;
-    const ageFactor = clamp(growth * decline - declineDebt, 0.62, 1.08);
+    const ageFactor = clamp(growth * decline - declineDebt + mods.perf, 0.62, 1.08);
     const seasonOvr = clamp(finalOvr * ageFactor + bell(rng, 2.2), 35, 99);
 
     const contact = clamp(vals.contact * ageFactor + bell(rng, 3), 20, 99);
     const power = clamp(vals.power * ageFactor + bell(rng, 3), 20, 99);
     const vision = clamp(vals.plate_vision * ageFactor + bell(rng, 3), 20, 99);
     const disc = clamp(vals.plate_discipline * ageFactor + bell(rng, 3), 20, 99);
-    const clutch = clamp(vals.batting_clutch * ageFactor + bell(rng, 4), 20, 99);
+    const clutch = clamp(vals.batting_clutch * ageFactor + bell(rng, 4) + mods.clutch, 20, 99);
     const speed = clamp(vals.speed * ageFactor + bell(rng, 2.5), 20, 99);
     const defense = clamp(vals.fielding_ability * ageFactor + bell(rng, 2.8), 20, 99);
     const durab = vals.frame;
@@ -2463,8 +2640,17 @@ function simulateCareer(filled, finalOvr, draftTeamAb) {
     const hurt = rng() < injuryRisk;
     const injuryPenalty = hurt ? randRange(rng, 0.5, 0.82) : 1;
     if (hurt && age > 30) declineDebt += randRange(rng, 0.006, 0.018);
+    // a real injury at 26+ forces the surgery-or-play-through call (once per career)
+    let volOnce = 1;
+    if (evOn && hurt && age >= 26 && !injuryAsked) {
+      injuryAsked = true;
+      const pick = takeChoice();
+      if (pick == null) { ask('injury', age); break; }
+      applyChoice('injury', pick, age);
+      volOnce = pick === 'surgery' ? 0.25 : 0.8;
+    }
 
-    const pa = Math.round(clamp(640 + (durab - 60) * 1.6 + bell(rng, 25), 280, 715) * injuryPenalty);
+    const pa = Math.round(clamp(640 + (durab - 60) * 1.6 + bell(rng, 25), 280, 715) * injuryPenalty * volOnce);
     const bbRate = clamp(0.02 + disc * 0.0011 + bell(rng, 0.006), 0.03, 0.185);
     const kRate = clamp(0.30 - vision * 0.0019 + bell(rng, 0.012), 0.08, 0.34);
     const bb = Math.round(pa * bbRate);
@@ -2509,7 +2695,7 @@ function simulateCareer(filled, finalOvr, draftTeamAb) {
     let salary = Math.max(leagueMin, marketBase * phase * inflation);
     salary += ((mvp ? 6e6 : 0) + (allStar ? 1.4e6 : 0) + (silverSlugger ? 1e6 : 0) + (battingTitle ? 1e6 : 0)
       + (hrTitle ? 1e6 : 0) + (goldGlove ? 0.5e6 : 0) + (ring ? 0.4e6 : 0)) * inflation;
-    salary = Math.round(salary);
+    salary = Math.round(salary * mods.earnMult);
 
     const season = { age, role, pa, ab, h, hr, rbi, r: runs, sb, bb, k, avg: round(avg, 3), obp: round(obp, 3),
       slg: round(slg, 3), ops: round(ops, 3), war: round(war, 1), mvp, allStar, battingTitle, hrTitle,
@@ -2531,7 +2717,25 @@ function simulateCareer(filled, finalOvr, draftTeamAb) {
         && rng() < clamp(0.42 + (badStreak - 1) * 0.32 + (disaster ? 0.3 : 0), 0, 0.95)) {
       season.exit = (war < 0.2 || ops < 0.63) ? 'released' : 'pushed-out'; break;
     }
-    if (age >= 35 && (seasonOvr < 60 || badStreak >= 2) && rng() < 0.45) { season.exit = 'faded'; break; }
+    if (age >= 35 && (seasonOvr < 60 || badStreak >= 2) && rng() < 0.45) {
+      if (evOn && !twilightDone) {
+        twilightDone = true;
+        const pick = takeChoice();
+        if (pick == null) { ask('twilight', age); break; }
+        applyChoice('twilight', pick, age);
+        if (pick !== 'walk') { endAge = age + 1; continue; }   // one more summer
+        // walked away: end here WITHOUT stamping exit on the just-shown season —
+        // rewriting an already-rendered row would break replay identity
+        break;
+      }
+      season.exit = 'faded'; break;
+    }
+  }
+
+  // sim halted at an unanswered decision: hand back what's played so far — the
+  // playback shows it, asks the player, and re-runs with the pick appended
+  if (pendingDecision) {
+    return { version: 1, seed, role, draftTeam: draftTeamAb || (seasons[0] && seasons[0].team), seasons, decisions, pendingDecision };
   }
 
   const careerAvg = totals.h / Math.max(1, totals.ab);
@@ -2555,7 +2759,7 @@ function simulateCareer(filled, finalOvr, draftTeamAb) {
   const highlight = bestCareerHighlight(totals, peak);
   const teams = [...new Set(seasons.map(s => s.team).filter(Boolean))];
 
-  return { version: 1, seed, role, seasons, peakSeason: peak,
+  const career = { version: 1, seed, role, seasons, peakSeason: peak,
     draftTeam: draftTeamAb || teams[0],
     finalTeam: seasons[seasons.length - 1] && seasons[seasons.length - 1].team,
     teams,
@@ -2566,6 +2770,10 @@ function simulateCareer(filled, finalOvr, draftTeamAb) {
       goldGloves: totals.goldGloves, hr40: totals.hr40, hofScore, hallOfFame,
       earnings: careerEarnings, earningsOnField: totals.earnings, hofBonus },
     highlight };
+  // decision fields are added ONLY when the feature ran, so classic (toggle-off)
+  // careers stay byte-identical to the original sim
+  if (evOn) { career.decisions = decisions; career.totals.voteBonus = Math.round(mods.voteBonus * 10) / 10; }
+  return career;
 }
 
 function bestCareerHighlight(totals, peak) {
@@ -2746,10 +2954,34 @@ function runCareerPlaythrough() {
   }, _doCareerSim);
 }
 
+function careerEventsOn() { try { return localStorage.getItem('pl_careerEvents') !== '0'; } catch (e) { return true; } }
+
+// Mid-career decision prompt: a locked overlay (no backdrop/Escape dismissal —
+// the career is paused until the player commits to a path).
+function showDecisionModal(pd, onPick) {
+  $('decAge').textContent = pd.age;
+  $('decTitle').textContent = `${pd.icon} ${pd.title}`;
+  $('decFlavor').textContent = pd.flavor;
+  const wrap = $('decOpts');
+  wrap.innerHTML = '';
+  pd.options.forEach(o => {
+    const b = document.createElement('button');
+    b.className = 'dec-opt';
+    b.innerHTML = `<b>${o.label}</b><small>${o.hint}</small>`;
+    b.onclick = () => { Sound.click(); closeOverlay('decisionModal'); onPick(o.key); };
+    wrap.appendChild(b);
+  });
+  Sound.gold();
+  openOverlay('decisionModal');
+  gsap.fromTo(wrap.children, { y: 10, opacity: 0 }, { y: 0, opacity: 1, duration: .3, stagger: .08, delay: .15, ease: 'power2.out' });
+}
+
 function _doCareerSim() {
-  state.career = simulateCareer(state.filled, state.finalOvr, state.draftTeamAb);
-  try { gtag('event', 'career_sim', { game: 'batter', ovr: state.finalOvr, hof: state.career.totals.hallOfFame ? 1 : 0 }); } catch (e) {}
-  const career = state.career, seasons = career.seasons;
+  // decisions ON => choices grow as the player answers (sim halts at each new
+  // event and re-runs with the pick appended); OFF => null = the classic sim
+  state.careerChoices = careerEventsOn() ? [] : null;
+  let career = state.career = simulateCareer(state.filled, state.finalOvr, state.draftTeamAb, state.careerChoices);
+  let seasons = career.seasons;
   const ab = state.draftTeamAb;
   state.simTeam = teamInfo(ab);
   state.simName = $('nameInput').value.trim() || 'Your hitter';
@@ -2767,14 +2999,32 @@ function _doCareerSim() {
 
   let runH = 0, runHR = 0, runWar = 0, runMoney = 0;
   const hMiles = [1000, 2000, 3000], hrMiles = [100, 200, 300, 400, 500];
-  const delay = clamp(3400 / seasons.length, 130, 320);
+  let delay = clamp(3400 / seasons.length, 130, 320);
   let careerSkip = false;
   const skipBtn = $('skipCareerBtn');
   skipBtn.style.display = 'inline-block';
   skipBtn.onclick = () => { careerSkip = true; Sound.click(); };   // fast-forward the remaining seasons
   let i = 0;
+  function presentDecision() {
+    const pd = career.pendingDecision;
+    const resume = pick => {
+      state.careerChoices.push(pick);
+      career = state.career = simulateCareer(state.filled, state.finalOvr, state.draftTeamAb, state.careerChoices);
+      seasons = career.seasons;
+      delay = clamp(3400 / seasons.length, 130, 320);
+      const d = CAREER_EVENTS[pd.id], opt = d.options.find(o => o.key === pick);
+      addNews(news, { text: `${d.icon} <b>${d.title}:</b> ${opt ? opt.label : pick}`, big: true });
+      try { gtag('event', 'career_decision', { game: 'batter', decision: pd.id, pick }); } catch (e) {}
+      setTimeout(step, careerSkip ? 0 : 450);
+    };
+    if (careerSkip) return resume(pd.def);        // ⏩ skip: auto-take the default path
+    showDecisionModal(pd, resume);
+  }
   function step() {
-    if (i >= seasons.length) return finishPlaythrough(career);
+    if (i >= seasons.length) {
+      if (career.pendingDecision) return presentDecision();
+      return finishPlaythrough(career);
+    }
     const yr = String(2026 + i).slice(-2);
     const s = seasons[i]; i++;
     const rowTeam = teamInfo(s.team || state.simTeam.abbr);
@@ -2854,6 +3104,7 @@ function careerTier(t, ovr) {
 function finishPlaythrough(career) {
   $('skipCareerBtn').style.display = 'none';
   const t = career.totals;
+  try { gtag('event', 'career_sim', { game: 'batter', ovr: state.finalOvr, hof: t.hallOfFame ? 1 : 0 }); } catch (e) {}
   const verdict = careerTier(t, state.finalOvr);
 
   // HOF vote reveal
@@ -2904,7 +3155,7 @@ function fmtMoney(v) {
 // HOF vote line, shared by the finish flow and the shared-build viewer.
 function hofVoteLine(t, ovr) {
   if (!t.hallOfFame) return { voteLine: '', votePct: 0 };
-  const pct = clamp(round(75 + (t.hofScore - 112) * 0.16 + t.mvp * 1.2, 1), 75, 99.6);
+  const pct = clamp(round(75 + (t.hofScore - 112) * 0.16 + t.mvp * 1.2 + (t.voteBonus || 0), 1), 75, 99.6);
   const firstBallot = pct >= 90 || t.mvp >= 3;
   return { votePct: pct, voteLine: `${ovr >= 99 ? 'Hall of Fame · ' : ''}${firstBallot ? 'First ballot · ' : ''}${pct}% of the vote` };
 }
