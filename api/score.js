@@ -254,6 +254,7 @@ module.exports = async (req, res) => {
     // Optional sort by a career-total stat (trust-the-client, same as ovr). Whitelisted keys map to build.career.totals fields.
     const SORT_FIELDS = { k: 'k', war: 'war', wins: 'wins', rings: 'rings', cyYoung: 'cyYoung', hr: 'hr', hits: 'h', mvp: 'mvp', pts: 'pts', reb: 'reb', ast: 'ast', goals: 'goals', assists: 'assists', cs: 'cs', saves: 'saves' };
     const sortField = SORT_FIELDS[req.query && req.query.sort] || null;
+    const asc = (req.query && req.query.dir) === 'asc';       // flip any stat sort to worst-first
     const worst = (req.query && req.query.sort) === 'ovrAsc'; // ascending OVR ("worst overall")
     const NULL_SENTINEL = -1e30; // ranks missing-career entries last under a stat sort
 
@@ -270,6 +271,19 @@ module.exports = async (req, res) => {
               game, created_at FROM scores
               WHERE game = ${game}
               ORDER BY ovr ASC, created_at ASC LIMIT ${limit}`;
+    } else if (sortField && asc) {
+      // worst-first stat sort (dir=asc); NULLS LAST still ranks missing-career entries at the end
+      rows = daily
+        ? await sql`SELECT id, name, ovr,
+              CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots') ELSE build END AS build,
+              game, created_at, (build->'career'->'totals'->>${sortField})::numeric AS stat FROM scores
+              WHERE game = ${game} AND created_at >= date_trunc('day', now())
+              ORDER BY (build->'career'->'totals'->>${sortField})::numeric ASC NULLS LAST, ovr ASC, created_at ASC LIMIT ${limit}`
+        : await sql`SELECT id, name, ovr,
+              CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots') ELSE build END AS build,
+              game, created_at, (build->'career'->'totals'->>${sortField})::numeric AS stat FROM scores
+              WHERE game = ${game}
+              ORDER BY (build->'career'->'totals'->>${sortField})::numeric ASC NULLS LAST, ovr ASC, created_at ASC LIMIT ${limit}`;
     } else if (sortField) {
       rows = daily
         ? await sql`SELECT id, name, ovr,
