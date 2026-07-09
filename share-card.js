@@ -125,9 +125,9 @@
       ctx.fillText(o.voteLine, W / 2, y);
     }
 
-    // --- stat grid (up to 6, laid out 3 x 2) ---
-    const stats = (o.stats || []).slice(0, 6);
-    const cols = Math.min(3, Math.max(1, stats.length));
+    // --- stat grid (up to 6 laid out 3 x 2; 7-8 go 4 x 2) ---
+    const stats = (o.stats || []).slice(0, 8);
+    const cols = stats.length > 6 ? 4 : Math.min(3, Math.max(1, stats.length));
     const rows = Math.ceil(stats.length / cols);
     const gw = (CW2 - 88) / cols, gy0 = y + 56, gh = 118;
     stats.forEach((s, i) => {

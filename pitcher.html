@@ -1480,8 +1480,8 @@ function hofCardHTML(s) {
   const verdict = careerTier(t, s.ovr);
   const isBat = s.game === 'batter';
   const stats = isBat
-    ? `${(Number(t.avg) || 0).toFixed(3).replace(/^0\./, '.')} AVG · ${t.hr || 0} HR · ${(Number(t.war) || 0).toFixed(1)} WAR`
-    : `${t.wins || 0}-${t.losses || 0} · ${(Number(t.era) || 0).toFixed(2)} ERA · ${(t.k || 0).toLocaleString()} K · ${(Number(t.war) || 0).toFixed(1)} WAR`;
+    ? `${(Number(t.avg) || 0).toFixed(3).replace(/^0\./, '.')} AVG · ${t.hr || 0} HR · ${t.sb || 0} SB · ${(Number(t.war) || 0).toFixed(1)} WAR`
+    : `${t.saves > 0 ? `${t.saves} SV` : `${t.wins || 0}-${t.losses || 0}`} · ${(Number(t.era) || 0).toFixed(2)} ERA · ${(t.k || 0).toLocaleString()} K · ${(Number(t.war) || 0).toFixed(1)} WAR`;
   const money = t.earnings ? `<div class="hc-money">💰 ${fmtMoney(t.earnings)}</div>` : '';
   return `<div class="hof-card">
     <button class="hc-del" data-del="${s.id}" title="Delete">✕</button>
@@ -2590,7 +2590,7 @@ function simulateCareer(filled, finalOvr, draftTeamAb, choices) {
   const role = vals.stamina >= 52 ? 'Starter' : 'Bullpen Ace';
   const seasons = [];
   const totals = {
-    ip: 0, k: 0, bb: 0, hr: 0, h: 0, er: 0, wins: 0, losses: 0, war: 0,
+    ip: 0, k: 0, bb: 0, hr: 0, h: 0, er: 0, wins: 0, losses: 0, saves: 0, war: 0,
     cyYoung: 0, allStar: 0, eraTitles: 0, strikeoutTitles: 0, rings: 0,
     noHitters: 0, perfectGames: 0, playoffTrips: 0, earnings: 0,
   };
@@ -2753,6 +2753,10 @@ function simulateCareer(filled, finalOvr, draftTeamAb, choices) {
     const winPct = clamp(0.5 + (4.15 - era) * 0.085 + currentTeamQuality + (clutch - 50) * 0.0013 + bell(rng, 0.04), 0.22, 0.82);
     const wins = Math.round(decisions * winPct);
     const losses = Math.max(0, Math.round(decisions - wins));
+    // Saves: derived from already-drawn values only — a new rng() call here would
+    // shift every draw after it and change every existing build's career.
+    const saves = role === 'Starter' ? 0
+      : Math.round(clamp(appearances * clamp(0.60 - (era - 2.2) * 0.16 + (clutch - 50) * 0.0015, 0.05, 0.72), 0, 55));
 
     // Cy Young: you have to beat the whole league - even ace seasons usually lose.
     // Elite builds (93+ OVR) get a real shot at MULTIPLE Cy Youngs (but not absurd).
@@ -2789,13 +2793,13 @@ function simulateCareer(filled, finalOvr, draftTeamAb, choices) {
 
     const season = {
       age, role, team: currentTeam, trade, ip: round(ip, 1), k, bb, hr, h, era: round(era, 2), whip: round(whip, 2),
-      wins, losses, war: round(war, 1), cyYoung, allStar, eraTitle, strikeoutTitle,
+      wins, losses, saves, war: round(war, 1), cyYoung, allStar, eraTitle, strikeoutTitle,
       playoff, ring, noHitters, perfectGames, doubleDigitK, salary, hurt, exit: null, struggling: false,
     };
     seasons.push(season);
 
     totals.ip += ip; totals.k += k; totals.bb += bb; totals.hr += hr; totals.h += h; totals.er += er;
-    totals.wins += wins; totals.losses += losses; totals.war += war;
+    totals.wins += wins; totals.losses += losses; totals.saves += saves; totals.war += war;
     totals.cyYoung += cyYoung ? 1 : 0; totals.allStar += allStar ? 1 : 0;
     totals.eraTitles += eraTitle ? 1 : 0; totals.strikeoutTitles += strikeoutTitle ? 1 : 0;
     totals.playoffTrips += playoff ? 1 : 0; totals.rings += ring ? 1 : 0;
@@ -2872,7 +2876,7 @@ function simulateCareer(filled, finalOvr, draftTeamAb, choices) {
     peakSeason: peak,
     totals: {
       ip: round(totals.ip, 1), k: totals.k, bb: totals.bb, hr: totals.hr, h: totals.h,
-      era: round(careerEra, 2), whip: round(careerWhip, 2), wins: totals.wins, losses: totals.losses,
+      era: round(careerEra, 2), whip: round(careerWhip, 2), wins: totals.wins, losses: totals.losses, saves: totals.saves,
       war: round(totals.war, 1), cyYoung: totals.cyYoung, allStar: totals.allStar,
       eraTitles: totals.eraTitles, strikeoutTitles: totals.strikeoutTitles, rings: totals.rings,
       noHitters: totals.noHitters, perfectGames: totals.perfectGames, playoffTrips: totals.playoffTrips,
@@ -3142,8 +3146,10 @@ function _doCareerSim() {
   $('tkK').textContent = '0'; $('tkW').textContent = '0'; $('tkWar').textContent = '0.0'; $('tkMoney').textContent = '$0';
   if ($('careerArchetype')) $('careerArchetype').textContent = state.archetype ? state.archetype.name : '';
 
-  let runK = 0, runW = 0, runWar = 0, runMoney = 0;
-  const kMiles = [1000, 2000, 3000, 4000, 5000], wMiles = [100, 200, 300];
+  let runK = 0, runW = 0, runWar = 0, runMoney = 0, runSv = 0;
+  const kMiles = [1000, 2000, 3000, 4000, 5000], wMiles = [100, 200, 300], svMiles = [100, 200, 300, 400, 500, 600];
+  const closerRun = seasons.length > 0 && seasons[0].role !== 'Starter';
+  $('tkW').nextElementSibling.textContent = closerRun ? 'Saves' : 'Wins';
   let delay = clamp(3400 / seasons.length, 130, 320);
   let careerSkip = false;
   const skipBtn = $('skipCareerBtn');
@@ -3181,7 +3187,7 @@ function _doCareerSim() {
     row.innerHTML = `<div class="s-main">
         <span class="age">'${yr}</span>
         ${teamLogoHTML(rowTeam.abbr, 'sm')}
-        <span class="s-line">${s.wins}-${s.losses} · ${s.era.toFixed(2)} ERA · ${s.k} K · ${round(s.ip, 0)} IP</span>
+        <span class="s-line">${s.role === 'Starter' ? `${s.wins}-${s.losses}` : `${s.saves || 0} SV`} · ${s.era.toFixed(2)} ERA · ${s.k} K · ${round(s.ip, 0)} IP</span>
         <span class="s-war">${s.war.toFixed(1)}</span>
       </div>${badges ? `<div class="s-badges">${badges}</div>` : ''}`;
     log.appendChild(row);
@@ -3190,14 +3196,15 @@ function _doCareerSim() {
     $('careerSpan').textContent = `${rowTeam.name} · Age ${seasons[0].age}–${s.age}`;
 
     // live ticker + milestone headlines
-    const beforeK = runK, beforeW = runW;
-    runK += s.k; runW += s.wins; runWar += s.war; runMoney += s.salary;
-    $('tkK').textContent = runK.toLocaleString(); $('tkW').textContent = runW; $('tkWar').textContent = runWar.toFixed(1);
+    const beforeK = runK, beforeW = runW, beforeSv = runSv;
+    runK += s.k; runW += s.wins; runWar += s.war; runMoney += s.salary; runSv += s.saves || 0;
+    $('tkK').textContent = runK.toLocaleString(); $('tkW').textContent = closerRun ? runSv : runW; $('tkWar').textContent = runWar.toFixed(1);
     $('tkMoney').textContent = fmtMoney(runMoney);
     const heads = seasonHeadlines(s, i - 1, seasons.length, P, T);
     let milestone = false;
     for (const m of kMiles) if (beforeK < m && runK >= m) { heads.push({ text: `${P} reaches <b>${m.toLocaleString()} career strikeouts</b>.`, big: true }); flashTk('tkK'); milestone = true; }
-    for (const m of wMiles) if (beforeW < m && runW >= m) { heads.push({ text: `${P} earns career win <b>#${m}</b>.`, big: true }); flashTk('tkW'); milestone = true; }
+    if (closerRun) for (const m of svMiles) { if (beforeSv < m && runSv >= m) { heads.push({ text: `${P} locks down career save <b>#${m}</b>.`, big: true }); flashTk('tkW'); milestone = true; } }
+    else for (const m of wMiles) if (beforeW < m && runW >= m) { heads.push({ text: `${P} earns career win <b>#${m}</b>.`, big: true }); flashTk('tkW'); milestone = true; }
     heads.forEach(h => addNews(news, h));
 
     if (!careerSkip) {   // skipping: no per-season chatter, the verdict fanfare still plays
@@ -3377,7 +3384,9 @@ function careerCardHTML(d) {
     </div>
     <div class="cc-verdict" style="color:${verdictColor(d.verdict.cls)}">${d.verdict.txt}${d.voteLine ? `<div class="cc-vote">${d.voteLine}</div>` : ''}</div>
     <div class="cc-line">
-      <div><b>${t.wins}-${t.losses}</b><span>W-L</span></div>
+      ${career.role !== 'Starter' && t.saves != null
+        ? `<div><b>${t.saves}</b><span>Saves</span></div>`
+        : `<div><b>${t.wins}-${t.losses}</b><span>W-L</span></div>`}
       <div><b>${t.era.toFixed(2)}</b><span>ERA</span></div>
       <div><b>${t.k.toLocaleString()}</b><span>K</span></div>
       <div><b>${t.war.toFixed(1)}</b><span>WAR</span></div>
@@ -3421,7 +3430,8 @@ async function shareCareerCard() {
     voteLine: hofVoteLine(t, state.finalOvr).voteLine,
     subtitle: state.archetype ? state.archetype.name : '',
     metaLine: `${state.career.role} · ${state.career.seasons.length} seasons`,
-    stats: [[`${t.wins}-${t.losses}`, 'W-L'], [t.era.toFixed(2), 'ERA'], [t.k.toLocaleString(), 'K'],
+    stats: [state.career.role !== 'Starter' && t.saves != null ? [String(t.saves), 'Saves'] : [`${t.wins}-${t.losses}`, 'W-L'],
+      [t.era.toFixed(2), 'ERA'], [t.k.toLocaleString(), 'K'],
       [t.war.toFixed(1), 'WAR'], [t.whip.toFixed(2), 'WHIP'], [Math.round(t.ip).toLocaleString(), 'IP']],
     trophies: trophyParts(t).slice(0, 12).join(' '),
     earnings: fmtMoney(t.earnings),

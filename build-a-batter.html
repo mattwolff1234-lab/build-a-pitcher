@@ -387,7 +387,7 @@
   .cc-verdict { font-family:'Oswald',sans-serif; font-size:14px; font-weight:700; text-transform:uppercase; letter-spacing:1px;
     padding:9px 16px; text-align:center; background:#0a111c; }
   .cc-vote { font-size:11px; color:var(--muted); text-transform:none; letter-spacing:0; margin-top:2px; font-weight:400; }
-  .cc-line { display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:rgba(120,160,210,.12); }
+  .cc-line { display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:rgba(120,160,210,.12); }
   .cc-line > div { background:#0c131e; padding:9px 6px; text-align:center; }
   .cc-line b { display:block; font-family:'Oswald',sans-serif; font-size:18px; color:var(--ink); line-height:1; }
   .cc-line span { display:block; margin-top:3px; font-size:9px; letter-spacing:1px; text-transform:uppercase; color:var(--muted); }
@@ -1452,8 +1452,8 @@ function hofCardHTML(s) {
   const verdict = careerTier(t, s.ovr);
   const isBat = s.game === 'batter';
   const stats = isBat
-    ? `${(Number(t.avg) || 0).toFixed(3).replace(/^0\./, '.')} AVG · ${t.hr || 0} HR · ${(Number(t.war) || 0).toFixed(1)} WAR`
-    : `${t.wins || 0}-${t.losses || 0} · ${(Number(t.era) || 0).toFixed(2)} ERA · ${(t.k || 0).toLocaleString()} K · ${(Number(t.war) || 0).toFixed(1)} WAR`;
+    ? `${(Number(t.avg) || 0).toFixed(3).replace(/^0\./, '.')} AVG · ${t.hr || 0} HR · ${t.sb || 0} SB · ${(Number(t.war) || 0).toFixed(1)} WAR`
+    : `${t.saves > 0 ? `${t.saves} SV` : `${t.wins || 0}-${t.losses || 0}`} · ${(Number(t.era) || 0).toFixed(2)} ERA · ${(t.k || 0).toLocaleString()} K · ${(Number(t.war) || 0).toFixed(1)} WAR`;
   const money = t.earnings ? `<div class="hc-money">💰 ${fmtMoney(t.earnings)}</div>` : '';
   return `<div class="hof-card">
     <button class="hc-del" data-del="${s.id}" title="Delete">✕</button>
@@ -3212,6 +3212,8 @@ function careerCardHTML(d) {
       <div><b>${t.rbi.toLocaleString()}</b><span>RBI</span></div>
       <div><b>${t.war.toFixed(1)}</b><span>WAR</span></div>
       <div><b>${t.h.toLocaleString()}</b><span>Hits</span></div>
+      <div><b>${(t.r || 0).toLocaleString()}</b><span>Runs</span></div>
+      <div><b>${(t.sb || 0).toLocaleString()}</b><span>SB</span></div>
       <div><b>${t.ops.toFixed(3).replace(/^0\./, '.')}</b><span>OPS</span></div>
     </div>
     <div class="cc-trophies">${trophyHtml}</div>
@@ -3251,7 +3253,8 @@ async function shareCareerCard() {
     subtitle: '',
     metaLine: `${state.career.role} · ${state.career.seasons.length} seasons`,
     stats: [[t.avg.toFixed(3).replace(/^0\./, '.'), 'AVG'], [String(t.hr), 'HR'], [t.rbi.toLocaleString(), 'RBI'],
-      [t.war.toFixed(1), 'WAR'], [t.h.toLocaleString(), 'Hits'], [t.ops.toFixed(3).replace(/^0\./, '.'), 'OPS']],
+      [t.war.toFixed(1), 'WAR'], [t.h.toLocaleString(), 'Hits'], [(t.r || 0).toLocaleString(), 'Runs'],
+      [(t.sb || 0).toLocaleString(), 'SB'], [t.ops.toFixed(3).replace(/^0\./, '.'), 'OPS']],
     trophies: trophyParts(t).slice(0, 12).join(' '),
     earnings: fmtMoney(t.earnings),
     gameEmoji: '⚾', url,

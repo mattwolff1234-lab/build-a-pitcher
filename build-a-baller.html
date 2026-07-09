@@ -1459,8 +1459,8 @@ function hofCardHTML(s) {
   const stats = s.game === 'baller'
     ? `${t.ppg || 0} PPG · ${t.rpg || 0} RPG · ${t.apg || 0} APG · ${(Number(t.war) || 0).toFixed(1)} WS`
     : isBat
-    ? `${(Number(t.avg) || 0).toFixed(3).replace(/^0\./, '.')} AVG · ${t.hr || 0} HR · ${(Number(t.war) || 0).toFixed(1)} WAR`
-    : `${t.wins || 0}-${t.losses || 0} · ${(Number(t.era) || 0).toFixed(2)} ERA · ${(t.k || 0).toLocaleString()} K · ${(Number(t.war) || 0).toFixed(1)} WAR`;
+    ? `${(Number(t.avg) || 0).toFixed(3).replace(/^0\./, '.')} AVG · ${t.hr || 0} HR · ${t.sb || 0} SB · ${(Number(t.war) || 0).toFixed(1)} WAR`
+    : `${t.saves > 0 ? `${t.saves} SV` : `${t.wins || 0}-${t.losses || 0}`} · ${(Number(t.era) || 0).toFixed(2)} ERA · ${(t.k || 0).toLocaleString()} K · ${(Number(t.war) || 0).toFixed(1)} WAR`;
   const money = t.earnings ? `<div class="hc-money">💰 ${fmtMoney(t.earnings)}</div>` : '';
   return `<div class="hof-card">
     <button class="hc-del" data-del="${s.id}" title="Delete">✕</button>
