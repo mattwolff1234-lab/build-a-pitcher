@@ -19,6 +19,8 @@
 <meta name="twitter:image" content="/icon-512.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="/xp.js" defer></script>
+<script src="/season-track.js" defer></script>
+<script src="/hotboard.js" defer></script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-TVL2XEQ2Q7"></script>
@@ -28,8 +30,6 @@
   gtag('js', new Date());
   gtag('config', 'G-TVL2XEQ2Q7');
 </script>
-<!-- Vercel Web Analytics -->
-<script defer src="/_vercel/insights/script.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -310,9 +310,11 @@
     <div class="menu-head"><span class="mt">Menu</span><button class="x" data-close>✕</button></div>
     <div class="menu-body">
       <div id="acctSlot"></div>
+      <div data-player-title></div>
       <div data-xp-bar></div>
       <div class="menu-sec">Play</div>
       <a class="menu-item" href="/pitching#daily">🎯 Daily Challenge</a>
+      <button class="menu-item" id="miHot">🔥 Last Night's Studs</button>
       <a class="menu-item" href="/pitching#quests">📜 Daily Quests</a>
       <a class="menu-item" href="/pitching#streak">🔥 Streak Calendar</a>
       <a class="menu-item" href="/versus">⚔️ 1v1 Live · Face Off</a>
@@ -321,6 +323,7 @@
       <a class="menu-item" href="/pitching#hof">🏛️ My Hall of Fame</a>
       <a class="menu-item" href="/pitching#achievements">🏅 Achievements</a>
       <a class="menu-item" href="/pitching#collection">📇 My Collection</a>
+      <button class="menu-item" id="miTrack">🎟️ Season Track</button>
       <div class="menu-sec">Compete</div>
       <a class="menu-item" href="/pitching#leaderboard">🏆 Leaderboard</a>
       <a class="menu-item" href="/versus#stats">📊 1v1 Stats</a>
@@ -365,6 +368,7 @@
     bar.style.display = 'inline-flex'; // show teaser immediately; fill in live stats below
     var playsEl = bar.querySelector('.sb-plays'), msg = bar.querySelector('.sb-msg');
     function load(){
+      if (document.hidden) return;   // background tabs shouldn't bill edge requests
       fetch('/api/score?action=stats&game=pitcher').then(function(r){ return r.json(); }).then(function(d){
         if (!d || !d.ok) return;
         if (d.plays) { playsEl.textContent = Number(d.plays).toLocaleString() + ' PLAYS'; playsEl.style.display = ''; }
@@ -375,7 +379,7 @@
       }).catch(function(){});
     }
     load();
-    setInterval(load, 20000); // keep the play count ticking live
+    setInterval(load, 60000); // keep the play count ticking (60s + hidden-tab guard = ~10x fewer requests than the old 20s)
   })();
   </script>
 
@@ -592,6 +596,9 @@ initGoogle();
 const menu = $('menu');
 $('menuBtn').onclick = () => { menu.classList.add('show'); renderAcct(); gsap.fromTo(menu.firstElementChild, { y: 14, opacity: 0 }, { y: 0, opacity: 1, duration: .3, ease: 'power3.out' }); };
 menu.addEventListener('click', e => { if (e.target === menu || e.target.hasAttribute('data-close')) menu.classList.remove('show'); });
+
+$('miTrack').onclick = () => { menu.classList.remove('show'); window.SeasonTrack && SeasonTrack.open(); };
+$('miHot').onclick = () => { menu.classList.remove('show'); window.Hot && Hot.open(); };
 
 // Install App (PWA) - expandable steps + real one-click install where supported
 let deferredInstall = null;

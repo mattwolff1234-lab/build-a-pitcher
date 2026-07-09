@@ -273,8 +273,13 @@ async function main() {
     const live = bestLive[n];
     if (!live || prime[live.name]) continue; // not in pool, or already has a real Prime
     const sp = { ...live };
-    for (const k of ATTRS) if (typeof sp[k] === 'number') sp[k] = sp[k] + 6;
-    sp.ovr = (live.ovr || 0) + 6;
+    // Peak-year fantasy: an award winner's Prime floors at diamond (88) even if their current
+    // card has decayed (2015 Cy Young Keuchel = a 53 Live card). Every stat gets the standard
+    // +6 (uncapped); the floor-lift beyond that raises stats to at most 99 so the card keeps
+    // its shape (soft-tossers stay soft-tossers) instead of going uniformly superhuman.
+    const bump = Math.max(6, 88 - (live.ovr || 0));
+    for (const k of ATTRS) if (typeof sp[k] === 'number') sp[k] = Math.max(sp[k] + 6, Math.min(99, sp[k] + bump));
+    sp.ovr = (live.ovr || 0) + bump;
     sp.synthPrime = true;
     prime[live.name] = sp;
     synth++;
