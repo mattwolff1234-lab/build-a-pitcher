@@ -69,10 +69,14 @@
   .gs-hm-sw i { position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%; background:#8fa2bd; transition:left .2s, background .2s; }
   .gs-hm-sw.on { background:rgba(255,122,24,.5); border-color:rgba(255,122,24,.6); }
   .gs-hm-sw.on i { left:20px; background:#ffb35c; }
-  /* --gnav-h = our bar (0 on pages without it); --pl-adh = the Playwire adhesion ad's measured
-     height. Content padding covers both, and the bar rides ABOVE the ad. */
-  body { padding-bottom: calc(var(--gnav-h, 0px) + var(--pl-adh, 0px) + env(safe-area-inset-bottom, 0px)); }
-  .gnav { position:fixed; left:0; right:0; bottom:var(--pl-adh, 0px); z-index:220; display:flex; justify-content:center;
+  /* --gnav-h = our bar (0 on pages without it); --pl-adh = the Playwire anchor ad's MEASURED
+     height; --pl-adh-min = the 60px mobile floor from ads.md (the anchor's z-index beats
+     everything, so on phones we always clear its zone even if measuring fails). Content padding
+     covers bar + ad, and the bar rides ABOVE the ad. */
+  :root { --pl-adh-min: 0px; }
+  @media (max-width:900px) { :root { --pl-adh-min: 60px; } }
+  body { padding-bottom: calc(var(--gnav-h, 0px) + max(var(--pl-adh, 0px), var(--pl-adh-min, 0px)) + env(safe-area-inset-bottom, 0px)); }
+  .gnav { position:fixed; left:0; right:0; bottom:max(var(--pl-adh, 0px), var(--pl-adh-min, 0px)); z-index:220; display:flex; justify-content:center;
     padding: 0 10px calc(8px + env(safe-area-inset-bottom, 0px)); pointer-events:none; transition:bottom .25s ease; }
   .gnav-bar { pointer-events:auto; display:flex; width:100%; max-width:520px; border-radius:16px;
     border:1px solid rgba(120,160,210,.22); background:linear-gradient(180deg,rgba(19,29,45,.94),rgba(8,13,22,.97));
