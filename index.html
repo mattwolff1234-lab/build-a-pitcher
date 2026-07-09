@@ -539,30 +539,33 @@ gsap.from('.hero p', { y: 10, opacity: 0, duration: .35, delay: .1, ease: 'power
       ? sport.roles.map(r => `<button class="role-chip${r === active ? ' on' : ''}" data-role="${r}">${GAME[r].icon} ${GAME[r].name}</button>`).join('')
       : '';
 
-    // resume hero: streak at risk > daily ready > daily done
+    // resume hero: streak at risk > daily ready > daily done. Always badge it as the DAILY and
+    // name the host game — the rotation means "Play Daily" as a Batter fan opens the Pitcher
+    // daily today, which read as a glitch when the button didn't say so.
     const dg = dailyGameOf(active);
+    const D = GAME[dg];
     const rc = $('resumeCard');
     if (playedToday) {
-      $('rzKick').textContent = '▶ Continue';
-      $('rzLine').innerHTML = `✅ Daily done${streakN >= 2 ? ` · <b>${streakN}-day</b> streak safe` : ''} — run a new build?`;
+      $('rzKick').textContent = '✅ Daily done for today';
+      $('rzLine').innerHTML = `${streakN >= 2 ? `<b>${streakN}-day</b> streak is safe — ` : ''}run a new build?`;
       $('rzGo').textContent = `Build a ${g.name}`;
       rc.href = g.path;
     } else if (streakN >= 2) {
-      $('rzKick').textContent = '🔥 Streak at risk';
-      $('rzLine').innerHTML = `Your <b>${streakN}-day</b> streak resets tonight`;
-      $('rzGo').textContent = 'Play Daily';
-      rc.href = GAME[dg].path + '#daily';
+      $('rzKick').textContent = '🎯 Daily Challenge · 🔥 streak at risk';
+      $('rzLine').innerHTML = `Your <b>${streakN}-day</b> streak resets tonight — any game's daily saves it`;
+      $('rzGo').textContent = `Play ${D.icon} ${D.name} Daily`;
+      rc.href = D.path + '#daily';
     } else {
-      $('rzKick').textContent = '▶ Continue';
-      $('rzLine').textContent = `Today's ${GAME[dg].name} Daily is live`;
-      $('rzGo').textContent = 'Play Daily';
-      rc.href = GAME[dg].path + '#daily';
+      $('rzKick').textContent = '🎯 Daily Challenge';
+      $('rzLine').textContent = `Today's ${D.icon} ${D.name} Daily is live — same cards for everyone`;
+      $('rzGo').textContent = `Play ${D.icon} ${D.name} Daily`;
+      rc.href = D.path + '#daily';
     }
     $('rzFig').src = g.fig;
 
     // mode grid, scoped to the active game
     const tiles = [
-      { i: '🎯', b: 'Daily', s: (playedToday ? '<span class="done">✅ Done today</span>' : 'Same cards for everyone') + '<span id="dcCount" style="display:block;color:var(--accent2)"></span>', href: GAME[dg].path + '#daily' },
+      { i: '🎯', b: 'Daily', s: (playedToday ? '<span class="done">✅ Done today</span>' : `Today: ${D.icon} ${D.name}`) + '<span id="dcCount" style="display:block;color:var(--accent2)"></span>', href: D.path + '#daily' },
       { i: '🛠️', b: 'Build', s: `Draft a ${g.name.toLowerCase()}, sim the career`, href: g.path },
       sport.vs ? { i: '⚔️', b: '1v1 Live', s: 'Real players, live builds', href: sport.vs }
                : { i: '⚔️', b: '1v1 Live', s: 'Soccer 1v1 — coming soon', lock: true },
