@@ -147,7 +147,9 @@ async function compute(serveDate) {
 }
 
 module.exports = async (req, res) => {
-  res.setHeader('Cache-Control', 's-maxage=600, stale-while-revalidate=3600');
+  // max-age lets the BROWSER reuse the list as players hop landing -> pitching -> batting
+  // (every request, even a CDN hit, bills as an edge request — only browser cache avoids one)
+  res.setHeader('Cache-Control', 'public, max-age=600, s-maxage=600, stale-while-revalidate=3600');
   try {
     const today = etToday();
     if (!CONN) {
