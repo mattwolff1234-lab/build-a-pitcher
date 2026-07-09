@@ -40,7 +40,17 @@
   });
 </script>
 <script async src="//cdn.intergient.com/1025880/77906/ramp.js"></script>
-<style>@media (max-width:900px){ body{ padding-bottom:60px; } }</style>
+<style>
+/* Ad-safe mobile spacing: keep fixed-bottom UI above the Playwire anchor ad (see ads.md) */
+@media (max-width:900px){
+  body{ padding-bottom:60px; }
+  body .toast, body .day-toast{ bottom:92px; }
+  body .xp-hud{ bottom:calc(8vh + 56px); }
+  body #challengeNotif{ bottom:120px !important; }
+  body .overlay, body .draft-overlay, body .daily-reveal, body .hotb-overlay,
+  body .dq-ov, body .col-ov, body .ach-ov, body .st-ov{ padding-bottom:72px; }
+}
+</style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
