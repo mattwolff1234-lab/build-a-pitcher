@@ -21,6 +21,7 @@
 <script src="/achievements.js" defer></script>
 <script src="/xp.js" defer></script>
 <script src="/collection.js" defer></script>
+<script src="/hotboard.js" defer></script>
 <script src="/quests.js" defer></script>
 <script src="/share-card.js" defer></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -249,6 +250,7 @@
     50%{box-shadow:0 0 24px rgba(163,102,255,1),inset 0 0 16px rgba(163,102,255,.4);}}
   .legend-tag{font-family:'Oswald',sans-serif; font-size:11px; font-weight:600; color:var(--legend); letter-spacing:1px;}
   .prime-tag{font-family:'Oswald',sans-serif; font-size:11px; font-weight:700; color:#ffb02e; letter-spacing:1px; text-shadow:0 0 8px rgba(255,176,46,.45);}
+  .hot-tag{font-family:'Oswald',sans-serif; font-size:11px; font-weight:700; color:#ff9c4a; letter-spacing:1px; text-shadow:0 0 8px rgba(255,122,46,.55);}
 
   /* ---------- controls ---------- */
   .controls { display:flex; gap:10px; justify-content:center; margin:14px 0; flex-wrap:wrap; }
@@ -281,6 +283,10 @@
   .new-badge { font-family:'Oswald',sans-serif; display:inline-block; font-size:11px; font-weight:700; color:#04140a;
     background:linear-gradient(90deg,#43e97b,#38f9d7); padding:2px 9px; border-radius:20px; margin-left:8px;
     vertical-align:middle; letter-spacing:1px; }
+  .hot-badge { font-family:'Oswald',sans-serif; display:inline-block; font-size:11px; font-weight:700; color:#1a0e04;
+    background:linear-gradient(90deg,#ffb02e,#ff7a2e); padding:2px 9px; border-radius:20px; margin-left:8px;
+    vertical-align:middle; letter-spacing:1px; box-shadow:0 0 10px rgba(255,122,46,.45); }
+  .hot-lastnight { color:#ff9c4a; font-size:12px; margin-top:3px; letter-spacing:.3px; }
   .hint { color:var(--muted); font-size:12.5px; margin:12px 0 0; text-align:center; letter-spacing:.4px; }
 
   /* ---------- build header / OVR gauge / pips ---------- */
@@ -746,8 +752,9 @@
       <div class="landed-top">
         <img id="landedImg" src="" alt="">
         <div class="landed-info">
-          <h2 id="landedName">-<span id="primeBadge" class="prime-badge" style="display:none">PRIME</span><span id="newBadge" class="new-badge" style="display:none">NEW</span></h2>
+          <h2 id="landedName">-<span id="primeBadge" class="prime-badge" style="display:none">PRIME</span><span id="hotBadge" class="hot-badge" style="display:none">🔥 HOT</span><span id="newBadge" class="new-badge" style="display:none">NEW</span></h2>
           <div class="sub" id="landedSub">-</div>
+          <div class="hot-lastnight" id="hotLine" style="display:none"></div>
           <div class="big-ov" id="landedOvr">-</div>
         </div>
       </div>
@@ -842,6 +849,7 @@
       <div class="menu-sec">Play</div>
       <a class="menu-item" href="/">🏠 Home</a>
       <button class="menu-item" id="miDaily">🎯 Daily Challenge</button>
+      <button class="menu-item" id="miHot">🔥 Last Night's Studs</button>
       <button class="menu-item" id="miStreak">🔥 Streak Calendar</button>
       <a class="menu-item" href="/versus">⚔️ 1v1 Live · Face Off</a>
       <div class="menu-sec">Your Stuff</div>
@@ -1249,6 +1257,15 @@ async function init() {
     (DATA.legends || []).forEach(p => add(p, true));
     Collection.setPool(LEADERBOARD_GAME, list);
   })();
+  // 🔥 pull today's hot studs from hotboard.js (deferred module — retry until it's up)
+  (function hookHot() {
+    if (!window.Hot) return setTimeout(hookHot, 250);
+    Hot.ready.then(() => {
+      const poolIds = new Set(DATA.pool.map(p => p.mlbamId));
+      for (const h of Hot.list()) if (h.type === 'pitcher' && poolIds.has(h.mlbamId)) HOT.set(h.mlbamId, h);
+      if (HOT.size && !state.spinning && !state.strip && !dailyMode) startIdleReel();   // repaint so 🔥 cards ride the idle reel (only while still idle)
+    });
+  })();
   $('loading').style.display = 'none';
   $('game').style.display = 'block';
   if (hardMode) document.querySelector('header .tag').textContent = 'Hard Mode 🙈';
@@ -1290,6 +1307,7 @@ async function init() {
   $('dailyReveal').addEventListener('click', e => { if (e.target.id === 'dailyReveal') closeDailyReveal(); });
   $('dResSim').onclick = () => { Sound.click(); closeDailyResults(false); };
   $('miDaily').onclick = () => { Sound.click(); startDailyChallenge(); };
+  $('miHot').onclick = () => { closeOverlay('menu'); Sound.click(); window.Hot && Hot.open(); };
   $('miStreak').onclick = () => { Sound.click(); openStreak(); };
   $('miHof').onclick = () => { closeOverlay('menu'); openHof(); };
   $('miAch').onclick = () => { closeOverlay('menu'); Sound.click(); window.Ach && Ach.open(); };
@@ -1528,6 +1546,25 @@ function pickWeighted(rng) {
 }
 const LEGEND_ODDS = 0.04;
 const PRIME_ODDS = 0.05;   // real special-edition "Prime" cards as a rare spin (parity with batter/hoops)
+/* ===== 🔥 Last Night's Studs (hotboard.js + /api/hot) =====
+   Real MLB studs from yesterday's box scores run hot for the day: +5..+10 to every rating
+   attribute (never height/Frame) and a direct-landing roll in the reel. FREE PLAY ONLY —
+   the Daily Challenge is seeded same-for-everyone, so hot logic must never touch it. */
+const HOT_ODDS = 0.10;
+const HOT = new Map();   // mlbamId -> { boost, line, ... }
+function hotVersion(p) {
+  const h = (p && p.mlbamId != null && !p.legend) ? HOT.get(p.mlbamId) : null;
+  if (!h) return p;
+  if (!p._hot) {
+    const c = Object.assign({}, p, { hot: true, hotBoost: h.boost, hotLine: h.line, ovr: p.ovr + h.boost });
+    for (const s of SLOTS) {
+      if (s.type === 'height') continue;
+      if (typeof c[s.key] === 'number') c[s.key] += h.boost;
+    }
+    p._hot = c;
+  }
+  return p._hot;
+}
 function reelPrimes() {
   // spinnable Primes = real special-edition cards, diamond+, and only for CURRENT-pool players -
   // retired greats' special cards stay purple legends
@@ -1541,6 +1578,11 @@ function reelPrimes() {
 }
 function randPitcher(rng) {
   const rand = rng || Math.random;
+  const hotOn = !dailyMode && HOT.size > 0;   // never in the seeded Daily Challenge
+  if (hotOn && rand() < HOT_ODDS) {
+    const hot = DATA.pool.filter(p => HOT.has(p.mlbamId) && !state.used.has(p.name));
+    if (hot.length) return hotVersion(hot[Math.floor(rand() * hot.length)]);
+  }
   const legs = DATA.legends || [];
   if (legs.length && rand() < LEGEND_ODDS) {
     const avail = legs.filter(p => !state.used.has(p.name));
@@ -1549,11 +1591,11 @@ function randPitcher(rng) {
   const primes = reelPrimes();
   if (primes.length && rand() < PRIME_ODDS) {
     const avail = primes.filter(p => !state.used.has(p.name));
-    if (avail.length) return avail[Math.floor(rand() * avail.length)];
+    if (avail.length) return hotOn ? hotVersion(avail[Math.floor(rand() * avail.length)]) : avail[Math.floor(rand() * avail.length)];
   }
   let p, tries = 0;
   do { p = pickWeighted(rng); } while (state.used.has(p.name) && ++tries < 50);
-  return p;
+  return hotOn ? hotVersion(p) : p;   // a hot player is always boosted today, however you land on him
 }
 
 /* ===== Daily Challenge + streak (habit loop - phase 1 foundation) ===== */
@@ -1996,6 +2038,7 @@ function borderTier(p) { return p.legend ? 'legend' : tier(p.ovr); }
 function cardHTML(p) {
   const t = borderTier(p);
   const meta = p.legend ? `<div class="legend-tag">★ LEGEND</div>`
+    : p.hot ? `<div class="hot-tag">🔥 HOT${ratingsHidden() ? '' : ' +' + p.hotBoost}</div>`
     : p.prime ? `<div class="prime-tag">⚡ PRIME ${p.year || ''}</div>`
     : `<div class="yr">${p.year || ''}</div>`;
   return `<div class="reel-card t-${t}">
@@ -2017,7 +2060,10 @@ function startIdleReel() {
   const track = $('track');
   const N = 24;
   const cards = [];
-  for (let i = 0; i < N; i++) cards.push(DATA.pool[Math.floor(Math.random() * DATA.pool.length)]);
+  for (let i = 0; i < N; i++) {
+    const pick = DATA.pool[Math.floor(Math.random() * DATA.pool.length)];
+    cards.push(dailyMode ? pick : hotVersion(pick));   // 🔥 studs show their hot card while idling
+  }
   track.innerHTML = cards.concat(cards).map(cardHTML).join('');   // two sets → seamless loop
   track.classList.add('idle');
   gsap.set(track, { x: 0, filter: 'none' });
@@ -2143,6 +2189,12 @@ function land(p) {
   // never-collected card → NEW badge (collected = assigned into a build at least once)
   $('newBadge').style.display = (window.Collection && !Collection.has(LEADERBOARD_GAME, p.name)) ? 'inline-block' : 'none';
 
+  // 🔥 hot stud: badge + the real-life line that earned it
+  $('hotBadge').textContent = p.hot ? (ratingsHidden() ? '🔥 HOT' : `🔥 HOT +${p.hotBoost}`) : '🔥 HOT';
+  $('hotBadge').style.display = p.hot ? 'inline-block' : 'none';
+  $('hotLine').textContent = (p.hot && p.hotLine) ? `Last night: ${p.hotLine}` : '';
+  $('hotLine').style.display = (p.hot && p.hotLine) ? 'block' : 'none';
+
   const hasPrime = !p.legend && !p.prime && !!DATA.prime[p.name] && !state.boostedThisLand;
   $('primeBadge').textContent = 'PRIME' + (p.prime && p.year ? ' ' + p.year : '');
   $('primeBadge').style.display = (state.boostedThisLand || p.prime) ? 'inline-block' : 'none';
@@ -2231,7 +2283,11 @@ function boost() {
   (state.turnPowers || (state.turnPowers = new Set())).add('boost');
   Sound.prime();
   updatePowerups();
-  land(boostedCard(base, primeCard));
+  let card = boostedCard(base, primeCard);
+  // Boosting a hot stud stacks on top of his hot card (boostedCard already guarantees >= base+5
+  // per attribute) — keep the 🔥 flags and never let the shown OVR drop below the hot OVR.
+  if (base.hot) card = Object.assign({}, card, { hot: true, hotBoost: base.hotBoost, hotLine: base.hotLine, ovr: Math.max(Number(card.ovr) || 0, base.ovr) });
+  land(card);
 }
 
 // Boost should never leave an attribute flat or worse than the card you landed - guarantee every

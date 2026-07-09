@@ -168,6 +168,35 @@ Cross-game progression that rewards *playing*, not just first-time achievements.
   with none yet). Sign-out zeroes the local copy (`XP.signOut()`).
 - Same **trust-the-client** caveat as the leaderboard/Elo — XP is reported from the browser.
 
+### 🔥 Last Night's Studs (shipped)
+Daily real-MLB hot players — the "open the app the morning after" retention hook. Baseball only
+(no NBA box-score source; hoops untouched).
+- **`api/hot.js`** — `GET /api/hot` → `{ ok, gameDate, players:[{mlbamId, name, team, pos,
+  type:'pitcher'|'batter', line, boost}] }`. Computes once per **US-Eastern day** on the first
+  request (no cron): statsapi schedule → one boxscore per Final game → stud scoring (pitchers =
+  Game-Score-ish, qualify ≥68; batters = HR-heavy points, qualify ≥20 or 2 HR / 4 H / 3 SB auto).
+  Top 4 pitchers + 6 batters; **`boost` = 5–10** scaled by how big the night was. Cached in Neon
+  `hot_players(serve_date PK, payload jsonb)`; statsapi failure → serves the most recent stored
+  day; off-days/All-Star break walk back up to 5 days; a day with games still live (late
+  west-coast) is skipped. Tune the scoring locally with **`node api/hot.js`** (prints the list,
+  no DB needed).
+- **`hotboard.js`** — drop-in module (landing + both baseball games, like xp.js): `window.Hot`
+  (`ready`/`list()`/`get(mlbamId)`/`open()`), the bulletin-board overlay, auto-opens **once per
+  local day** (`pl_hot_seen`), skipped when a `#hash` deep link is present. Fails silent — no
+  list, no change. Landing page also has a "🔥 Last Night's Studs" banner (`hotCta`) + games have
+  a ☰ `miHot` item.
+- **In-game** (pitcher.html + build-a-batter.html, identical pattern): `HOT` map by `mlbamId`,
+  `hotVersion(p)` = copy with **+boost on every rated attribute and ovr** (never height/Frame;
+  intentionally uncapped past 99, same precedent as Judge's 108 power), `HOT_ODDS = 0.10`
+  direct-landing roll in `randPitcher`/`randHitter`, and any normal land on a hot player swaps to
+  the hot card — a stud is *always* boosted today. 🔥 tag on reel cards, 🔥 badge + "Last night:
+  <real line>" on the landed panel. The Boost power-up stacks on top of the hot card (never
+  downgrades).
+- **Guardrails:** **free play only** — `dailyMode` short-circuits all hot logic so the seeded
+  same-for-everyone Daily Challenge stream is byte-identical with or without a hot list
+  (verified). Versus 1v1 untouched (its balance is separately tuned). Hot builds can post higher
+  OVRs to the global leaderboard — accepted trade-off, revisit with the anti-cheat hardening.
+
 ### Known caveat — anti-cheat
 Scores are submitted from the browser; the server only clamps `ovr` 1–99 and name length, so the OVR
 is currently trust-the-client. Harden later by recomputing OVR server-side from the submitted `build`
