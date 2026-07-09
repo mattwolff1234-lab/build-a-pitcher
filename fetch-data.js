@@ -83,6 +83,24 @@ async function resolveActiveId(name) {
   } catch (e) { return null; }
 }
 
+// Cy Young + World Series MVP winners — pitchers whose peak year guarantees them a Prime.
+const AWARD_IDS = ['ALCY', 'NLCY', 'WSMVP'];
+async function fetchAwardWinners() {
+  const names = new Set();
+  for (const id of AWARD_IDS) {
+    for (let y = 2010; y <= 2025; y++) {
+      try {
+        const r = await fetch(`https://statsapi.mlb.com/api/v1/awards/${id}/recipients?sportId=1&season=${y}`);
+        for (const a of ((await r.json()).awards || [])) {
+          if (a.player && a.player.nameFirstLast) names.add(norm(a.player.nameFirstLast));
+        }
+      } catch (e) { /* skip a year/award that errors */ }
+      await new Promise(r => setTimeout(r, 50));
+    }
+  }
+  return names;
+}
+
 function slim(item, year) {
   const hm = String(item.height || '').match(/(\d+)'\s*(\d+)/); // "6'4\"" -> 76 in
   const out = {
@@ -242,6 +260,26 @@ async function main() {
   }
   const debutedPool = await dropUndebuted([...byName.values()]);
   console.log(`\nSpin pool: ${debutedPool.length} cards | with headshot id: ${debutedPool.filter(p => p.mlbamId).length}`);
+
+  // Guarantee a Prime for every Cy Young / WS MVP winner in the pool. If they have
+  // no special-edition card, synthesize one by boosting their best Live card (+6).
+  console.log('\nFetching Cy Young / WS MVP winners...');
+  const awardNames = await fetchAwardWinners();
+  console.log(`  award-winner names: ${awardNames.size}`);
+  const bestLive = {};
+  for (const p of debutedPool) { const n = norm(p.name); if (!bestLive[n] || p.ovr > bestLive[n].ovr) bestLive[n] = p; }
+  let synth = 0;
+  for (const n of awardNames) {
+    const live = bestLive[n];
+    if (!live || prime[live.name]) continue; // not in pool, or already has a real Prime
+    const sp = { ...live };
+    for (const k of ATTRS) if (typeof sp[k] === 'number') sp[k] = sp[k] + 6;
+    sp.ovr = (live.ovr || 0) + 6;
+    sp.synthPrime = true;
+    prime[live.name] = sp;
+    synth++;
+  }
+  console.log(`  synthesized ${synth} Primes for award winners without one (total Primes: ${Object.keys(prime).length})`);
 
   fs.writeFileSync('pitchers.json', JSON.stringify({ pool: debutedPool, prime, legends }));
   const kb = (fs.statSync('pitchers.json').size / 1024).toFixed(0);
