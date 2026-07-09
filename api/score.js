@@ -214,6 +214,15 @@ module.exports = async (req, res) => {
         const key = playerKey(body);
         if (!key) return res.status(400).json({ ok: false, error: 'No player key' });
         const game = gameOf(body.game);
+        // Rotation guard: pitcher/batter and striker/keeper each alternate ONE daily per date
+        // (same parity formula as the clients); hoops runs daily. The clients redirect on
+        // off-days, so only stale pages and direct POSTs land here — reject them.
+        const rd = dailyDate(body.date);
+        if (rd && (game === 'pitcher' || game === 'batter' || game === 'striker' || game === 'keeper')) {
+          const odd = Math.floor(Date.parse(rd + 'T00:00:00Z') / 86400000) % 2 === 1;
+          const host = (game === 'pitcher' || game === 'batter') ? (odd ? 'pitcher' : 'batter') : (odd ? 'striker' : 'keeper');
+          if (game !== host) return res.status(400).json({ ok: false, error: `Today's daily is ${host} — this one runs tomorrow` });
+        }
         const chk = checkBuild(game, body.ovr, body.build);
         if (!chk.ok) return res.status(400).json({ ok: false, error: 'Invalid build' });
         const ovr = chk.ovr;

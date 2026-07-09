@@ -1871,6 +1871,12 @@ async function fetchPlayedToday() {
 }
 function updateDailyBtn() {
   const btn = $('dailyBtn'); if (!btn) return;
+  if (dailyGameFor(todayUTC()) !== LEADERBOARD_GAME) {   // off-day: today's daily lives in the sibling game
+    btn.textContent = '🎯 Daily ↗';
+    btn.classList.remove('pulse'); btn.classList.remove('done');
+    btn.title = "Today's daily is the other game's — tap to jump over";
+    return;
+  }
   const done = getDailyStatus();
   if (done) { btn.textContent = '✅ Done'; btn.classList.add('done'); btn.classList.remove('pulse'); btn.title = `Today: ${done.ovr} OVR · #${done.rank} of ${done.total}`; }
   else {
