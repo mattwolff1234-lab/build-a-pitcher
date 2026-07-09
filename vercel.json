@@ -13,6 +13,9 @@
       "headers": [{ "key": "Cache-Control", "value": "public, max-age=300, stale-while-revalidate=3600" }]
     }
   ],
+  "redirects": [
+    { "source": "/ads.txt", "destination": "https://config.playwire.com/dyn_ads/1025880/77906/ads.txt", "statusCode": 301 }
+  ],
   "rewrites": [
     { "source": "/batting", "destination": "/build-a-batter.html" },
     { "source": "/pitching", "destination": "/pitcher.html" },
