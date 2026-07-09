@@ -568,7 +568,7 @@ module.exports = async (req, res) => {
       // Same always-merge posture as achSync — a fresh device can never wipe the account's binder.
       if (action === 'collectionSync') {
         if (!(await authed(body.sub, body.sessionToken))) return res.status(401).json({ ok: false, error: 'Not signed in' });
-        const GAMES = ['pitcher', 'batter', 'baller'];
+        const GAMES = ['pitcher', 'batter', 'baller', 'striker', 'keeper'];
         const TIER_RANK = { legend: 5, diamond: 4, gold: 3, silver: 2, bronze: 1, grey: 0 };
         const incoming = (body.collection && typeof body.collection === 'object') ? body.collection : {};
         const base = ((await sql`SELECT collection FROM users WHERE google_sub = ${body.sub}`)[0] || {}).collection || {};
