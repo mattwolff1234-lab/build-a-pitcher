@@ -19,6 +19,7 @@
 <meta name="twitter:image" content="/icon-512.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="/xp.js" defer></script>
+<script src="/season-track.js" defer></script>
 <script src="/hotboard.js" defer></script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <!-- Google tag (gtag.js) -->
@@ -251,8 +252,6 @@
   .daily-cta { border-color:rgba(255,206,58,.4); }
   .daily-cta:hover { border-color:var(--gold); box-shadow:0 20px 50px rgba(0,0,0,.6), 0 0 28px rgba(255,206,58,.32); }
   .daily-cta .dc-badge { background:linear-gradient(180deg,#ffd23f,#e0a40c); color:#06121d; }
-  .hot-cta { cursor:pointer; }
-  .hot-cta .hot-vbadge { background:linear-gradient(180deg,#ffb02e,#ff7a2e); color:#1a0e04; }
   .daily-cta .vtitle b { color:var(--gold); }
   .daily-cta.done { opacity:.78; }
   #dailyCount { color:var(--gold)!important; border-color:rgba(255,206,58,.4)!important; }
@@ -308,9 +307,11 @@
     <div class="menu-head"><span class="mt">Menu</span><button class="x" data-close>✕</button></div>
     <div class="menu-body">
       <div id="acctSlot"></div>
+      <div data-player-title></div>
       <div data-xp-bar></div>
       <div class="menu-sec">Play</div>
       <a class="menu-item" href="/pitching#daily">🎯 Daily Challenge</a>
+      <button class="menu-item" id="miHot">🔥 Last Night's Studs</button>
       <a class="menu-item" href="/pitching#quests">📜 Daily Quests</a>
       <a class="menu-item" href="/pitching#streak">🔥 Streak Calendar</a>
       <a class="menu-item" href="/versus">⚔️ 1v1 Live · Face Off</a>
@@ -319,6 +320,7 @@
       <a class="menu-item" href="/pitching#hof">🏛️ My Hall of Fame</a>
       <a class="menu-item" href="/pitching#achievements">🏅 Achievements</a>
       <a class="menu-item" href="/pitching#collection">📇 My Collection</a>
+      <button class="menu-item" id="miTrack">🎟️ Season Track</button>
       <div class="menu-sec">Compete</div>
       <a class="menu-item" href="/pitching#leaderboard">🏆 Leaderboard</a>
       <a class="menu-item" href="/versus#stats">📊 1v1 Stats</a>
@@ -387,31 +389,6 @@
     </div>
     <div class="vgo" id="dailyGo">▶ Play Today</div>
   </a>
-
-  <div class="versus hot-cta" id="hotCta" style="display:none">
-    <span class="vbadge hot-vbadge">TODAY</span>
-    <div class="vtxt">
-      <div class="vtitle">🔥 Last Night's <b>Studs</b></div>
-      <div class="vdesc" id="hotDesc">Real MLB studs from last night's box scores are boosted in today's reel.</div>
-    </div>
-    <div class="vgo">▶ See Who's Hot</div>
-  </div>
-  <script>
-  // reveal the Studs banner once hotboard.js has today's list (deferred module — retry until it's up)
-  (function hookHotCta() {
-    if (!window.Hot) return setTimeout(hookHotCta, 250);
-    Hot.ready.then(function (players) {
-      if (!players.length) return;
-      var top = players[0], others = players.length - 1;
-      document.getElementById('hotDesc').textContent =
-        top.name + ' (' + top.line + ')' + (others ? ' + ' + others + ' more' : '') +
-        (others ? ' are' : ' is') + ' running hot — boosted up to +10 OVR in today\'s reel.';
-      var cta = document.getElementById('hotCta');
-      cta.style.display = '';
-      cta.onclick = function () { Hot.open(); };
-    });
-  })();
-  </script>
 
   <div class="versus">
     <span class="vbadge">NEW</span>
@@ -596,6 +573,9 @@ initGoogle();
 const menu = $('menu');
 $('menuBtn').onclick = () => { menu.classList.add('show'); renderAcct(); gsap.fromTo(menu.firstElementChild, { y: 14, opacity: 0 }, { y: 0, opacity: 1, duration: .3, ease: 'power3.out' }); };
 menu.addEventListener('click', e => { if (e.target === menu || e.target.hasAttribute('data-close')) menu.classList.remove('show'); });
+
+$('miTrack').onclick = () => { menu.classList.remove('show'); window.SeasonTrack && SeasonTrack.open(); };
+$('miHot').onclick = () => { menu.classList.remove('show'); window.Hot && Hot.open(); };
 
 // Install App (PWA) - expandable steps + real one-click install where supported
 let deferredInstall = null;
