@@ -11,6 +11,8 @@ global/daily leaderboard.
 
 - **Live:** https://pitchinglab.pitchergami.com (also `build-a-pitcher.vercel.app`)
 - **Repo:** github.com/mattwolff1234-lab/build-a-pitcher (push to `main` → Vercel auto-deploys)
+- **Ads:** Playwire (Ramp) — **read `ads.md` before touching page `<head>`s, layout, or
+  `vercel.json`** (per-page ad-tag contract, dynamic ads.txt redirect, verification steps).
 
 ## NOT part of PitcherGami
 Separate project from PitcherGami (~/pitcher-scorigami) and Perfect Season. Shared audience
