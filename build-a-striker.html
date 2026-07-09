@@ -32,6 +32,18 @@
   gtag('js', new Date());
   gtag('config', 'G-TVL2XEQ2Q7');
 </script>
+
+<!-- Playwire Ramp - PUB 1025880 / SITE 77906 -->
+<script>
+  window.ramp = window.ramp || {};
+  window.ramp.que = window.ramp.que || [];
+  window.ramp.passiveMode = true;
+  document.addEventListener('DOMContentLoaded', function () {
+    window.ramp.que.push(function () { window.ramp.spaNewPage(window.location.pathname); });
+  });
+</script>
+<script async src="//cdn.intergient.com/1025880/77906/ramp.js"></script>
+<style>@media (max-width:900px){ body{ padding-bottom:60px; } }</style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -714,6 +726,7 @@
   <div id="loading" class="loading">Loading players…</div>
 
   <div id="game" style="display:none">
+    <div id="game-ad" style="min-height:100px;display:flex;align-items:center;justify-content:center;width:100%;max-width:970px;margin:6px auto 12px;"></div>
     <div id="dailyInfo" class="daily-info" style="display:none"></div>
     <div class="reel-frame panel">
       <div class="pointer"></div>
