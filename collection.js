@@ -152,13 +152,15 @@
 
   // ---- binder UI (injected, like achievements.js) ----
   const css = `
-  .col-ov{position:fixed;inset:0;z-index:210;display:none;align-items:center;justify-content:center;background:rgba(3,6,11,.78);backdrop-filter:blur(6px);padding:18px}
+  .col-ov{position:fixed;inset:0;z-index:210;display:none;align-items:center;justify-content:center;background:rgba(3,6,11,.78);backdrop-filter:blur(6px);padding:18px;overscroll-behavior:contain}
   .col-ov.show{display:flex}
-  .col-card{width:min(860px,96vw);max-height:88vh;display:flex;flex-direction:column;background:linear-gradient(180deg,rgba(20,31,48,.96),rgba(9,15,25,.98));border:1px solid rgba(25,198,255,.3);border-radius:16px;box-shadow:0 30px 80px rgba(0,0,0,.6);overflow:hidden}
+  .col-card{width:min(860px,96vw);max-height:88vh;max-height:88dvh;display:flex;flex-direction:column;background:linear-gradient(180deg,rgba(20,31,48,.96),rgba(9,15,25,.98));border:1px solid rgba(25,198,255,.3);border-radius:16px;box-shadow:0 30px 80px rgba(0,0,0,.6);overflow:hidden}
   .col-head{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid rgba(25,198,255,.18)}
   .col-title{font-family:'Oswald',sans-serif;font-size:19px;font-weight:700;letter-spacing:1px;color:#eaf2fb}
-  .col-x{margin-left:auto;background:none;border:none;color:#8fa2bd;font-size:20px;cursor:pointer;padding:4px 8px}
-  .col-x:hover{color:#fff}
+  .col-x{margin-left:auto;background:rgba(255,255,255,.06);border:1px solid rgba(120,160,210,.3);border-radius:10px;
+    color:#cdd9ea;font-size:18px;line-height:1;cursor:pointer;min-width:44px;min-height:42px;padding:8px 14px;
+    display:grid;place-items:center;touch-action:manipulation}
+  .col-x:hover{color:#fff;border-color:#19c6ff}
   .col-tabs{display:flex;gap:8px;padding:12px 18px 0}
   .col-tab{font-family:'Oswald',sans-serif;font-size:13px;font-weight:600;letter-spacing:.6px;color:#8fa2bd;background:rgba(25,198,255,.06);border:1px solid rgba(25,198,255,.16);border-radius:999px;padding:7px 14px;cursor:pointer}
   .col-tab.active{color:#04121c;background:#19c6ff;border-color:#19c6ff}
@@ -168,15 +170,16 @@
   .col-sum-line span{color:#8fa2bd;font-size:13px;font-family:'Inter',sans-serif}
   .col-bar{height:8px;border-radius:999px;background:rgba(25,198,255,.12);margin-top:8px;overflow:hidden}
   .col-bar i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#19c6ff,#7de3ff);transition:width .5s ease}
-  .col-body{overflow-y:auto;padding:8px 18px 20px;flex:1}
+  .col-body{overflow-y:auto;padding:8px 18px 20px;flex:1;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y}
   .col-tier{margin-top:14px}
   .col-tier-h{display:flex;align-items:center;gap:8px;font-family:'Oswald',sans-serif;font-size:14px;font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px}
   .col-tier-h .tc{margin-left:auto;color:#8fa2bd;font-size:12px;font-family:'Inter',sans-serif}
   .col-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(76px,1fr));gap:7px}
   .col-cardlet{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 4px 6px;border-radius:10px;
-    border:1px solid var(--cc,#7e8da3);background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));min-width:0}
+    border:1px solid var(--cc,#7e8da3);background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));min-width:0;
+    content-visibility:auto;contain-intrinsic-size:80px 96px}
   .col-cardlet img{width:46px;height:46px;border-radius:50%;object-fit:cover;object-position:top center;background:#0c131e;
-    border:1.5px solid var(--cc,#7e8da3);box-shadow:0 0 9px -3px var(--cc,#7e8da3)}
+    border:1.5px solid var(--cc,#7e8da3);box-shadow:0 0 9px -3px var(--cc,#7e8da3);pointer-events:none;-webkit-user-drag:none}
   .col-cardlet .nm{font-family:'Inter',sans-serif;font-size:10px;font-weight:600;line-height:1.2;color:#eaf2fb;text-align:center;
     max-width:100%;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
   .col-cardlet .n{color:#8fa2bd;font-weight:500;font-size:9.5px;font-family:'Inter',sans-serif}
