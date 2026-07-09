@@ -7,3 +7,6 @@ _*.png
 
 .vercel
 .env*.local
+
+# EA ratings raw dump (12.6MB, regenerate with: node fetch-footballers.js --fresh)
+footballers-raw.json

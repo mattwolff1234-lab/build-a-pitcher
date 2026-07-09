@@ -138,6 +138,11 @@
   .pick.pitch { --ac:rgba(255,122,24,.28); --ac2:#e0640c; --acb:var(--accent); }
   .pick.bat { --ac:rgba(25,198,255,.26); --ac2:#0f9fd0; --acb:var(--accent2); }
   .pick.ball { --ac:rgba(255,138,60,.30); --ac2:#e8702a; --acb:#ff8a3c; }
+  .pick.strk { --ac:rgba(74,222,128,.28); --ac2:#1fa055; --acb:#4ade80; }
+  .pick.keep { --ac:rgba(255,206,58,.30); --ac2:#d9a616; --acb:#ffce3a; }
+  .pick .newtag { position:absolute; top:10px; right:10px; z-index:2; font-family:'Oswald',sans-serif;
+    font-size:10px; font-weight:700; letter-spacing:1.2px; color:#04140a; padding:3px 9px; border-radius:12px;
+    background:linear-gradient(90deg,#43e97b,#38f9d7); box-shadow:0 0 12px rgba(67,233,123,.45); }
 
   /* ---------- hard mode toggle ---------- */
   .opt { margin-top:34px; width:100%; display:flex; align-items:center; gap:16px;
@@ -348,7 +353,7 @@
   <div class="hero">
     <div class="kick">A Pitchergami Game</div>
     <h1>Goat<i>Lab</i></h1>
-    <p>Spin the reel, draft a real MLB player into nine attribute slots, then simulate their entire career.</p>
+    <p>Spin the reel, draft real pros into the attribute slots, then simulate their entire career.</p>
     <div id="statBar" class="stat-bar" style="display:none">
       <span class="sb-plays" style="display:none"></span>
       <span class="sb-msg">Can you build the <b class="sb-goat">GOAT</b> (99 OVR)?</span>
@@ -419,6 +424,22 @@
       <div class="desc">Shooting, dunks, defense &amp; more. Chase the title.</div>
       <div class="go">▶ Play</div>
     </a>
+    <a class="pick strk" href="/striker">
+      <span class="newtag">⚽ NEW</span>
+      <span class="br tl"></span><span class="br tr"></span><span class="br bl"></span><span class="br br2"></span>
+      <div class="fig"><img src="/striker-figure.png" alt="Striker"></div>
+      <div class="label">Build a <b>Striker</b></div>
+      <div class="desc">Pace, finishing, flair &amp; more. Chase the Ballon d'Or.</div>
+      <div class="go">▶ Play</div>
+    </a>
+    <a class="pick keep" href="/keeper">
+      <span class="newtag">🧤 NEW</span>
+      <span class="br tl"></span><span class="br tr"></span><span class="br bl"></span><span class="br br2"></span>
+      <div class="fig"><img src="/keeper-figure.png" alt="Keeper"></div>
+      <div class="label">Build a <b>Keeper</b></div>
+      <div class="desc">Reflexes, diving, command &amp; more. Keep them all out.</div>
+      <div class="go">▶ Play</div>
+    </a>
   </div>
 
   <div class="opt">
@@ -484,6 +505,9 @@ const TEMPLATES = [
   () => ({ icon: '🔥', label: 'Wins', stat: rnd(120, 340).toLocaleString(), unit: 'W', col: COLORS.pitch }),
   () => ({ icon: '⭐', label: 'Hall of Fame', stat: rnd(74, 99).toString(), unit: 'OVR', col: COLORS.legend }),
   () => ({ icon: '💎', label: 'Batter', stat: (rnd(2700, 3500)).toLocaleString(), unit: 'H', col: COLORS.bat }),
+  () => ({ icon: '⚽', label: 'Striker', stat: rnd(180, 640).toLocaleString(), unit: 'GOALS', col: '#4ade80' }),
+  () => ({ icon: '🧤', label: 'Keeper', stat: rnd(120, 330).toLocaleString(), unit: 'CS', col: COLORS.gold }),
+  () => ({ icon: '🌍', label: 'World Cup', stat: rnd(1, 3).toString(), unit: 'WC', col: '#4ade80' }),
 ];
 function rnd(a, b) { return Math.floor(a + Math.random() * (b - a)); }
 

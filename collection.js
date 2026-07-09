@@ -24,6 +24,8 @@
     { id: 'pitcher', icon: '⚾', label: 'Pitchers', noun: 'pitchers' },
     { id: 'batter', icon: '💥', label: 'Batters', noun: 'batters' },
     { id: 'baller', icon: '🏀', label: 'Hoopers', noun: 'hoopers' },
+    { id: 'striker', icon: '⚽', label: 'Strikers', noun: 'strikers' },
+    { id: 'keeper', icon: '🧤', label: 'Keepers', noun: 'keepers' },
   ];
   const TIERS = [
     { id: 'legend', label: 'Legends', icon: '🟣', color: '#c084fc' },

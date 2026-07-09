@@ -872,6 +872,8 @@
         <button class="lb-tab lb-game-tab" data-game="pitcher">Pitchers</button>
         <button class="lb-tab lb-game-tab active" data-game="batter">Batters</button>
         <button class="lb-tab lb-game-tab" data-game="baller">Hoopers</button>
+        <button class="lb-tab lb-game-tab" data-game="striker">Strikers</button>
+        <button class="lb-tab lb-game-tab" data-game="keeper">Keepers</button>
       </div>
       <div class="lb-tabs">
         <button class="lb-tab lb-scope-tab active" data-scope="global">All-Time</button>
@@ -1158,6 +1160,8 @@ const SORT_OPTIONS = {
   pitcher: [{ key: 'ovr', label: 'OVR' }, { key: 'ovrAsc', label: 'Worst' }, { key: 'k', label: 'Strikeouts' }, { key: 'war', label: 'WAR' }, { key: 'wins', label: 'Wins' }, { key: 'rings', label: 'Rings' }, { key: 'cyYoung', label: 'Cy Youngs' }],
   batter: [{ key: 'ovr', label: 'OVR' }, { key: 'ovrAsc', label: 'Worst' }, { key: 'hr', label: 'Home Runs' }, { key: 'hits', label: 'Hits' }, { key: 'war', label: 'WAR' }, { key: 'rings', label: 'Rings' }, { key: 'mvp', label: 'MVPs' }],
   baller: [{ key: 'ovr', label: 'OVR' }, { key: 'ovrAsc', label: 'Worst' }, { key: 'pts', label: 'Points' }, { key: 'reb', label: 'Rebounds' }, { key: 'ast', label: 'Assists' }, { key: 'war', label: 'Win Shares' }, { key: 'rings', label: 'Rings' }, { key: 'mvp', label: 'MVPs' }],
+  striker: [{ key: 'ovr', label: 'OVR' }, { key: 'ovrAsc', label: 'Worst' }, { key: 'goals', label: 'Goals' }, { key: 'assists', label: 'Assists' }, { key: 'war', label: 'Rating' }, { key: 'rings', label: 'UCLs' }, { key: 'mvp', label: "Ballons d'Or" }],
+  keeper: [{ key: 'ovr', label: 'OVR' }, { key: 'ovrAsc', label: 'Worst' }, { key: 'cs', label: 'Clean Sheets' }, { key: 'saves', label: 'Saves' }, { key: 'war', label: 'Rating' }, { key: 'rings', label: 'UCLs' }, { key: 'mvp', label: 'Yashin Trophies' }],
 };
 function sortOptionsFor(game) { return SORT_OPTIONS[game] || SORT_OPTIONS.pitcher; }
 function fmtStat(v) { return lbSort === 'war' ? Number(v).toFixed(1) : Math.round(v); }
@@ -3277,7 +3281,7 @@ async function loadSharedBuild(id) {
     if (!data.ok || !data.entry) return;
     const entry = data.entry;
     if (entry.game && entry.game !== LEADERBOARD_GAME) {   // wrong game page for this build — hop over
-      const path = entry.game === 'batter' ? '/batting' : entry.game === 'baller' ? '/hoops' : '/pitching';
+      const path = entry.game === 'batter' ? '/batting' : entry.game === 'baller' ? '/hoops' : entry.game === 'striker' ? '/striker' : entry.game === 'keeper' ? '/keeper' : '/pitching';
       location.replace(`${path}?b=${entry.id}`);
       return;
     }
@@ -3456,7 +3460,7 @@ function openBuildDetails(entryId) {
 }
 async function loadLeaderboard(scope = lbScope, game = lbGame, sort = lbSort) {
   lbScope = scope === 'daily' ? 'daily' : 'global';
-  lbGame = (game === 'batter' || game === 'baller') ? game : 'pitcher';
+  lbGame = (game === 'batter' || game === 'baller' || game === 'striker' || game === 'keeper') ? game : 'pitcher';
   lbSort = sortOptionsFor(lbGame).some(o => o.key === sort) ? sort : 'ovr';
   document.querySelectorAll('.lb-scope-tab').forEach(t => t.classList.toggle('active', t.dataset.scope === lbScope));
   document.querySelectorAll('.lb-game-tab').forEach(t => t.classList.toggle('active', t.dataset.game === lbGame));

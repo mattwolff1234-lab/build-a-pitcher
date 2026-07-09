@@ -18,7 +18,7 @@ function findConn() {
 }
 const CONN = findConn();
 const sql = CONN ? neon(CONN) : null;
-const gameOf = g => (g === 'batter' || g === 'baller') ? g : 'pitcher';
+const gameOf = g => (g === 'batter' || g === 'baller' || g === 'striker' || g === 'keeper') ? g : 'pitcher';
 // Per-player key for daily dedup: signed-in account, else device guest id. Trust-the-client, same
 // posture as the rest of the leaderboard — the UNIQUE constraint is what enforces one attempt/day.
 const playerKey = b => (b && b.sub ? 'acct:' + String(b.sub).slice(0, 80) : (b && b.guestId ? 'guest:' + String(b.guestId).slice(0, 80) : null));
@@ -36,6 +36,9 @@ const SLOT_MAX = {
   pitcher: { _default: 128, Break: 102, Command: 102, Defense: 100, 'Ground Ball': 104, Frame: 102 },
   batter:  { _default: 128, Speed: 102, Defense: 102, Frame: 96 },
   baller:  { _default: 128, '3-Pointer': 123, Finishing: 120, Dribble: 123, Playmaking: 120, Defense: 117, Speed: 118, Clutch: 121 },
+  // Soccer caps = true maxima across pool+prime+icons in strikers/keepers.json, +3 buffer.
+  striker: { _default: 120, Finishing: 118, Pace: 120, 'Shot Power': 114, Dribbling: 117, Passing: 117, Heading: 115, Physical: 114, Clutch: 114, Frame: 102 },
+  keeper:  { _default: 117, Diving: 117, Reflexes: 117, Handling: 111, Distribution: 111, Positioning: 114, Agility: 108, Command: 114, Clutch: 114, Frame: 112 },
 };
 // Plain weighted-avg OVR — matches batter/baller's client computeOvr exactly, so we can reject an
 // inflated OVR claim. Pitcher uses a value-scaled formula, so we don't recompute it (its slot caps
@@ -43,6 +46,8 @@ const SLOT_MAX = {
 const OVR_W = {
   batter: { Vision: 1.1, Power: 1.2, Contact: 1.2, Speed: 1.0, Clutch: 1.1, Discipline: 1.1, Frame: 1.0, Defense: 1.0 },
   baller: { '3-Pointer': 1.2, Finishing: 1.2, Playmaking: 1.2, Dribble: 1.1, Defense: 1.1, Rebounding: 1.1, Clutch: 1.1, Speed: 0.9, Frame: 1.0 },
+  striker: { Finishing: 1.2, Pace: 1.2, Dribbling: 1.1, 'Shot Power': 1.1, Passing: 1.1, Clutch: 1.1, Heading: 1.0, Physical: 1.0, Frame: 0.9 },
+  keeper: { Reflexes: 1.2, Diving: 1.2, Positioning: 1.1, Handling: 1.1, Clutch: 1.1, Frame: 1.1, Command: 1.0, Distribution: 1.0, Agility: 1.0 },
 };
 // Legend names per game, loaded lazily from the baked data (auto-updates on refresh; only read on
 // submit, so the GET leaderboard hot path is untouched). Blocks impossible "all-legends" builds:
@@ -53,12 +58,13 @@ function legendSet(game) {
   if (!_legends) {
     const names = d => new Set((((d && d.legends) || [])).map(p => String((p && p.name) || '').trim().toLowerCase()).filter(Boolean));
     try {
-      _legends = { pitcher: names(require('../pitchers.json')), batter: names(require('../batters.json')), baller: names(require('../ballers.json')) };
-    } catch (e) { _legends = { pitcher: new Set(), batter: new Set(), baller: new Set() }; }
+      _legends = { pitcher: names(require('../pitchers.json')), batter: names(require('../batters.json')), baller: names(require('../ballers.json')),
+        striker: names(require('../strikers.json')), keeper: names(require('../keepers.json')) };
+    } catch (e) { _legends = { pitcher: new Set(), batter: new Set(), baller: new Set(), striker: new Set(), keeper: new Set() }; }
   }
   return _legends[game] || null;
 }
-const LEGEND_CAP = { baller: 6, batter: 7, pitcher: 7 };   // observed legit maxima: baller 3, batter 4, pitcher 5
+const LEGEND_CAP = { baller: 6, batter: 7, pitcher: 7, striker: 6, keeper: 6 };   // observed legit maxima: baller 3, batter 4, pitcher 5; soccer icon odds match baller's 4%
 
 function checkBuild(game, clientOvr, build) {
   const ovr = Math.max(1, Math.min(120, Math.round(Number(clientOvr) || 0)));
@@ -246,7 +252,7 @@ module.exports = async (req, res) => {
     const daily = scope === 'daily';
     const game = gameOf(req.query && req.query.game);
     // Optional sort by a career-total stat (trust-the-client, same as ovr). Whitelisted keys map to build.career.totals fields.
-    const SORT_FIELDS = { k: 'k', war: 'war', wins: 'wins', rings: 'rings', cyYoung: 'cyYoung', hr: 'hr', hits: 'h', mvp: 'mvp', pts: 'pts', reb: 'reb', ast: 'ast' };
+    const SORT_FIELDS = { k: 'k', war: 'war', wins: 'wins', rings: 'rings', cyYoung: 'cyYoung', hr: 'hr', hits: 'h', mvp: 'mvp', pts: 'pts', reb: 'reb', ast: 'ast', goals: 'goals', assists: 'assists', cs: 'cs', saves: 'saves' };
     const sortField = SORT_FIELDS[req.query && req.query.sort] || null;
     const worst = (req.query && req.query.sort) === 'ovrAsc'; // ascending OVR ("worst overall")
     const NULL_SENTINEL = -1e30; // ranks missing-career entries last under a stat sort

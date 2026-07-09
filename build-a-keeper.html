@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>GoatLab · Hoops</title>
+<title>GoatLab · Keeper</title>
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#0a1320">
 <meta name="mobile-web-app-capable" content="yes">
@@ -12,8 +12,8 @@
 <meta name="apple-mobile-web-app-title" content="GoatLab">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="icon" href="/icon-192.png">
-<meta property="og:title" content="GoatLab · Hoops">
-<meta property="og:description" content="Spin, draft, and build the ultimate NBA hooper, then simulate their career.">
+<meta property="og:title" content="GoatLab · Keeper">
+<meta property="og:description" content="Spin, draft, and build the ultimate goalkeeper, then simulate their career.">
 <meta property="og:image" content="/icon-512.png">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:image" content="/icon-512.png">
@@ -32,8 +32,6 @@
   gtag('js', new Date());
   gtag('config', 'G-TVL2XEQ2Q7');
 </script>
-<!-- Vercel Web Analytics -->
-<script defer src="/_vercel/insights/script.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -137,6 +135,10 @@
     max-width:100%; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
   .reel-card .ov { font-family:'Oswald',sans-serif; font-size:24px; font-weight:700; margin-top:2px; line-height:1; }
   .reel-card .pos { font-size:10px; color:var(--muted); margin-top:2px; letter-spacing:.5px; }
+  /* !important: generic img rules (.reel-card img, .landed-top img) must never inflate a flag */
+  img.flag { width:16px !important; height:11px !important; object-fit:cover; display:inline-block;
+    border-radius:2px !important; vertical-align:-1px; box-shadow:0 0 5px rgba(0,0,0,.45);
+    border:1px solid rgba(255,255,255,.25) !important; background:none !important; margin:0 !important; }
   .reel-card .yr { font-family:'Oswald',sans-serif; font-size:11px; color:var(--accent); font-weight:600; }
   .reel-card.win { border-color:#fff; box-shadow:0 0 0 2px rgba(255,255,255,.5),0 0 26px rgba(25,198,255,.55); }
   .pointer { position:absolute; top:0; left:50%; transform:translateX(-50%); width:0; height:0;
@@ -215,7 +217,7 @@
 
   /* ---------- figure stage ---------- */
   .stage3d { perspective:1100px; margin:8px auto 0; max-width:600px; }
-  .stage { position:relative; width:100%; aspect-ratio:1086/1275; max-width:520px; margin:0 auto; border-radius:16px; overflow:hidden;
+  .stage { position:relative; width:100%; aspect-ratio:1086/944; max-width:520px; margin:0 auto; border-radius:16px; overflow:hidden;
     border:1px solid var(--line); transform-style:preserve-3d; will-change:transform;
     background:radial-gradient(120% 100% at 50% 30%, #122236 0%, #060a12 76%);
     box-shadow:inset 0 0 70px rgba(0,0,0,.6), 0 14px 50px rgba(0,0,0,.5); }
@@ -223,14 +225,14 @@
   .stage::before { top:10px; left:10px; border-top:2px solid var(--accent2); border-left:2px solid var(--accent2); }
   .stage::after { bottom:10px; right:10px; border-bottom:2px solid var(--accent2); border-right:2px solid var(--accent2); }
   .stage .figure { position:absolute; inset:0; background:#39414c;
-    -webkit-mask:url(baller-figure.png) center/contain no-repeat; mask:url(baller-figure.png) center/contain no-repeat;
+    -webkit-mask:url(keeper-figure.png) center/contain no-repeat; mask:url(keeper-figure.png) center/contain no-repeat;
     pointer-events:none; }
   .seg { position:absolute; inset:0; background:transparent; transition:background .25s;
     -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat; -webkit-mask-position:center; mask-position:center;
     -webkit-mask-size:contain; mask-size:contain; pointer-events:none; }
   .stage .shade { position:absolute; inset:0; pointer-events:none; mix-blend-mode:soft-light;
     background:linear-gradient(158deg,rgba(255,255,255,.30),rgba(255,255,255,0) 42%,rgba(0,0,0,.40));
-    -webkit-mask:url(baller-figure.png) center/contain no-repeat; mask:url(baller-figure.png) center/contain no-repeat; }
+    -webkit-mask:url(keeper-figure.png) center/contain no-repeat; mask:url(keeper-figure.png) center/contain no-repeat; }
   .burst { position:absolute; inset:0; pointer-events:none; z-index:4; opacity:0;
     background:radial-gradient(circle at 50% 40%,rgba(163,102,255,.85),rgba(163,102,255,0) 60%); }
   .wires { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:3; }
@@ -697,13 +699,13 @@
 
 <header>
   <div class="brand">
-    <span class="mark">Hooper <i>Lab</i></span>
+    <span class="mark">Keeper <i>Lab</i></span>
     <span class="tag">Draft Mode</span>
     <span id="streakChip" class="streak-chip" title="Your daily streak" style="display:none">🔥 0</span>
     <span class="brand-rule"></span>
     <button id="muteBtn" class="mute" title="Toggle sound">🔊</button>
     <button id="dailyBtn" class="coming-tab live dc-btn" title="Daily Challenge - same players for everyone!">🎯 Daily</button>
-    <a id="buildTab" class="coming-tab live" href="/pitching" title="Build a Pitcher">🛠️ Build a Pitcher</a>
+    <a id="buildTab" class="coming-tab live" href="build-a-striker.html" title="Build a Striker">⚽ Build a Striker</a>
     <button id="menuBtn" class="mute" title="Menu">☰</button>
   </div>
 </header>
@@ -775,12 +777,12 @@
     </div>
 
     <div id="done" class="done panel">
-      <h2>Hooper Complete</h2>
+      <h2>Keeper Complete</h2>
       <div class="total" id="doneOvr">-</div>
       <div class="done-sub">Weighted overall rating</div>
 
       <div id="preSim" class="pre-sim">
-        <input id="nameInput" maxlength="20" placeholder="Name your hooper" autocomplete="off">
+        <input id="nameInput" maxlength="20" placeholder="Name your keeper" autocomplete="off">
         <label class="dec-toggle"><input type="checkbox" id="decChk"> 🎬 Career Decisions <small>(shape the story mid-career)</small></label>
         <button id="simBtn" class="primary">▶ Simulate Career</button>
       </div>
@@ -795,9 +797,9 @@
           <div id="careerNote" class="career-note" style="display:none"></div>
         </div>
         <div class="career-ticker">
-          <div><b id="tkK">0</b><span>Points</span></div>
-          <div><b id="tkW">0</b><span>Assists</span></div>
-          <div><b id="tkWar">0.0</b><span>Win Shares</span></div>
+          <div><b id="tkK">0</b><span>Clean Sheets</span></div>
+          <div><b id="tkW">0</b><span>Saves</span></div>
+          <div><b id="tkWar">0</b><span>Trophies</span></div>
           <div><b id="tkMoney">$0</b><span>Earned</span></div>
         </div>
         <div class="skip-row"><button id="skipCareerBtn" class="skip-career" style="display:none">⏩ Skip to verdict</button></div>
@@ -831,7 +833,7 @@
       <a class="menu-item" href="/">🏠 Home</a>
       <button class="menu-item" id="miDaily">🎯 Daily Challenge</button>
       <button class="menu-item" id="miStreak">🔥 Streak Calendar</button>
-      <a class="menu-item" href="/versus-hoops">⚔️ 1v1 Live · Hoops Face Off</a>
+      <a class="menu-item" href="build-a-striker.html">⚽ Build a Striker</a>
       <div class="menu-sec">Your Stuff</div>
       <button class="menu-item" id="miHof">🏛️ My Hall of Fame</button>
       <button class="menu-item" id="miAch">🏅 Achievements<span class="mi-chev" data-ach-count style="margin-left:auto;font-family:'Oswald',sans-serif;font-size:12px;color:var(--gold)">0/0</span></button>
@@ -839,7 +841,6 @@
       <button class="menu-item" id="miQuests">📜 Daily Quests<span class="mi-chev" data-quest-count style="margin-left:auto;font-family:'Oswald',sans-serif;font-size:12px;color:var(--gold)">0/3</span></button>
       <div class="menu-sec">Compete</div>
       <button class="menu-item" id="miLb">🏆 Leaderboard</button>
-      <a class="menu-item" href="/versus-hoops#stats">📊 1v1 Stats</a>
       <div class="menu-sec">Help</div>
       <button class="menu-item" id="miHow">📖 How to Play</button>
       <button class="menu-item" id="miInstall">📲 Install App<span class="mi-chev" id="installChev">⌄</span></button>
@@ -871,9 +872,9 @@
       <div class="lb-tabs">
         <button class="lb-tab lb-game-tab" data-game="pitcher">Pitchers</button>
         <button class="lb-tab lb-game-tab" data-game="batter">Batters</button>
-        <button class="lb-tab lb-game-tab active" data-game="baller">Hoopers</button>
+        <button class="lb-tab lb-game-tab" data-game="baller">Hoopers</button>
         <button class="lb-tab lb-game-tab" data-game="striker">Strikers</button>
-        <button class="lb-tab lb-game-tab" data-game="keeper">Keepers</button>
+        <button class="lb-tab lb-game-tab active" data-game="keeper">Keepers</button>
       </div>
       <div class="lb-tabs">
         <button class="lb-tab lb-scope-tab active" data-scope="global">All-Time</button>
@@ -913,13 +914,13 @@
   <div class="overlay-card panel">
     <div class="overlay-head"><span class="overlay-title">How to Play</span><button class="overlay-close" data-close="howModal">✕</button></div>
     <div class="overlay-body how-body">
-      <p>Build the ultimate baller, one body part at a time.</p>
+      <p>Build the ultimate goalkeeper, one body part at a time.</p>
       <ol>
-        <li><b>Spin</b> the reel. It stops on a random player.</li>
-        <li><b>Assign</b> that player to one of the 9 body parts. Each part is an attribute like 3-Pointer, Finishing, Defense, or Dribble, and the slot takes that player's rating for it.</li>
-        <li>Fill every part to finish your hooper and reveal their Overall rating. Card colors show how strong a hooper is, from grey up to diamond, with purple for legends.</li>
-        <li><b>Simulate Career</b> to play out their seasons and see if they reach the Hall of Fame.</li>
-        <li>Name your hooper and post them to the leaderboard.</li>
+        <li><b>Spin</b> the reel. It stops on a random keeper.</li>
+        <li><b>Assign</b> that keeper to one of the 9 body parts. Each part is an attribute like Reflexes, Diving, Handling, or Positioning, and the slot takes that keeper's rating for it.</li>
+        <li>Fill every part to finish your keeper and reveal their Overall rating. Card colors show how strong a player is, from grey up to diamond, with purple for icons of the game.</li>
+        <li><b>Simulate Career</b> to play out their seasons and see if they become a legend of the game.</li>
+        <li>Name your keeper and post them to the leaderboard.</li>
       </ol>
       <h4>Power-ups</h4>
       <p>You get one of each per run, so spend them wisely.</p>
@@ -928,18 +929,18 @@
         <li><b>Boost:</b> upgrade the current player to their Prime version with stronger ratings, then assign them.</li>
         <li><b>Snag:</b> grab the player one spot to the left or right of where you landed.</li>
       </ul>
-      <p>Tip: your strongest players do the most good on 3-Pointer, Finishing, and Playmaking.</p>
+      <p>Tip: your strongest keepers do the most good on Reflexes and Diving.</p>
     </div>
   </div>
 </div>
 
 <div id="draftOverlay" class="draft-overlay">
   <div class="draft-inner">
-    <div class="draft-league">NBA Draft</div>
-    <div class="draft-headline">Draft Day</div>
-    <div class="draft-round-tag" id="draftRoundTag">Round 1 - Pick 1</div>
+    <div class="draft-league">Transfer Deadline Day</div>
+    <div class="draft-headline">Signing Day</div>
+    <div class="draft-round-tag" id="draftRoundTag">Transfer Fee</div>
     <div class="draft-divider"></div>
-    <div class="draft-call" id="draftCall">With the <b id="draftPickOrd">1st</b> pick in Round <b id="draftRoundNum">1</b> of the NBA Draft...</div>
+    <div class="draft-call" id="draftCall">The fax machine hums... a <b id="draftPickOrd">-</b> bid<span id="draftRoundNum" style="display:none"></span> is accepted...</div>
     <div class="draft-selecting" id="draftSelecting"></div>
     <div class="draft-reveal" id="draftReveal">
       <span class="team-logo lg" id="drLogo"><img src="" alt=""></span>
@@ -1029,54 +1030,71 @@
 
 <div id="toast" class="toast"></div>
 
-<div class="footer-note">Ratings from NBA 2K. Not affiliated with the NBA or 2K.</div>
+<div class="footer-note">Ratings from EA Sports FC. Not affiliated with EA Sports, FIFA, or any league.</div>
 
 <script>
 // Each slot maps an attribute to a body part. ax/ay = anchor point on the figure (%),
 // lx/ly = where the label node floats (%). A wire connects the two.
 const SLOTS = [
-  { key: 'threept',    label: '3-Pointer',  part: 'Shooting Hand', mask: 'hoop-seg-threept.png',    ax: 16, ay: 50, lx: 7,  ly: 56 },
-  { key: 'finishing',  label: 'Finishing',  part: 'Thighs',        mask: 'hoop-seg-finishing.png',  ax: 40, ay: 61, lx: 11, ly: 74 },
-  { key: 'dribble',    label: 'Dribble',    part: 'Forearms',      mask: 'hoop-seg-dribble.png',    ax: 27, ay: 40, lx: 8,  ly: 38 },
-  { key: 'playmaking', label: 'Playmaking', part: 'Off Hand',      mask: 'hoop-seg-playmaking.png', ax: 85, ay: 55, lx: 93, ly: 60 },
-  { key: 'defense',    label: 'Defense',    part: 'Shoulders',     mask: 'hoop-seg-defense.png',    ax: 70, ay: 25, lx: 92, ly: 22 },
-  { key: 'rebounding', label: 'Rebounding', part: 'Core',          mask: 'hoop-seg-rebounding.png', ax: 53, ay: 46, lx: 9,  ly: 20 },
-  { key: 'speed',      label: 'Speed',      part: 'Legs',          mask: 'hoop-seg-speed.png',      ax: 80, ay: 76, lx: 90, ly: 82 },
-  { key: 'clutch',     label: 'Clutch',     part: 'Head',          mask: 'hoop-seg-clutch.png',     ax: 58, ay: 12, lx: 86, ly: 8 },
-  { key: 'frame',      label: 'Frame',      part: 'Height',        mask: 'hoop-seg-frame.png',      ax: 54, ay: 30, lx: 93, ly: 40, type: 'height' },
+  { key: 'diving',       label: 'Diving',       part: 'Arms',        mask: 'kp-seg-diving.png',       ax: 21, ay: 36, lx: 8,  ly: 26 },
+  { key: 'reflexes',     label: 'Reflexes',     part: 'Left Glove',  mask: 'kp-seg-reflexes.png',     ax: 9,  ay: 44, lx: 8,  ly: 62 },
+  { key: 'handling',     label: 'Handling',     part: 'Right Glove', mask: 'kp-seg-handling.png',     ax: 91, ay: 43, lx: 92, ly: 62 },
+  { key: 'distribution', label: 'Distribution', part: 'Boots',       mask: 'kp-seg-distribution.png', ax: 78, ay: 88, lx: 50, ly: 90 },
+  { key: 'positioning',  label: 'Positioning',  part: 'Head',        mask: 'kp-seg-positioning.png',  ax: 52, ay: 9,  lx: 86, ly: 6 },
+  { key: 'agility',      label: 'Agility',      part: 'Legs',        mask: 'kp-seg-agility.png',      ax: 28, ay: 74, lx: 10, ly: 80 },
+  { key: 'command',      label: 'Command',      part: 'The Box',     mask: 'kp-seg-command.png',      ax: 52, ay: 38, lx: 92, ly: 26 },
+  { key: 'clutch',       label: 'Clutch',       part: 'Heart',       mask: 'kp-seg-clutch.png',       ax: 52, ay: 25, lx: 14, ly: 7 },
+  { key: 'frame',        label: 'Frame',        part: 'Height',      mask: 'kp-seg-frame.png',        ax: 51, ay: 54, lx: 50, ly: 72, type: 'height' },
 ];
 
-// NBA team primary colors (jersey tint). FA / unknown -> neutral steel.
-const TEAM_COLORS = {
-  ATL:'#E03A3E', BOS:'#007A33', BKN:'#1D1D1D', CHA:'#00788C', CHI:'#CE1141',
-  CLE:'#860038', DAL:'#00538C', DEN:'#0E2240', DET:'#C8102E', GSW:'#1D428A',
-  HOU:'#CE1141', IND:'#002D62', LAC:'#C8102E', LAL:'#552583', MEM:'#5D76A9',
-  MIA:'#98002E', MIL:'#00471B', MIN:'#0C2340', NOP:'#0C2340', NYK:'#006BB6',
-  OKC:'#007AC1', ORL:'#0077C0', PHI:'#006BB6', PHX:'#1D1160', POR:'#E03A3E',
-  SAC:'#5A2D81', SAS:'#767A7F', TOR:'#CE1141', UTA:'#002B5C', WAS:'#002B5C',
-  FA:'#5b636e',
+// Career clubs (Signing Day, transfers): 30 famous sides. color = kit primary; tid = EA club id —
+// the crest is looked up from DATA.teams at runtime (unlicensed clubs get EA's generic crest).
+const CLUBS = {
+  RMA:{name:'Real Madrid',color:'#d9d5c4',tid:243}, BAR:{name:'FC Barcelona',color:'#a50044',tid:241},
+  ATM:{name:'Atlético Madrid',color:'#cb3524',tid:240},
+  MCI:{name:'Manchester City',color:'#6cabdd',tid:10}, MUN:{name:'Manchester United',color:'#da291c',tid:11},
+  LIV:{name:'Liverpool',color:'#c8102e',tid:9}, ARS:{name:'Arsenal',color:'#ef0107',tid:1},
+  CHE:{name:'Chelsea',color:'#034694',tid:5}, TOT:{name:'Tottenham',color:'#1b2b57',tid:18},
+  NEW:{name:'Newcastle',color:'#35363c',tid:13},
+  JUV:{name:'Juventus',color:'#2f3238',tid:45}, INT:{name:'Inter Milano',color:'#0068a8',tid:131682},
+  MIL:{name:'Milan',color:'#fb090b',tid:131681}, NAP:{name:'Napoli',color:'#12a0d7',tid:48},
+  ROM:{name:'Roma',color:'#8e1f2f',tid:52},
+  BAY:{name:'Bayern München',color:'#dc052d',tid:21}, BVB:{name:'Borussia Dortmund',color:'#fde100',tid:22},
+  LEV:{name:'Leverkusen',color:'#e32221',tid:32},
+  PSG:{name:'Paris SG',color:'#004170',tid:73}, MON:{name:'Monaco',color:'#e63312',tid:69},
+  BEN:{name:'Benfica',color:'#d81e2c',tid:234}, POR:{name:'Porto',color:'#1a4f8f',tid:236},
+  SCP:{name:'Sporting CP',color:'#067c50',tid:237},
+  CEL:{name:'Celtic',color:'#018749',tid:78}, GAL:{name:'Galatasaray',color:'#e30a17',tid:325},
+  MIA:{name:'Inter Miami',color:'#f5b6cd',tid:112893}, NAS:{name:'Al Nassr',color:'#f6c500',tid:112139},
+  HIL:{name:'Al Hilal',color:'#1a63b7',tid:605},
+  RIV:{name:'River Plate',color:'#d94a4a',tid:1876}, BOC:{name:'Boca Juniors',color:'#103f7b',tid:1877},
 };
 const IDLE_JERSEY = '#aeb6c2';
-const TEAM_NAMES = {
-  ATL:'Hawks', BOS:'Celtics', BKN:'Nets', CHA:'Hornets', CHI:'Bulls', CLE:'Cavaliers',
-  DAL:'Mavericks', DEN:'Nuggets', DET:'Pistons', GSW:'Warriors', HOU:'Rockets', IND:'Pacers',
-  LAC:'Clippers', LAL:'Lakers', MEM:'Grizzlies', MIA:'Heat', MIL:'Bucks', MIN:'Timberwolves',
-  NOP:'Pelicans', NYK:'Knicks', OKC:'Thunder', ORL:'Magic', PHI:'76ers', PHX:'Suns',
-  POR:'Trail Blazers', SAC:'Kings', SAS:'Spurs', TOR:'Raptors', UTA:'Jazz', WAS:'Wizards',
+const TEAM_NAMES = {}; const TEAM_COLORS = { FA:'#5b636e' };
+for (const [ab, c] of Object.entries(CLUBS)) { TEAM_NAMES[ab] = c.name; TEAM_COLORS[ab] = c.color; }
+// Jersey tint for the POOL's clubs (landed players come from ~300 real clubs): the famous ones are
+// hardcoded, everything else gets a stable palette color hashed from the club name. Icons wash purple.
+const POOL_CLUB_COLORS = {
+  'Real Madrid':'#d9d5c4','FC Barcelona':'#a50044','Atlético de Madrid':'#cb3524',
+  'Manchester City':'#6cabdd','Man Utd':'#da291c','Liverpool':'#c8102e','Arsenal':'#ef0107',
+  'Chelsea':'#034694','Spurs':'#1b2b57','Newcastle Utd':'#35363c','Aston Villa':'#670e36','West Ham':'#7a263a',
+  'Juventus':'#2f3238','Lombardia FC':'#0068a8','Milano FC':'#fb090b','SSC Napoli':'#12a0d7','AS Roma':'#8e1f2f',
+  'FC Bayern München':'#dc052d','Borussia Dortmund':'#fde100','Leverkusen':'#e32221','RB Leipzig':'#dd0741',
+  'Paris SG':'#004170','AS Monaco':'#e63312',
+  'SL Benfica':'#d81e2c','FC Porto':'#1a4f8f','Sporting CP':'#067c50',
+  'Celtic':'#018749','Rangers':'#1b458f','Galatasaray':'#e30a17','Fenerbahçe':'#ffed00',
+  'Inter Miami CF':'#f5b6cd','Al Nassr':'#f6c500','Al Hilal':'#1a63b7','Al Ittihad':'#f0c645',
+  'River Plate':'#d94a4a','Boca Juniors':'#103f7b','Icons':'#a366ff',
 };
-const TEAM_IDS = {
-  ATL:1610612737, BOS:1610612738, BKN:1610612751, CHA:1610612766, CHI:1610612741, CLE:1610612739,
-  DAL:1610612742, DEN:1610612743, DET:1610612765, GSW:1610612744, HOU:1610612745, IND:1610612754,
-  LAC:1610612746, LAL:1610612747, MEM:1610612763, MIA:1610612748, MIL:1610612749, MIN:1610612750,
-  NOP:1610612740, NYK:1610612752, OKC:1610612760, ORL:1610612753, PHI:1610612755, PHX:1610612756,
-  POR:1610612757, SAC:1610612758, SAS:1610612759, TOR:1610612761, UTA:1610612762, WAS:1610612764,
-};
+const HASH_PALETTE = ['#c0392b','#2980b9','#27ae60','#8e44ad','#d35400','#16a085','#7f8c8d','#2c3e50',
+  '#a04000','#1f618d','#117a65','#6c3483','#b7950b','#4a6741','#884ea0','#5d6d7e'];
 function randTeamAb(rng = Math.random, exclude = null) {
   const abbrs = Object.keys(TEAM_NAMES).filter(ab => ab !== exclude);
   return abbrs[Math.floor(rng() * abbrs.length)];
 }
 function teamLogoUrl(abbr) {
-  return TEAM_IDS[abbr] ? `https://cdn.nba.com/logos/nba/${TEAM_IDS[abbr]}/primary/L/logo.svg` : '';
+  const c = CLUBS[abbr];
+  return (c && DATA && DATA.teams && DATA.teams[c.tid]) ? DATA.teams[c.tid].img : '';
 }
 function teamLogoHTML(abbr, cls = '') {
   const url = teamLogoUrl(abbr);
@@ -1104,7 +1122,13 @@ function brightColor(hex, minLuma = 110) {
   return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
 }
 function verdictColor(cls) { return cls === 'goat' ? '#ffd23f' : cls === 'yes' ? '#ffce3a' : cls === 'no' ? '#c8d0da' : cls === 'mid' ? '#d08a3e' : '#7e8da3'; }
-function teamColor(team) { return TEAM_COLORS[team] || IDLE_JERSEY; }
+function teamColor(team) {
+  if (!team) return IDLE_JERSEY;
+  if (TEAM_COLORS[team]) return TEAM_COLORS[team];
+  if (POOL_CLUB_COLORS[team]) return POOL_CLUB_COLORS[team];
+  let h = 0; for (let i = 0; i < team.length; i++) h = (h * 31 + team.charCodeAt(i)) >>> 0;
+  return HASH_PALETTE[h % HASH_PALETTE.length];
+}
 
 function tier(ovr) {
   if (ovr >= 85) return 'diamond';
@@ -1114,19 +1138,18 @@ function tier(ovr) {
   return 'grey';
 }
 
-// OVR weighting: the offensive engine counts a little more, physicals a little less.
+// OVR weighting: shot-stopping counts the most, distribution/agility a little less.
 const WEIGHTS = {
-  threept: 1.2, finishing: 1.2, playmaking: 1.2,
-  dribble: 1.1, defense: 1.1, rebounding: 1.1, clutch: 1.1,
-  speed: 0.9, frame: 1.0,
+  reflexes: 1.2, diving: 1.2,
+  positioning: 1.1, handling: 1.1, clutch: 1.1, frame: 1.1,
+  command: 1.0, distribution: 1.0, agility: 1.0,
 };
 
-// Frame is pure height: taller is always better, with NO 99 cap (Wembanyama's 7'4" -> ~115, like the
-// rating curve). A short guard sits in the 50s, a true seven-footer pushes 100+. Weighted below the
-// skills in the Overall, so it's an edge, not a cheat code.
+// Frame is pure height — and for a keeper it REALLY matters (reach, crosses, the top corner).
+// A 6'0" keeper sits ~70, a 6'6" giant pushes ~97. Steeper than the striker curve.
 function heightToRating(inches) {
   if (!inches) return 60;
-  return clamp(Math.round(50 + (inches - 70) * 3.6), 1, 125);
+  return clamp(Math.round(38 + (inches - 64) * 4.2), 1, 125);
 }
 function slotNumeric(p, s) { return s.type === 'height' ? heightToRating(p.heightIn) : (p[s.key] || 0); }
 function slotDisplay(p, s) { return s.type === 'height' ? (p.height || '-') : (p[s.key] || 0); }
@@ -1136,7 +1159,19 @@ const SILHOUETTE = 'data:image/svg+xml;utf8,' + encodeURIComponent(
 );
 function headshot(p) {
   if (p.img) return p.img;
-  return p.nbaId ? `https://cdn.nba.com/headshots/nba/latest/260x190/${p.nbaId}.png` : SILHOUETTE;
+  return p.eaId ? `https://ratings-images-prod.pulse.ea.com/FC25/full/player-portraits/p${p.eaId}.png?width=220` : SILHOUETTE;
+}
+// Nation flag: by id for pool players, by name for icons (Yashin -> his nation's flag if present).
+let _natByName = null;
+function nationImg(p) {
+  if (!DATA || !DATA.nations) return '';
+  if (p && p.nid && DATA.nations[p.nid]) return DATA.nations[p.nid].img;
+  if (!_natByName) { _natByName = {}; for (const v of Object.values(DATA.nations)) _natByName[v.name] = v.img; }
+  return p && p.nation ? (_natByName[p.nation] || '') : '';
+}
+function nationFlag(p) {
+  const img = nationImg(p);
+  return img ? `<img class="flag" src="${img}" alt="${p.nation || ''}" title="${p.nation || ''}" onerror="this.style.display='none'">` : '';
 }
 
 let DATA = null;
@@ -1155,7 +1190,7 @@ const ratingsHidden = () => hardMode && !hardRevealed;
 
 const $ = id => document.getElementById(id);
 let deferredInstall = null;
-const LEADERBOARD_GAME = 'baller';
+const LEADERBOARD_GAME = 'keeper';
 let lbScope = 'global';
 let lbGame = LEADERBOARD_GAME;
 let lbSort = 'ovr';
@@ -1167,7 +1202,7 @@ const SORT_OPTIONS = {
   striker: [{ key: 'ovr', label: 'OVR' }, { key: 'ovrAsc', label: 'Worst' }, { key: 'goals', label: 'Goals' }, { key: 'assists', label: 'Assists' }, { key: 'war', label: 'Rating' }, { key: 'rings', label: 'UCLs' }, { key: 'mvp', label: "Ballons d'Or" }],
   keeper: [{ key: 'ovr', label: 'OVR' }, { key: 'ovrAsc', label: 'Worst' }, { key: 'cs', label: 'Clean Sheets' }, { key: 'saves', label: 'Saves' }, { key: 'war', label: 'Rating' }, { key: 'rings', label: 'UCLs' }, { key: 'mvp', label: 'Yashin Trophies' }],
 };
-function sortOptionsFor(game) { return SORT_OPTIONS[game] || SORT_OPTIONS.baller; }
+function sortOptionsFor(game) { return SORT_OPTIONS[game] || SORT_OPTIONS.keeper; }
 function fmtStat(v) { return lbSort === 'war' ? Number(v).toFixed(1) : Math.round(v); }
 
 // ---------- sound (synthesized via Web Audio - no asset files) ----------
@@ -1223,10 +1258,10 @@ const Sound = (() => {
 
 async function init() {
   try {
-    const res = await fetch('ballers.json');
+    const res = await fetch('keepers.json');
     DATA = await res.json();
   } catch (e) {
-    $('loading').textContent = 'Could not load ballers.json. Run "node fetch-ballers.js" first and serve over http.';
+    $('loading').textContent = 'Could not load keepers.json. Run "node fetch-footballers.js" first and serve over http.';
     return;
   }
   buildWeights();
@@ -1333,7 +1368,7 @@ function openLeaderboard(scope, game = LEADERBOARD_GAME) { openOverlay('lbModal'
 
 /* ===== Accounts ("Sign in with Google") + My Hall of Fame ===== */
 const GOOGLE_CLIENT_ID = '349698720898-t9bpb8fp7ks6scf8ci8mmoeec1lpm3d3.apps.googleusercontent.com';
-const HOF_GAME = 'baller';
+const HOF_GAME = 'keeper';
 let account = null;
 try { account = JSON.parse(localStorage.getItem('pl_account') || 'null'); } catch (e) {}
 
@@ -1459,8 +1494,12 @@ function hofCardHTML(s) {
   const team = teamInfo((s.build && s.build.team) || '');
   const verdict = careerTier(t, s.ovr);
   const isBat = s.game === 'batter';
-  const kind = s.game === 'batter' ? 'Batter' : s.game === 'baller' ? 'Hooper' : 'Pitcher';
-  const stats = s.game === 'baller'
+  const kind = s.game === 'batter' ? 'Batter' : s.game === 'baller' ? 'Hooper' : s.game === 'striker' ? 'Striker' : s.game === 'keeper' ? 'Keeper' : 'Pitcher';
+  const stats = s.game === 'keeper'
+    ? `${t.cs || 0} CS · ${(t.saves || 0).toLocaleString()} saves · ${t.apps || 0} apps · ${(Number(t.war) || 0).toFixed(2)} rating`
+    : s.game === 'striker'
+    ? `${t.goals || 0} G · ${t.assists || 0} A · ${t.apps || 0} apps · ${(Number(t.war) || 0).toFixed(2)} rating`
+    : s.game === 'baller'
     ? `${t.ppg || 0} PPG · ${t.rpg || 0} RPG · ${t.apg || 0} APG · ${(Number(t.war) || 0).toFixed(1)} WS`
     : isBat
     ? `${(Number(t.avg) || 0).toFixed(3).replace(/^0\./, '.')} AVG · ${t.hr || 0} HR · ${t.sb || 0} SB · ${(Number(t.war) || 0).toFixed(1)} WAR`
@@ -1532,7 +1571,7 @@ function borderTier(p) { return p.legend ? 'legend' : tier(p.ovr); }
 
 function cardHTML(p) {
   const t = borderTier(p);
-  const meta = p.legend ? `<div class="legend-tag">★ LEGEND</div>`
+  const meta = p.legend ? `<div class="legend-tag">★ ICON</div>`
     : p.prime ? `<div class="prime-tag">🔥 PRIME ${p.year || ''}</div>`
     : `<div class="yr">${p.year || ''}</div>`;
   return `<div class="reel-card t-${t}">
@@ -1540,7 +1579,7 @@ function cardHTML(p) {
     <div class="nm">${p.name}</div>
     <div class="ov c-${t}">${p.ovr}</div>
     ${meta}
-    <div class="pos">${p.pos || ''} · ${p.team || ''}</div>
+    <div class="pos">${nationFlag(p)} ${[p.pos, p.club].filter(Boolean).join(' · ')}</div>
   </div>`;
 }
 
@@ -1569,8 +1608,8 @@ function stopIdleReel() {
 function logPlay() {
   if (window.__plLogged) return;
   window.__plLogged = true;
-  try { gtag('event', 'game_start', { game: 'baller' }); } catch (e) {}
-  fetch('/api/score', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'play', game: 'baller' }) }).catch(function(){});
+  try { gtag('event', 'game_start', { game: 'keeper' }); } catch (e) {}
+  fetch('/api/score', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'play', game: 'keeper' }) }).catch(function(){});
 }
 function spin() {
   if (state.spinning) return;
@@ -1671,9 +1710,8 @@ function land(p) {
   $('landedImg').onerror = function () { this.onerror = null; this.src = SILHOUETTE; };
   $('landedImg').className = 't-' + t;
   $('landedName').childNodes[0].nodeValue = p.name + ' ';
-  $('landedSub').textContent = p.legend
-    ? `★ LEGEND · ${p.pos || ''} · ${p.team || ''}`
-    : `${p.year || ''} · ${p.pos || ''} · ${p.team || ''}`;
+  $('landedSub').innerHTML = (p.legend ? ['★ ICON', p.pos] : [p.pos, p.club])
+    .filter(Boolean).join(' · ') + (p.nation ? ` · ${nationFlag(p)} ${p.nation}` : '');
   $('landedOvr').textContent = ratingsHidden() ? '?' : p.ovr;
   $('landedOvr').className = 'big-ov c-' + t;
 
@@ -1805,7 +1843,7 @@ function assign(slotKey) {
 
   state.filled[slotKey] = {
     name: p.name, value: slotNumeric(p, s), display: slotDisplay(p, s),
-    ovr: p.ovr, legend: !!p.legend, team: p.team, img: headshot(p),
+    ovr: p.ovr, legend: !!p.legend, team: p.club, nation: p.nation || '', img: headshot(p),
     prime: !!p.prime, year: p.year || '',
   };
   state.used.add(p.name);
@@ -2174,8 +2212,8 @@ function dayToast(msg) {
 }
 
 // personal best is split per game (the two OVR scales differ — batters can top 99).
-function dailyBest() { try { return Number(localStorage.getItem('pl_dc_best_baller') || '0') || 0; } catch (e) { return 0; } }
-function setDailyBest(v) { try { localStorage.setItem('pl_dc_best_baller', String(v)); } catch (e) {} }
+function dailyBest() { try { return Number(localStorage.getItem('pl_dc_best_keeper') || '0') || 0; } catch (e) { return 0; } }
+function setDailyBest(v) { try { localStorage.setItem('pl_dc_best_keeper', String(v)); } catch (e) {} }
 
 let dailyMode = false, dailyRng = null, luckyToday = false, luckyConsumed = false, dailyResultsShown = false;
 // The "played today" gate is shared across both games (only one runs per date).
@@ -2222,7 +2260,7 @@ async function startDailyChallenge() {
   reset();
   dailyMode = true;
   luckyConsumed = false;
-  dailyRng = seededRandom(`pl-daily-${todayUTC()}-baller-v1`);
+  dailyRng = seededRandom(`pl-daily-${todayUTC()}-keeper-v1`);
   luckyToday = isLuckyToday();
   const tagEl = document.querySelector('header .tag');
   if (tagEl) { tagEl.textContent = '🎯 Daily Challenge'; tagEl.classList.add('dc-header-tag'); }
@@ -2420,11 +2458,11 @@ function checkBuildAchievements() {
   if (state.respinUsed && state.boostUsed && state.snagUsed) Ach.unlock('triple1');
   if (SLOTS.some(s => Number(f[s.key].value) >= 125)) Ach.unlock('offcharts');
   const hi = parseHeightIn(f['frame'] && f['frame'].display);
-  if (hi && hi <= 71) Ach.unlock('short_king');
-  if (hi >= 81) Ach.unlock('tall_tale');
+  if (hi && hi <= 72) Ach.unlock('short_king');
+  if (hi >= 79) Ach.unlock('tall_tale');
   const teams = SLOTS.map(s => f[s.key].team);
   if (teams[0] && teams.every(t => t === teams[0])) Ach.unlock('one_team');
-  if ((f['fielding_ability'] && f['fielding_ability'].ovr >= 99) || (f['frame'] && f['frame'].ovr >= 99)) Ach.unlock('nepo');
+  if (f['frame'] && f['frame'].ovr >= 91) Ach.unlock('nepo');
 }
 // Fires after a simulated career (called from finishPlaythrough()).
 function checkCareerAchievements(t, verdict, votePct) {
@@ -2442,13 +2480,14 @@ function checkCareerAchievements(t, verdict, votePct) {
   if (verdict.cls === 'low') Ach.unlock('hall_not_good');
 }
 
-function ballerRole(vals) {
-  if (vals.playmaking >= 88 && vals.dribble >= 85) return 'Floor General';
-  if (vals.threept >= 95) return 'Sharpshooter';
-  if (vals.rebounding >= 90 && vals.frame >= 84) return 'Big Man';
-  if (vals.defense >= 92) return 'Two-Way Wing';
-  if (vals.finishing >= 92) return 'Slasher';
-  return 'Bucket Getter';
+function keeperRole(vals) {
+  if (vals.frame >= 95 && vals.command >= 88) return 'The Wall';
+  if (vals.distribution >= 95) return 'Sweeper Keeper';
+  if (vals.reflexes >= 100 && vals.agility >= 92) return 'The Cat';
+  if (vals.clutch >= 95) return 'Penalty Killer';
+  if (vals.reflexes >= 98) return 'Shot Stopper';
+  if (vals.command >= 92) return 'Box Commander';
+  return 'Complete Keeper';
 }
 
 /* ---- mid-career decision events ------------------------------------------
@@ -2460,90 +2499,101 @@ function ballerRole(vals) {
 // pills [direction, label]. These MUST mirror applyChoice() below so the tags
 // tell the truth about what the choice does.
 const CAREER_EVENTS = {
-  media: { title: 'Rookie Media Day', icon: '🎙️', def: 'business',
-    flavor: 'Training camp opens and every mic in the city is pointed at the lottery pick. How do you want to play it?',
+  media: { title: 'The First Big Interview', icon: '🎙️', def: 'business',
+    flavor: 'Preseason opens and every camera at the training ground is pointed at the wonderkid signing. How do you want to play it?',
     options: [
-      { key: 'spotlight', label: 'Embrace the spotlight', hint: 'Sponsors love a star who loves the camera.', fx: [['up', 'Earnings'], ['up', 'HOF vote']] },
-      { key: 'business', label: 'All business', hint: 'Short answers, long gym sessions.', fx: [['up', 'Performance'], ['down', 'Earnings']] },
-      { key: 'villain', label: 'Give them a villain', hint: 'Talk now, back it up in June.', fx: [['up', 'Clutch'], ['up', 'Earnings'], ['down', 'HOF vote']] },
+      { key: 'spotlight', label: 'Embrace the spotlight', hint: 'Sponsors love a star who loves the camera.', fx: [['up', 'Earnings'], ['up', 'Legacy vote']] },
+      { key: 'business', label: 'All business', hint: 'Short answers, long sessions on the training pitch.', fx: [['up', 'Performance'], ['down', 'Earnings']] },
+      { key: 'villain', label: 'Give them a villain', hint: 'Talk now, back it up in the derby.', fx: [['up', 'Clutch'], ['up', 'Earnings'], ['down', 'Legacy vote']] },
     ] },
   viral_rookie: { title: 'Accidentally Famous', icon: '📱', def: 'lowkey',
-    flavor: 'You get stuck hanging on the rim during pregame warmups. The clip hits 40 million views overnight.',
+    flavor: 'You rainbow-flick the club captain in warmups and the clip hits 40 million views overnight.',
     options: [
-      { key: 'lean', label: 'Lean into it', hint: 'Hang on the rim after every poster from now on.', fx: [['up', 'Earnings'], ['up', 'HOF vote']] },
+      { key: 'lean', label: 'Lean into it', hint: 'A flick in every warmup from now on.', fx: [['up', 'Earnings'], ['up', 'Legacy vote']] },
       { key: 'lowkey', label: 'Laugh it off, lock in', hint: 'Funny once. Back to work.', fx: [['up', 'Performance']] },
-      { key: 'merch', label: 'Drop the merch', hint: '"Rim Hanger" tees by Friday.', fx: [['up', 'Earnings'], ['down', 'HOF vote']] },
+      { key: 'merch', label: 'Drop the merch', hint: '"Flick Kid" tees by Friday.', fx: [['up', 'Earnings'], ['down', 'Legacy vote']] },
     ] },
-  gear: { title: 'Signature Shoe', icon: '👟', def: 'focus',
-    flavor: 'A shoe company calls: they want a signature line with your logo on the tongue.',
+  gear: { title: 'Signature Gloves', icon: '🧤', def: 'focus',
+    flavor: 'A glove company calls: they want a signature model with your logo on the strap.',
     options: [
-      { key: 'sign', label: 'Sign the deal', hint: 'Money in the bank, your shoes on every court.', fx: [['up', 'Big earnings']] },
+      { key: 'sign', label: 'Sign the deal', hint: 'Money in the bank, your gloves in every goalmouth.', fx: [['up', 'Big earnings']] },
       { key: 'focus', label: 'Stay locked in', hint: 'No distractions until the job is done.', fx: [['up', 'Performance']] },
-      { key: 'charity', label: 'Design it, donate it', hint: 'Every pair funds hoops programs back home.', fx: [['up', 'HOF vote'], ['up', 'Earnings']] },
+      { key: 'charity', label: 'Design them, donate them', hint: 'Every pair funds pitches back home.', fx: [['up', 'Legacy vote'], ['up', 'Earnings']] },
     ] },
-  presser: { title: 'The Presser', icon: '🎤', def: 'robot',
-    flavor: 'After a brutal loss you give the most painfully honest press conference of the year. By midnight it\'s everywhere.',
+  presser: { title: 'The Mixed Zone', icon: '🎤', def: 'robot',
+    flavor: 'After a brutal cup exit you give the most painfully honest interview of the season. By midnight it\'s everywhere.',
     options: [
-      { key: 'comedy', label: 'Roll with the jokes', hint: 'The late-night shows come calling.', fx: [['up', 'HOF vote'], ['up', 'Earnings']] },
-      { key: 'robot', label: '"We\'re on to next week"', hint: 'Full robot mode. Nothing to see here.', fx: [['up', 'Performance']] },
-      { key: 'fireback', label: 'Fire back at the critics', hint: 'Bulletin-board material, for you.', fx: [['up', 'Clutch'], ['down', 'HOF vote']] },
+      { key: 'comedy', label: 'Roll with the jokes', hint: 'The panel shows come calling.', fx: [['up', 'Legacy vote'], ['up', 'Earnings']] },
+      { key: 'robot', label: '"We go again"', hint: 'Full robot mode. Nothing to see here.', fx: [['up', 'Performance']] },
+      { key: 'fireback', label: 'Fire back at the pundits', hint: 'Bulletin-board material, for you.', fx: [['up', 'Clutch'], ['down', 'Legacy vote']] },
     ] },
-  viral_celebration: { title: 'The Celly', icon: '🕺', def: 'tone',
-    flavor: 'Your celebration (the night-night, the shimmy, the too-small) is suddenly all over the internet.',
+  viral_celebration: { title: 'The Celebration', icon: '🕺', def: 'tone',
+    flavor: 'Your goal celebration - the frozen stance, the knee slide, the badge tap - is suddenly all over the internet.',
     options: [
       { key: 'trademark', label: 'Trademark it', hint: 'Kids do it at recess. Get paid for it.', fx: [['up', 'Earnings']] },
-      { key: 'tone', label: 'Tone it down', hint: 'Respect the game, keep the edge.', fx: [['up', 'Performance'], ['up', 'HOF vote']] },
-      { key: 'teach', label: 'Teach the arena', hint: 'The whole building does it now.', fx: [['up', 'HOF vote']] },
+      { key: 'tone', label: 'Tone it down', hint: 'Respect the game, keep the edge.', fx: [['up', 'Performance'], ['up', 'Legacy vote']] },
+      { key: 'teach', label: 'Teach the stadium', hint: 'The whole end does it now.', fx: [['up', 'Legacy vote']] },
     ] },
-  national: { title: 'Play for Gold', icon: '🥇', def: 'rest',
-    flavor: 'Your country wants you leading the break at the Olympics this summer.',
+  national: { title: 'World Cup Summer', icon: '🌍', def: 'rest',
+    flavor: 'The World Cup lands this summer, and your nation needs a #1. How do you carry it?',
     options: [
-      { key: 'play', label: 'Play for gold', hint: 'A legacy moment. The legs pay the interest.', fx: [['up', 'HOF vote'], ['down', 'Performance']] },
-      { key: 'rest', label: 'Protect the legs', hint: 'Regular-season wins pay the bills.', fx: [['up', 'Performance']] },
-      { key: 'captain', label: 'Go as the captain', hint: 'Lead the whole squad. Heavy is the crown.', fx: [['up', 'Clutch'], ['up', 'HOF vote'], ['down', 'Performance']] },
+      { key: 'play', label: 'Carry the nation', hint: 'Every minute of every match. Legends are made in July.', fx: [['up', 'Legacy vote'], ['up', 'World Cup odds'], ['down', 'Club form']] },
+      { key: 'rest', label: 'Manage the summer', hint: 'Play your part, protect the legs. Club form pays the bills.', fx: [['up', 'Performance']] },
+      { key: 'captain', label: 'Take the armband', hint: 'Lead the whole nation. Heavy is the crown.', fx: [['up', 'Clutch'], ['up', 'Legacy vote'], ['down', 'Performance']] },
     ] },
-  mentor: { title: 'The Phenom', icon: '🧑‍🏫', def: 'focus',
-    flavor: 'The team\'s top draft pick just arrived and asked for the locker next to yours.',
+  mentor: { title: 'The Wonderkid', icon: '🧑‍🏫', def: 'focus',
+    flavor: 'The academy\'s golden boy just got promoted and asked for the locker next to yours.',
     options: [
-      { key: 'mentor', label: 'Take them under your wing', hint: 'Legacy is what they say about you later.', fx: [['up', 'HOF vote']] },
-      { key: 'focus', label: 'Compete with them', hint: 'Iron sharpens iron. Yours first.', fx: [['up', 'Performance']] },
+      { key: 'mentor', label: 'Take them under your wing', hint: 'Legacy is what they say about you later.', fx: [['up', 'Legacy vote']] },
+      { key: 'focus', label: 'Compete with them', hint: 'Iron sharpens iron. Your shirt first.', fx: [['up', 'Performance']] },
     ] },
   injury: { title: 'Injury Crossroads', icon: '🏥', def: 'surgery',
-    flavor: 'The knee finally buckles mid-season. The doc lays out two roads.',
+    flavor: 'The hamstring finally goes mid-season. The club doctor lays out two roads.',
     options: [
       { key: 'surgery', label: 'Get the surgery', hint: 'Sit now, come back fresh.', fx: [['up', '+1 career season'], ['down', 'Miss most of this year']] },
-      { key: 'gut', label: 'Play through it', hint: 'Ice it and go. Stars don\'t sit.', fx: [['down', 'Lasting decline'], ['down', 'Fewer games now']] },
+      { key: 'gut', label: 'Play through it', hint: 'Strap it and go. Stars don\'t sit.', fx: [['down', 'Lasting decline'], ['down', 'Fewer matches now']] },
     ] },
-  fa: { title: 'Free Agency', icon: '💼', def: 'loyal',
-    flavor: 'The rookie deal is up and the max offers hit the table: three teams, three futures.',
+  fa: { title: 'The Transfer Saga', icon: '💼', def: 'loyal',
+    flavor: 'Your first big contract is up and the bids hit the table: three clubs, three futures.',
     options: [
-      { key: 'loyal', label: 'Stay loyal', hint: 'Hometown discount. Jersey in the rafters someday.', fx: [['up', 'HOF vote'], ['up', 'Performance'], ['down', 'Earnings']] },
-      { key: 'ring', label: 'Chase the ring', hint: 'Join a superteam. June or bust.', fx: [['up', 'Ring odds'], ['down', 'Earnings']] },
-      { key: 'money', label: 'Max the bag', hint: 'Highest bidder wins. Standings optional.', fx: [['up', 'Big earnings'], ['down', 'Ring odds']] },
+      { key: 'loyal', label: 'Stay loyal', hint: 'Hometown discount. A statue outside the ground someday.', fx: [['up', 'Legacy vote'], ['up', 'Performance'], ['down', 'Earnings']] },
+      { key: 'ring', label: 'Join the giants', hint: 'A super-club calls. Champions League or bust.', fx: [['up', 'Trophy odds'], ['down', 'Earnings']] },
+      { key: 'money', label: 'Take the record bid', hint: 'Highest bidder wins. League table optional.', fx: [['up', 'Big earnings'], ['down', 'Trophy odds']] },
     ] },
   twilight: { title: 'The Twilight Call', icon: '🌇', def: 'ride',
     flavor: 'The offseason phone stays quiet longer these days. What\'s the move?',
     options: [
-      { key: 'walk', label: 'Walk away on top', hint: 'Leave them wanting one more.', fx: [['up', 'HOF vote'], ['neu', 'Retire now']] },
-      { key: 'ride', label: 'One last ride', hint: 'Run it back. One more season.', fx: [['neu', 'One more season']] },
-      { key: 'farewell', label: 'Farewell tour', hint: 'Tell the world it\'s the last dance and soak it in.', fx: [['up', 'Earnings'], ['up', 'HOF vote'], ['neu', 'Farewell season'], ['down', 'Late decline']] },
+      { key: 'walk', label: 'Walk away on top', hint: 'Leave them wanting one more.', fx: [['up', 'Legacy vote'], ['neu', 'Retire now']] },
+      { key: 'ride', label: 'One last season', hint: 'Run it back. One more year.', fx: [['neu', 'One more season']] },
+      { key: 'farewell', label: 'Farewell tour', hint: 'Tell the world it\'s the last dance and soak in every away end.', fx: [['up', 'Earnings'], ['up', 'Legacy vote'], ['neu', 'Farewell season'], ['down', 'Late decline']] },
     ] },
 };
+
+function buildNation(filled) {
+  const counts = {};
+  for (const s of SLOTS) { const n = filled[s.key] && filled[s.key].nation; if (n) counts[n] = (counts[n] || 0) + 1; }
+  let best = null, bestN = 0;
+  for (const [n, c] of Object.entries(counts)) if (c > bestN) { best = n; bestN = c; }
+  return best || 'the national side';
+}
 
 function simulateCareer(filled, finalOvr, draftTeamAb, choices) {
   const vals = {};
   for (const s of SLOTS) vals[s.key] = filled[s.key].value;
   const seed = SLOTS.map(s => `${s.key}:${vals[s.key]}:${filled[s.key].player || filled[s.key].name}`).join('|');
-  const rng = seededRandom(seed + '|hoop-career-v1');
-  const role = ballerRole(vals);
+  const rng = seededRandom(seed + '|keeper-career-v1');
+  const role = keeperRole(vals);
+  const nation = buildNation(filled);
   const seasons = [];
-  const totals = { gp:0, min:0, pts:0, reb:0, ast:0, stl:0, blk:0, war:0,
-    mvp:0, allStar:0, allNba:0, scoringTitles:0, dpoy:0, roy:0, rings:0, finalsMvp:0, p30:0, earnings:0 };
+  const totals = { apps:0, cs:0, saves:0, pkSaves:0, ratingW:0, war:0, savePctW:0,
+    mvp:0, allStar:0, goldenGloves:0, titles:0, rings:0, wcTitles:0, wcApps:0, roy:0, p25:0, earnings:0 };
   let currentTeam = draftTeamAb || randTeamAb(rng);
   let currentTeamQuality = randRange(rng, -0.1, 0.12);
+  const natQuality = randRange(rng, -0.06, 0.14);
   let tradeCount = 0;
-  const startAge = 20;
-  const maxAge = Math.round(clamp(30 + vals.frame * 0.085 + (vals.clutch - 50) * 0.01 + randRange(rng, -2, 3), 26, 41));
+  const startAge = 19;
+  // keepers age like wine — careers regularly run into the 40s
+  const maxAge = Math.round(clamp(34 + (vals.agility - 60) * 0.03 + (vals.frame - 65) * 0.025 + randRange(rng, -2, 4), 30, 44));
   let declineDebt = 0, badStreak = 0, peakWar = 0, rookieDone = false;
 
   // ---- decision-event machinery (completely inert when choices == null) ----
@@ -2556,19 +2606,20 @@ function simulateCareer(filled, finalOvr, draftTeamAb, choices) {
   if (evOn) {
     // a FIXED number of draws builds the plan, so it never depends on career length
     const dRng = seededRandom(seed + '|decisions-v1');
-    const EARLY = ['media', 'viral_rookie', 'gear'], MID = ['presser', 'viral_celebration', 'national', 'mentor'];
+    const EARLY = ['media', 'viral_rookie', 'gear'], MID = ['presser', 'viral_celebration', 'mentor'];
     const early = EARLY[Math.floor(dRng() * EARLY.length)];
     const earlyYear = 1 + Math.floor(dRng() * 2);                       // season 2 or 3
     const midA = MID[Math.floor(dRng() * MID.length)];
     let midB = MID[Math.floor(dRng() * MID.length)];
     const twoMids = dRng() < 0.45;
     const midYearA = 3 + Math.floor(dRng() * 3);                        // seasons 4-6
-    const midYearB = 8 + Math.floor(dRng() * 3);                        // seasons 9-11 (long careers only)
+    const midYearB = 9 + Math.floor(dRng() * 3);                        // seasons 10-12 (long careers only)
     if (midB === midA) midB = MID[(MID.indexOf(midA) + 1) % MID.length];
     evPlan[earlyYear] = early;
     evPlan[midYearA] = midA;
     if (twoMids) evPlan[midYearB] = midB;
-    delete evPlan[4];                                                    // year 5 belongs to free agency (rookie scale ends)
+    delete evPlan[4];                                                    // year 5 belongs to the transfer saga (first contract ends)
+    evPlan[8] = 'national';                                              // pinned: the 2034 World Cup summer (a WC year)
   }
   const takeChoice = () => (choiceIdx < choices.length ? choices[choiceIdx++] : null);
   const ask = (id, age) => {
@@ -2583,7 +2634,7 @@ function simulateCareer(filled, finalOvr, draftTeamAb, choices) {
     else if (id === 'gear') { if (pick === 'sign') m.earnMult *= 1.18; else if (pick === 'focus') m.perf += 0.012; else { m.voteBonus += 2; m.earnMult *= 1.05; } }
     else if (id === 'presser') { if (pick === 'comedy') { m.voteBonus += 1.5; m.earnMult *= 1.05; } else if (pick === 'robot') m.perf += 0.012; else { m.clutch += 3; m.voteBonus -= 1; } }
     else if (id === 'viral_celebration') { if (pick === 'trademark') m.earnMult *= 1.15; else if (pick === 'tone') { m.perf += 0.008; m.voteBonus += 0.5; } else m.voteBonus += 1.5; }
-    else if (id === 'national') { if (pick === 'play') { m.voteBonus += 1.5; m.perf -= 0.008; } else if (pick === 'rest') m.perf += 0.008; else { m.clutch += 3; m.voteBonus += 1; m.perf -= 0.012; } }
+    else if (id === 'national') { if (pick === 'play') { m.voteBonus += 1.5; m.clutch += 2; m.perf -= 0.008; } else if (pick === 'rest') m.perf += 0.008; else { m.clutch += 3; m.voteBonus += 1; m.perf -= 0.012; } }
     else if (id === 'mentor') { if (pick === 'mentor') m.voteBonus += 2; else m.perf += 0.01; }
     else if (id === 'fa') {
       if (pick === 'loyal') { m.voteBonus += 2; m.perf += 0.01; m.earnMult *= 0.9; m.noTrades = true; }
@@ -2619,8 +2670,8 @@ function simulateCareer(filled, finalOvr, draftTeamAb, choices) {
     }
 
     let trade = null;
-    if (age > startAge && tradeCount < 4 && !mods.noTrades) {
-      const tradeChance = clamp(0.045 + badStreak * 0.035 + (age > 31 ? 0.018 : 0) + (peakWar > 5.5 ? 0.015 : 0), 0.025, 0.22);
+    if (age > startAge && tradeCount < 5 && !mods.noTrades) {
+      const tradeChance = clamp(0.05 + badStreak * 0.035 + (age > 29 ? 0.02 : 0) + (peakWar > 7.7 ? 0.02 : 0), 0.025, 0.24);
       if (rng() < tradeChance) {
         const from = currentTeam;
         currentTeam = randTeamAb(rng, from);
@@ -2629,97 +2680,100 @@ function simulateCareer(filled, finalOvr, draftTeamAb, choices) {
         tradeCount++;
       }
     }
-    if (decisionTrade) { trade = decisionTrade; decisionTrade = null; tradeCount++; }   // free-agency move
-    const growth = age < 26 ? 1 + (age - startAge) * 0.02 : 1;
-    const decline = age > 30 ? 1 - Math.pow(age - 30, 1.4) * 0.024 : 1;
-    const ageFactor = clamp(growth * decline - declineDebt + mods.perf, 0.62, 1.08);
+    if (decisionTrade) { trade = decisionTrade; decisionTrade = null; tradeCount++; }   // transfer-saga move
+    const growth = age < 25 ? 0.87 + (age - startAge) * 0.022 : 1;    // young keepers ripen slowly
+    const decline = age > 33 ? 1 - Math.pow(age - 33, 1.4) * 0.022 : 1;
+    const ageFactor = clamp(growth * decline - declineDebt + mods.perf, 0.6, 1.06);
     const seasonOvr = clamp(finalOvr * ageFactor + bell(rng, 2.2), 35, 99);
 
     const yearIdx = age - startAge;
-    const shoot = clamp(vals.threept * ageFactor + bell(rng, 3), 18, 130);
-    const fin = clamp(vals.finishing * ageFactor + bell(rng, 3), 18, 130);
-    const handle = clamp(vals.dribble * ageFactor + bell(rng, 3), 18, 130);
-    const play = clamp(vals.playmaking * ageFactor + bell(rng, 3), 18, 130);
-    const def = clamp(vals.defense * ageFactor + bell(rng, 2.8), 18, 130);
-    const reb = clamp(vals.rebounding * ageFactor + bell(rng, 3), 18, 130);
-    const spd = clamp(vals.speed * ageFactor + bell(rng, 2.5), 18, 130);
+    const ref = clamp(vals.reflexes * ageFactor + bell(rng, 3), 18, 130);
+    const div = clamp(vals.diving * ageFactor + bell(rng, 3), 18, 130);
+    const han = clamp(vals.handling * ageFactor + bell(rng, 3), 18, 130);
+    const dis = clamp(vals.distribution * ageFactor + bell(rng, 3), 18, 130);
+    const pos = clamp(vals.positioning * ageFactor + bell(rng, 3), 18, 130);
+    const agi = clamp(vals.agility * ageFactor + bell(rng, 2.5), 18, 130);
+    const cmd = clamp(vals.command * ageFactor + bell(rng, 3), 18, 130);
     const clutch = clamp(vals.clutch * ageFactor + bell(rng, 3.5) + mods.clutch, 18, 130);
-    const durab = vals.frame;
+    const durab = (vals.command + vals.frame) / 2;
 
-    const injuryRisk = clamp(0.13 - (durab - 50) * 0.0022 + Math.max(0, age - 32) * 0.016, 0.03, 0.36);
+    const injuryRisk = clamp(0.09 - (durab - 50) * 0.0015 + Math.max(0, age - 35) * 0.014, 0.03, 0.3);
     const hurt = rng() < injuryRisk;
-    // a real injury at 26+ forces the surgery-or-play-through call (once per career)
+    // a real injury at 24+ forces the surgery-or-play-through call (once per career)
     let volOnce = 1;
-    if (evOn && hurt && age >= 26 && !injuryAsked) {
+    if (evOn && hurt && age >= 24 && !injuryAsked) {
       injuryAsked = true;
       const pick = takeChoice();
       if (pick == null) { ask('injury', age); break; }
       applyChoice('injury', pick, age);
-      volOnce = pick === 'surgery' ? 0.25 : 0.8;
+      volOnce = pick === 'surgery' ? 0.3 : 0.8;
     }
-    const gp = Math.round(clamp(75 + (durab - 60) * 0.16 + bell(rng, 5), 28, 82) * (hurt ? randRange(rng, 0.42, 0.78) : 1) * volOnce);
-    if (hurt && age > 30) declineDebt += randRange(rng, 0.006, 0.018);
-    const mpg = clamp(19 + (seasonOvr - 64) * 0.6 + bell(rng, 2), 10, 38.5);
+    // appearances across all competitions — a #1 keeper plays nearly everything
+    const apps = Math.round(clamp(34 + (seasonOvr - 72) * 0.5 + bell(rng, 3), 6, 55) * (hurt ? randRange(rng, 0.4, 0.75) : 1) * volOnce);
+    if (hurt && age > 33) declineDebt += randRange(rng, 0.006, 0.016);
 
-    const scoreSkill = shoot * 0.30 + fin * 0.34 + handle * 0.16 + clutch * 0.10 + (mpg - 24) * 0.6;
-    const ppg = clamp((scoreSkill - 42) * 0.5 + bell(rng, 2.6), 1.5, 40);
-    const rpg = clamp((reb - 42) * 0.16 + (durab - 50) * 0.03 + (mpg - 24) * 0.12 + bell(rng, 1), 0.5, 15.5);
-    const apg = clamp((play - 42) * 0.13 + (handle - 50) * 0.04 + (mpg - 24) * 0.11 + bell(rng, 0.8), 0.3, 12.5);
-    const spg = clamp((def - 46) * 0.018 + (spd - 50) * 0.006 + bell(rng, 0.25), 0.1, 2.8);
-    const bpg = clamp((def - 52) * 0.013 + (durab - 55) * 0.012 + bell(rng, 0.18), 0, 3.6);
-    const tpPct = clamp(0.28 + (shoot - 60) * 0.0016 + bell(rng, 0.018), 0.20, 0.47);
-    const fgPct = clamp(0.41 + (fin - 60) * 0.0011 + (shoot - 60) * 0.0005 + bell(rng, 0.014), 0.37, 0.64);
-    const ts = clamp(fgPct + 0.075 + (shoot - 60) * 0.0006, 0.46, 0.70);
-    const war = clamp((ts - 0.53) * ppg * 0.5 + (ppg - 12) * 0.11 + (rpg - 4) * 0.16 + (apg - 3) * 0.2
-      + (spg - 0.9) * 0.55 + (bpg - 0.6) * 0.6 + (seasonOvr - 70) * 0.05 + bell(rng, 0.6), -1.5, 20.5) * (gp / 72);
-    const pts = Math.round(ppg * gp), rebT = Math.round(rpg * gp), astT = Math.round(apg * gp), stlT = Math.round(spg * gp), blkT = Math.round(bpg * gp);
+    const gkSkill = ref * 0.28 + div * 0.24 + pos * 0.18 + han * 0.14 + agi * 0.08 + cmd * 0.08;
+    const savePct = clamp(0.655 + (gkSkill - 60) * 0.0021 + bell(rng, 0.011), 0.58, 0.85);
+    const csRate = clamp(0.15 + (gkSkill - 60) * 0.0048 + currentTeamQuality * 0.45 + bell(rng, 0.02), 0.04, 0.62);
+    const cs = Math.round(apps * csRate);
+    const saves = Math.round(apps * clamp(2.5 - currentTeamQuality * 2.4 + bell(rng, 0.3), 1.4, 4.2));
+    const pkSaves = Math.round(clamp(((ref + clutch) / 2 - 68) * 0.028 + bell(rng, 0.5), 0, 4));
+    const rating = clamp(6.45 + (savePct - 0.70) * 8.5 + csRate * 1.1 + (seasonOvr - 78) * 0.01 + bell(rng, 0.11), 5.8, 9.8);
+    const war = round(rating, 2);   // season match rating — the soccer "WAR" column
 
-    const mvpDom = (war - 8) * 0.7 + (ppg - 25) * 0.12 + Math.max(0, finalOvr - 90) * 0.7 + currentTeamQuality * 2;
-    const mvp = age >= 21 && rng() < clamp(mvpDom * 0.032, 0, 0.45);
-    const allNba = !mvp && (war >= 8.5 || (ppg >= 24 && war >= 6.5)) && rng() < clamp((war - 7) * 0.12 + 0.2, 0, 0.72);
-    const allStar = mvp || allNba || war >= 6 || ppg >= 21.5;
-    const scoringTitle = ppg >= 25 && rng() < clamp((ppg - 25) * 0.05, 0, 0.5);
-    const dpoy = def >= 95 && (spg + bpg) >= 2.0 && rng() < clamp((def - 95) * 0.015 + 0.03, 0, 0.22);
-    const roy = yearIdx <= 1 && !rookieDone && war >= 2.3 && rng() < clamp((war - 2.3) * 0.12 + 0.12, 0, 0.55);
+    // silverware: the league title & Champions League ride on club quality + your season
+    const title = rng() < clamp(0.13 + currentTeamQuality * 0.9 + (rating - 7.2) * 0.09, 0.02, 0.62);
+    const ucl = rng() < clamp(0.025 + currentTeamQuality * 0.55 + (rating - 7.4) * 0.055 + (clutch - 70) * 0.0012, 0.005, 0.3);
+    const goldenBoot = cs >= 14 && rng() < clamp((cs - 14) * 0.07 + 0.1, 0, 0.8);   // league Golden Glove
+    const allStar = rating >= 7.3 || cs >= 20;                            // Team of the Season nod
+    const roy = yearIdx <= 1 && !rookieDone && age <= 22 && rating >= 7.0 && rng() < clamp((rating - 7.0) * 0.9 + 0.15, 0, 0.6);
     if (yearIdx === 0) rookieDone = true;
-    const playoff = rng() < clamp(0.35 + currentTeamQuality + (war - 4) * 0.01, 0.1, 0.8);
-    const ring = playoff && rng() < clamp(0.08 + currentTeamQuality * 0.45 + (clutch - 60) * 0.003 + Math.max(0, war - 7) * 0.012, 0.03, 0.42);
-    const finalsMvp = ring && (mvp || war >= 10) && rng() < 0.55;
-    const p30 = ppg >= 30;
 
-    // --- salary: NBA rookie-scale -> veteran market value arc, with yearly cap inflation.
-    const inflation = Math.pow(1.04, yearIdx);
-    const marketBase = clamp((seasonOvr - 70) * 1.7e6 + Math.max(0, war) * 1.9e6, 0, 52e6);
-    let salary = yearIdx <= 3
-      ? (4.2e6 + Math.max(0, finalOvr - 70) * 0.16e6) * inflation
-      : Math.max(8e6 * inflation, marketBase * inflation);
-    salary += ((mvp ? 5e6 : 0) + (allNba ? 2e6 : 0) + (allStar ? 1.2e6 : 0) + (ring ? 0.6e6 : 0)
-      + (scoringTitle ? 0.8e6 : 0) + (dpoy ? 0.8e6 : 0)) * inflation;
+    // World Cup summers (every 4th year starting '26): make the squad, chase the trophy
+    const wcYear = (yearIdx % 4) === 0;
+    const wc = wcYear && seasonOvr >= 74 && !hurt;
+    const wcCS = wc ? Math.round(clamp(csRate * randRange(rng, 4, 7), 0, 7)) : 0;
+    const wcWin = wc && rng() < clamp(0.07 + natQuality + (clutch - 70) * 0.0018 + (rating - 7.3) * 0.03, 0.015, 0.3);
+    const wcBoot = wc && wcCS >= 4 && rng() < 0.5;                        // World Cup Golden Glove
+
+    // Yashin Trophy: best keeper on the planet — clean sheets + trophies + moments
+    const mvpDom = (cs - 15) * 0.075 + (rating - 7.3) * 1.9 + (ucl ? 0.8 : 0) + (title ? 0.25 : 0)
+      + (wcWin ? 1.2 : 0) + Math.min(Math.max(0, finalOvr - 85) * 0.38, 3.2);
+    const mvp = rng() < clamp(mvpDom * 0.07, 0, 0.42);
+    const p25 = cs >= 25;
+
+    // --- wages: academy deal -> superstar contract arc (keepers earn a bit less than strikers).
+    const inflation = Math.pow(1.045, yearIdx);
+    const marketBase = clamp((seasonOvr - 70) * 0.85e6 + cs * 0.28e6 + (rating - 7) * 3e6, 0, 30e6);
+    let salary = yearIdx <= 2
+      ? (0.7e6 + Math.max(0, finalOvr - 70) * 0.07e6) * inflation
+      : Math.max(2.5e6 * inflation, marketBase * inflation);
+    salary += ((mvp ? 3e6 : 0) + (ucl ? 1.2e6 : 0) + (title ? 0.7e6 : 0) + (goldenBoot ? 0.6e6 : 0) + (allStar ? 0.5e6 : 0)) * inflation;
     salary = Math.round(salary * mods.earnMult);
 
-    const season = { age, role, gp, mpg: round(mpg, 1), ppg: round(ppg, 1), rpg: round(rpg, 1), apg: round(apg, 1),
-      spg: round(spg, 1), bpg: round(bpg, 1), pts, reb: rebT, ast: astT, stl: stlT, blk: blkT,
-      fgPct: round(fgPct, 3), tpPct: round(tpPct, 3), ts: round(ts, 3), war: round(war, 1),
-      mvp, allStar, allNba, scoringTitle, dpoy, roy, playoff, ring, finalsMvp, p30,
+    const season = { age, role, apps, cs, saves, pkSaves, savePct: round(savePct, 3), rating: round(rating, 2), war,
+      mvp, allStar, roy, title, ucl, ring: ucl, goldenBoot, wc, wcCS, wcWin, wcBoot, p25,
       salary, hurt, exit: null, struggling: false, team: currentTeam, trade };
     seasons.push(season);
-    totals.gp+=gp; totals.min+=Math.round(mpg*gp); totals.pts+=pts; totals.reb+=rebT; totals.ast+=astT; totals.stl+=stlT; totals.blk+=blkT; totals.war+=war;
-    totals.mvp+=mvp?1:0; totals.allStar+=allStar?1:0; totals.allNba+=allNba?1:0; totals.scoringTitles+=scoringTitle?1:0;
-    totals.dpoy+=dpoy?1:0; totals.roy+=roy?1:0; totals.rings+=ring?1:0; totals.finalsMvp+=finalsMvp?1:0; totals.p30+=p30?1:0; totals.earnings+=salary;
+    totals.apps += apps; totals.cs += cs + wcCS; totals.saves += saves; totals.pkSaves += pkSaves;
+    totals.ratingW += rating * apps; totals.savePctW += savePct * apps; totals.war += war;
+    totals.mvp += mvp ? 1 : 0; totals.allStar += allStar ? 1 : 0; totals.goldenGloves += goldenBoot ? 1 : 0;
+    totals.titles += title ? 1 : 0; totals.rings += ucl ? 1 : 0; totals.wcTitles += wcWin ? 1 : 0; totals.wcApps += wc ? 1 : 0;
+    totals.roy += roy ? 1 : 0; totals.p25 += p25 ? 1 : 0; totals.earnings += salary;
 
-    peakWar = Math.max(peakWar, war);
-    const everStar = peakWar >= 11;
-    const badYear = war < 1.5 || ppg < 7;
+    peakWar = Math.max(peakWar, rating);
+    const everStar = peakWar >= 7.45;
+    const badYear = rating < 6.55 || apps < 16;
     badStreak = badYear ? badStreak + 1 : 0;
-    const disaster = war < 0 || (ppg < 5 && mpg < 16);
+    const disaster = rating < 6.3 || apps < 9;
     if (badStreak >= 2 && !disaster) season.struggling = true;
-    if (!everStar && age >= 24 && (badStreak >= 2 || disaster)
+    if (!everStar && age >= 23 && (badStreak >= 2 || disaster)
         && rng() < clamp(0.4 + (badStreak - 1) * 0.3 + (disaster ? 0.3 : 0), 0, 0.95)) {
-      season.exit = (war < 0.5 || ppg < 5) ? 'waived' : 'pushed-out'; break;
+      season.exit = (rating < 6.4 || apps < 10) ? 'waived' : 'pushed-out'; break;
     }
-    // Non-stars phase out of the league in their early-mid 30s (keeps compiler totals rare & earned).
+    // Non-stars drift to the bench in their mid 30s (keeps compiler totals rare & earned).
     // Both graceful-fade exits route through the twilight decision (asked once).
-    if (!everStar && age >= 31 && rng() < clamp((age - 30) * 0.12 + (seasonOvr < 76 ? 0.15 : 0) - Math.max(0, finalOvr - 86) * 0.03, 0, 0.62)) {
+    if (!everStar && age >= 33 && rng() < clamp((age - 32) * 0.12 + (seasonOvr < 76 ? 0.15 : 0) - Math.max(0, finalOvr - 86) * 0.03, 0, 0.62)) {
       if (evOn && !twilightDone) {
         twilightDone = true;
         const pick = takeChoice();
@@ -2730,7 +2784,7 @@ function simulateCareer(filled, finalOvr, draftTeamAb, choices) {
       }
       season.exit = 'faded'; break;
     }
-    if (age >= 35 && (seasonOvr < 60 || badStreak >= 2) && rng() < 0.5) {
+    if (age >= 38 && (seasonOvr < 60 || badStreak >= 2) && rng() < 0.5) {
       if (evOn && !twilightDone) {
         twilightDone = true;
         const pick = takeChoice();
@@ -2746,38 +2800,37 @@ function simulateCareer(filled, finalOvr, draftTeamAb, choices) {
   // sim halted at an unanswered decision: hand back what's played so far — the
   // playback shows it, asks the player, and re-runs with the pick appended
   if (pendingDecision) {
-    return { version: 1, seed, role, draftTeam: draftTeamAb || (seasons[0] && seasons[0].team), seasons, decisions, pendingDecision };
+    return { version: 1, seed, role, nation, draftTeam: draftTeamAb || (seasons[0] && seasons[0].team), seasons, decisions, pendingDecision };
   }
 
-  const cg = Math.max(1, totals.gp);
-  const ppgC = totals.pts / cg, rpgC = totals.reb / cg, apgC = totals.ast / cg;
-  const peak = seasons.reduce((b, s) => s.war > b.war ? s : b, seasons[0]);
-  let fgw = 0, tpw = 0, tsw = 0, gpw = 0;
-  for (const s of seasons) { fgw += s.fgPct * s.gp; tpw += s.tpPct * s.gp; tsw += s.ts * s.gp; gpw += s.gp; }
-  const fgPctC = fgw / Math.max(1, gpw), tpPctC = tpw / Math.max(1, gpw), tsC = tsw / Math.max(1, gpw);
+  const ca = Math.max(1, totals.apps);
+  const avgRating = totals.ratingW / ca;
+  const avgSavePct = totals.savePctW / ca;
+  const peak = seasons.reduce((b, s) => s.rating > b.rating ? s : b, seasons[0]);
 
-  const warPts = totals.war * 0.5;
-  const ptsPts = clamp((totals.pts - 12000) * 0.0012, 0, 22);
-  const hardware = totals.mvp * 16 + totals.rings * 3 + totals.finalsMvp * 3 + totals.allNba * 2
-    + totals.allStar * 1.3 + totals.scoringTitles * 1.6 + totals.dpoy * 2.2;
-  const hofScore = Math.max(0, round(warPts + ptsPts + hardware, 1));
-  const slamDunk = totals.war >= 155 || totals.mvp >= 3 || totals.rings >= 4
+  const csPts = clamp((totals.cs - 80) * 0.14, 0, 36);
+  const savePts = clamp((totals.saves - 1500) * 0.003, 0, 8);
+  const hardware = totals.mvp * 15 + totals.rings * 4.5 + totals.titles * 1.6
+    + totals.goldenGloves * 2.5 + totals.wcTitles * 9 + totals.allStar * 0.7 + totals.roy * 1.5;
+  const ratePts = clamp((avgRating - 6.6) * 20, 0, 20);
+  const hofScore = Math.max(0, round(csPts + savePts + hardware + ratePts, 1));
+  const slamDunk = totals.cs >= 400 || totals.mvp >= 3 || totals.wcTitles >= 2
     || (totals.mvp >= 1 && totals.rings >= 2);
-  const hallOfFame = slamDunk || rng() < clamp((hofScore - 55) / 32, 0, 1);
-  // Hall of Fame status pays out beyond the floor - endorsements, legacy deals, appearances.
+  const hallOfFame = slamDunk || rng() < clamp((hofScore - 44) / 32, 0, 1);
+  // Legend status pays out beyond the pitch - endorsements, legacy deals, appearances.
   const hofBonus = hallOfFame ? Math.round(totals.earnings * 0.18) : 0;
   const careerEarnings = totals.earnings + hofBonus;
   const highlight = bestCareerHighlight(totals, peak);
   const teams = [...new Set(seasons.map(s => s.team).filter(Boolean))];
 
-  const career = { version: 1, seed, role, seasons, peakSeason: peak,
+  const career = { version: 1, seed, role, nation, seasons, peakSeason: peak,
     draftTeam: draftTeamAb || teams[0],
     finalTeam: seasons[seasons.length - 1] && seasons[seasons.length - 1].team,
     teams,
-    totals: { gp: totals.gp, pts: totals.pts, reb: totals.reb, ast: totals.ast, stl: totals.stl, blk: totals.blk,
-      ppg: round(ppgC, 1), rpg: round(rpgC, 1), apg: round(apgC, 1), fgPct: round(fgPctC, 3), tpPct: round(tpPctC, 3), ts: round(tsC, 3),
-      war: round(totals.war, 1), mvp: totals.mvp, allStar: totals.allStar, allNba: totals.allNba,
-      scoringTitles: totals.scoringTitles, dpoy: totals.dpoy, roy: totals.roy, rings: totals.rings, finalsMvp: totals.finalsMvp,
+    totals: { apps: totals.apps, cs: totals.cs, saves: totals.saves, pkSaves: totals.pkSaves,
+      savePct: round(avgSavePct, 3), war: round(avgRating, 2),
+      mvp: totals.mvp, allStar: totals.allStar, goldenGloves: totals.goldenGloves,
+      titles: totals.titles, rings: totals.rings, wcTitles: totals.wcTitles, wcApps: totals.wcApps, roy: totals.roy,
       hofScore, hallOfFame, earnings: careerEarnings, earningsOnField: totals.earnings, hofBonus },
     highlight };
   // decision fields are added ONLY when the feature ran, so classic (toggle-off)
@@ -2787,11 +2840,12 @@ function simulateCareer(filled, finalOvr, draftTeamAb, choices) {
 }
 
 function bestCareerHighlight(totals, peak) {
-  if (totals.mvp) return `${totals.mvp} MVP award${totals.mvp === 1 ? '' : 's'}`;
-  if (totals.rings) return `${totals.rings} championship${totals.rings === 1 ? '' : 's'}`;
-  if (totals.pts >= 20000) return `${totals.pts.toLocaleString()} career points`;
-  if (totals.scoringTitles) return `${totals.scoringTitles} scoring title${totals.scoringTitles === 1 ? '' : 's'}`;
-  return `peak: age ${peak.age}, ${peak.ppg} PPG, ${peak.war.toFixed(1)} WS`;
+  if (totals.mvp) return `${totals.mvp} Yashin Troph${totals.mvp === 1 ? 'y' : 'ies'}`;
+  if (totals.wcTitles) return `${totals.wcTitles} World Cup${totals.wcTitles === 1 ? '' : 's'}`;
+  if (totals.rings) return `${totals.rings} Champions League title${totals.rings === 1 ? '' : 's'}`;
+  if (totals.cs >= 200) return `${totals.cs.toLocaleString()} career clean sheets`;
+  if (totals.goldenGloves) return `${totals.goldenGloves} Golden Glove${totals.goldenGloves === 1 ? '' : 's'}`;
+  return `peak: age ${peak.age}, ${peak.cs} clean sheets, ${peak.rating.toFixed(2)} rating`;
 }
 
 function ordinal(n) {
@@ -2804,26 +2858,20 @@ function ordinal(n) {
   return n + 'th';
 }
 
-function getDraftSlot(ovr, rng) {
-  let round, pick;
-  if (ovr >= 95) { round = 1; pick = 1 + Math.floor(rng() * 3); }
-  else if (ovr >= 90) { round = 1; pick = 3 + Math.floor(rng() * 9); }
-  else if (ovr >= 85) { round = 1; pick = 10 + Math.floor(rng() * 14); }
-  else if (ovr >= 80) { round = 1; pick = 20 + Math.floor(rng() * 11); }
-  else if (ovr >= 75) { round = 2; pick = 1 + Math.floor(rng() * 12); }
-  else if (ovr >= 70) { round = 2; pick = 10 + Math.floor(rng() * 12); }
-  else { round = 2; pick = 20 + Math.floor(rng() * 11); }
-  return { round, pick };
+function getTransferFee(ovr, rng) {
+  // headline transfer fee in $M — scales hard with the build (200M+ = world-record territory)
+  const base = ovr >= 95 ? 185 + rng() * 65 : ovr >= 90 ? 120 + rng() * 55 : ovr >= 85 ? 70 + rng() * 40
+    : ovr >= 80 ? 40 + rng() * 25 : ovr >= 75 ? 18 + rng() * 15 : ovr >= 70 ? 8 + rng() * 8 : 2 + rng() * 5;
+  return Math.round(base);
 }
 
-function runDraftAnimation({ round, pick, teamAbbr, teamName, tColor, hitter, ovr, role }, onDone) {
+function runDraftAnimation({ feeM, teamAbbr, teamName, tColor, hitter, ovr, role }, onDone) {
   const overlay = $('draftOverlay');
-  if (round === 1 && pick === 1 && window.Ach) Ach.unlock('first_overall');
-  const pickOrd = ordinal(pick);
+  if (feeM >= 200 && window.Ach) Ach.unlock('first_overall');
   const bColor = brightColor(tColor);
-  $('draftRoundTag').textContent = `Round ${round} - Pick ${pick}`;
-  $('draftPickOrd').textContent = pickOrd;
-  $('draftRoundNum').textContent = round;
+  $('draftRoundTag').textContent = feeM >= 200 ? `World-record $${feeM}M fee` : `$${feeM}M Transfer`;
+  $('draftPickOrd').textContent = `$${feeM}M`;
+  $('draftRoundNum').textContent = '';
   $('draftSelecting').textContent = '';
   $('draftSelecting').style.color = bColor;
   const reveal = $('draftReveal');
@@ -2836,7 +2884,7 @@ function runDraftAnimation({ round, pick, teamAbbr, teamName, tColor, hitter, ov
     logoImg.alt = `${teamName} logo`;
     logoImg.onerror = () => { logo.style.display = 'none'; };
   }
-  $('drTeam').textContent = 'The ' + teamName.toUpperCase();
+  $('drTeam').textContent = teamName.toUpperCase();
   $('drName').textContent = hitter;
   $('drName').style.textShadow = `0 0 36px ${bColor}80`;
   $('drOvr').textContent = `${ovr} OVR`;
@@ -2864,7 +2912,7 @@ function runDraftAnimation({ round, pick, teamAbbr, teamName, tColor, hitter, ov
     .to(roundTag,  { opacity: 1, duration: .4 }, 0.7)
     .to(divider,   { opacity: 1, duration: .5 }, 0.9)
     .to(call,      { opacity: 1, duration: .45 }, 1.2)
-    .add(() => { selecting.textContent = `The ${teamName} select...`; }, 2.0)
+    .add(() => { selecting.textContent = `${teamName} announce the signing of...`; }, 2.0)
     .to(selecting, { opacity: 1, duration: .35 }, 2.0)
     .fromTo(reveal, { y: 18, opacity: 0 }, { y: 0, opacity: 1, duration: .55, ease: 'back.out(1.6)' }, 2.7)
     .add(() => {
@@ -2908,29 +2956,31 @@ function addNews(news, h) {
 function flashTk(id) { const el = $(id); el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); }
 
 // Headlines generated from a season's events.
-function seasonHeadlines(s, idx, total, P, fallbackTeam, finished = true) {
-  const teamName = TEAM_NAMES[s.team] || fallbackTeam;
-  const team = 'the ' + teamName;
+function seasonHeadlines(s, idx, total, P, fallbackTeam, finished = true, nation = '') {
+  const team = TEAM_NAMES[s.team] || fallbackTeam;
   const h = [];
   if (s.trade) {
     const from = TEAM_NAMES[s.trade.from] || s.trade.from;
     const to = TEAM_NAMES[s.trade.to] || s.trade.to;
-    h.push({ text: `${P} is <b>traded</b> from the ${from} to the ${to}.`, big: true });
+    h.push({ text: `${P} completes a <b>blockbuster transfer</b> from ${from} to ${to}.`, big: true });
   }
-  if (idx === 0) h.push({ text: `${P} makes his <b>NBA debut</b> with ${team}.`, big: true });
-  if (s.roy) h.push({ text: `${P} is named <b>Rookie of the Year</b>.`, big: true });
-  if (s.mvp) h.push({ text: `🏆 ${P} is named league <b>MVP</b>!`, big: true });
-  if (s.finalsMvp) h.push({ text: `🏆 ${P} wins <b>Finals MVP</b> as ${team} take the title!`, big: true });
-  else if (s.ring) h.push({ text: `💍 ${P} and ${team} win the <b>NBA Championship</b>!`, big: true });
-  if (s.p30) h.push({ text: `${P} averages <b>${s.ppg} points</b> a game.`, big: true });
-  if (s.scoringTitle) h.push({ text: `${P} wins the <b>scoring title</b> (${s.ppg} PPG).` });
-  if (s.dpoy) h.push({ text: `${P} is <b>Defensive Player of the Year</b>.` });
-  if (s.allNba && !s.mvp) h.push({ text: `${P} earns <b>All-NBA</b> honors.` });
-  if (s.hurt && !s.mvp) h.push({ text: `${P} battles injury, limited to ${s.gp} games.` });
-  if (s.struggling && !s.exit) h.push({ text: `${P} slips to ${s.ppg} PPG and is fighting for minutes.` });
+  if (idx === 0) h.push({ text: `${P} makes his <b>professional debut</b> between the posts for ${team}.`, big: true });
+  if (s.roy) h.push({ text: `${P} wins the <b>Golden Boy</b> award.`, big: true });
+  if (s.mvp) h.push({ text: `🧤 ${P} wins the <b>Yashin Trophy</b> as the world's best keeper!`, big: true });
+  if (s.ucl) h.push({ text: `⭐ ${P} and ${team} are <b>Champions of Europe</b>!`, big: true });
+  if (s.title) h.push({ text: `${P} and ${team} win the <b>league title</b>.`, big: !s.ucl });
+  if (s.wcWin) h.push({ text: `🌍 ${P} lifts the <b>World Cup</b> with ${nation}!`, big: true });
+  else if (s.wc && s.wcCS >= 3) h.push({ text: `${P} keeps <b>${s.wcCS} clean sheets</b> at the World Cup for ${nation}.` });
+  if (s.p25) h.push({ text: `${P} posts <b>${s.cs} clean sheets</b> in a single season.`, big: true });
+  if (s.goldenBoot) h.push({ text: `🧤 ${P} wins the league <b>Golden Glove</b> (${s.cs} clean sheets).` });
+  if (s.wcBoot) h.push({ text: `🧤 ${P} takes the <b>World Cup Golden Glove</b>.` });
+  if (s.pkSaves >= 3) h.push({ text: `${P} saves <b>${s.pkSaves} penalties</b> this season.` });
+  if (s.allStar && !s.mvp && !s.goldenBoot) h.push({ text: `${P} makes the <b>Team of the Season</b>.` });
+  if (s.hurt && !s.mvp) h.push({ text: `${P} battles injury, limited to ${s.apps} appearances.` });
+  if (s.struggling && !s.exit) h.push({ text: `${P} is shipping soft goals and fighting for the #1 shirt.` });
   if (idx === total - 1 && finished) {
-    if (s.exit === 'waived') h.push({ text: `${P} is <b>waived</b> and can't catch on elsewhere - career over.`, big: true });
-    else if (s.exit === 'pushed-out') h.push({ text: `${P} loses his rotation spot and <b>walks away</b> after ${total} seasons.`, big: true });
+    if (s.exit === 'waived') h.push({ text: `${P}'s contract is <b>terminated</b> and no club comes calling - career over.`, big: true });
+    else if (s.exit === 'pushed-out') h.push({ text: `${P} loses the <b>#1 shirt</b> and walks away after ${total} seasons.`, big: true });
     else h.push({ text: `${P} announces his <b>retirement</b> after ${total} seasons.`, big: true });
   }
   return h;
@@ -2945,16 +2995,16 @@ function runCareerPlaythrough() {
 
   const vals = {};
   for (const s of SLOTS) vals[s.key] = state.filled[s.key].value;
-  const role = ballerRole(vals);
+  const role = keeperRole(vals);
   const draftSeed = SLOTS.map(s => `${s.key}:${state.filled[s.key].value}:${state.filled[s.key].name}`).join('|');
-  const draftRng = seededRandom(draftSeed + '|hoop-draft-v1');
-  const { round, pick } = getDraftSlot(state.finalOvr, draftRng);
+  const draftRng = seededRandom(draftSeed + '|keeper-signing-v1');
+  const feeM = Math.round(getTransferFee(state.finalOvr, draftRng) * 0.55);   // keeper fees run lower
 
   state.draftTeamAb = randTeamAb(draftRng);
-  const hitter = $('nameInput').value.trim() || 'Your Hooper';
+  const hitter = $('nameInput').value.trim() || 'Your Keeper';
 
   runDraftAnimation({
-    round, pick,
+    feeM,
     teamAbbr: state.draftTeamAb,
     teamName: TEAM_NAMES[state.draftTeamAb] || 'club',
     tColor: teamColor(state.draftTeamAb),
@@ -2996,7 +3046,7 @@ function _doCareerSim() {
   let seasons = career.seasons;
   const ab = state.draftTeamAb;
   state.simTeam = teamInfo(ab);
-  state.simName = $('nameInput').value.trim() || 'Your baller';
+  state.simName = $('nameInput').value.trim() || 'Your keeper';
   const P = state.simName, T = state.simTeam.name, accent = state.simTeam.color;
 
   $('preSim').style.display = 'none';
@@ -3010,7 +3060,7 @@ function _doCareerSim() {
   $('tkK').textContent = '0'; $('tkW').textContent = '0'; $('tkWar').textContent = '0.0'; $('tkMoney').textContent = '$0';
 
   let runPts = 0, runAst = 0, runWar = 0, runMoney = 0;
-  const ptsMiles = [10000, 20000, 30000], astMiles = [5000, 10000];
+  const ptsMiles = [50, 100, 150, 200, 250, 300, 400], astMiles = [500, 1000, 1500, 2000, 3000];
   let delay = clamp(3400 / seasons.length, 130, 320);
   let careerSkip = false;
   const skipBtn = $('skipCareerBtn');
@@ -3026,7 +3076,7 @@ function _doCareerSim() {
       delay = clamp(3400 / seasons.length, 130, 320);
       const d = CAREER_EVENTS[pd.id], opt = d.options.find(o => o.key === pick);
       addNews(news, { text: `${d.icon} <b>${d.title}:</b> ${opt ? opt.label : pick}`, big: true });
-      try { gtag('event', 'career_decision', { game: 'baller', decision: pd.id, pick }); } catch (e) {}
+      try { gtag('event', 'career_decision', { game: 'keeper', decision: pd.id, pick }); } catch (e) {}
       setTimeout(step, careerSkip ? 0 : 450);
     };
     if (careerSkip) return resume(pd.def);        // ⏩ skip: auto-take the default path
@@ -3040,16 +3090,16 @@ function _doCareerSim() {
     const yr = String(2026 + i).slice(-2);
     const s = seasons[i]; i++;
     const rowTeam = teamInfo(s.team || state.simTeam.abbr);
-    const badges = [s.mvp ? 'MVP' : '', s.allStar ? '★' : '', s.allNba ? 'All-NBA' : '', s.scoringTitle ? 'SCORE Title' : '',
-      s.dpoy ? 'DPOY' : '', s.roy ? 'ROY' : '', s.finalsMvp ? 'FMVP' : '', s.ring ? '💍' : ''].filter(Boolean).join(' · ');
+    const badges = [s.mvp ? '🧤 YASHIN' : '', s.goldenBoot ? '🧤 GOLDEN GLOVE' : '', s.roy ? 'GOLDEN BOY' : '',
+      s.allStar && !s.mvp ? 'TOTS' : '', s.title ? '🛡️ TITLE' : '', s.ucl ? '⭐ UCL' : '', s.wcWin ? '🌍 WC' : ''].filter(Boolean).join(' · ');
     const row = document.createElement('div');
-    row.className = 'season-row' + (s.mvp || s.ring || s.p30 ? ' big' : '');
+    row.className = 'season-row' + (s.mvp || s.ucl || s.wcWin || s.p25 ? ' big' : '');
     row.style.borderLeft = `3px solid ${rowTeam.color}`;
     row.innerHTML = `<div class="s-main">
         <span class="age">'${yr}</span>
         ${teamLogoHTML(rowTeam.abbr, 'sm')}
-        <span class="s-line">${s.ppg} PPG · ${s.rpg} RPG · ${s.apg} APG</span>
-        <span class="s-war">${s.war.toFixed(1)}</span>
+        <span class="s-line">${s.cs} CS · ${(s.savePct * 100).toFixed(0)}% SV · ${s.apps} apps</span>
+        <span class="s-war">${s.rating.toFixed(1)}</span>
       </div>${badges ? `<div class="s-badges">${badges}</div>` : ''}`;
     log.appendChild(row);
     log.scrollTop = log.scrollHeight;
@@ -3058,18 +3108,18 @@ function _doCareerSim() {
 
     // live ticker + milestone headlines
     const beforePts = runPts, beforeAst = runAst;
-    runPts += s.pts; runAst += s.ast; runWar += s.war; runMoney += s.salary;
-    $('tkK').textContent = runPts.toLocaleString(); $('tkW').textContent = runAst.toLocaleString(); $('tkWar').textContent = runWar.toFixed(1);
+    runPts += s.cs + (s.wcCS || 0); runAst += s.saves; runWar += (s.title ? 1 : 0) + (s.ucl ? 1 : 0) + (s.wcWin ? 1 : 0); runMoney += s.salary;
+    $('tkK').textContent = runPts.toLocaleString(); $('tkW').textContent = runAst.toLocaleString(); $('tkWar').textContent = runWar;
     $('tkMoney').textContent = fmtMoney(runMoney);
-    const heads = seasonHeadlines(s, i - 1, seasons.length, P, T, !career.pendingDecision);
+    const heads = seasonHeadlines(s, i - 1, seasons.length, P, T, !career.pendingDecision, career.nation);
     let milestone = false;
-    for (const m of ptsMiles) if (beforePts < m && runPts >= m) { heads.push({ text: `${P} scores his <b>${m.toLocaleString()}th career point</b>.`, big: true }); flashTk('tkK'); milestone = true; }
-    for (const m of astMiles) if (beforeAst < m && runAst >= m) { heads.push({ text: `${P} dishes career assist <b>#${m.toLocaleString()}</b>.`, big: true }); flashTk('tkW'); milestone = true; }
+    for (const m of ptsMiles) if (beforePts < m && runPts >= m) { heads.push({ text: `${P} records career clean sheet <b>#${m.toLocaleString()}</b>.`, big: true }); flashTk('tkK'); milestone = true; }
+    for (const m of astMiles) if (beforeAst < m && runAst >= m) { heads.push({ text: `${P} makes career save <b>#${m.toLocaleString()}</b>.`, big: true }); flashTk('tkW'); milestone = true; }
     heads.forEach(h => addNews(news, h));
 
     if (!careerSkip) {   // skipping: no per-season chatter, the verdict fanfare still plays
       if (s.trade) Sound.swap();
-      else if (s.mvp || s.p30 || s.ring || milestone) Sound.gold();
+      else if (s.mvp || s.p25 || s.ucl || s.wcWin || milestone) Sound.gold();
       else Sound.tick(0.35);
     }
     setTimeout(step, careerSkip ? 0 : delay);
@@ -3082,14 +3132,14 @@ function _doCareerSim() {
 // act as the trigger for the special "Hall of Compilers" tier.
 function milestoneBonus(t) {
   let pts = 0; const clubs = [];
-  if (t.pts >= 30000)      { pts += 8; clubs.push('30K PTS'); }
-  else if (t.pts >= 25000) { pts += 6; clubs.push('25K PTS'); }
-  else if (t.pts >= 20000) { pts += 4; clubs.push('20K PTS'); }
-  else if (t.pts >= 15000) { pts += 2; }
-  if (t.ast >= 9000)       { pts += 4; clubs.push('9K AST'); }
-  else if (t.ast >= 6000)  { pts += 2; clubs.push('6K AST'); }
-  if (t.reb >= 12000)      { pts += 4; clubs.push('12K REB'); }
-  else if (t.reb >= 8000)  { pts += 2; clubs.push('8K REB'); }
+  if (t.cs >= 300)      { pts += 8; clubs.push('300 CLEAN SHEETS'); }
+  else if (t.cs >= 250) { pts += 6; clubs.push('250 CLEAN SHEETS'); }
+  else if (t.cs >= 200) { pts += 4; clubs.push('200 CLEAN SHEETS'); }
+  else if (t.cs >= 150) { pts += 2; }
+  if (t.saves >= 3000)      { pts += 4; clubs.push('3K SAVES'); }
+  else if (t.saves >= 2000) { pts += 2; clubs.push('2K SAVES'); }
+  if (t.apps >= 900)      { pts += 4; clubs.push('900 APPS'); }
+  else if (t.apps >= 750) { pts += 2; clubs.push('750 APPS'); }
   return { pts: Math.min(pts, 9), clubs };
 }
 
@@ -3099,10 +3149,10 @@ function careerTier(t, ovr) {
   if (t.hallOfFame && ovr >= 99) return { txt: '🐐 G.O.A.T.', cls: 'goat' };
   if (t.hallOfFame) return { txt: '🏆 Hall of Fame', cls: 'yes' };
   const mb = milestoneBonus(t);
-  // True compiler: an absurd counting line forces its way onto the ballot.
-  if (mb.clubs.length >= 2 && (t.pts >= 25000 || t.ast >= 9000 || t.reb >= 12000))
-    return { txt: '🏀 Hall of Bucket-Getters', cls: 'no',
-      note: `The advanced stats shrug, but the box score doesn't lie: <strong>${mb.clubs.join(' · ')}</strong>. Compilers make the Hall too.` };
+  // True compiler: an absurd counting line forces its way into the conversation.
+  if (mb.clubs.length >= 2 && (t.cs >= 250 || t.saves >= 3000 || t.apps >= 900))
+    return { txt: '🧱 Hall of Clean Sheets', cls: 'no',
+      note: `The ratings shrug, but the scoresheet doesn't lie: <strong>${mb.clubs.join(' · ')}</strong>. Compilers make the Hall too.` };
   const eff = ovr + mb.pts;
   const note = mb.pts
     ? `Counting stats carried this one: <strong>Compiler bonus +${mb.pts}</strong>${mb.clubs.length ? ` (${mb.clubs.join(', ')})` : ''} → played like a <strong>${eff}</strong> when the milestones are counted.`
@@ -3115,7 +3165,7 @@ function careerTier(t, ovr) {
 function finishPlaythrough(career) {
   $('skipCareerBtn').style.display = 'none';
   const t = career.totals;
-  try { gtag('event', 'career_sim', { game: 'baller', ovr: state.finalOvr, hof: t.hallOfFame ? 1 : 0 }); } catch (e) {}
+  try { gtag('event', 'career_sim', { game: 'keeper', ovr: state.finalOvr, hof: t.hallOfFame ? 1 : 0 }); } catch (e) {}
   const verdict = careerTier(t, state.finalOvr);
 
   // HOF vote reveal
@@ -3174,11 +3224,11 @@ function hofVoteLine(t, ovr) {
 // Trophy shelf pieces, shared by the DOM card and the canvas share image.
 function trophyParts(t) {
   const trophies = [];
-  for (let i = 0; i < t.mvp; i++) trophies.push('🏆');
-  for (let i = 0; i < t.rings; i++) trophies.push('💍');
-  if (t.allStar) trophies.push(`⭐ ${t.allStar}`);
-  if (t.allNba) trophies.push(`🏀 ${t.allNba}`);
-  if (t.dpoy) trophies.push(`🛡️ ${t.dpoy}`);
+  for (let i = 0; i < t.mvp; i++) trophies.push('🧤');           // Yashin Trophy
+  for (let i = 0; i < (t.wcTitles || 0); i++) trophies.push('🌍');
+  for (let i = 0; i < t.rings; i++) trophies.push('🏆');          // Champions League
+  if (t.titles) trophies.push(`🛡️ ${t.titles}`);
+  if (t.goldenGloves) trophies.push(`🥇 ${t.goldenGloves}`);
   return trophies;
 }
 
@@ -3190,7 +3240,8 @@ function careerCardHTML(d) {
   const trophies = trophyParts(t);
   const trophyHtml = trophies.length ? trophies.join('&nbsp; ') : '<span class="none">No major hardware</span>';
   const hasSeasons = Array.isArray(career.seasons) && career.seasons.length > 0;
-  const roleLine = [career.role,
+  const natBit = career.nation ? `${nationFlag({ nation: career.nation })} ${career.nation}` : '';
+  const roleLine = [career.role, natBit,
     hasSeasons ? `age ${career.seasons[0].age}–${career.seasons[career.seasons.length - 1].age}` : '',
     hasSeasons ? `${career.seasons.length} seasons` : ''].filter(Boolean).join(' · ');
 
@@ -3208,12 +3259,12 @@ function careerCardHTML(d) {
     </div>
     <div class="cc-verdict" style="color:${verdictColor(d.verdict.cls)}">${d.verdict.txt}${d.voteLine ? `<div class="cc-vote">${d.voteLine}</div>` : ''}</div>
     <div class="cc-line">
-      <div><b>${t.ppg}</b><span>PPG</span></div>
-      <div><b>${t.rpg}</b><span>RPG</span></div>
-      <div><b>${t.apg}</b><span>APG</span></div>
-      <div><b>${t.war.toFixed(1)}</b><span>WS</span></div>
-      <div><b>${t.pts.toLocaleString()}</b><span>PTS</span></div>
-      <div><b>${(t.tpPct * 100).toFixed(1)}</b><span>3P%</span></div>
+      <div><b>${t.cs.toLocaleString()}</b><span>CLEAN SHEETS</span></div>
+      <div><b>${t.saves.toLocaleString()}</b><span>SAVES</span></div>
+      <div><b>${t.apps.toLocaleString()}</b><span>APPS</span></div>
+      <div><b>${Number(t.war).toFixed(2)}</b><span>RATING</span></div>
+      <div><b>${(t.savePct * 100).toFixed(1)}%</b><span>SAVE PCT</span></div>
+      <div><b>${(t.titles || 0) + (t.rings || 0) + (t.wcTitles || 0)}</b><span>TROPHIES</span></div>
     </div>
     <div class="cc-trophies">${trophyHtml}</div>
     <div class="cc-money" style="text-align:center; padding:6px 0 2px; font-family:'Oswald',sans-serif; font-size:20px; font-weight:700; color:var(--gold); letter-spacing:.5px;">💰 ${fmtMoney(t.earnings)} <span style="font-size:11px; color:var(--muted); font-weight:600; letter-spacing:1px;">CAREER EARNINGS</span></div>`;
@@ -3244,20 +3295,20 @@ async function shareCareerCard() {
   const btn = $('ccShareBtn');
   if (btn) { btn.disabled = true; btn.textContent = 'Rendering…'; }
   const res = await ShareCard.share({
-    name: state.simName || 'My Hooper',
+    name: state.simName || 'My Keeper',
     teamName: team.name, teamColor: team.color,
     ovr: state.finalOvr,
     verdict: verdict.txt, verdictColor: verdictColor(verdict.cls),
     voteLine: hofVoteLine(t, state.finalOvr).voteLine,
     subtitle: '',
     metaLine: `${state.career.role} · ${state.career.seasons.length} seasons`,
-    stats: [[t.ppg, 'PPG'], [t.rpg, 'RPG'], [t.apg, 'APG'],
-      [t.war.toFixed(1), 'WS'], [t.pts.toLocaleString(), 'PTS'], [(t.tpPct * 100).toFixed(1), '3P%']],
+    stats: [[t.cs.toLocaleString(), 'CLEAN SHEETS'], [t.saves.toLocaleString(), 'SAVES'], [t.apps.toLocaleString(), 'APPS'],
+      [Number(t.war).toFixed(2), 'RATING'], [(t.savePct * 100).toFixed(1) + '%', 'SAVE PCT'], [(t.titles || 0) + (t.rings || 0) + (t.wcTitles || 0), 'TROPHIES']],
     trophies: trophyParts(t).slice(0, 12).join(' '),
     earnings: fmtMoney(t.earnings),
-    gameEmoji: '🏀', url,
-    text: `I built ${state.simName || 'a hooper'}: a ${state.finalOvr} OVR${t.hallOfFame ? ' Hall of Fame' : ''} hooper on GoatLab. Beat my career:`,
-    filename: 'goatlab-hooper.png',
+    gameEmoji: '🧤', url,
+    text: `I built ${state.simName || 'a keeper'}: a ${state.finalOvr} OVR${t.hallOfFame ? ' Hall of Fame' : ''} goalkeeper on GoatLab. Beat my career:`,
+    filename: 'goatlab-keeper.png',
   });
   if (btn) { btn.disabled = false; btn.textContent = '📤 Share this card'; }
   if (res.mode === 'shared') toast('Shared! 🎉');
@@ -3275,7 +3326,7 @@ async function loadSharedBuild(id) {
     if (!data.ok || !data.entry) return;
     const entry = data.entry;
     if (entry.game && entry.game !== LEADERBOARD_GAME) {   // wrong game page for this build — hop over
-      const path = entry.game === 'batter' ? '/batting' : entry.game === 'baller' ? '/hoops' : entry.game === 'striker' ? '/striker' : entry.game === 'keeper' ? '/keeper' : '/pitching';
+      const path = entry.game === 'batter' ? '/batting' : entry.game === 'baller' ? '/hoops' : entry.game === 'striker' ? '/striker' : '/pitching';
       location.replace(`${path}?b=${entry.id}`);
       return;
     }
@@ -3299,7 +3350,7 @@ async function loadSharedBuild(id) {
     $('beatBtn').onclick = () => {
       beatTarget = candidate;
       closeOverlay('sharedModal');
-      toast(`⚔️ Beat ${candidate.name}: build your hooper + run the career`);
+      toast(`⚔️ Beat ${candidate.name}: build your keeper + run the career`);
       try { gtag('event', 'beat_start', { game: LEADERBOARD_GAME }); } catch (e) {}
     };
     $('sharedCloseBtn').onclick = () => closeOverlay('sharedModal');
@@ -3314,7 +3365,7 @@ function finish() {
   renderNodes();
   const avg = weightedOvr(SLOTS.map(s => s.key));
   state.finalOvr = avg;
-  try { gtag('event', 'build_complete', { game: 'baller', ovr: avg }); } catch (e) {}
+  try { gtag('event', 'build_complete', { game: 'keeper', ovr: avg }); } catch (e) {}
   state.build = SLOTS.map(s => {
     const f = state.filled[s.key];
     return { slot: s.label, value: f.value, display: String(f.display), player: f.name, team: f.team, legend: !!f.legend, img: f.img, ovr: f.ovr, prime: !!f.prime, year: f.year || '' };
@@ -3403,10 +3454,10 @@ function headshotByName(name) {
 const TIER_LABELS = { grey: 'Common', bronze: 'Bronze', silver: 'Silver', gold: 'Gold', diamond: 'Diamond', legend: 'Legend' };
 // Mini team-colored figure for a leaderboard build - per game, keyed by slot label (works for either board).
 const FIG_CONFIG = {
-  baller: { base: 'baller-figure.png', masks: { '3-Pointer': 'hoop-seg-threept.png', 'Finishing': 'hoop-seg-finishing.png', 'Dribble': 'hoop-seg-dribble.png', 'Playmaking': 'hoop-seg-playmaking.png', 'Defense': 'hoop-seg-defense.png', 'Rebounding': 'hoop-seg-rebounding.png', 'Speed': 'hoop-seg-speed.png', 'Clutch': 'hoop-seg-clutch.png', 'Frame': 'hoop-seg-frame.png' } },
+  keeper: { base: 'keeper-figure.png', masks: { 'Diving': 'kp-seg-diving.png', 'Reflexes': 'kp-seg-reflexes.png', 'Handling': 'kp-seg-handling.png', 'Distribution': 'kp-seg-distribution.png', 'Positioning': 'kp-seg-positioning.png', 'Agility': 'kp-seg-agility.png', 'Command': 'kp-seg-command.png', 'Clutch': 'kp-seg-clutch.png', 'Frame': 'kp-seg-frame.png' } },
 };
 function miniFigureHTML(entry, slots) {
-  const cfg = FIG_CONFIG.baller;
+  const cfg = FIG_CONFIG.keeper;
   const mask = u => `-webkit-mask:url(${u}) center/contain no-repeat;mask:url(${u}) center/contain no-repeat;`;
   let layers = `<div class="lay" style="background:#39414c;${mask(cfg.base)}"></div>`;
   for (const s of slots) {
@@ -3417,7 +3468,7 @@ function miniFigureHTML(entry, slots) {
   return `<div class="bd-fig" style="${dim}" title="Built figure">${layers}</div>`;
 }
 function shareBuild(entry) {
-  const kind = entry.game === 'batter' ? 'batter' : entry.game === 'pitcher' ? 'pitcher' : 'hooper';
+  const kind = entry.game === 'batter' ? 'batter' : entry.game === 'pitcher' ? 'pitcher' : entry.game === 'baller' ? 'hooper' : entry.game === 'striker' ? 'striker' : 'keeper';
   const url = 'https://goat-lab.app';
   const txt = `I built a ${entry.ovr} OVR ${kind}${entry.name ? ` - "${entry.name}"` : ''} on GoatLab. Think you can do better?`;
   window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(txt)}&url=${encodeURIComponent(url)}`, '_blank', 'noopener');
@@ -3433,7 +3484,7 @@ function openBuildDetails(entryId) {
     ${miniFigureHTML(entry, slots)}
     <div class="bd-id">
       <div class="bd-name">${escapeHTML(name)}</div>
-      <div class="bd-tier c-${t}">${TIER_LABELS[t] || ''} · ${entry.game === 'batter' ? 'Batter' : entry.game === 'baller' ? 'Hooper' : 'Pitcher'}</div>
+      <div class="bd-tier c-${t}">${TIER_LABELS[t] || ''} · ${entry.game === 'batter' ? 'Batter' : entry.game === 'baller' ? 'Hooper' : entry.game === 'striker' ? 'Striker' : entry.game === 'keeper' ? 'Keeper' : 'Pitcher'}</div>
     </div>
     <div class="bd-ovr"><span>OVR</span><b class="c-${t}">${entry.ovr}</b></div>`;
   $('buildDetailList').innerHTML = slots.length ? slots.map(s => {
