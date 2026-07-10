@@ -88,6 +88,10 @@
   /* pending friend requests/challenges count — painted by social.js into any [data-social-badge] */
   .gnav-tab [data-social-badge] { position:absolute; top:3px; left:calc(50% + 5px); min-width:15px; padding:1px 4px;
     border-radius:9px; background:#ff4d5e; color:#fff; font-size:9.5px; font-weight:700; text-align:center; line-height:1.3; }
+  /* the ☰ menu scrolls under the bottom nav + anchor ad — give its scroller enough bottom
+     room that the last items clear both (adapts live via the measured --pl-adh) */
+  #menu .overlay-body, #menu .menu-body {
+    padding-bottom: calc(var(--gnav-h, 0px) + max(var(--pl-adh, 0px), var(--pl-adh-min, 0px)) + 24px) !important; }
   .gnav-tab.on { color:#eaf2fb; }
   .gnav-tab.on i { filter:drop-shadow(0 0 8px rgba(255,122,24,.8)); }
   .gnav-tab:hover { color:#eaf2fb; }
