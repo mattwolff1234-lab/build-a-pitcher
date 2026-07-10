@@ -176,6 +176,8 @@ function ensure() {
       )`;
       await sql`CREATE INDEX IF NOT EXISTS idx_challenges_to ON challenges (to_key, status)`;
       await sql`CREATE INDEX IF NOT EXISTS idx_challenges_from ON challenges (from_key, status)`;
+      // Franchise mode: one save blob per account (see franchise.html + franchiseSync)
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS franchise jsonb`;
     })().catch(e => { ready = null; throw e; });   // don't cache a transient failure forever
   }
   return ready;
@@ -877,6 +879,27 @@ module.exports = async (req, res) => {
         }
         await sql`UPDATE users SET cosmetics = ${JSON.stringify(merged)}::jsonb WHERE google_sub = ${body.sub}`;
         return res.status(200).json({ ok: true, cosmetics: merged });
+      }
+
+      // Franchise mode save: one blob per account. Whichever copy has made more progress
+      // wins (the client bumps a monotonic `prog` counter on every sim/roster step) — the
+      // same incoming-wins posture as trackSync. Always answers with the winning copy so
+      // the client can adopt a further-along save from another device.
+      if (action === 'franchiseSync') {
+        if (!(await authed(body.sub, body.sessionToken))) return res.status(401).json({ ok: false, error: 'Not signed in' });
+        const inc = body.franchise;
+        const [row] = await sql`SELECT franchise FROM users WHERE google_sub = ${body.sub}`;
+        const stored = (row && row.franchise && typeof row.franchise === 'object') ? row.franchise : null;
+        const progOf = f => (f && typeof f === 'object' && Number(f.prog)) || 0;
+        const valid = inc && typeof inc === 'object' && typeof inc.id === 'string' && /^fr_[a-z0-9]{4,16}$/.test(inc.id);
+        if (valid) {
+          const s = JSON.stringify(inc);
+          if (s.length <= 60000 && progOf(inc) >= progOf(stored)) {
+            await sql`UPDATE users SET franchise = ${s}::jsonb WHERE google_sub = ${body.sub}`;
+            return res.status(200).json({ ok: true, franchise: inc });
+          }
+        }
+        return res.status(200).json({ ok: true, franchise: stored });
       }
 
       // ===================================================================
