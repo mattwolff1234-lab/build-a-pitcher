@@ -617,31 +617,66 @@ function mkPlayer(rng, game, ovr, age, src) {
   return { id, name: mkName(rng), game,
     ovr: Math.round(ovr), age, pot: potOf(rng, Math.round(ovr), age), src, s: null, c: null };
 }
-function mkFA(rng, game) { return mkPlayer(rng, game, 60 + rng() * 10, 23, 'fa'); }
-function mkProspect(rng, game) {
+// Real-builds pool: {pitcher:[{name,ovr}], batter:[...]} sampled from the global
+// leaderboard (actual submitted builds). When present, free agents, draft prospects,
+// and rival rosters wear REAL made guys on the same OVR scale; when absent
+// (offline / empty board) the generated names below keep everything working.
+function poolPick(rng, pool, game, lo, hi, used) {
+  const list = pool && pool[game];
+  if (!list || !list.length) return null;
+  const band = list.filter(x => x && x.ovr >= lo && x.ovr <= hi && !(used && used.has(x.name)));
+  if (!band.length) return null;
+  return band[Math.floor(rng() * band.length)];
+}
+function mkFA(rng, game, pool, used) {
+  const real = poolPick(rng, pool, game, 58, 72, used);
+  if (real) {
+    const p = mkPlayer(rng, game, clamp(Math.round(real.ovr), 55, 75), 23, 'fa');
+    p.name = String(real.name).slice(0, 26);
+    if (used) used.add(p.name);
+    return p;
+  }
+  return mkPlayer(rng, game, 60 + rng() * 10, 23, 'fa');
+}
+function mkProspect(rng, game, pool, used) {
   const r = rng();
   const ovr = Math.round(r < 0.72 ? 62 + rng() * 10 : r < 0.94 ? 70 + rng() * 7 : 76 + rng() * 6);
-  return mkPlayer(rng, game, ovr, 21 + Math.floor(rng() * 3), 'draft');
+  const p = mkPlayer(rng, game, ovr, 21 + Math.floor(rng() * 3), 'draft');
+  const real = poolPick(rng, pool, game, ovr - 4, ovr + 4, used);   // nearest real build to the rolled tier
+  if (real) {
+    p.name = String(real.name).slice(0, 26);
+    p.ovr = clamp(Math.round(real.ovr), 55, 99);
+    p.pot = Math.max(p.pot, p.ovr);
+    if (used) used.add(p.name);
+  }
+  return p;
 }
-// A full rival club: 14 players spread around a target strength band.
-function mkRivalRoster(rng, base) {
+// A full rival club: 14 players spread around a target strength band. With a pool the
+// names are real builds; the seeded OVRs stay (they carry the league balance).
+function mkRivalRoster(rng, base, pool, used) {
   const sp = () => clamp(Math.round(base + (rng() + rng() - 1) * 9), 55, 96);
+  const mk = game => {
+    const p = mkPlayer(rng, game, sp(), 21 + Math.floor(rng() * 13), 'rival');
+    const real = poolPick(rng, pool, game, 40, 130, used);
+    if (real) { p.name = String(real.name).slice(0, 26); if (used) used.add(p.name); }
+    return p;
+  };
   return {
-    rot: Array.from({ length: 5 }, () => mkPlayer(rng, 'pitcher', sp(), 21 + Math.floor(rng() * 13), 'rival')),
-    line: Array.from({ length: 9 }, () => mkPlayer(rng, 'batter', sp(), 21 + Math.floor(rng() * 13), 'rival')),
+    rot: Array.from({ length: 5 }, () => mk('pitcher')),
+    line: Array.from({ length: 9 }, () => mk('batter')),
   };
 }
-function mkRivals(id, season) {
+function mkRivals(id, season, pool) {
   const rng = seededRandom(`${id}|s${season}|rivals`);
   const rivals = [];
-  const usedC = new Set(), usedM = new Set();
+  const usedC = new Set(), usedM = new Set(), usedP = new Set();
   for (let i = 0; i < 7; i++) {
     let c, m;
     do { c = RIVAL_CITIES[Math.floor(rng() * RIVAL_CITIES.length)]; } while (usedC.has(c));
     do { m = RIVAL_MASCOTS[Math.floor(rng() * RIVAL_MASCOTS.length)]; } while (usedM.has(m));
     usedC.add(c); usedM.add(m);
     const base = Math.round(68 + rng() * 20);
-    const ros = mkRivalRoster(rng, base);
+    const ros = mkRivalRoster(rng, base, pool, usedP);
     rivals.push({ name: `${c} ${m}`, rot: ros.rot, line: ros.line, w: 0, l: 0 });
   }
   return rivals;
@@ -887,13 +922,16 @@ function agePlayers(F) {
   return report;
 }
 // rivals live the same winter: develop, retire, and quietly restock via their own drafts
-function rivalOffseason(F) {
+function rivalOffseason(F, pool) {
+  const used = new Set();
+  F.rivals.forEach(R => R.rot.concat(R.line).forEach(p => p && used.add(p.name)));
+  F.rotation.concat(F.lineup).forEach(p => p && used.add(p.name));
   F.rivals.forEach((R, ri) => {
     const rng = seededRandom(`${F.id}|s${F.season}|off-r${ri}`);
     ['rot', 'line'].forEach(kind => {
       R[kind] = R[kind].map(p => {
         const r = developPlayer(rng, p);
-        return r.retired ? mkProspect(rng, kind === 'rot' ? 'pitcher' : 'batter') : p;
+        return r.retired ? mkProspect(rng, kind === 'rot' ? 'pitcher' : 'batter', pool, used) : p;
       });
     });
   });
@@ -968,6 +1006,34 @@ function save() {
   persist();
 }
 function acct() { try { return JSON.parse(localStorage.getItem('pl_account') || 'null'); } catch (e) { return null; } }
+
+/* ---------- real-builds pool: actual made guys for FAs / prospects / rivals ---------- */
+let POOL = null;
+async function loadPool() {
+  if (POOL) return POOL;
+  try {
+    const c = JSON.parse(sessionStorage.getItem('pl_fr_pool') || 'null');
+    if (c && Date.now() - c.t < 3600e3 && c.p && c.p.pitcher && c.p.pitcher.length) return POOL = c.p;
+  } catch (e) {}
+  try {
+    const [p, b] = await Promise.all(['pitcher', 'batter'].map(g =>
+      fetch(`/api/score?action=names&game=${g}&min=55&max=99&limit=120`).then(r => r.json())));
+    if (p && p.ok && b && b.ok && p.rows.length > 10 && b.rows.length > 10) {
+      POOL = { pitcher: p.rows, batter: b.rows };
+      try { sessionStorage.setItem('pl_fr_pool', JSON.stringify({ t: Date.now(), p: POOL })); } catch (e) {}
+    }
+  } catch (e) {}
+  return POOL;
+}
+loadPool();   // warm it early — founding/autofill/draft all want it
+// every name already in this save's league (no duplicate signings anywhere)
+function usedNames() {
+  const s = new Set();
+  if (!F) return s;
+  F.rotation.concat(F.lineup).forEach(p => p && s.add(p.name));
+  (F.rivals || []).forEach(r => { if (r.rot) r.rot.concat(r.line).forEach(p => p && s.add(p.name)); });
+  return s;
+}
 let syncTimer = null;
 function queueSync() {
   const a = acct();
@@ -1199,7 +1265,7 @@ function wirePickRows() {
   const fa = document.querySelector('[data-fa]');
   if (fa) fa.onclick = () => {
     const rng = seededRandom(`${F.id}|fa|${F.season}|${pickSeat.where}${pickSeat.idx}|${(F.prog || 0)}`);
-    placePlayer(mkFA(rng, pickSeat.where === 'rot' ? 'pitcher' : 'batter'));
+    placePlayer(mkFA(rng, pickSeat.where === 'rot' ? 'pitcher' : 'batter', POOL, usedNames()));
   };
   const cut = document.querySelector('[data-cut]');
   if (cut) cut.onclick = () => { setSeat(null); };
@@ -1214,8 +1280,9 @@ function placePlayer(p) { setSeat(p); toast(`${p.name} signed ${p.src === 'hof' 
 $('pickClose').onclick = () => closeOv('pickOv');
 $('autoFill').onclick = () => {
   let n = 0;
-  F.rotation = F.rotation.map((p, i) => p || (n++, mkFA(seededRandom(`${F.id}|auto|${F.season}|r${i}`), 'pitcher')));
-  F.lineup = F.lineup.map((p, i) => p || (n++, mkFA(seededRandom(`${F.id}|auto|${F.season}|l${i}`), 'batter')));
+  const used = usedNames();
+  F.rotation = F.rotation.map((p, i) => p || (n++, mkFA(seededRandom(`${F.id}|auto|${F.season}|r${i}`), 'pitcher', POOL, used)));
+  F.lineup = F.lineup.map((p, i) => p || (n++, mkFA(seededRandom(`${F.id}|auto|${F.season}|l${i}`), 'batter', POOL, used)));
   if (n) { bump(); save(); renderRoster(); toast(`${n} free agent${n === 1 ? '' : 's'} signed.`); }
 };
 // creations = players YOU made (built rookies + Hall of Fame imports), anywhere on the roster
@@ -1224,9 +1291,10 @@ function createdCount() {
 }
 $('startSeason').onclick = () => {
   // the front office quietly signs FAs into any seats you left open
-  F.rotation = F.rotation.map((p, i) => p || mkFA(seededRandom(`${F.id}|auto|${F.season}|r${i}`), 'pitcher'));
-  F.lineup = F.lineup.map((p, i) => p || mkFA(seededRandom(`${F.id}|auto|${F.season}|l${i}`), 'batter'));
-  if (!F.rivals || !F.rivals.length || !F.rivals[0].rot) F.rivals = mkRivals(F.id, F.season);
+  const used = usedNames();
+  F.rotation = F.rotation.map((p, i) => p || mkFA(seededRandom(`${F.id}|auto|${F.season}|r${i}`), 'pitcher', POOL, used));
+  F.lineup = F.lineup.map((p, i) => p || mkFA(seededRandom(`${F.id}|auto|${F.season}|l${i}`), 'batter', POOL, used));
+  if (!F.rivals || !F.rivals.length || !F.rivals[0].rot) F.rivals = mkRivals(F.id, F.season, POOL);
   else F.rivals.forEach(r => { r.w = 0; r.l = 0; });   // league persists across seasons now
   F.day = 0; F.wins = 0; F.losses = 0; F.phase = 'season'; F.playoffs = null;
   F.tradesIn = 0; F.tradesUser = 0; F.tradeLog = []; F.gameLog = []; F.poLog = [];
@@ -1783,7 +1851,7 @@ function finishSeason(result, summary) {
   F.history.push({ season: F.season, w: F.wins, l: F.losses, result, mvp: awardsW.mvp, ace: awardsW.ace });
   F.phase = 'offseason';
   F.offReport = agePlayers(F);
-  rivalOffseason(F);
+  rivalOffseason(F, POOL);
   F.offSummary = summary;
   F.pendingOffer = null;
   bump(); save();
@@ -1832,7 +1900,8 @@ $('spinDraft').onclick = () => {
   const game = seat.where === 'rot' ? 'pitcher' : 'batter';
   const pickNo = F.rotation.filter(Boolean).length + F.lineup.filter(Boolean).length + 1;
   const rng = seededRandom(`${F.id}|s${F.season}|draft${seat.where}${seat.idx}`);
-  draftPool = Array.from({ length: 26 }, () => mkProspect(rng, game));
+  const used = usedNames();
+  draftPool = Array.from({ length: 26 }, () => mkProspect(rng, game, POOL, used));
   const target = 18 + Math.floor(rng() * 6);
   const track = $('rTrack');
   track.innerHTML = draftPool.map(p => `<div class="rcard"><div class="pos">${game === 'pitcher' ? 'SP prospect' : 'Bat prospect'}</div>
@@ -1962,7 +2031,7 @@ $('newGo').onclick = () => {
     tradesIn: 0, tradesUser: 0, tradeLog: [],
     history: [], titles: 0,
   };
-  F.rivals = mkRivals(F.id, 1);   // the league exists from day one — go scout it
+  F.rivals = mkRivals(F.id, 1, POOL);   // the league exists from day one — go scout it
   save(); render();
   toast(`${name} founded. Now build that roster.`);
 };

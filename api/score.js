@@ -165,6 +165,26 @@ module.exports = async (req, res) => {
       return res.status(200).json({ ok: true, ghost: { ...g, id: Number(g.id) } });
     }
 
+    // GET ?action=names&game=&min=&max=&limit= — a random sample of real submitted builds
+    // (name + ovr only) inside an OVR band. Powers franchise mode's free agents, draft
+    // prospects, and rival rosters, so the whole league is actual made guys. Public read;
+    // the CDN caches one sample briefly (clients pick from it with their own seeds).
+    if (req.method !== 'POST' && (req.query && req.query.action) === 'names') {
+      const game = gameOf(req.query && req.query.game);
+      const min = Math.max(1, Math.min(150, Math.round(Number(req.query && req.query.min) || 55)));
+      const max = Math.max(min, Math.min(150, Math.round(Number(req.query && req.query.max) || 99)));
+      const limit = Math.max(1, Math.min(150, parseInt(req.query && req.query.limit, 10) || 60));
+      const rows = await sql`
+        SELECT name, ovr FROM (
+          SELECT DISTINCT ON (lower(name)) name, ovr FROM scores
+          WHERE game = ${game} AND ovr BETWEEN ${min} AND ${max}
+            AND length(name) BETWEEN 2 AND 26 AND lower(name) <> 'anonymous'
+          ORDER BY lower(name), created_at DESC
+        ) t ORDER BY random() LIMIT ${limit}`;
+      res.setHeader('Cache-Control', 'public, s-maxage=600, stale-while-revalidate=3600');
+      return res.status(200).json({ ok: true, rows: rows.map(r => ({ name: r.name, ovr: Number(r.ovr) })) });
+    }
+
     // GET ?action=stats[&game=pitcher|batter|all] — total builds, GOAT (99 OVR) count, + live play counter.
     if (req.method !== 'POST' && (req.query && req.query.action) === 'stats') {
       const g = req.query && req.query.game;
