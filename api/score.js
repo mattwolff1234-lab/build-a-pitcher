@@ -32,13 +32,20 @@ const dailyDate = v => (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) ?
 // low. Note most batter slots (Vision/Power/Contact/Clutch/Discipline) and some pitcher slots
 // (Velocity/Strikeout/Clutch/Stamina) legitimately reach ~125 — only the low-max slots below catch
 // a uniform "all-125/all-200" cheat.
+// Headroom on top of the raw card maxima, because power-ups stack on legit builds:
+//  - baseball (pitcher/batter): 🔥 hot-player boost adds up to +10 to EVERY rated stat
+//    (intentionally uncapped), and the Boost power-up then guarantees ≥ +5 over the landed
+//    card — so a legit slot can sit ~15 above the best raw card (99 Break → 114 hot+boosted).
+//  - all games: Boost's +5-over-landed guarantee alone. Frame is real height (never
+//    hot-boosted or Boost-raised), so Frame caps stay at heightToRating bounds.
+// Caps stay tight enough to catch "all-150" edited builds without rejecting real ones.
 const SLOT_MAX = {
-  pitcher: { _default: 128, Break: 102, Command: 102, Defense: 100, 'Ground Ball': 104, Frame: 102 },
-  batter:  { _default: 128, Speed: 102, Defense: 102, Frame: 96 },
-  baller:  { _default: 128, '3-Pointer': 123, Finishing: 120, Dribble: 123, Playmaking: 120, Defense: 117, Speed: 118, Clutch: 121 },
-  // Soccer caps = true maxima across pool+prime+icons in strikers/keepers.json, +3 buffer.
-  striker: { _default: 120, Finishing: 118, Pace: 120, 'Shot Power': 114, Dribbling: 117, Passing: 117, Heading: 115, Physical: 114, Clutch: 114, Frame: 102 },
-  keeper:  { _default: 117, Diving: 117, Reflexes: 117, Handling: 111, Distribution: 111, Positioning: 114, Agility: 108, Command: 114, Clutch: 114, Frame: 112 },
+  pitcher: { _default: 132, Break: 117, Command: 117, Defense: 115, 'Ground Ball': 119, Frame: 102 },
+  batter:  { _default: 132, Speed: 117, Defense: 117, Frame: 96 },
+  baller:  { _default: 133, '3-Pointer': 128, Finishing: 125, Dribble: 128, Playmaking: 125, Defense: 122, Speed: 123, Clutch: 126 },
+  // Soccer caps = true maxima across pool+prime+icons in strikers/keepers.json, +5 boost headroom +3 buffer.
+  striker: { _default: 125, Finishing: 123, Pace: 125, 'Shot Power': 119, Dribbling: 122, Passing: 122, Heading: 120, Physical: 119, Clutch: 119, Frame: 102 },
+  keeper:  { _default: 122, Diving: 122, Reflexes: 122, Handling: 116, Distribution: 116, Positioning: 119, Agility: 113, Command: 119, Clutch: 119, Frame: 112 },
 };
 // Plain weighted-avg OVR — matches batter/baller's client computeOvr exactly, so we can reject an
 // inflated OVR claim. Pitcher uses a value-scaled formula, so we don't recompute it (its slot caps

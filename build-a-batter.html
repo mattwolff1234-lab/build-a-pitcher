@@ -3553,7 +3553,7 @@ async function submitScore() {
       body: JSON.stringify({ name, ovr: state.finalOvr, game: LEADERBOARD_GAME, build: { slots: state.build, career: state.career } }),
     });
     const data = await res.json();
-    if (!data.ok) throw new Error(data.error || 'failed');
+    if (!data.ok) { const err = new Error(data.error || 'rejected'); err.server = true; throw err; }
     myEntryId = data.id;
     try { gtag('event', 'leaderboard_submit', { game: LEADERBOARD_GAME, ovr: state.finalOvr }); } catch (e) {}
     $('submitRow').style.display = 'none';
@@ -3561,7 +3561,7 @@ async function submitScore() {
     openLeaderboard('global', LEADERBOARD_GAME);
   } catch (e) {
     $('submitBtn').disabled = false;
-    $('submitMsg').textContent = 'Leaderboard not reachable yet (goes live once deployed with the database).';
+    $('submitMsg').textContent = e && e.server ? ('Could not submit: ' + e.message + '. If this looks wrong, ping us on Discord.') : 'Could not reach the leaderboard - check your connection and try again.';
   }
 }
 
