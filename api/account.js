@@ -1048,14 +1048,19 @@ module.exports = async (req, res) => {
       // A player's profile (tabbed in the UI): identity + per-sport 1v1 records, top build per
       // game, recent Hall of Fame saves, builds summary, THEIR friends list (with each friend's
       // relationship to the CALLER, so the UI can offer Add/Accept), progress numbers, and
-      // head-to-head. Friends-only (except your own), enforced server-side.
+      // head-to-head. Non-friends get a LIMITED public card (identity + records + rel,
+      // limited:true) instead of a 403 — builds/friends/h2h/stats stay friends-only.
       if (action === 'profile') {
         const key = await pvpKey(body);
         if (!key) return res.status(401).json({ ok: false, error: 'Not signed in' });
         const other = keyOf(body.key) || key;
-        if (other !== key && !(await areFriends(key, other))) {
-          return res.status(403).json({ ok: false, error: 'Friends only' });
+        let rel = 'you';
+        if (other !== key) {
+          const [pa, pb] = pairOf(key, other);
+          const [fr] = await sql`SELECT status, requested_by FROM friends WHERE a = ${pa} AND b = ${pb}`;
+          rel = fr ? (fr.status === 'accepted' ? 'friends' : (fr.requested_by === key ? 'pending' : 'incoming')) : 'none';
         }
+        const full = other === key || rel === 'friends';
         const [u] = await sql`SELECT name, handle, picture, avatar, xp, created_at, last_seen,
             achievements, current_streak, best_streak,
             pvp_elo, pvp_wins, pvp_losses, pvp_streak,
@@ -1065,7 +1070,7 @@ module.exports = async (req, res) => {
         if (!u) return res.status(404).json({ ok: false, error: 'Player not found' });
         // Builds only exist for signed-in players (Hall of Fame saves are account-only).
         let top = [], recent = [], buildsByGame = [];
-        if (other.indexOf('guest:') !== 0) {
+        if (full && other.indexOf('guest:') !== 0) {
           try {
             top = await sql`SELECT DISTINCT ON (game) game, name, ovr, created_at FROM saves
               WHERE google_sub = ${other} ORDER BY game, ovr DESC, created_at DESC`;
@@ -1078,7 +1083,7 @@ module.exports = async (req, res) => {
         // The subject's friends, each tagged with how they relate to the CALLER
         // (you / friends / pending / incoming / none) — lets you add friends-of-friends.
         let friendsOut = [];
-        try {
+        if (full) try {
           const frRows = await sql`SELECT u.google_sub AS fkey, u.name, u.picture, u.avatar, u.xp, u.pvp_elo, u.last_seen
             FROM friends f JOIN users u ON u.google_sub = (CASE WHEN f.a = ${other} THEN f.b ELSE f.a END)
             WHERE (f.a = ${other} OR f.b = ${other}) AND f.status = 'accepted'
@@ -1097,28 +1102,30 @@ module.exports = async (req, res) => {
             xp: Number(r.xp) || 0, elo: r.pvp_elo, online: isOnline(r.last_seen), rel: relOf(r.fkey) }));
         } catch (e) {}
         let h2h = null;
-        if (other !== key) {
+        if (full && other !== key) {
           const [a, b] = pairOf(key, other);
           const [fr] = await sql`SELECT a_wins, b_wins FROM friends WHERE a = ${a} AND b = ${b}`;
           if (fr) h2h = { mine: a === key ? fr.a_wins : fr.b_wins, theirs: a === key ? fr.b_wins : fr.a_wins };
         }
         const achCount = (u.achievements && typeof u.achievements === 'object') ? Object.keys(u.achievements).length : 0;
-        return res.status(200).json({ ok: true, profile: {
+        const prof = {
           key: other, personId: personIdOf(other), name: u.name || 'Player', handle: u.handle || null,
-          picture: u.picture || '', avatar: u.avatar || null, self: other === key,
+          picture: u.picture || '', avatar: u.avatar || null, self: other === key, rel,
           xp: Number(u.xp) || 0, memberSince: u.created_at, online: isOnline(u.last_seen),
           guest: other.indexOf('guest:') === 0,
           baseball: { elo: u.pvp_elo, wins: u.pvp_wins, losses: u.pvp_losses, streak: u.pvp_streak },
           hoops: { elo: u.pvp_elo_hoops, wins: u.pvp_wins_hoops, losses: u.pvp_losses_hoops, streak: u.pvp_streak_hoops },
           soccer: { elo: u.pvp_elo_soccer, wins: u.pvp_wins_soccer, losses: u.pvp_losses_soccer, streak: u.pvp_streak_soccer },
-          topBuilds: top, recentBuilds: recent, h2h,
-          friends: friendsOut,
-          stats: {
+        };
+        if (full) {
+          prof.topBuilds = top; prof.recentBuilds = recent; prof.h2h = h2h; prof.friends = friendsOut;
+          prof.stats = {
             achievements: achCount,
             dailyStreak: u.current_streak || 0, bestDailyStreak: u.best_streak || 0,
             builds: buildsByGame, buildsTotal: buildsByGame.reduce((s, b) => s + b.count, 0),
-          },
-        }});
+          };
+        } else prof.limited = true;
+        return res.status(200).json({ ok: true, profile: prof });
       }
 
       // Challenge a friend to a friendly 1v1 in a sport. Pending for 24h; one live

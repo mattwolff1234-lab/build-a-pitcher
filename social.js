@@ -562,12 +562,13 @@
         : u.rel === 'incoming' ? '<button class="soc-btn warm" data-sadd="accept">Accept</button>'
         : '<button class="soc-btn warm" data-sadd="add">＋ Add</button>';
       return `<div class="soc-row" data-key="${esc(u.key)}">
-        ${avatarHtml({ name: u.handle, picture: u.picture })}
+        ${avatarHtml({ name: u.handle, picture: u.picture, avatar: u.avatar })}
         <div class="soc-who"><div class="nm">@${esc(u.handle)}</div>
         <div class="sub">Lv ${levelOf(u.xp)} · ${u.elo} Elo</div></div>
-        <div class="soc-acts">${btn}</div></div>`;
+        <div class="soc-acts"><button class="soc-btn" data-sprof>Profile</button>${btn}</div></div>`;
     }).join('');
     out.querySelectorAll('[data-sadd]').forEach(b => b.onclick = () => addFromSearch(b));
+    out.querySelectorAll('[data-sprof]').forEach(b => b.onclick = () => openProfile(b.closest('.soc-row').dataset.key));
   }
   async function addFromSearch(btn) {
     if (searchBusy) return;
@@ -695,6 +696,19 @@
       const lead = p.h2h.mine > p.h2h.theirs ? 'You lead' : p.h2h.mine < p.h2h.theirs ? 'They lead' : 'All square';
       h2h = `<div class="soc-h2h">HEAD-TO-HEAD · ${lead} ${p.h2h.mine}–${p.h2h.theirs}</div>`;
     }
+    // Stranger's card: records + a big Add/Accept CTA instead of the friends-only sections.
+    if (p.limited) {
+      const cta = p.rel === 'incoming'
+        ? '<button class="soc-btn warm" id="socProfAdd" data-mode="accept" style="padding:11px">✓ Accept friend request</button>'
+        : p.rel === 'pending'
+          ? '<button class="soc-btn dim" disabled style="padding:11px">Request sent — waiting</button>'
+          : '<button class="soc-btn warm" id="socProfAdd" data-mode="add" style="padding:11px">＋ Add Friend</button>';
+      return `<div class="soc-stats">${statCells}</div>
+        ${cta}
+        <div class="soc-err" id="socProfAddMsg"></div>
+        <div class="soc-empty">🔒 Builds, friends, and full stats are visible to friends only.</div>
+        <button class="soc-btn dim" id="socProfBack" style="align-self:flex-start">← Friends</button>`;
+    }
     const topSorted = (p.topBuilds || []).slice().sort((x, y) => y.ovr - x.ovr);
     const buildsHtml = topSorted.length
       ? `<div class="soc-sec">Top builds</div>${topSorted.map(buildRow).join('')}
@@ -713,13 +727,15 @@
   }
 
   function profFriends(p) {
+    if (p.limited) return '<div class="soc-empty">🔒 Friends lists are visible to friends only.<br>Add them from the Overview tab first.</div>';
     const list = p.friends || [];
     if (!list.length) return `<div class="soc-empty">${p.self
       ? 'No friends yet — find some in the 🔎 Find tab.'
       : 'No friends to show yet.'}</div>`;
     return list.map(f => {
+      const prof = f.rel === 'you' ? '' : '<button class="soc-btn" data-pf="profile">Profile</button>';
       const btn = f.rel === 'you' ? '<button class="soc-btn dim" disabled>You</button>'
-        : f.rel === 'friends' ? '<button class="soc-btn" data-pf="profile">Profile</button>'
+        : f.rel === 'friends' ? ''
         : f.rel === 'pending' ? '<button class="soc-btn dim" disabled>Requested</button>'
         : f.rel === 'incoming' ? '<button class="soc-btn warm" data-pf="accept">Accept</button>'
         : '<button class="soc-btn warm" data-pf="add">＋ Add</button>';
@@ -727,7 +743,7 @@
         ${avatarHtml(f)}
         <div class="soc-who"><div class="nm">${esc(f.name)}</div>
         <div class="sub">Lv ${levelOf(f.xp)} · ${f.elo} Elo${f.online ? ' · <span style="color:#39d98a">online</span>' : ''}</div></div>
-        <div class="soc-acts">${btn}</div></div>`;
+        <div class="soc-acts">${prof}${btn}</div></div>`;
     }).join('');
   }
 
@@ -735,6 +751,14 @@
     const st = p.stats || {};
     const builds = st.builds || [];
     const totalGames = ['baseball', 'hoops', 'soccer'].reduce((s, k) => s + p[k].wins + p[k].losses, 0);
+    if (p.limited) {
+      return `<div class="soc-sec">1v1 record${totalGames ? ` · ${totalGames} matches` : ''}</div>
+        ${sportRow('⚾', 'Baseball', p.baseball)}
+        ${sportRow('🏀', 'Hoops', p.hoops)}
+        ${sportRow('⚽', 'Soccer', p.soccer)}
+        <div class="soc-kv"><span>⭐ Level</span><span><b>${levelOf(p.xp)}</b> · ${(p.xp || 0).toLocaleString()} XP</span></div>
+        <div class="soc-empty">🔒 Builds and progress are visible to friends only.</div>`;
+    }
     const buildRows = builds.length
       ? builds.map(b => {
           const g = GAME_META[b.game] || { icon: '🏗️', label: b.game };
@@ -824,6 +848,27 @@
     if (back) back.onclick = () => { if (data) renderFriends(); else open(); };   // profile can open before the first poll
     const chal = overlay.querySelector('#socProfChal');
     if (chal) chal.onclick = () => { tab = 'friends'; renderFriends(); pickSport(p.key, p.name); };
+    // limited (stranger) profile: the big Add / Accept CTA
+    const addBtn = overlay.querySelector('#socProfAdd');
+    if (addBtn) addBtn.onclick = async () => {
+      addBtn.disabled = true;
+      const msg = overlay.querySelector('#socProfAddMsg');
+      try {
+        const r = addBtn.dataset.mode === 'accept'
+          ? await api('friendRespond', { key: p.key, accept: true })
+          : await api('friendRequest', { toKey: p.key });
+        if (r && r.ok) {
+          ga('friend_request', { result: addBtn.dataset.mode === 'accept' ? 'accepted' : (r.status || 'pending'), from: 'profile' });
+          refresh();
+          // accepted (either direction) -> we're friends now, reload the full card
+          if (addBtn.dataset.mode === 'accept' || r.status === 'accepted') return openProfile(p.key);
+          addBtn.textContent = 'Request sent ✓'; addBtn.className = 'soc-btn dim';
+        } else {
+          addBtn.disabled = false;
+          if (msg) msg.textContent = (r && r.error) || 'Something went wrong.';
+        }
+      } catch (e) { addBtn.disabled = false; if (msg) msg.textContent = 'Network error — try again.'; }
+    };
     const rm = overlay.querySelector('#socProfRemove');
     if (rm) rm.onclick = async () => {
       if (!confirm(`Remove ${p.name} from your friends?`)) return;
