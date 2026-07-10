@@ -23,6 +23,7 @@
 <script src="/collection.js" defer></script>
 <script src="/hotboard.js" defer></script>
 <script src="/quests.js" defer></script>
+<script src="/season-track.js" defer></script>
 <script src="/share-card.js" defer></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <!-- Google tag (gtag.js) -->
@@ -762,12 +763,14 @@
 
     <div class="spin-wrap">
       <button id="spinBtn" class="primary">Spin</button>
+      <button id="scoutBtn" class="scout-btn" style="display:none">🔭 ×0</button>
     </div>
     <div class="powerups">
       <span id="pu-respin">Re-spin 1</span>
       <span id="pu-boost">Boost 1</span>
       <span id="pu-snag">Snag 1</span>
     </div>
+    <div id="scoutPeek" class="scout-peek" style="display:none"></div>
 
     <div id="landed" class="landed panel">
       <div class="landed-top">
@@ -856,6 +859,7 @@
       <div id="submitMsg" class="submit-msg"></div>
       <a class="discord-cta" href="https://discord.gg/bMVX2zJp49" target="_blank" rel="noopener"><span class="dc-emoji">💬</span><span class="dc-text"><b>Share this build in our Discord</b><small>Talk shop, post your builds, and challenge players to live 1v1s ↗</small></span></a>
 
+      <button id="resimBtn" class="ghost-btn" style="display:none">🔁 Re-sim Career ×0</button>
       <button id="resetBtn" class="ghost-btn">Build Another</button>
     </div>
   </div>
@@ -866,6 +870,7 @@
     <div class="overlay-head"><span class="overlay-title">Menu</span><button class="overlay-close" data-close="menu">✕</button></div>
     <div class="overlay-body">
       <div id="acctSlot"></div>
+      <div data-player-title></div>
       <div data-xp-bar></div>
       <div class="menu-sec">Play</div>
       <a class="menu-item" href="/">🏠 Home</a>
@@ -878,6 +883,7 @@
       <button class="menu-item" id="miAch">🏅 Achievements<span class="mi-chev" data-ach-count style="margin-left:auto;font-family:'Oswald',sans-serif;font-size:12px;color:var(--gold)">0/0</span></button>
       <button class="menu-item" id="miCol">📇 My Collection<span class="mi-chev" data-col-count style="margin-left:auto;font-family:'Oswald',sans-serif;font-size:12px;color:var(--gold)">0</span></button>
       <button class="menu-item" id="miQuests">📜 Daily Quests<span class="mi-chev" data-quest-count style="margin-left:auto;font-family:'Oswald',sans-serif;font-size:12px;color:var(--gold)">0/3</span></button>
+      <button class="menu-item" id="miTrack">🎟️ Season Track</button>
       <div class="menu-sec">Compete</div>
       <button class="menu-item" id="miLb">🏆 Leaderboard</button>
       <a class="menu-item" href="/versus#stats">📊 1v1 Stats</a>
@@ -1185,6 +1191,7 @@ const state = {
   respinUsed: false, boostUsed: false, snagUsed: false,
   boostedThisLand: false, spinning: false, strip: null, targetIndex: 0,
   career: null, archetype: null, draftTeamAb: null,
+  scoutTarget: null, resimSalt: '', resimN: 0,
 };
 
 // Hard mode ("hide ratings") - set on the landing page, shared via localStorage.
@@ -1300,6 +1307,9 @@ async function init() {
   $('spinBtn').onclick = () => { if (state.spinning) return stopSpin(); state.turnPowers = new Set(); state.snaggedThisLand = false; spin(); };
   $('respinBtn').onclick = respin;
   $('boostBtn').onclick = boost;
+  $('scoutBtn').onclick = scout;
+  $('resimBtn').onclick = resim;
+  setTimeout(updateScoutUI, 1400);   // season-track.js loads deferred, after this inline script
   $('snagLeftBtn').onclick = () => snag(-1);
   $('snagRightBtn').onclick = () => snag(1);
   $('resetBtn').onclick = reset;
@@ -1338,6 +1348,7 @@ async function init() {
   $('miAch').onclick = () => { closeOverlay('menu'); Sound.click(); window.Ach && Ach.open(); };
   $('miCol').onclick = () => { closeOverlay('menu'); Sound.click(); window.Collection && Collection.open(LEADERBOARD_GAME); };
   $('miQuests').onclick = () => { closeOverlay('menu'); Sound.click(); window.Quests && Quests.open(); };
+  $('miTrack').onclick = () => { closeOverlay('menu'); Sound.click(); window.SeasonTrack && SeasonTrack.open(); };
   $('saveHofBtn').onclick = () => saveToHof($('saveHofBtn'));
   $('miLb').onclick = () => { closeOverlay('menu'); openLeaderboard('global'); };
   $('miHow').onclick = () => { closeOverlay('menu'); openOverlay('howModal'); };
@@ -1376,6 +1387,7 @@ async function init() {
   else if (h === 'streak') setTimeout(openStreak, 200);
   else if (h === 'collection' || h === 'binder') { const o = () => (window.Collection ? Collection.open(LEADERBOARD_GAME) : setTimeout(o, 120)); o(); }
   else if (h === 'quests') { const o = () => (window.Quests ? Quests.open() : setTimeout(o, 120)); o(); }
+  else if (h === 'season' || h === 'track') { const o = () => (window.SeasonTrack ? SeasonTrack.open() : setTimeout(o, 120)); o(); }
 
   // ?b=<scoreId> — a shared build link: show that career + the "Beat this career" challenge
   const sharedId = new URLSearchParams(location.search).get('b');
@@ -2125,9 +2137,14 @@ function spin() {
     const lr = seededRandom(`pl-lucky-pick-${todayUTC()}`);
     target = dpool.length ? dpool[Math.floor(lr() * dpool.length)] : randPitcher(rng);
     luckyConsumed = true;
+  } else if (!dailyMode && state.scoutTarget && !state.used.has(state.scoutTarget.name)) {
+    target = state.scoutTarget;   // 🔭 Scout: land on the peeked card
+    state.scoutTarget = null;
   } else {
+    state.scoutTarget = null;     // stale peek (mode changed / player already used) is discarded
     target = randPitcher(rng);
   }
+  updateScoutUI();
   const strip = [];
   const STRIP_LEN = 45;
   const targetIndex = STRIP_LEN - 6;
@@ -2176,6 +2193,7 @@ function animateReelTo(offset, duration, ease, onDone) {
       const b = Math.min(6, speed * 0.7);
       track.style.filter = b > 0.4 ? `blur(${b.toFixed(1)}px)` : 'none';
       if (Math.abs(x - lastTickX) >= CARD_W) { Sound.tick(speed / 7); lastTickX = x; }  // ticker (pitch by speed)
+      if (window.SeasonTrack && speed > 0.25) SeasonTrack.trailTick(track.parentElement);  // equipped reel trail (fades out as the reel brakes)
     },
     onComplete: () => { track.style.filter = 'none'; state.spinning = false; reelTween = null; onDone(); },
   });
@@ -2287,6 +2305,51 @@ function buildPips() {
 function updateProgress(n) {
   const pips = $('pips').children;
   for (let i = 0; i < pips.length; i++) pips[i].classList.toggle('on', i < n);
+}
+
+// 🔭 Scout (Season Track consumable): peek the card the NEXT spin will land on.
+// Solo builds only — Daily (same-day fairness) and Hard Mode keep everyone blind.
+function scout() {
+  if (state.spinning || dailyMode || hardMode || state.scoutTarget) return;
+  if (!(window.SeasonTrack && SeasonTrack.useItem('scout'))) { updateScoutUI(); return; }
+  Sound.click();
+  const p = state.scoutTarget = randPitcher();
+  const peek = $('scoutPeek');
+  peek.innerHTML = `🔭 Next spin: <img src="${headshot(p)}" alt="" onerror="this.style.display='none'"> <b>${p.name}</b> · ${p.ovr} OVR`;
+  peek.style.display = 'flex';
+  gsap.fromTo(peek, { y: -8, opacity: 0 }, { y: 0, opacity: 1, duration: .3, ease: 'power2.out' });
+  updateScoutUI();
+}
+function updateScoutUI() {
+  const btn = $('scoutBtn');
+  if (!btn) return;
+  const n = window.SeasonTrack ? (SeasonTrack.items().scout || 0) : 0;
+  btn.style.display = (!dailyMode && !hardMode && (n > 0 || state.scoutTarget)) ? 'inline-block' : 'none';
+  btn.textContent = `🔭 ×${n}`;
+  btn.disabled = !!state.scoutTarget || n <= 0;
+  if (!state.scoutTarget) $('scoutPeek').style.display = 'none';
+}
+
+// 🔁 Re-sim (Season Track consumable): re-roll a finished career on a fresh seed.
+// The build/OVR are untouched, so leaderboard ranking can't move — it's a new story.
+function updateResimBtn() {
+  const b = $('resimBtn');
+  if (!b) return;
+  const n = window.SeasonTrack ? (SeasonTrack.items().resim || 0) : 0;
+  b.style.display = (state.career && !state.career.pendingDecision && n > 0) ? 'inline-block' : 'none';
+  b.textContent = `🔁 Re-sim Career ×${n}`;
+}
+function resim() {
+  if (!state.career) return;
+  if (!(window.SeasonTrack && SeasonTrack.useItem('resim'))) { updateResimBtn(); return; }
+  Sound.click();
+  state.resimN += 1;
+  state.resimSalt = '|resim' + state.resimN;
+  state.career = null;
+  $('careerCard').style.display = 'none';
+  $('submitRow').style.display = 'none';
+  $('resimBtn').style.display = 'none';
+  _doCareerSim();
 }
 
 function respin() {
@@ -2553,6 +2616,7 @@ function updatePowerups() {
   r.classList.toggle('used', state.respinUsed);
   b.classList.toggle('used', state.boostUsed);
   s.classList.toggle('used', state.snagUsed);
+  updateScoutUI();
 }
 
 function clamp(n, lo, hi) { return Math.max(lo, Math.min(hi, n)); }
@@ -2662,12 +2726,13 @@ const CAREER_EVENTS = {
     ] },
 };
 
-function simulateCareer(filled, finalOvr, draftTeamAb, choices) {
+function simulateCareer(filled, finalOvr, draftTeamAb, choices, salt) {
   const vals = {};
   for (const s of SLOTS) vals[s.key] = filled[s.key].value;
 
   const seed = SLOTS.map(s => `${s.key}:${vals[s.key]}:${filled[s.key].player || filled[s.key].name}`).join('|');
-  const rng = seededRandom(seed + '|career-v1');
+  // salt = Re-sim token re-rolls ('' for a normal run — byte-identical to the original sim)
+  const rng = seededRandom(seed + '|career-v1' + (salt || ''));
   const role = vals.stamina >= 52 ? 'Starter' : 'Bullpen Ace';
   const seasons = [];
   const totals = {
@@ -2695,7 +2760,7 @@ function simulateCareer(filled, finalOvr, draftTeamAb, choices) {
   const evPlan = {};
   if (evOn) {
     // a FIXED number of draws builds the plan, so it never depends on career length
-    const dRng = seededRandom(seed + '|decisions-v1');
+    const dRng = seededRandom(seed + '|decisions-v1' + (salt || ''));
     const EARLY = ['media', 'viral_rookie', 'gear'], MID = ['presser', 'viral_celebration', 'national', 'mentor'];
     const early = EARLY[Math.floor(dRng() * EARLY.length)];
     const earlyYear = 1 + Math.floor(dRng() * 2);                       // season 2 or 3
@@ -3148,6 +3213,14 @@ function seasonHeadlines(s, idx, total, P, fallbackTeam, finished = true) {
   return h;
 }
 
+// Auto-name: simulating with an empty name field fills in a random one (written INTO the
+// input so the same name flows through the card, leaderboard submit, and HOF save).
+const NAME_FIRST = ['Ace', 'Bo', 'Buck', 'Chip', 'Cy', 'Deion', 'Duke', 'Dutch', 'Ernie', 'Flash', 'Gus', 'Hank', 'Hondo', 'Juice', 'Lefty', 'Mookie', 'Moose', 'Monte', 'Otis', 'Red', 'Rip', 'Rocco', 'Sal', 'Sandy', 'Sonny', 'Tex', 'Wade', 'Ziggy'];
+const NAME_LAST = ['Banks', 'Bishop', 'Blaze', 'Boone', 'Briggs', 'Cannon', 'Colt', 'Cross', 'Dalton', 'Diamond', 'Fox', 'Frost', 'Granger', 'Hammer', 'Holliday', 'Knox', 'Maddox', 'Marsh', 'McQueen', 'Rivers', 'Ryder', 'Slater', 'Steele', 'Sterling', 'Stone', 'Tatum', 'Vance', 'Wilder'];
+function randomPlayerName() {
+  return NAME_FIRST[Math.floor(Math.random() * NAME_FIRST.length)] + ' ' + NAME_LAST[Math.floor(Math.random() * NAME_LAST.length)];
+}
+
 // Play the career out season by season - log, headlines, live ticker - then the verdict + card.
 // Shows draft animation first, then runs the career sim.
 function runCareerPlaythrough() {
@@ -3155,6 +3228,8 @@ function runCareerPlaythrough() {
   // Daily: if the auto-popup hasn't fired yet, show the results panel first (fallback path).
   if (dailyMode && !dailyResultsShown) { showDailyResults(); return; }
   $('simBtn').disabled = true;
+  state.resimSalt = ''; state.resimN = 0;   // fresh build → the canonical (deterministic) career first
+  if (!$('nameInput').value.trim()) $('nameInput').value = randomPlayerName();
 
   // Compute archetype (role uses same logic as simulateCareer)
   const vals = {};
@@ -3209,7 +3284,7 @@ function _doCareerSim() {
   // decisions ON => choices grow as the player answers (sim halts at each new
   // event and re-runs with the pick appended); OFF => null = the classic sim
   state.careerChoices = careerEventsOn() ? [] : null;
-  let career = state.career = simulateCareer(state.filled, state.finalOvr, state.draftTeamAb, state.careerChoices);
+  let career = state.career = simulateCareer(state.filled, state.finalOvr, state.draftTeamAb, state.careerChoices, state.resimSalt);
   let seasons = career.seasons;
   const ab = state.draftTeamAb;
   state.simTeam = teamInfo(ab);
@@ -3241,7 +3316,7 @@ function _doCareerSim() {
     const pd = career.pendingDecision;
     const resume = pick => {
       state.careerChoices.push(pick);
-      career = state.career = simulateCareer(state.filled, state.finalOvr, state.draftTeamAb, state.careerChoices);
+      career = state.career = simulateCareer(state.filled, state.finalOvr, state.draftTeamAb, state.careerChoices, state.resimSalt);
       seasons = career.seasons;
       delay = clamp(3400 / seasons.length, 130, 320);
       const d = CAREER_EVENTS[pd.id], opt = d.options.find(o => o.key === pick);
@@ -3410,6 +3485,7 @@ function finishPlaythrough(career) {
     $('submitRow').style.display = 'flex';
     const shb = $('saveHofBtn'); shb.disabled = false; shb.textContent = '💾 Save to my Hall of Fame';
     gsap.fromTo($('submitRow'), { y: 8, opacity: 0 }, { y: 0, opacity: 1, duration: .4, delay: .2 });
+    updateResimBtn();
   }, 550);
 }
 
@@ -3490,6 +3566,7 @@ function buildCard(career, verdict, voteLine) {
     <div class="cc-hint">Shares a card image. Submit to the leaderboard first and your link goes with it</div>`;
   const sb = $('ccShareBtn');
   if (sb) sb.onclick = shareCareerCard;
+  if (window.SeasonTrack) SeasonTrack.applyFrame($('careerCard'));
 }
 
 // Render the finished card to a PNG and open the native share sheet (falls back to
@@ -3516,6 +3593,7 @@ async function shareCareerCard() {
       [t.war.toFixed(1), 'WAR'], [t.whip.toFixed(2), 'WHIP'], [Math.round(t.ip).toLocaleString(), 'IP']],
     trophies: trophyParts(t).slice(0, 12).join(' '),
     earnings: fmtMoney(t.earnings),
+    frame: window.SeasonTrack ? SeasonTrack.equippedFrame() : null,
     gameEmoji: '⚾', url,
     text: `I built ${state.simName || 'a pitcher'}: a ${state.finalOvr} OVR${t.hallOfFame ? ' Hall of Fame' : ''} pitcher on GoatLab. Beat my career:`,
     filename: 'goatlab-pitcher.png',
@@ -3811,6 +3889,8 @@ function reset() {
   state.spinning = false;
   state.strip = null;
   state.career = null;
+  state.scoutTarget = null; state.resimSalt = ''; state.resimN = 0;
+  updateScoutUI(); if ($('resimBtn')) $('resimBtn').style.display = 'none';
   state.archetype = null;
   state.draftTeamAb = null;
   $('done').classList.remove('show');

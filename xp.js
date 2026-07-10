@@ -333,7 +333,9 @@
       const r = orig.apply(this, arguments);
       if (!had && Ach.has(id)) {
         const a = (Ach.all || []).find(x => x.id === id);
-        award(a && a.xp ? a.xp : (a && a.chal ? ACH_XP_CHAL : ACH_XP), 'achievement');
+        // go through the PUBLIC method: season-track.js wraps XP.award to count season XP,
+        // so calling the internal award() here would earn XP the track never sees
+        XP.award(a && a.xp ? a.xp : (a && a.chal ? ACH_XP_CHAL : ACH_XP), 'achievement');
       }
       return r;
     };
@@ -380,7 +382,7 @@
         b.textContent = txt;
         b.style.cssText = 'font:600 12px Oswald,sans-serif;letter-spacing:.5px;color:#eaf2fb;background:#10202e;' +
           'border:1px solid #ffce3a;border-radius:9px;padding:9px 12px;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.5);';
-        b.onclick = () => award(amt, 'test');
+        b.onclick = () => XP.award(amt, 'test');   // public method, so wrappers (season track) see it
         return b;
       };
       wrap.appendChild(mk('＋ 75 XP', 75));            // usually a partial fill

@@ -175,6 +175,18 @@ const STRIKER_ICONS = [
   ['Gareth Bale',        'Wales',         'RW',  185, 89, 108,  97, 108,  97,  94,  88,  90, 103],
   ['David Beckham',      'England',       'RM',  183, 89,  78,  92, 105,  92, 114,  80,  86, 108],
 ];
+// Hand-authored NON-icon pool cards (regular reel entries, not purple legends). Same column
+// layout as KEEPER_ICONS + optional trailing img (repo-relative path); stats are FINAL (already
+// on the curved scale). No eaId, so without an img they'd fall back to the silhouette.
+const CUSTOM_KEEPERS = [
+  ['Vozhina', null, 193, 93, 93, 96, 90, 80, 93, 58, 82, 88, 'vozhina.webp'],
+];
+function customKeeper([name, nation, cm, ovr, diving, reflexes, handling, distribution, positioning, agility, command, clutch, img]) {
+  return { name, eaId: null, ovr, pos: 'GK', club: null, tid: null, nation, nid: null, league: null,
+    height: inToStr(cmToIn(cm)), heightIn: cmToIn(cm),
+    diving, reflexes, handling, distribution, positioning, agility, command, clutch, img: img || undefined };
+}
+
 // [name, nation, cm, ovr, diving, reflexes, handling, distribution, positioning, agility, command, clutch]
 const KEEPER_ICONS = [
   ['Lev Yashin',          'Russia',      189, 94, 114, 111, 108,  92, 111, 100, 105, 111],
@@ -209,17 +221,21 @@ function iconKeeper([name, nation, cm, ovr, diving, reflexes, handling, distribu
   else players = JSON.parse(fs.readFileSync('footballers-raw.json', 'utf8')).players;
 
   // Pool floors (RAW EA overalls, pre-stretch): tuned so each reel has a healthy few hundred
-  // names with real tier spread. Keeper floor 72 shaves the bronze-nobody tail.
-  const STRIKER_FLOOR = 74, KEEPER_FLOOR = 72;
+  // names with real tier spread. Keeper floor 71 = every SHOWN (stretched) OVR lands ≥ 70
+  // (raw 70 would stretch to 69).
+  const STRIKER_FLOOR = 74, KEEPER_FLOOR = 71;
   const ATTACK = new Set(['ST', 'CF', 'LW', 'RW', 'CAM']);
+  // Keepers only: top-5 leagues + MLS. EXACT EA league labels — the sponsor parts
+  // ("Enilive", "McDonald's") change between datasets, so re-check these on a data refresh.
+  const GK_LEAGUES = new Set(['Premier League', 'LALIGA EA SPORTS', 'Serie A Enilive', 'Bundesliga', "Ligue 1 McDonald's", 'MLS']);
 
   const attackers = players.filter(p =>
     (p.posType === 'attack' || ATTACK.has(p.pos)) && (p.ovr || 0) >= STRIKER_FLOOR && p.st.finishing != null);
-  const gks = players.filter(p => p.pos === 'GK' && (p.ovr || 0) >= KEEPER_FLOOR && p.st.gkReflexes != null);
+  const gks = players.filter(p => p.pos === 'GK' && (p.ovr || 0) >= KEEPER_FLOOR && p.st.gkReflexes != null && GK_LEAGUES.has(p.league));
 
   const dedupe = arr => { const seen = new Set(), out = []; for (const p of arr) { const k = norm(p.name); if (seen.has(k)) continue; seen.add(k); out.push(p); } return out; };
   const sPool = dedupe(attackers).map(slimStriker).sort((a, b) => b.ovr - a.ovr);
-  const kPool = dedupe(gks).map(slimKeeper).sort((a, b) => b.ovr - a.ovr);
+  const kPool = dedupe(gks).map(slimKeeper).concat(CUSTOM_KEEPERS.map(customKeeper)).sort((a, b) => b.ovr - a.ovr);
 
   const sPrime = {}; for (const c of sPool) sPrime[c.name] = makePrime(c, STRIKER_KEYS);
   const kPrime = {}; for (const c of kPool) kPrime[c.name] = makePrime(c, KEEPER_KEYS);

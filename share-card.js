@@ -35,6 +35,36 @@
     return '#' + [f(n >> 16), f((n >> 8) & 255), f(n & 255)].map(c => c.toString(16).padStart(2, '0')).join('');
   }
 
+  // Season Track card frames (o.frame = 'frame_cyan' | 'frame_gold' | 'frame_holo').
+  // Drawn over the card's default border; unknown/absent ids are a no-op.
+  function drawFrame(ctx, id, x, y, w, h) {
+    if (!id) return;
+    const ring = (inset, style, width) => {
+      roundRect(ctx, x + inset, y + inset, w - inset * 2, h - inset * 2, Math.max(8, 26 - inset));
+      ctx.strokeStyle = style; ctx.lineWidth = width; ctx.stroke();
+    };
+    ctx.save();
+    if (id === 'frame_cyan') {
+      ctx.shadowColor = 'rgba(25,198,255,.8)'; ctx.shadowBlur = 22;
+      ring(0, 'rgba(25,198,255,.95)', 5);
+      ctx.shadowBlur = 0;
+      ring(9, 'rgba(25,198,255,.4)', 2);
+    } else if (id === 'frame_gold') {
+      ctx.shadowColor = 'rgba(255,206,58,.8)'; ctx.shadowBlur = 24;
+      ring(0, '#ffce3a', 6);
+      ctx.shadowBlur = 0;
+      ring(10, 'rgba(255,206,58,.45)', 2);
+    } else if (id === 'frame_holo') {
+      const g = ctx.createLinearGradient(x, y, x + w, y + h);
+      g.addColorStop(0, '#19c6ff'); g.addColorStop(.5, '#c86bff'); g.addColorStop(1, '#ffce3a');
+      ctx.shadowColor = 'rgba(200,107,255,.7)'; ctx.shadowBlur = 26;
+      ring(0, g, 7);
+      ctx.shadowBlur = 0;
+      ring(11, 'rgba(255,255,255,.35)', 1.5);
+    }
+    ctx.restore();
+  }
+
   // Shrink a font size until the text fits maxWidth (keeps long player names on the card).
   function fitText(ctx, text, weight, family, size, maxWidth, minSize) {
     let s = size;
@@ -69,6 +99,7 @@
     ctx.restore();
     roundRect(ctx, CX, CY, CW2, CH2, 26);
     ctx.strokeStyle = 'rgba(25,198,255,.35)'; ctx.lineWidth = 2; ctx.stroke();
+    drawFrame(ctx, o.frame, CX, CY, CW2, CH2);
 
     // --- team-gradient header band ---
     const HH = 250;

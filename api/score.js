@@ -46,7 +46,7 @@ const SLOT_MAX = {
 const OVR_W = {
   batter: { Vision: 1.1, Power: 1.2, Contact: 1.2, Speed: 1.0, Clutch: 1.1, Discipline: 1.1, Frame: 1.0, Defense: 1.0 },
   baller: { '3-Pointer': 1.2, Finishing: 1.2, Playmaking: 1.2, Dribble: 1.1, Defense: 1.1, Rebounding: 1.1, Clutch: 1.1, Speed: 0.9, Frame: 1.0 },
-  striker: { Finishing: 1.2, Pace: 1.2, Dribbling: 1.1, 'Shot Power': 1.1, Passing: 1.1, Clutch: 1.1, Heading: 1.0, Physical: 1.0, Frame: 0.9 },
+  striker: { Finishing: 1.2, Pace: 1.2, Dribbling: 1.1, 'Shot Power': 1.1, Passing: 1.1, Clutch: 1.1, Heading: 1.0, Physical: 1.0, Frame: 0.7 },
   keeper: { Reflexes: 1.2, Diving: 1.2, Positioning: 1.1, Handling: 1.1, Clutch: 1.1, Frame: 1.1, Command: 1.0, Distribution: 1.0, Agility: 1.0 },
 };
 // Legend names per game, loaded lazily from the baked data (auto-updates on refresh; only read on

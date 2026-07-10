@@ -1164,14 +1164,16 @@ function tier(ovr) {
 const WEIGHTS = {
   finishing: 1.2, pace: 1.2,
   dribbling: 1.1, power: 1.1, passing: 1.1, clutch: 1.1,
-  heading: 1.0, physical: 1.0, frame: 0.9,
+  heading: 1.0, physical: 1.0, frame: 0.7,
 };
 
-// Frame is pure height: taller is always better (aerial threat / hold-up play). A 5'4" winger sits
-// in the 40s, a 6'6" tower pushes ~95. Weighted below the skills, so it's an edge, not a cheat code.
+// Frame is pure height, taller = better, but a GENTLE slope (1.5/inch vs the skills' full spread):
+// Haaland's 6'5" = 95, 6'6"+ giants squeeze out 97-99, Mbappé's 6'0" = 88, Messi's 5'7" = 80, and
+// even a 5'1" flea sits at 71. Combined with the 0.7 weight it's a nudge, not a build-maker.
 function heightToRating(inches) {
   if (!inches) return 60;
-  return clamp(Math.round(48 + (inches - 64) * 3.4), 1, 125);
+  if (inches > 77) return Math.min(99, 95 + (inches - 77) * 2);
+  return clamp(Math.round(95 - (77 - inches) * 1.5), 1, 125);
 }
 function slotNumeric(p, s) { return s.type === 'height' ? heightToRating(p.heightIn) : (p[s.key] || 0); }
 function slotDisplay(p, s) { return s.type === 'height' ? (p.height || '-') : (p[s.key] || 0); }

@@ -109,6 +109,8 @@ function ensure() {
       // Player card collection ("The Binder"): { pitcher:{ "Name":{t,c,f,p,l} }, batter:{…}, baller:{…} }.
       // Union-merged on sync (like achievements) so the binder follows the email across devices.
       await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS collection jsonb NOT NULL DEFAULT '{}'::jsonb`;
+      // Season Track cosmetics inventory: { seasons:{"1":sxp}, unlocked:{id:1}, equipped:{frame,title} }.
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS cosmetics jsonb NOT NULL DEFAULT '{}'::jsonb`;
       await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS current_streak int NOT NULL DEFAULT 0`;
       await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS best_streak int NOT NULL DEFAULT 0`;
       await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_active_date date`;
@@ -597,6 +599,50 @@ module.exports = async (req, res) => {
         }
         await sql`UPDATE users SET collection = ${JSON.stringify(merged)}::jsonb WHERE google_sub = ${body.sub}`;
         return res.status(200).json({ ok: true, collection: merged });
+      }
+
+      // Season Track cosmetics: per-season SXP keeps the max, unlocked is a union (permanent
+      // inventory — same always-merge posture as collectionSync), equipped = incoming wins
+      // (it's a preference; explicit null = unequipped). Trust-the-client like XP.
+      if (action === 'trackSync') {
+        if (!(await authed(body.sub, body.sessionToken))) return res.status(401).json({ ok: false, error: 'Not signed in' });
+        const okId = v => typeof v === 'string' && /^[a-z0-9_]{1,40}$/.test(v);
+        const stored = ((await sql`SELECT cosmetics FROM users WHERE google_sub = ${body.sub}`)[0] || {}).cosmetics || {};
+        const merged = {
+          seasons: (stored.seasons && typeof stored.seasons === 'object') ? stored.seasons : {},
+          unlocked: (stored.unlocked && typeof stored.unlocked === 'object') ? stored.unlocked : {},
+          equipped: (stored.equipped && typeof stored.equipped === 'object') ? stored.equipped : {},
+          items: (stored.items && typeof stored.items === 'object') ? stored.items : {},
+        };
+        const season = Math.max(0, Math.min(10000, Math.round(Number(body.season) || 0)));
+        if (season >= 1) {
+          const sxp = Math.max(0, Math.min(1e9, Math.round(Number(body.sxp) || 0)));
+          merged.seasons[String(season)] = Math.max(Number(merged.seasons[String(season)]) || 0, sxp);
+        }
+        if (body.unlocked && typeof body.unlocked === 'object') {
+          for (const id of Object.keys(body.unlocked)) {
+            if (!okId(id)) continue;
+            if (!merged.unlocked[id] && Object.keys(merged.unlocked).length >= 500) break;
+            merged.unlocked[id] = 1;
+          }
+        }
+        if (body.equipped && typeof body.equipped === 'object') {
+          for (const slot of ['frame', 'title', 'trail']) {
+            if (!(slot in body.equipped)) continue;
+            const v = body.equipped[slot];
+            merged.equipped[slot] = okId(v) ? v : null;
+          }
+        }
+        // Consumable counts: incoming wins (the client is the spender of record — same
+        // trust-the-client posture as everything else here).
+        if (body.items && typeof body.items === 'object') {
+          for (const k of ['scout', 'resim']) {
+            if (!(k in body.items)) continue;
+            merged.items[k] = Math.max(0, Math.min(999, Math.round(Number(body.items[k]) || 0)));
+          }
+        }
+        await sql`UPDATE users SET cosmetics = ${JSON.stringify(merged)}::jsonb WHERE google_sub = ${body.sub}`;
+        return res.status(200).json({ ok: true, cosmetics: merged });
       }
 
       if (action === 'pvpStats') {
