@@ -5,6 +5,11 @@
 # first and read the log before running with dry_run=0.
 name: Redact inflated careers
 
+# Two triggers:
+#  - workflow_dispatch (Actions tab -> Run workflow) with the inputs below
+#  - push touching .github/redact-request.json - the request params live in that
+#    file, and the result is committed back as .github/redact-result.json (lets
+#    the redaction be driven from environments that can't call the Actions API)
 on:
   workflow_dispatch:
     inputs:
@@ -24,11 +29,39 @@ on:
         description: 'Window end (ISO, default = now)'
         required: false
         default: ''
+  push:
+    paths: ['.github/redact-request.json']
 
 jobs:
   redact:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve params (dispatch inputs, or redact-request.json on push)
+        id: params
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            node -e "
+              const r = require('./.github/redact-request.json');
+              const out = [
+                'dry_run=' + (String(r.dry_run ?? '1')),
+                'game=' + (r.game || 'batter'),
+                'since=' + (r.since || '2026-07-10T05:37:00Z'),
+                'until=' + (r.until || ''),
+              ].join('\n');
+              require('fs').appendFileSync(process.env.GITHUB_OUTPUT, out + '\n');
+            "
+          else
+            {
+              echo "dry_run=${{ inputs.dry_run }}"
+              echo "game=${{ inputs.game }}"
+              echo "since=${{ inputs.since }}"
+              echo "until=${{ inputs.until }}"
+            } >> "$GITHUB_OUTPUT"
+          fi
       - name: Verify the fixed sim is live (abort otherwise)
         run: |
           n=$(curl -sf --max-time 30 https://pitchinglab.pitchergami.com/batting | grep -c 'superPow \* 0.00015' || true)
@@ -41,13 +74,33 @@ jobs:
       - name: Run redaction
         env:
           STATS_TOKEN: ${{ secrets.STATS_TOKEN }}
+          DRY_RUN: ${{ steps.params.outputs.dry_run }}
+          GAME: ${{ steps.params.outputs.game }}
+          SINCE: ${{ steps.params.outputs.since }}
+          UNTIL: ${{ steps.params.outputs.until }}
         run: |
           TOKEN="${STATS_TOKEN:-pl-balance-7f3a9c21}"
           BODY=$(printf '{"action":"redactCareers","token":"%s","game":"%s","since":"%s","until":"%s","dryRun":%s}' \
-            "$TOKEN" "${{ inputs.game }}" "${{ inputs.since }}" "${{ inputs.until }}" \
-            "$([ "${{ inputs.dry_run }}" = "0" ] && echo false || echo true)")
-          echo "dry_run=${{ inputs.dry_run }} game=${{ inputs.game }} since=${{ inputs.since }} until=${{ inputs.until }}"
+            "$TOKEN" "$GAME" "$SINCE" "$UNTIL" \
+            "$([ "$DRY_RUN" = "0" ] && echo false || echo true)")
+          echo "dry_run=$DRY_RUN game=$GAME since=$SINCE until=$UNTIL"
           curl -sf --max-time 60 -X POST https://pitchinglab.pitchergami.com/api/score \
             -H 'content-type: application/json' -d "$BODY" | tee result.json
           echo
           node -e "const r=require('./result.json'); if(!r.ok){console.error('FAILED',r);process.exit(1)}; console.log(r.dryRun?('DRY RUN — would redact '+r.count+' rows'):('REDACTED '+r.redacted+' rows'))"
+
+      - name: Commit result back to the branch (push-triggered runs only)
+        if: ${{ github.event_name == 'push' && always() }}
+        run: |
+          node -e "
+            const fs = require('fs');
+            let r = null;
+            try { r = JSON.parse(fs.readFileSync('result.json', 'utf8')); }
+            catch (e) { r = { ok: false, error: 'no result.json - see the Actions log' }; }
+            fs.writeFileSync('.github/redact-result.json', JSON.stringify({ ranAt: new Date().toISOString(), result: r }, null, 2) + '\n');
+          "
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add .github/redact-result.json
+          git commit -m 'redact-careers result [skip ci]' || exit 0
+          git push
