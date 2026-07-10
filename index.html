@@ -21,7 +21,7 @@
 <script src="/xp.js" defer></script>
 <script src="/social.js" defer></script>
 <script src="/hotboard.js" defer></script>
-<script src="/switcher.js?v=8" defer></script>
+<script src="/switcher.js?v=9" defer></script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-TVL2XEQ2Q7"></script>
@@ -175,6 +175,19 @@
   .mtile.lock { opacity:.55; cursor:default; }
   .mtile.lock:hover { border-color:var(--line); box-shadow:none; transform:none; }
   .mtile .done { color:#43e97b; font-weight:600; }
+  /* ⚔️ 1v1 tile: soft HUD glow pulse (shadow/filter only — no layout shift) */
+  @media (prefers-reduced-motion: no-preference) {
+    .mtile-vs { animation: mtileVsPulse 2s ease-in-out infinite; }
+    .mtile-vs i { animation: mtileVsIco 2s ease-in-out infinite; }
+  }
+  @keyframes mtileVsPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255,122,24,0); }
+    50% { box-shadow: 0 0 18px -4px rgba(255,122,24,.55), 0 0 28px -8px rgba(25,198,255,.4); }
+  }
+  @keyframes mtileVsIco {
+    0%, 100% { filter: drop-shadow(0 0 2px rgba(255,122,24,.2)); }
+    50% { filter: drop-shadow(0 0 7px rgba(255,122,24,.8)); }
+  }
   .pick { position:relative; display:flex; flex-direction:column; align-items:center; text-align:center;
     border:1px solid var(--line); border-radius:18px; padding:26px 20px 22px; overflow:hidden; cursor:pointer;
     text-decoration:none; color:var(--ink); transform-style:preserve-3d; transition:transform .12s ease;
@@ -569,7 +582,7 @@ gsap.from('.hero p', { y: 10, opacity: 0, duration: .35, delay: .1, ease: 'power
     const tiles = [
       { i: '🎯', b: 'Daily', s: (playedToday ? '<span class="done">✅ Done today</span>' : `Today: ${D.icon} ${D.name}`) + '<span id="dcCount" style="display:block;color:var(--accent2)"></span>', href: D.path + '#daily' },
       { i: '🛠️', b: 'Build', s: `Draft a ${g.name.toLowerCase()}, sim the career`, href: g.path },
-      sport.vs ? { i: '⚔️', b: '1v1 Live', s: 'Real players, live builds', href: sport.vs }
+      sport.vs ? { i: '⚔️', b: '1v1 Live', s: 'Real players, live builds', href: sport.vs, cls: ' mtile-vs' }
                : { i: '⚔️', b: '1v1 Live', s: 'Soccer 1v1 — coming soon', lock: true },
       { i: '🏆', b: 'Leaderboard', s: 'Top builds, all-time & today', href: g.path + '#leaderboard' },
       { i: '📇', b: 'Collection', s: 'Every card you\'ve pulled', href: g.path + '#collection' },
@@ -577,7 +590,7 @@ gsap.from('.hero p', { y: 10, opacity: 0, duration: .35, delay: .1, ease: 'power
     ];
     $('modeGrid').innerHTML = tiles.map(t => t.lock
       ? `<div class="mtile lock"><i>${t.i}</i><b>${t.b} 🔒</b><span>${t.s}</span></div>`
-      : `<a class="mtile" href="${t.href}"><i>${t.i}</i><b>${t.b}</b><span>${t.s}</span></a>`).join('');
+      : `<a class="mtile${t.cls || ''}" href="${t.href}"><i>${t.i}</i><b>${t.b}</b><span>${t.s}</span></a>`).join('');
 
     $('sportSeg').querySelectorAll('[data-sport]').forEach(b => b.onclick = () => { const s = SPORTS.find(x => x.id === b.dataset.sport); setActive(roleFor(s)); });
     $('roleSeg').querySelectorAll('[data-role]').forEach(b => b.onclick = () => setActive(b.dataset.role));

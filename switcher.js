@@ -95,6 +95,14 @@
   .gnav-tab.on { color:#eaf2fb; }
   .gnav-tab.on i { filter:drop-shadow(0 0 8px rgba(255,122,24,.8)); }
   .gnav-tab:hover { color:#eaf2fb; }
+  /* ⚔️ 1v1 tab: soft HUD glow pulse (filter only — zero layout shift) */
+  @media (prefers-reduced-motion: no-preference) {
+    .gnav-tab.gnav-vs i { animation: gnavVsPulse 2s ease-in-out infinite; }
+  }
+  @keyframes gnavVsPulse {
+    0%, 100% { filter: drop-shadow(0 0 2px rgba(255,122,24,.25)); }
+    50% { filter: drop-shadow(0 0 7px rgba(255,122,24,.85)) drop-shadow(0 0 13px rgba(25,198,255,.45)); }
+  }
   .gs-pill { display:inline-flex; align-items:center; gap:6px; padding:6px 11px; border-radius:8px;
     font-family:'Oswald',sans-serif; font-size:12px; font-weight:600; letter-spacing:1px; text-transform:uppercase;
     color:var(--ink,#eaf2fb); background:rgba(255,255,255,.04); border:1px solid var(--line,rgba(120,160,210,.16));
@@ -267,8 +275,8 @@
       <a class="gnav-tab${onDaily ? ' on' : ''}" data-nav="daily" href="${GAMES[dg].path}#daily"><i>🎯</i>Daily</a>
       <a class="gnav-tab${onGame && !onDaily && !onRanks ? ' on' : ''}" data-nav="build" href="${A.path}"><i>🛠️</i>Build</a>
       ${vsPath
-        ? `<a class="gnav-tab${onVersus ? ' on' : ''}" href="${vsPath}"><i>⚔️</i>1v1</a>`
-        : `<button class="gnav-tab" data-nav="vs-pick"><i>⚔️</i>1v1</button>`}
+        ? `<a class="gnav-tab gnav-vs${onVersus ? ' on' : ''}" href="${vsPath}"><i>⚔️</i>1v1</a>`
+        : `<button class="gnav-tab gnav-vs" data-nav="vs-pick"><i>⚔️</i>1v1</button>`}
       <a class="gnav-tab${onRanks ? ' on' : ''}" data-nav="ranks" href="${A.path}#leaderboard"><i>🏆</i>Ranks</a>
       <button class="gnav-tab" data-nav="profile"><i>👤</i>Profile<span data-social-badge></span></button>
       <button class="gnav-tab" data-nav="more"><i>☰</i>More</button>
