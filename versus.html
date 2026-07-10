@@ -6,9 +6,10 @@
 <title>Face Off · GoatLab 1v1</title>
 <meta name="theme-color" content="#0a1320">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-<script src="/switcher.js?v=6" defer></script>
+<script src="/switcher.js?v=7" defer></script>
 <script src="/achievements.js" defer></script>
 <script src="/xp.js" defer></script>
+<script src="/social.js" defer></script>
 <script src="/quests.js" defer></script>
 <script src="/season-track.js" defer></script>
 <script src="https://cdn.ably.com/lib/ably.min-2.js"></script>
@@ -535,6 +536,7 @@
       </div>
       <button class="btn ghost" id="mmChalBtn" style="width:100%;font-size:13px;padding:11px 20px;letter-spacing:1.5px;">🔗 Challenge a Friend</button>
       <div style="color:var(--dim);font-size:11.5px;margin-top:7px;letter-spacing:.2px;text-align:center;">Pick a mode · Share a link · No Elo change</div>
+      <button class="btn ghost" id="miFriends" style="width:100%;font-size:13px;padding:11px 20px;letter-spacing:1.5px;margin-top:10px;">👥 Friends<span data-social-badge style="margin-left:6px"></span></button>
       <div class="spinner" id="mmSpin"></div>
       <div class="status" id="mmStatus"></div>
       <div style="margin-top:18px; display:none;" id="cancelWrap">
@@ -2079,6 +2081,12 @@ function showForfeitResult(iWon, filled, data={}){
   const oppElo = typeof data.elo === 'number' ? data.elo : ((oppBuild && typeof oppBuild.elo === 'number') ? oppBuild.elo : 1000);
   const oppForfeitName = data.name || (oppBuild && oppBuild.name ? oppBuild.name : '');
   if (friendlyMode) {
+    // friends head-to-head: fire-and-forget — the server only counts the winner's report,
+    // once per match, and only if the two players are accepted friends (social layer).
+    if (!isGhost && oppBuild && oppBuild.key) {
+      try { fetch('/api/account', { method:'POST', headers:{'content-type':'application/json'},
+        body: JSON.stringify(Object.assign({ action:'friendlyResult', matchId, won: !!iWon, oppKey: oppBuild.key }, principal())) }); } catch(e){}
+    }
     $('ratingResult').innerHTML = '<div class="prompt" style="color:var(--accent2);font-size:14px;margin-top:4px">⚔️ Friendly Match · No Elo Change</div>';
   } else {
     pendingResult = { matchId, won:iWon, oppElo, role:myRole, ovr:(myBuild ? myBuild.ovr : 0), oppOvr:(oppBuild ? oppBuild.ovr : 0), oppName:oppForfeitName, oppKey:(oppBuild && oppBuild.key ? oppBuild.key : ''), decided: false };
@@ -2478,6 +2486,12 @@ function showResult(iWon, pitcher, batter, winnerRole, script){
 
   const oppElo = (oppBuild && typeof oppBuild.elo === 'number') ? oppBuild.elo : 1000;
   if (friendlyMode) {
+    // friends head-to-head: fire-and-forget — the server only counts the winner's report,
+    // once per match, and only if the two players are accepted friends (social layer).
+    if (!isGhost && oppBuild && oppBuild.key) {
+      try { fetch('/api/account', { method:'POST', headers:{'content-type':'application/json'},
+        body: JSON.stringify(Object.assign({ action:'friendlyResult', matchId, won: !!iWon, oppKey: oppBuild.key }, principal())) }); } catch(e){}
+    }
     $('ratingResult').innerHTML = '<div class="prompt" style="color:var(--accent2);font-size:14px;margin-top:4px">⚔️ Friendly Match · No Elo Change</div>';
   } else {
     pendingResult = { matchId, won: iWon, oppElo, role: myRole, ovr: (myBuild ? myBuild.ovr : 0), oppOvr: (oppBuild ? oppBuild.ovr : 0), oppName: oppName, oppKey: (oppBuild && oppBuild.key ? oppBuild.key : ''), decided: true };
@@ -2669,6 +2683,9 @@ initGoogle();
 refreshStats().then(() => { updateRatingChip(); renderSeasonBar(); });
 startSeasonBar();   // keep the season countdown live on the matchmaking screen
 checkChallengeURL();  // show challenge screen immediately if URL has ?ch= (no Ably needed for the screen)
+// A friends-panel challenge (social.js) sends the CHALLENGER here with ?lobby=1: wait in the
+// challenge lobby — an incoming ping auto-accepts (lobbyWaiting) and the match starts.
+if (new URLSearchParams(location.search).get('lobby')) setTimeout(openLobby, 400);
 goOnline();  // connect + wire the friend-challenge inbox (global presence is joined lazily on search)
 // dev harness: /versus.html?animtest=1&seed=5&aovr=95&bovr=88&ateam=LAD&bteam=LAD plays the at-bat
 // with fake builds — no Ably, no matchmaking, and friendlyMode means no Elo is reported.
