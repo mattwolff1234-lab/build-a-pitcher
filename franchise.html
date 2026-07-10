@@ -298,7 +298,12 @@ button.btn.danger { color:#ffdede; background:rgba(255,77,94,.14); border:1px so
     <div class="panel" style="padding:18px; margin-top:16px; max-width:460px">
       <div class="eyebrow" style="margin-bottom:8px">Name your club</div>
       <input id="newName" maxlength="24" placeholder="e.g. Goat City Legends" style="width:100%;box-sizing:border-box;font-family:'Oswald',sans-serif;font-size:17px;letter-spacing:1px;color:var(--ink);background:rgba(8,14,24,.8);border:1px solid var(--line);border-radius:9px;padding:11px 12px;outline:none">
-      <button class="btn" id="newGo" style="margin-top:12px;width:100%">🏟️ Found the Franchise</button>
+      <div class="eyebrow" style="margin:16px 0 6px">How many players will YOU create?</div>
+      <div class="sub" style="margin-bottom:8px">Build/import this many of the 14 — the front office signs free agents for the rest.</div>
+      <div id="newCreateRow" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+      <div class="eyebrow" style="margin:16px 0 6px">Season length</div>
+      <div id="newGamesRow" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+      <button class="btn" id="newGo" style="margin-top:16px;width:100%">🏟️ Found the Franchise</button>
     </div>
   </section>
 
@@ -318,6 +323,7 @@ button.btn.danger { color:#ffdede; background:rgba(255,77,94,.14); border:1px so
     <div class="rosterbar">
       <button class="btn ghost" id="autoFill">⚡ Auto-fill empty seats</button>
       <button class="btn" id="startSeason" disabled>▶ Start Season</button>
+      <button class="btn ghost" id="frSettings">⚙️ Settings</button>
       <span class="hint" id="rosterHint"></span>
     </div>
   </section>
@@ -489,6 +495,26 @@ button.btn.danger { color:#ffdede; background:rgba(255,77,94,.14); border:1px so
       <button class="btn" id="offerAccept" style="flex:1">✅ Accept trade</button>
       <button class="btn danger" id="offerDecline" style="flex:1">Hang up</button>
     </div>
+  </div>
+</div>
+
+<!-- franchise settings -->
+<div class="fr-ov" id="settingsOv">
+  <div class="panel fr-card">
+    <div class="eyebrow">⚙️ Franchise settings</div>
+    <div class="pcard-sec">Players you create</div>
+    <div class="sub">How many of the 14 must be YOUR creations (built rookies / Hall of Fame imports) before a season can start. The front office fills the rest.</div>
+    <div style="display:flex;align-items:center;gap:12px;margin-top:10px">
+      <button class="btn ghost" id="setCreateMinus" style="padding:8px 16px">−</button>
+      <span id="setCreateVal" style="font-family:'Oswald',sans-serif;font-size:26px;font-weight:700;min-width:44px;text-align:center">1</span>
+      <button class="btn ghost" id="setCreatePlus" style="padding:8px 16px">＋</button>
+      <span class="hint" id="setCreateHint" style="margin:0"></span>
+    </div>
+    <div class="pcard-sec">Season length</div>
+    <div class="sub" id="setGamesNote">Applies from the next season you start.</div>
+    <div id="setGamesRow" style="display:flex;gap:6px;margin-top:8px"></div>
+    <button class="btn" id="setSave" style="width:100%;margin-top:16px">Save settings</button>
+    <button class="btn ghost" id="setClose" style="width:100%;margin-top:8px">Cancel</button>
   </div>
 </div>
 
@@ -764,8 +790,14 @@ function simRivalSeries(F, tag, aIdx, bIdx) {
   return { winner: aw === 3 ? aIdx : bIdx, aw, bw };
 }
 
+/* ---- per-save settings (the settings system) ----
+   create: how many roster players YOU commit to creating (HOF imports + rookies)
+   games:  season length. Deadline is always the 3/4 mark. */
+const settingsOf = F => Object.assign({ create: 0, games: 32 }, (F && F.settings) || {});
+const gamesOf = F => clamp(Math.round(Number(settingsOf(F).games) || 32), 8, 60);
+const deadlineOf = F => Math.max(4, Math.round(gamesOf(F) * 0.75));
+
 /* ---- trades ---- */
-const TRADE_DEADLINE = 24;   // no deals from game 24 on
 const MAX_OFFERS_IN = 3, MAX_TRADES_USER = 3;
 // market value: rating now + a cut of remaining upside + youth bonus − aging tax
 function tradeValue(p) {
@@ -776,7 +808,7 @@ function tradeValue(p) {
 // your six most valuable players and offers a same-position 1-for-1. Some offers are
 // genuinely good, some are robbery — value band 0.85×–1.2× — the GM (you) decides.
 function genTradeOffer(F, day) {
-  if (day >= TRADE_DEADLINE || (F.tradesIn || 0) >= MAX_OFFERS_IN) return null;
+  if (day >= deadlineOf(F) || (F.tradesIn || 0) >= MAX_OFFERS_IN) return null;
   const rng = seededRandom(`${F.id}|s${F.season}|offer${day}`);
   if (rng() > 0.1) return null;
   const rivalIdx = Math.floor(rng() * 7);
@@ -1012,7 +1044,7 @@ function renderHead() {
   document.querySelectorAll('.frtab').forEach(b => {
     b.classList.toggle('on', b.dataset.tab === tab);
     // Trade Hub only mid-season, before the deadline
-    if (b.dataset.tab === 'trades') b.style.display = (inSeason && F.day < TRADE_DEADLINE) ? '' : 'none';
+    if (b.dataset.tab === 'trades') b.style.display = (inSeason && F.day < deadlineOf(F)) ? '' : 'none';
     if (b.dataset.tab === 'season') b.textContent = F.phase === 'playoffs' ? '🏆 Playoffs' : '📅 Season';
   });
 }
@@ -1047,10 +1079,16 @@ function renderRoster() {
   } else rb.style.display = 'none';
   $('rotSeats').innerHTML = F.rotation.map((p, i) => seatHtml(p, 'rot', i)).join('');
   $('lineSeats').innerHTML = F.lineup.map((p, i) => seatHtml(p, 'line', i)).join('');
-  const filled = F.rotation.filter(Boolean).length + F.lineup.filter(Boolean).length;
-  $('startSeason').disabled = filled < 14;
+  // the creation plan (⚙️ settings): N seats must hold YOUR players before first pitch;
+  // empty seats are the front office's problem (auto-filled at Start Season)
+  const created = createdCount();
+  const target = Math.min(14, Math.max(0, settingsOf(F).create));
+  $('startSeason').disabled = created < target;
   $('startSeason').textContent = `▶ Start Season ${F.season}`;
-  $('rosterHint').textContent = filled < 14 ? `${14 - filled} seat${filled === 13 ? '' : 's'} to fill` : 'Roster complete — play ball!';
+  $('rosterHint').innerHTML = created < target
+    ? `Your plan: <b>${target}</b> creation${target === 1 ? '' : 's'} · ${created} so far — build/import ${target - created} more (or lower it in ⚙️)`
+    : (target ? `Creation plan met (${created}/${target}) — empty seats auto-fill at first pitch. Play ball!`
+              : 'Empty seats auto-fill with free agents at first pitch. Play ball!');
   // occupied seat -> the player's card (stats + Replace); empty seat -> straight to the picker
   document.querySelectorAll('#rotSeats .seat, #lineSeats .seat').forEach(el => el.onclick = () => {
     const w = el.dataset.w, i = Number(el.dataset.i);
@@ -1180,7 +1218,14 @@ $('autoFill').onclick = () => {
   F.lineup = F.lineup.map((p, i) => p || (n++, mkFA(seededRandom(`${F.id}|auto|${F.season}|l${i}`), 'batter')));
   if (n) { bump(); save(); renderRoster(); toast(`${n} free agent${n === 1 ? '' : 's'} signed.`); }
 };
+// creations = players YOU made (built rookies + Hall of Fame imports), anywhere on the roster
+function createdCount() {
+  return F.rotation.concat(F.lineup).filter(p => p && (p.src === 'hof' || p.src === 'rookie')).length;
+}
 $('startSeason').onclick = () => {
+  // the front office quietly signs FAs into any seats you left open
+  F.rotation = F.rotation.map((p, i) => p || mkFA(seededRandom(`${F.id}|auto|${F.season}|r${i}`), 'pitcher'));
+  F.lineup = F.lineup.map((p, i) => p || mkFA(seededRandom(`${F.id}|auto|${F.season}|l${i}`), 'batter'));
   if (!F.rivals || !F.rivals.length || !F.rivals[0].rot) F.rivals = mkRivals(F.id, F.season);
   else F.rivals.forEach(r => { r.w = 0; r.l = 0; });   // league persists across seasons now
   F.day = 0; F.wins = 0; F.losses = 0; F.phase = 'season'; F.playoffs = null;
@@ -1188,18 +1233,17 @@ $('startSeason').onclick = () => {
   resetSeasonStats(F);
   tab = 'season';
   bump(); save(); render();
-  toast(`Season ${F.season} begins — 32 games, top 4 make the playoffs.`);
+  toast(`Season ${F.season} begins — ${gamesOf(F)} games, top 4 make the playoffs.`);
 };
 
 /* ---------- season screen ---------- */
-const SEASON_GAMES = 32;
 let auto = false, autoTimer2 = null;
 function renderStandings() {
   const rows = standingsRows(F);
   const lead = rows[0];
   $('standBody').innerHTML = rows.map((r, i) => {
     const gb = ((lead.w - r.w) + (r.l - lead.l)) / 2;
-    return `<tr class="${r.me ? 'me' : ''} ${F.day >= SEASON_GAMES && i < 4 ? 'pl' : ''}" data-team="${r.idx}">
+    return `<tr class="${r.me ? 'me' : ''} ${F.day >= gamesOf(F) && i < 4 ? 'pl' : ''}" data-team="${r.idx}">
     <td>${escapeHTML(r.name)}</td><td>${r.w}</td><td>${r.l}</td>
     <td style="color:var(--dim)">${gb === 0 ? '—' : gb}</td>
     <td style="text-align:right;color:var(--dim)">${r.ovr}</td></tr>`;
@@ -1239,12 +1283,12 @@ function openBox(e) {
 $('boxClose').onclick = () => closeOv('boxOv');
 $('boxOv').addEventListener('click', e => { if (e.target === $('boxOv')) closeOv('boxOv'); });
 function renderSeason() {
-  $('gProg').textContent = `Game ${Math.min(F.day + 1, SEASON_GAMES)} of ${SEASON_GAMES}${streakOf()}${F.day < TRADE_DEADLINE ? '' : ' · deadline passed'}`;
+  $('gProg').textContent = `Game ${Math.min(F.day + 1, gamesOf(F))} of ${gamesOf(F)}${streakOf()}${F.day < deadlineOf(F) ? '' : ' · deadline passed'}`;
   renderFeed($('gameFeed'), F.gameLog);
   renderStandings();
-  $('nextGame').disabled = F.day >= SEASON_GAMES;
+  $('nextGame').disabled = F.day >= gamesOf(F);
   // next matchup: opponent + both probable starters (the 2K pre-game strip)
-  if (F.day < SEASON_GAMES) {
+  if (F.day < gamesOf(F)) {
     const rival = F.rivals[F.day % 7];
     const ours = F.rotation[F.day % 5], theirs = rival.rot[F.day % 5];
     $('nextUp').innerHTML = `<span class="vs">Next up</span> <b>${escapeHTML(F.name)}</b> vs <b>${escapeHTML(rival.name)}</b> (${teamOvr(rival)} OVR)
@@ -1280,7 +1324,7 @@ function streakOf() {
   return n >= 2 ? ` · ${last ? 'W' : 'L'}${n} ${last ? '🔥' : ''}` : '';
 }
 function playNextGame() {
-  if (F.phase !== 'season' || F.day >= SEASON_GAMES) return;
+  if (F.phase !== 'season' || F.day >= gamesOf(F)) return;
   if (F.pendingOffer) { showOffer(); return; }   // answer the phone first
   simOneDay();
   bump(); save();
@@ -1288,21 +1332,21 @@ function playNextGame() {
   const first = $('gameFeed').firstElementChild;
   if (window.gsap && first) gsap.fromTo(first, { x: -16, opacity: 0 }, { x: 0, opacity: 1, duration: .3 });
   if (F.pendingOffer) { stopAuto(); showOffer(); }
-  if (F.day >= SEASON_GAMES) endRegularSeason();
+  if (F.day >= gamesOf(F)) endRegularSeason();
 }
 // "retire the season": fast-forward every remaining game. Deterministically identical
 // to playing them out and hanging up on every trade call.
 $('simSeason').onclick = () => {
-  if (F.phase !== 'season' || F.day >= SEASON_GAMES) return;
+  if (F.phase !== 'season' || F.day >= gamesOf(F)) return;
   stopAuto();
   closeOv('offerOv');
   const startDay = F.day, startW = F.wins, startL = F.losses;
   F.pendingOffer = null;
-  while (F.day < SEASON_GAMES) {
+  while (F.day < gamesOf(F)) {
     simOneDay();
     F.pendingOffer = null;   // every call goes to voicemail
   }
-  F.gameLog.push({ t: '★', note: `⏭ Simmed the final ${SEASON_GAMES - startDay} games: went ${F.wins - startW}–${F.losses - startL}. Trade calls went to voicemail.` });
+  F.gameLog.push({ t: '★', note: `⏭ Simmed the final ${gamesOf(F) - startDay} games: went ${F.wins - startW}–${F.losses - startL}. Trade calls went to voicemail.` });
   bump(); save();
   renderSeason(); renderHead();
   endRegularSeason();
@@ -1335,7 +1379,7 @@ function stopAuto() { auto = false; clearInterval(autoTimer2); $('autoPlay').tex
 $('autoPlay').onclick = () => {
   if (auto) { stopAuto(); return; }
   auto = true; $('autoPlay').textContent = '⏸ Pause';
-  autoTimer2 = setInterval(() => { if (F.phase !== 'season' || F.day >= SEASON_GAMES || F.pendingOffer) stopAuto(); else playNextGame(); }, 1200);
+  autoTimer2 = setInterval(() => { if (F.phase !== 'season' || F.day >= gamesOf(F) || F.pendingOffer) stopAuto(); else playNextGame(); }, 1200);
 };
 
 /* ---------- incoming trade offer ---------- */
@@ -1453,11 +1497,11 @@ $('teamOvClose').onclick = () => closeOv('teamOv');
 let th = { mine: null, team: null };
 function renderTrades() {
   const dealsLeft = MAX_TRADES_USER - (F.tradesUser || 0);
-  $('tradeSub').innerHTML = F.day >= TRADE_DEADLINE
+  $('tradeSub').innerHTML = F.day >= deadlineOf(F)
     ? 'The trade deadline has passed — the phones are quiet until next season.'
     : `Shop anyone on your roster for a same-position player. Rivals only say yes when they <b>win the deal</b> —
        value is rating + youth + potential. <b>${dealsLeft}</b> deal${dealsLeft === 1 ? '' : 's'} left this season.`;
-  const dead = F.day >= TRADE_DEADLINE || dealsLeft <= 0;
+  const dead = F.day >= deadlineOf(F) || dealsLeft <= 0;
   $('thMine').innerHTML = dead ? '' : F.rotation.map((p, i) => p ? thRow(p, `SP${i + 1}`, `rot|${i}`, th.mine === `rot|${i}`) : '').join('')
     + F.lineup.map((p, i) => p ? thRow(p, `B${i + 1}`, `line|${i}`, th.mine === `line|${i}`) : '').join('');
   document.querySelectorAll('#thMine .prow').forEach(el => el.onclick = () => { th.mine = el.dataset.pkey; th.team = null; renderTrades(); });
@@ -1891,12 +1935,26 @@ function nextDropEta() {
   return `Next drop window: ~${Math.floor(ms / 3.6e6)}h ${Math.floor(ms % 3.6e6 / 6e4)}m.`;
 }
 
-/* ---------- new franchise ---------- */
+/* ---------- new franchise (founding settings live here + in ⚙️ later) ---------- */
+let newCreate = 1, newGames = 32;
+const CREATE_OPTS = [0, 1, 3, 5, 9, 14], GAME_OPTS = [16, 32, 48];
+function optBtn(v, cur, label) {
+  return `<button class="frtab ${v === cur ? 'on' : ''}" data-opt="${v}" style="padding:8px 13px">${label}</button>`;
+}
+function renderFoundingOpts() {
+  const cr = $('newCreateRow'), gr = $('newGamesRow');
+  if (!cr || !gr) return;
+  cr.innerHTML = CREATE_OPTS.map(v => optBtn(v, newCreate, v === 0 ? 'None — front office' : v === 14 ? 'All 14' : String(v))).join('');
+  gr.innerHTML = GAME_OPTS.map(v => optBtn(v, newGames, v + ' games')).join('');
+  cr.querySelectorAll('[data-opt]').forEach(b => b.onclick = () => { newCreate = Number(b.dataset.opt); renderFoundingOpts(); });
+  gr.querySelectorAll('[data-opt]').forEach(b => b.onclick = () => { newGames = Number(b.dataset.opt); renderFoundingOpts(); });
+}
 $('newGo').onclick = () => {
   if (W.active == null) W.active = [0, 1, 2].find(i => !W.saves[i]) ?? 0;
   const name = ($('newName').value || '').trim().slice(0, 24) || 'The Underdogs';
   F = {
     v: 2, id: 'fr_' + Math.random().toString(36).slice(2, 10), name,
+    settings: { create: newCreate, games: newGames },
     season: 1, phase: 'roster', prog: 1,
     rotation: [null, null, null, null, null],
     lineup: [null, null, null, null, null, null, null, null, null],
@@ -1909,20 +1967,46 @@ $('newGo').onclick = () => {
   toast(`${name} founded. Now build that roster.`);
 };
 
+/* ---------- ⚙️ settings overlay (roster phase; season length applies at next first pitch) ---------- */
+let setDraft = null;
+function openSettings() {
+  setDraft = Object.assign({}, settingsOf(F));
+  paintSettings();
+  $('settingsOv').classList.add('show');
+}
+function paintSettings() {
+  $('setCreateVal').textContent = setDraft.create;
+  $('setCreateHint').textContent = `${createdCount()} created player${createdCount() === 1 ? '' : 's'} on the roster right now`;
+  $('setGamesRow').innerHTML = GAME_OPTS.map(v => optBtn(v, setDraft.games, v + ' games')).join('');
+  $('setGamesRow').querySelectorAll('[data-opt]').forEach(b => b.onclick = () => { setDraft.games = Number(b.dataset.opt); paintSettings(); });
+}
+$('setCreateMinus').onclick = () => { setDraft.create = Math.max(0, setDraft.create - 1); paintSettings(); };
+$('setCreatePlus').onclick = () => { setDraft.create = Math.min(14, setDraft.create + 1); paintSettings(); };
+$('setSave').onclick = () => {
+  F.settings = { create: setDraft.create, games: setDraft.games };
+  bump(); save();
+  closeOv('settingsOv');
+  toast('Settings saved.');
+  renderRoster();
+};
+$('setClose').onclick = () => closeOv('settingsOv');
+$('settingsOv').addEventListener('click', e => { if (e.target === $('settingsOv')) closeOv('settingsOv'); });
+$('frSettings').onclick = openSettings;
+
 /* ---------- router ---------- */
 function render() {
   renderHead();
   if (uiView === 'mode') { show('scrMode'); renderMode(); return; }
   if (uiView === 'slots') { show('scrSlots'); renderSlots(); return; }
   if (uiView === 'clubs') { show('scrClubs'); $('clubsBack').style.display = ''; renderClubs(); return; }
-  if (!F) { show('scrNew'); return; }   // an empty slot was picked — found the franchise
+  if (!F) { show('scrNew'); renderFoundingOpts(); return; }   // an empty slot was picked — found the franchise
   $('clubsBack').style.display = 'none';
   maybeRookieCeremony();   // a fresh build just arrived from the builder pages
   // league-wide tabs work during roster + season + playoffs
   if ((F.phase === 'season' || F.phase === 'roster' || F.phase === 'playoffs') && tab !== 'season') {
     if (tab === 'myteam') { show('scrMyTeam'); renderMyTeam(); return; }
     if (tab === 'league') { show('scrLeague'); renderLeague(); return; }
-    if (tab === 'trades' && F.phase === 'season' && F.day < TRADE_DEADLINE) { show('scrTrades'); renderTrades(); return; }
+    if (tab === 'trades' && F.phase === 'season' && F.day < deadlineOf(F)) { show('scrTrades'); renderTrades(); return; }
     if (tab === 'clubs') { show('scrClubs'); renderClubs(); return; }
     if (tab === 'history') { show('scrHistory'); renderHistory(); return; }
     tab = 'season';
@@ -1931,7 +2015,7 @@ function render() {
   else if (F.phase === 'season') {
     show('scrSeason'); renderSeason();
     if (F.pendingOffer) showOffer();
-    if (F.day >= SEASON_GAMES) endRegularSeason();
+    if (F.day >= gamesOf(F)) endRegularSeason();
   } else if (F.phase === 'playoffs') { show('scrPlayoffs'); renderPlayoffs(); }
   else if (F.phase === 'offseason') { show('scrOff'); renderOffseason(); }
   else if (F.phase === 'draft') { show('scrDraft'); renderDraft(); }
