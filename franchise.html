@@ -13,7 +13,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="icon" href="/icon-192.png">
 <meta property="og:title" content="GoatLab · Franchise">
-<meta property="og:description" content="Build a roster from your creations, chase a title, age the squad, and draft the future.">
+<meta property="og:description" content="Run the whole club: sign your builds, work the trade lines, develop prospects, chase titles.">
 <meta property="og:image" content="/icon-512.png">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:image" content="/icon-512.png">
@@ -81,7 +81,8 @@ button.btn { font-family:'Oswald',sans-serif; font-size:14px; font-weight:600; l
 button.btn:disabled { opacity:.45; cursor:default; box-shadow:none; }
 button.btn.ghost { color:var(--ink); background:rgba(255,255,255,.05); border:1px solid var(--line); box-shadow:none; }
 button.btn.cy { color:#04202c; background:linear-gradient(180deg,#5fd0ff,#19c6ff); box-shadow:0 8px 24px rgba(25,198,255,.3); }
-.frhead { display:flex; align-items:center; flex-wrap:wrap; gap:10px 16px; margin:8px 0 16px; }
+button.btn.danger { color:#ffdede; background:rgba(255,77,94,.14); border:1px solid rgba(255,77,94,.45); box-shadow:none; }
+.frhead { display:flex; align-items:center; flex-wrap:wrap; gap:10px 16px; margin:8px 0 12px; }
 .frname { font-family:'Oswald',sans-serif; font-size:26px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; }
 .frseason { font-family:'Oswald',sans-serif; font-size:13px; letter-spacing:2px; color:var(--accent2); text-transform:uppercase;
   border:1px solid rgba(25,198,255,.35); border-radius:8px; padding:4px 10px; background:rgba(25,198,255,.07); }
@@ -89,22 +90,30 @@ button.btn.cy { color:#04202c; background:linear-gradient(180deg,#5fd0ff,#19c6ff
 .banner { font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:1px; color:#2b2000; background:linear-gradient(180deg,#ffe27a,#ffc93f);
   border-radius:6px; padding:3px 8px; box-shadow:0 4px 14px rgba(255,201,63,.35); }
 .frrec { font-family:'Oswald',sans-serif; font-size:13px; color:var(--muted); letter-spacing:1px; }
-/* roster */
+/* in-season tab bar */
+.frtabs { display:flex; gap:6px; margin:2px 0 14px; flex-wrap:wrap; }
+.frtab { font-family:'Oswald',sans-serif; font-size:12px; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted);
+  background:rgba(20,32,48,.55); border:1px solid var(--line); border-radius:9px; padding:8px 14px; cursor:pointer; }
+.frtab.on { color:var(--ink); border-color:rgba(59,209,255,.5); background:rgba(25,198,255,.09); }
+.frtab .n { display:inline-block; min-width:15px; padding:0 4px; margin-left:5px; border-radius:8px; font-size:10px; background:var(--red); color:#fff; }
+/* roster seats */
 .rsec { font-family:'Oswald',sans-serif; font-size:12px; letter-spacing:2.5px; text-transform:uppercase; color:var(--muted); margin:18px 4px 8px; }
-.seats { display:grid; grid-template-columns:repeat(auto-fill,minmax(168px,1fr)); gap:9px; }
+.seats { display:grid; grid-template-columns:repeat(auto-fill,minmax(172px,1fr)); gap:9px; }
 .seat { padding:10px 12px; border-radius:11px; border:1px solid var(--line); background:rgba(18,28,44,.6); cursor:pointer;
-  display:flex; flex-direction:column; gap:3px; min-height:74px; position:relative; transition:border-color .15s; }
+  display:flex; flex-direction:column; gap:3px; min-height:78px; position:relative; transition:border-color .15s; }
 .seat:hover { border-color:rgba(25,198,255,.55); }
 .seat .pos { font-family:'Oswald',sans-serif; font-size:10px; letter-spacing:2px; color:var(--dim); text-transform:uppercase; }
-.seat .nm { font-weight:700; font-size:13.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.seat .nm { font-weight:700; font-size:13.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding-right:34px; }
 .seat .meta { font-size:11px; color:var(--muted); }
+.seat .stat { font-size:10.5px; color:var(--accent2); font-family:'Oswald',sans-serif; letter-spacing:.5px; }
 .seat .ov { position:absolute; right:10px; top:9px; font-family:'Oswald',sans-serif; font-size:20px; font-weight:700; }
 .seat.empty { border-style:dashed; color:var(--dim); align-items:center; justify-content:center; }
 .seat.empty .plus { font-size:20px; color:var(--accent2); }
 .ov.t-d { color:#7fd7ff; } .ov.t-g { color:var(--gold); } .ov.t-s { color:#cfd8e6; } .ov.t-b { color:#d09a5e; } .ov.t-x { color:#9aa7ba; }
+.potstars { color:var(--gold); font-size:10px; letter-spacing:1px; }
 .rosterbar { display:flex; gap:10px; margin:20px 0 4px; flex-wrap:wrap; align-items:center; }
 /* season */
-.seagrid { display:grid; grid-template-columns:300px 1fr; gap:14px; margin-top:14px; }
+.seagrid { display:grid; grid-template-columns:310px 1fr; gap:14px; }
 @media (max-width:760px){ .seagrid { grid-template-columns:1fr; } }
 .standings { padding:14px; }
 .standings table { width:100%; border-collapse:collapse; font-size:12.5px; }
@@ -112,6 +121,11 @@ button.btn.cy { color:#04202c; background:linear-gradient(180deg,#5fd0ff,#19c6ff
 .standings td { padding:5px 6px; border-top:1px solid rgba(120,160,210,.1); }
 .standings tr.me td { color:var(--gold); font-weight:700; }
 .standings tr.pl td:first-child::after { content:' ·'; color:var(--green); }
+.standings tr { cursor:pointer; }
+.standings tr:hover td { background:rgba(25,198,255,.05); }
+.nextup { padding:11px 14px; margin-bottom:12px; display:flex; align-items:center; gap:12px; font-size:12.5px; color:var(--muted); flex-wrap:wrap; }
+.nextup b { color:var(--ink); }
+.nextup .vs { font-family:'Oswald',sans-serif; letter-spacing:1px; color:var(--accent); text-transform:uppercase; font-size:11px; }
 .gamefeed { padding:14px; max-height:520px; overflow-y:auto; display:flex; flex-direction:column; gap:8px; }
 .gcard { border:1px solid var(--line); border-radius:10px; padding:9px 12px; background:rgba(16,26,40,.65); }
 .gcard .top { display:flex; align-items:center; gap:10px; font-family:'Oswald',sans-serif; }
@@ -123,24 +137,43 @@ button.btn.cy { color:#04202c; background:linear-gradient(180deg,#5fd0ff,#19c6ff
 .gcard .line { font-size:11.5px; color:var(--muted); margin-top:4px; }
 .gcard .hero { font-size:12px; color:var(--gold); margin-top:3px; }
 .gcard.big { border-color:rgba(255,210,63,.45); box-shadow:0 0 18px -8px rgba(255,210,63,.5); }
-.seasonbar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:14px; }
+.gcard.trade { border-color:rgba(25,198,255,.45); }
+.seasonbar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:14px; }
 .gprog { font-family:'Oswald',sans-serif; letter-spacing:1.5px; font-size:13px; color:var(--muted); }
-/* playoffs */
-.bracket { display:flex; flex-direction:column; gap:12px; margin-top:14px; }
-.series { padding:12px 14px; display:flex; align-items:center; gap:12px; }
-.series .rd { font-family:'Oswald',sans-serif; font-size:10px; letter-spacing:2px; color:var(--accent2); text-transform:uppercase; width:72px; }
-.series .t { flex:1; font-weight:600; font-size:13.5px; }
-.series .t.win { color:var(--green); }
-.series .sc { font-family:'Oswald',sans-serif; font-size:20px; font-weight:700; }
+/* league + rosters */
+.lgrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:10px; }
+.lteam { padding:12px 14px; cursor:pointer; }
+.lteam:hover { border-color:rgba(25,198,255,.55); }
+.lteam .tn { font-family:'Oswald',sans-serif; font-size:15px; font-weight:700; letter-spacing:.5px; }
+.lteam .tm { font-size:11.5px; color:var(--muted); margin-top:3px; }
+.lteam .tv { font-family:'Oswald',sans-serif; font-size:12px; color:var(--accent2); margin-top:5px; letter-spacing:1px; }
+.prow { display:flex; align-items:center; gap:9px; padding:7px 10px; border-radius:9px; border:1px solid var(--line);
+  background:rgba(18,28,44,.55); margin-bottom:6px; cursor:pointer; }
+.prow:hover { border-color:rgba(25,198,255,.5); }
+.prow .pos { font-family:'Oswald',sans-serif; font-size:9.5px; letter-spacing:1.5px; color:var(--dim); width:34px; flex:0 0 auto; }
+.prow .nm { flex:1; font-weight:600; font-size:13px; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.prow .age { font-size:10.5px; color:var(--muted); flex:0 0 auto; }
+.prow .ov { font-family:'Oswald',sans-serif; font-size:16px; font-weight:700; flex:0 0 auto; width:30px; text-align:right; }
+/* trade hub */
+.tstep { margin:14px 0 6px; font-family:'Oswald',sans-serif; font-size:12px; letter-spacing:2px; text-transform:uppercase; color:var(--accent2); }
+.tsummary { padding:14px; display:flex; align-items:center; gap:14px; flex-wrap:wrap; font-size:13px; }
+.tsummary .arrow { font-size:20px; color:var(--accent); }
 /* offseason */
 .agelist { display:flex; flex-direction:column; gap:6px; margin-top:12px; }
 .agerow { display:flex; align-items:center; gap:10px; padding:8px 12px; border-radius:9px; border:1px solid var(--line);
-  background:rgba(16,26,40,.6); font-size:13px; }
-.agerow .nm { flex:1; font-weight:600; }
+  background:rgba(16,26,40,.6); font-size:13px; flex-wrap:wrap; }
+.agerow .nm { flex:1; font-weight:600; min-width:120px; }
 .agerow .chg { font-family:'Oswald',sans-serif; font-weight:700; }
-.agerow .chg.down { color:var(--red); } .agerow .chg.flat { color:var(--muted); }
+.agerow .chg.down { color:var(--red); } .agerow .chg.flat { color:var(--muted); } .agerow .chg.up { color:var(--green); }
 .agerow.retired { border-color:rgba(255,77,94,.4); }
+.agerow.breakout { border-color:rgba(255,210,63,.5); box-shadow:0 0 14px -6px rgba(255,210,63,.5); }
 .agerow .ret { font-family:'Oswald',sans-serif; font-size:10px; letter-spacing:2px; color:var(--red); }
+.agerow .brk { font-family:'Oswald',sans-serif; font-size:10px; letter-spacing:2px; color:var(--gold); }
+.awardcard { padding:16px; margin-top:14px; display:flex; gap:20px; flex-wrap:wrap; }
+.awardcard .aw { flex:1; min-width:180px; }
+.awardcard .at { font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:2px; color:var(--accent2); text-transform:uppercase; }
+.awardcard .an { font-family:'Oswald',sans-serif; font-size:19px; font-weight:700; margin-top:4px; }
+.awardcard .as { font-size:11.5px; color:var(--muted); margin-top:3px; }
 /* draft reel */
 .reelwrap { margin-top:14px; position:relative; overflow:hidden; border-radius:12px; border:1px solid var(--line);
   background:rgba(8,14,24,.8); padding:14px 0; }
@@ -155,13 +188,33 @@ button.btn.cy { color:#04202c; background:linear-gradient(180deg,#5fd0ff,#19c6ff
 .fr-ov { position:fixed; inset:0; z-index:300; display:none; align-items:center; justify-content:center; padding:16px;
   background:rgba(4,8,14,.8); backdrop-filter:blur(4px); }
 .fr-ov.show { display:flex; }
-.fr-card { width:min(480px,100%); max-height:min(82vh,700px); overflow-y:auto; padding:18px; }
+.fr-card { width:min(500px,100%); max-height:min(84vh,720px); overflow-y:auto; padding:18px; }
 .pickrow { display:flex; align-items:center; gap:10px; padding:9px 11px; border-radius:10px; border:1px solid var(--line);
   background:rgba(18,28,44,.6); cursor:pointer; margin-bottom:7px; }
 .pickrow:hover { border-color:rgba(25,198,255,.55); }
-.pickrow .nm { flex:1; font-weight:600; font-size:13.5px; }
+.pickrow .nm { flex:1; font-weight:600; font-size:13.5px; min-width:0; }
 .pickrow .meta { font-size:11px; color:var(--muted); }
 .pickrow .ov { font-family:'Oswald',sans-serif; font-size:19px; font-weight:700; }
+/* player card */
+.pcard-head { display:flex; align-items:center; gap:14px; }
+.pcard-ovr { font-family:'Oswald',sans-serif; font-size:44px; font-weight:700; line-height:1; }
+.pcard-nm { font-family:'Oswald',sans-serif; font-size:22px; font-weight:700; letter-spacing:1px; text-transform:uppercase; }
+.pcard-sub { font-size:12px; color:var(--muted); margin-top:3px; }
+.pcard-stats { margin-top:14px; display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+.pstat { background:rgba(20,32,48,.55); border:1px solid var(--line); border-radius:10px; padding:8px 6px; text-align:center; }
+.pstat .v { font-family:'Oswald',sans-serif; font-size:17px; font-weight:700; }
+.pstat .l { font-size:9.5px; color:var(--muted); letter-spacing:1px; text-transform:uppercase; margin-top:1px; }
+.pcard-sec { font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:2px; color:var(--accent2); text-transform:uppercase; margin:14px 0 6px; }
+/* trade offer modal */
+.offer-vs { display:flex; align-items:center; gap:12px; margin:14px 0; }
+.offer-side { flex:1; text-align:center; padding:14px 8px; border-radius:12px; border:1px solid var(--line); background:rgba(18,28,44,.6); }
+.offer-side.get { border-color:rgba(67,233,123,.4); }
+.offer-side.give { border-color:rgba(255,77,94,.35); }
+.offer-side .tag { font-family:'Oswald',sans-serif; font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); }
+.offer-side .nm { font-family:'Oswald',sans-serif; font-size:16px; font-weight:700; margin-top:5px; }
+.offer-side .ov { font-family:'Oswald',sans-serif; font-size:30px; font-weight:700; margin-top:3px; }
+.offer-side .meta { font-size:11px; color:var(--muted); margin-top:3px; }
+.offer-arrows { font-size:22px; color:var(--accent); }
 /* trophy */
 .trophy { text-align:center; padding:30px 24px; }
 .trophy .cup { font-size:74px; filter:drop-shadow(0 0 26px rgba(255,210,63,.6)); }
@@ -176,6 +229,10 @@ button.btn.cy { color:#04202c; background:linear-gradient(180deg,#5fd0ff,#19c6ff
 .hint { font-size:11.5px; color:var(--dim); margin-top:8px; line-height:1.5; }
 .screen { display:none; }
 .screen.on { display:block; }
+.histrow { display:flex; gap:10px; align-items:center; padding:7px 11px; border-radius:9px; border:1px solid var(--line);
+  background:rgba(16,26,40,.55); margin-bottom:6px; font-size:12.5px; flex-wrap:wrap; }
+.histrow .sn { font-family:'Oswald',sans-serif; letter-spacing:1px; color:var(--accent2); }
+.histrow .res-c { color:var(--gold); font-weight:700; }
 </style>
 </head>
 <body>
@@ -192,14 +249,21 @@ button.btn.cy { color:#04202c; background:linear-gradient(180deg,#5fd0ff,#19c6ff
     <span class="frrec" id="frRec"></span>
     <span class="banners" id="frBanners"></span>
   </div>
+  <div class="frtabs" id="frTabs" style="display:none">
+    <button class="frtab" data-tab="season">📅 Season</button>
+    <button class="frtab" data-tab="myteam">👥 My Team</button>
+    <button class="frtab" data-tab="league">🌐 League</button>
+    <button class="frtab" data-tab="trades">🔁 Trade Hub<span class="n" id="tradeBadge" style="display:none">!</span></button>
+    <button class="frtab" data-tab="history">📜 History</button>
+  </div>
 
   <!-- ============ 0. New franchise ============ -->
   <section class="screen" id="scrNew">
     <div class="eyebrow">Welcome to the front office</div>
     <h1 class="h">Start your <i>Franchise</i></h1>
-    <p class="sub" style="max-width:620px">Stop throwing your builds away. Sign your created pitchers and hitters to a roster,
-      play a 32-game season against 7 rivals, chase the title — then age the squad, survive retirements, and draft the future.
-      One franchise per device; it follows your Google account when you're signed in.</p>
+    <p class="sub" style="max-width:640px">Stop throwing your builds away. Sign your created pitchers and hitters, run a club in an
+      8-team league where <b>every roster is real</b> — work the trade lines, develop prospects toward their potential,
+      chase titles, and survive the aging curve. Your franchise follows your Google account when you're signed in.</p>
     <div class="panel" style="padding:18px; margin-top:16px; max-width:460px">
       <div class="eyebrow" style="margin-bottom:8px">Name your club</div>
       <input id="newName" maxlength="24" placeholder="e.g. Goat City Legends" style="width:100%;box-sizing:border-box;font-family:'Oswald',sans-serif;font-size:17px;letter-spacing:1px;color:var(--ink);background:rgba(8,14,24,.8);border:1px solid var(--line);border-radius:9px;padding:11px 12px;outline:none">
@@ -207,12 +271,12 @@ button.btn.cy { color:#04202c; background:linear-gradient(180deg,#5fd0ff,#19c6ff
     </div>
   </section>
 
-  <!-- ============ 1. Roster ============ -->
+  <!-- ============ 1. Roster (preseason) ============ -->
   <section class="screen" id="scrRoster">
-    <div class="eyebrow">Build your 14-man roster</div>
+    <div class="eyebrow">Preseason — build your 14-man roster</div>
     <h1 class="h">The <i>Roster</i></h1>
     <p class="sub">Tap a seat to sign a player — import from your <b>Hall of Fame</b> saves or sign a replacement-level free agent.
-      Every signing starts at <b>age 23</b> and ages each season.</p>
+      Signings start at <b>age 23</b>; young players grow toward their <span class="potstars">★ potential</span>, veterans fade.</p>
     <div class="rsec">Starting Rotation — 5 pitchers</div>
     <div class="seats" id="rotSeats"></div>
     <div class="rsec">Lineup — 9 hitters</div>
@@ -226,6 +290,7 @@ button.btn.cy { color:#04202c; background:linear-gradient(180deg,#5fd0ff,#19c6ff
 
   <!-- ============ 2. Season ============ -->
   <section class="screen" id="scrSeason">
+    <div class="panel nextup" id="nextUp"></div>
     <div class="seasonbar">
       <button class="btn" id="nextGame">⚾ Next Game</button>
       <button class="btn cy" id="autoPlay">▶ Autoplay</button>
@@ -236,18 +301,58 @@ button.btn.cy { color:#04202c; background:linear-gradient(180deg,#5fd0ff,#19c6ff
         <div class="eyebrow" style="margin-bottom:8px">Standings</div>
         <table><thead><tr><th>Team</th><th>W</th><th>L</th><th style="text-align:right">OVR</th></tr></thead>
         <tbody id="standBody"></tbody></table>
-        <div class="hint">Top 4 make the playoffs · best-of-5 series</div>
+        <div class="hint">Top 4 make the playoffs · best-of-5 · tap a team for their roster · trade deadline: game 24</div>
       </div>
       <div class="panel gamefeed" id="gameFeed"></div>
     </div>
+  </section>
+
+  <!-- ============ 2b. My Team (stats) ============ -->
+  <section class="screen" id="scrMyTeam">
+    <div class="eyebrow">Clubhouse</div>
+    <h1 class="h">My <i>Team</i></h1>
+    <p class="sub">Season stat lines so far — tap a player for the full card.</p>
+    <div class="rsec">Rotation</div>
+    <div id="mtRot"></div>
+    <div class="rsec">Lineup</div>
+    <div id="mtLine"></div>
+  </section>
+
+  <!-- ============ 2c. League ============ -->
+  <section class="screen" id="scrLeague">
+    <div class="eyebrow">Around the league</div>
+    <h1 class="h">The <i>League</i></h1>
+    <p class="sub">Eight clubs, every roster real. Tap a team to scout them.</p>
+    <div class="lgrid" id="leagueGrid" style="margin-top:14px"></div>
+  </section>
+
+  <!-- ============ 2d. Trade Hub ============ -->
+  <section class="screen" id="scrTrades">
+    <div class="eyebrow">The phones are open</div>
+    <h1 class="h">Trade <i>Hub</i></h1>
+    <p class="sub" id="tradeSub"></p>
+    <div class="tstep">1 · Who are you shopping?</div>
+    <div id="thMine"></div>
+    <div class="tstep" id="thTeamsTitle" style="display:none">2 · Call a club</div>
+    <div class="lgrid" id="thTeams" style="display:none"></div>
+    <div class="tstep" id="thTheirsTitle" style="display:none">3 · Ask for their player (same position)</div>
+    <div id="thTheirs" style="display:none"></div>
+    <div class="panel tsummary" id="thSummary" style="display:none"></div>
+  </section>
+
+  <!-- ============ 2e. History ============ -->
+  <section class="screen" id="scrHistory">
+    <div class="eyebrow">The record books</div>
+    <h1 class="h">Franchise <i>History</i></h1>
+    <div id="histList" style="margin-top:14px"></div>
   </section>
 
   <!-- ============ 3. Playoffs ============ -->
   <section class="screen" id="scrPlayoffs">
     <div class="eyebrow">Postseason</div>
     <h1 class="h">The <i>Playoffs</i></h1>
-    <div class="bracket" id="bracket"></div>
-    <div class="seasonbar">
+    <div class="bracket" id="bracket" style="display:flex;flex-direction:column;gap:12px;margin-top:14px"></div>
+    <div class="seasonbar" style="margin-top:14px">
       <button class="btn" id="nextPGame">⚾ Next Playoff Game</button>
       <span class="gprog" id="pProg"></span>
     </div>
@@ -259,6 +364,8 @@ button.btn.cy { color:#04202c; background:linear-gradient(180deg,#5fd0ff,#19c6ff
     <div class="eyebrow">Winter</div>
     <h1 class="h">The <i>Offseason</i></h1>
     <p class="sub" id="offSummary"></p>
+    <div class="panel awardcard" id="awards"></div>
+    <div class="rsec">Player development — growth, decline, goodbyes</div>
     <div class="agelist" id="ageList"></div>
     <div class="rosterbar">
       <button class="btn" id="toDraft">📋 Continue to the Draft</button>
@@ -290,6 +397,38 @@ button.btn.cy { color:#04202c; background:linear-gradient(180deg,#5fd0ff,#19c6ff
   </div>
 </div>
 
+<!-- team roster viewer -->
+<div class="fr-ov" id="teamOv">
+  <div class="panel fr-card">
+    <div class="eyebrow" id="teamOvName" style="margin-bottom:2px"></div>
+    <div class="sub" id="teamOvMeta" style="margin-bottom:10px"></div>
+    <div id="teamOvList"></div>
+    <button class="btn ghost" id="teamOvClose" style="width:100%;margin-top:6px">Close</button>
+  </div>
+</div>
+
+<!-- player card -->
+<div class="fr-ov" id="playerOv">
+  <div class="panel fr-card" id="playerOvCard"></div>
+</div>
+
+<!-- incoming trade offer -->
+<div class="fr-ov" id="offerOv">
+  <div class="panel fr-card">
+    <div class="eyebrow">📞 Incoming trade offer</div>
+    <div class="sub" id="offerLine" style="margin-top:6px"></div>
+    <div class="offer-vs">
+      <div class="offer-side get"><div class="tag">You receive</div><div class="nm" id="offerGetNm"></div><div class="ov" id="offerGetOv"></div><div class="meta" id="offerGetMeta"></div></div>
+      <div class="offer-arrows">⇄</div>
+      <div class="offer-side give"><div class="tag">You send</div><div class="nm" id="offerGiveNm"></div><div class="ov" id="offerGiveOv"></div><div class="meta" id="offerGiveMeta"></div></div>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn" id="offerAccept" style="flex:1">✅ Accept trade</button>
+      <button class="btn danger" id="offerDecline" style="flex:1">Hang up</button>
+    </div>
+  </div>
+</div>
+
 <!-- champion -->
 <div class="fr-ov" id="champOv">
   <div class="confetti-host" id="confettiHost"></div>
@@ -309,9 +448,9 @@ button.btn.cy { color:#04202c; background:linear-gradient(180deg,#5fd0ff,#19c6ff
 const $ = id => document.getElementById(id);
 
 /* ============================ ==ENGINE== ============================
-   Pure, DOM-free franchise engine. Everything below is deterministic:
-   the same franchise id + season + game number always produces the same
-   result, so a franchise can be replayed/synced without drift.        */
+   Pure, DOM-free franchise engine (v2 "GM Edition"). Deterministic: the
+   same franchise id + season + game number always produces the same
+   result. All 8 teams carry REAL rosters that age, develop, and trade. */
 function seededRandom(seedText) {
   let h = 2166136261 >>> 0;
   for (let i = 0; i < seedText.length; i++) { h ^= seedText.charCodeAt(i); h = Math.imul(h, 16777619); }
@@ -326,10 +465,36 @@ function seededRandom(seedText) {
 const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
 const RIVAL_CITIES = ['Rivertown', 'Port Vista', 'Iron Ridge', 'Bayshore', 'Summit Falls', 'Red Mesa', 'Kingsport', 'Palm Vale', 'Storm Lake', 'North Haven', 'Gold Coast', 'Cedar Hill', 'Silver City', 'Twin Rivers'];
 const RIVAL_MASCOTS = ['Admirals', 'Bison', 'Comets', 'Wolves', 'Sentinels', 'Rattlers', 'Mariners', 'Falcons', 'Miners', 'Thunder', 'Royals', 'Aces', 'Longhorns', 'Captains'];
-const FA_FIRST = ['Denny', 'Hal', 'Rusty', 'Vern', 'Chip', 'Gus', 'Lefty', 'Moose', 'Ray', 'Bucky', 'Ernie', 'Wade', 'Sal', 'Duke', 'Ollie', 'Red'];
-const FA_LAST = ['Hobbs', 'Malone', 'Vukovich', 'Trellis', 'Okafor', 'Barnes', 'Castillo', 'Nagy', 'Pruitt', 'Delgado', 'Whitfield', 'Kowalski', 'Sato', 'Reyes', 'McGraw', 'Boone'];
+const FA_FIRST = ['Denny', 'Hal', 'Rusty', 'Vern', 'Chip', 'Gus', 'Lefty', 'Moose', 'Ray', 'Bucky', 'Ernie', 'Wade', 'Sal', 'Duke', 'Ollie', 'Red', 'Tito', 'Cy', 'Amos', 'Flip', 'Dizzy', 'Hank', 'Otis', 'Zeke'];
+const FA_LAST = ['Hobbs', 'Malone', 'Vukovich', 'Trellis', 'Okafor', 'Barnes', 'Castillo', 'Nagy', 'Pruitt', 'Delgado', 'Whitfield', 'Kowalski', 'Sato', 'Reyes', 'McGraw', 'Boone', 'Ferreira', 'Lindqvist', 'Okada', 'Bell', 'Crowe', 'Vance', 'Iron', 'Marsh'];
 
-// 7 procedurally-named rivals for a season; OVRs spread 68–88 so there's a bully and a doormat
+function mkName(rng) { return `${FA_FIRST[Math.floor(rng() * FA_FIRST.length)]} ${FA_LAST[Math.floor(rng() * FA_LAST.length)]}`; }
+// Every player: ovr + pot (potential ceiling — what growth can reach), age, per-season stats
+// (s) and career totals (c). potOf gives the young real headroom, vets almost none.
+function potOf(rng, ovr, age) {
+  const headroom = age <= 22 ? 6 + rng() * 10 : age <= 25 ? 3 + rng() * 8 : age <= 28 ? rng() * 4 : 0;
+  return clamp(Math.round(ovr + headroom), ovr, 99);
+}
+function mkPlayer(rng, game, ovr, age, src) {
+  // id comes purely from the seeded rng so league generation stays deterministic
+  const id = 'p' + Math.floor(rng() * 1e9).toString(36) + Math.floor(rng() * 1e9).toString(36);
+  return { id, name: mkName(rng), game,
+    ovr: Math.round(ovr), age, pot: potOf(rng, Math.round(ovr), age), src, s: null, c: null };
+}
+function mkFA(rng, game) { return mkPlayer(rng, game, 60 + rng() * 10, 23, 'fa'); }
+function mkProspect(rng, game) {
+  const r = rng();
+  const ovr = Math.round(r < 0.72 ? 62 + rng() * 10 : r < 0.94 ? 70 + rng() * 7 : 76 + rng() * 6);
+  return mkPlayer(rng, game, ovr, 21 + Math.floor(rng() * 3), 'draft');
+}
+// A full rival club: 14 players spread around a target strength band.
+function mkRivalRoster(rng, base) {
+  const sp = () => clamp(Math.round(base + (rng() + rng() - 1) * 9), 55, 96);
+  return {
+    rot: Array.from({ length: 5 }, () => mkPlayer(rng, 'pitcher', sp(), 21 + Math.floor(rng() * 13), 'rival')),
+    line: Array.from({ length: 9 }, () => mkPlayer(rng, 'batter', sp(), 21 + Math.floor(rng() * 13), 'rival')),
+  };
+}
 function mkRivals(id, season) {
   const rng = seededRandom(`${id}|s${season}|rivals`);
   const rivals = [];
@@ -339,144 +504,289 @@ function mkRivals(id, season) {
     do { c = RIVAL_CITIES[Math.floor(rng() * RIVAL_CITIES.length)]; } while (usedC.has(c));
     do { m = RIVAL_MASCOTS[Math.floor(rng() * RIVAL_MASCOTS.length)]; } while (usedM.has(m));
     usedC.add(c); usedM.add(m);
-    rivals.push({ name: `${c} ${m}`, ovr: Math.round(68 + rng() * 20), w: 0, l: 0 });
+    const base = Math.round(68 + rng() * 20);
+    const ros = mkRivalRoster(rng, base);
+    rivals.push({ name: `${c} ${m}`, rot: ros.rot, line: ros.line, w: 0, l: 0 });
   }
   return rivals;
-}
-function mkFA(rng, game) {
-  const nm = `${FA_FIRST[Math.floor(rng() * FA_FIRST.length)]} ${FA_LAST[Math.floor(rng() * FA_LAST.length)]}`;
-  return { name: nm, ovr: Math.round(60 + rng() * 10), age: 23, game, src: 'fa' };
-}
-function mkProspect(rng, game) {
-  const nm = `${FA_FIRST[Math.floor(rng() * FA_FIRST.length)]} ${FA_LAST[Math.floor(rng() * FA_LAST.length)]}`;
-  // weighted low: most picks are 62–72, the occasional gem up to 82
-  const r = rng();
-  const ovr = Math.round(r < 0.72 ? 62 + rng() * 10 : r < 0.94 ? 70 + rng() * 7 : 76 + rng() * 6);
-  return { name: nm, ovr, age: 21 + Math.floor(rng() * 3), game, src: 'draft' };
 }
 function rosterAvg(list) {
   const v = list.filter(Boolean).map(p => p.ovr);
   return v.length ? v.reduce((s, x) => s + x, 0) / v.length : 60;
 }
+const teamOvr = t => Math.round((rosterAvg(t.rot) + rosterAvg(t.line)) / 2);
 
-// One regular-season game. Rate-stat backbone borrowed from the career sims:
-// the starter sets an ERA-ish runs-against; the lineup average vs the rival's
-// team OVR sets runs-for. Higher-OVR teams win more, nobody is safe.
+/* ---- stats: blank season line + fold into career at season end ---- */
+function blankS(game) { return game === 'pitcher' ? { gs: 0, ip: 0, k: 0, er: 0, w: 0, l: 0 } : { g: 0, ab: 0, h: 0, hr: 0, rbi: 0 }; }
+function resetSeasonStats(F) {
+  for (const p of F.rotation.concat(F.lineup)) if (p) p.s = blankS(p.game);
+}
+function foldSeasonStats(F) {
+  for (const p of F.rotation.concat(F.lineup)) {
+    if (!p || !p.s) continue;
+    if (!p.c) p.c = Object.assign({ seasons: 0 }, blankS(p.game));
+    p.c.seasons += 1;
+    for (const k of Object.keys(p.s)) p.c[k] = Math.round(((p.c[k] || 0) + p.s[k]) * 10) / 10;
+  }
+}
+// end-of-season hardware for YOUR club, from the accumulated real stats
+function seasonAwards(F) {
+  let ace = null, mvp = null;
+  for (const p of F.rotation) if (p && p.s && (!ace || (p.s.k + p.s.w * 4 - p.s.er) > (ace.s.k + ace.s.w * 4 - ace.s.er))) ace = p;
+  for (const p of F.lineup) if (p && p.s && (!mvp || (p.s.hr * 3 + p.s.rbi + p.s.h * 0.5) > (mvp.s.hr * 3 + mvp.s.rbi + mvp.s.h * 0.5))) mvp = p;
+  return {
+    ace: ace ? { name: ace.name, line: `${ace.s.w}-${ace.s.l} · ${era(ace.s)} ERA · ${ace.s.k} K` } : null,
+    mvp: mvp ? { name: mvp.name, line: `${avg(mvp.s)} AVG · ${mvp.s.hr} HR · ${mvp.s.rbi} RBI` } : null,
+  };
+}
+const era = s => s.ip > 0 ? (s.er * 9 / s.ip).toFixed(2) : '0.00';
+const avg = s => s.ab > 0 ? ('.' + String(Math.round(1000 * s.h / s.ab)).padStart(3, '0')) : '.000';
+
+/* ---- one regular-season game vs a real rival roster ---- */
 function simGame(F, day) {
   const rng = seededRandom(`${F.id}|s${F.season}|g${day}`);
   const rival = F.rivals[day % 7];
   const starter = F.rotation[day % 5];
+  const oppStarter = rival.rot[day % 5];
   const lineAvg = rosterAvg(F.lineup);
+  const oppPitch = oppStarter.ovr * 0.7 + rosterAvg(rival.rot) * 0.3;   // their staff tonight
+  const oppBat = rosterAvg(rival.line);
   const q = starter.ovr;
   const bell = s => (rng() + rng() + rng() - 1.5) * s;
-  // starter line
+  // our starter's line vs their lineup
   const ip = clamp(4.6 + (q - 60) * 0.05 + bell(1.1), 3, 9);
   const k9 = clamp(4.5 + q * 0.062 + bell(0.9), 3, 15);
   const k = Math.round(ip * k9 / 9);
   const bb = Math.max(0, Math.round(ip * clamp(4.4 - q * 0.028, 0.8, 4.5) / 9 + bell(0.5)));
-  const era = clamp(6.6 - q * 0.0345 + (rival.ovr - 76) * 0.03 + bell(0.55), 1.2, 7.5);
-  const er = Math.max(0, Math.round(era * ip / 9 + bell(0.5)));
+  const eraV = clamp(6.6 - q * 0.0345 + (oppBat - 76) * 0.03 + bell(0.55), 1.2, 7.5);
+  const er = Math.max(0, Math.round(eraV * ip / 9 + bell(0.5)));
   const bullpen = Math.max(0, Math.round((9 - ip) * clamp(0.56 - (rosterAvg(F.rotation) - 76) * 0.004, 0.3, 0.62) + bell(0.7)));
   const runsAgainst = er + bullpen;
-  // our offense vs their staff
-  const rfMean = clamp(4.35 + (lineAvg - rival.ovr) * 0.055, 1.6, 8.5);
+  // our offense vs their probable starter
+  const rfMean = clamp(4.35 + (lineAvg - oppPitch) * 0.055, 1.6, 8.5);
   let runsFor = Math.max(0, Math.round(rfMean + bell(1.9)));
-  if (runsFor === runsAgainst) runsFor += rng() < clamp(0.5 + (lineAvg - rival.ovr) * 0.012, 0.25, 0.75) ? 1 : -1; // extras
+  if (runsFor === runsAgainst) runsFor += rng() < clamp(0.5 + (lineAvg - oppPitch) * 0.012, 0.25, 0.75) ? 1 : -1;
   if (runsFor < 0) runsFor = 0;
   const win = runsFor > runsAgainst;
-  // hero moment
+  // batter box: each of the 9 gets a real line tonight (drives season/career stats)
+  const box = F.lineup.map(b => {
+    const ab = 3 + (rng() < 0.55 ? 1 : 0) + (rng() < 0.12 ? 1 : 0);
+    const pHit = clamp(0.16 + b.ovr * 0.0013 + (b.ovr - oppPitch) * 0.0016, 0.1, 0.42);
+    let h = 0;
+    for (let a = 0; a < ab; a++) if (rng() < pHit) h++;
+    const hr = h > 0 && rng() < clamp((b.ovr - 45) * 0.004, 0.01, 0.24) ? 1 : 0;
+    const rbi = hr + (h >= 2 && rng() < 0.4 ? 1 : 0) + (runsFor >= 6 && rng() < 0.25 ? 1 : 0);
+    return { ab, h, hr, rbi };
+  });
+  // hero moment (uses the real box)
   let hero = null;
   const heroRng = rng();
-  const batter = F.lineup[Math.floor(rng() * 9)];
-  if (win && runsFor - runsAgainst === 1 && heroRng < 0.5) hero = `🦸 ${batter.name} walks it off in the 9th!`;
+  let star = 0;
+  for (let i = 1; i < 9; i++) if (box[i].hr * 2 + box[i].h > box[star].hr * 2 + box[star].h) star = i;
+  const sb = F.lineup[star], sbx = box[star];
+  if (win && runsFor - runsAgainst === 1 && heroRng < 0.5) hero = `🦸 ${sb.name} walks it off in the 9th!`;
   else if (k >= 12) hero = `🔥 ${starter.name} punches out ${k} — the building was shaking.`;
-  else if (win && runsFor >= 9 && heroRng < 0.75) hero = `💥 ${batter.name} drives in 4 as the bats erupt.`;
+  else if (sbx.hr >= 1 && sbx.h >= 3) hero = `💥 ${sb.name} goes ${sbx.h}-for-${sbx.ab} with a homer.`;
   else if (win && er === 0 && ip >= 7) hero = `🧊 ${starter.name} is untouchable: ${ip.toFixed(1)} shutout innings.`;
-  else if (heroRng < 0.16) hero = win ? `⭐ ${batter.name} goes 3-for-4 with the go-ahead knock.` : `😤 ${starter.name} deserved better tonight.`;
+  else if (heroRng < 0.14) hero = win ? `⭐ ${sb.name} delivers the go-ahead knock.` : `😤 ${starter.name} deserved better tonight.`;
   return {
-    win, runsFor, runsAgainst, opp: rival.name, oppIdx: day % 7,
-    starter: starter.name, line: `${starter.name}: ${ip.toFixed(1)} IP · ${k} K · ${bb} BB · ${er} ER`,
+    win, runsFor, runsAgainst, opp: rival.name, oppIdx: day % 7, oppStarter: oppStarter.name,
+    starter: starter.name, starterIdx: day % 5, ipS: Math.round(ip * 10) / 10, k, er, bb, box,
+    line: `${starter.name}: ${ip.toFixed(1)} IP · ${k} K · ${bb} BB · ${er} ER`,
     hero,
   };
 }
-// rival-vs-rival results for the same day: the 6 teams we AREN'T playing pair off
+// bank the game's stats onto your players (called by the page after each sim)
+function applyGameStats(F, g) {
+  const sp = F.rotation[g.starterIdx];
+  if (sp) {
+    if (!sp.s) sp.s = blankS('pitcher');
+    sp.s.gs++; sp.s.ip = Math.round((sp.s.ip + g.ipS) * 10) / 10; sp.s.k += g.k; sp.s.er += g.er;
+    if (g.win) sp.s.w++; else sp.s.l++;
+  }
+  F.lineup.forEach((b, i) => {
+    if (!b) return;
+    if (!b.s) b.s = blankS('batter');
+    const x = g.box[i];
+    b.s.g++; b.s.ab += x.ab; b.s.h += x.h; b.s.hr += x.hr; b.s.rbi += x.rbi;
+  });
+}
+// the six rivals we AREN'T playing pair off (uses real computed team strength)
 function simRivalDay(F, day) {
   const rng = seededRandom(`${F.id}|s${F.season}|rd${day}`);
   const others = [0, 1, 2, 3, 4, 5, 6].filter(i => i !== (day % 7));
   const out = [];
   for (let p = 0; p < 3; p++) {
     const a = others[p], b = others[5 - p];
-    const pa = clamp(0.5 + (F.rivals[a].ovr - F.rivals[b].ovr) * 0.02, 0.12, 0.88);
-    const aWins = rng() < pa;
-    out.push({ a, b, aWins });
+    const pa = clamp(0.5 + (teamOvr(F.rivals[a]) - teamOvr(F.rivals[b])) * 0.02, 0.12, 0.88);
+    out.push({ a, b, aWins: rng() < pa });
   }
   return out;
 }
-// one playoff game between us and a rival (tag makes each series game unique)
 function simPlayoffGame(F, tag, rivalIdx, gameNo) {
-  const save = F.rivals[rivalIdx];
-  // reuse simGame's engine on a synthetic "day" seed; rotation keeps cycling
+  const R = F.rivals[rivalIdx];
   const rng = seededRandom(`${F.id}|s${F.season}|${tag}${gameNo}`);
   const starter = F.rotation[(F.day + gameNo) % 5];
+  const oppStarter = R.rot[gameNo % 5];
   const lineAvg = rosterAvg(F.lineup);
+  const oppPitch = oppStarter.ovr * 0.7 + rosterAvg(R.rot) * 0.3;
   const bell = s => (rng() + rng() + rng() - 1.5) * s;
   const q = starter.ovr;
   const ip = clamp(4.6 + (q - 60) * 0.05 + bell(1.1), 3, 9);
   const k = Math.round(ip * clamp(4.5 + q * 0.062 + bell(0.9), 3, 15) / 9);
-  const era = clamp(6.6 - q * 0.0345 + (save.ovr - 76) * 0.03 + bell(0.55), 1.2, 7.5);
-  const runsAgainst = Math.max(0, Math.round(era * ip / 9 + bell(0.5))) +
+  const eraV = clamp(6.6 - q * 0.0345 + (rosterAvg(R.line) - 76) * 0.03 + bell(0.55), 1.2, 7.5);
+  const runsAgainst = Math.max(0, Math.round(eraV * ip / 9 + bell(0.5))) +
     Math.max(0, Math.round((9 - ip) * clamp(0.56 - (rosterAvg(F.rotation) - 76) * 0.004, 0.3, 0.62) + bell(0.6)));
-  const rfMean = clamp(4.35 + (lineAvg - save.ovr) * 0.055, 1.6, 8.5);
+  const rfMean = clamp(4.35 + (lineAvg - oppPitch) * 0.055, 1.6, 8.5);
   let runsFor = Math.max(0, Math.round(rfMean + bell(1.9)));
   if (runsFor === runsAgainst) runsFor += rng() < 0.5 ? 1 : -1;
   if (runsFor < 0) runsFor = 0;
-  return { win: runsFor > runsAgainst, runsFor, runsAgainst, starter: starter.name, k,
+  return { win: runsFor > runsAgainst, runsFor, runsAgainst, starter: starter.name, oppStarter: oppStarter.name, k,
     line: `${starter.name}: ${ip.toFixed(1)} IP · ${k} K` };
 }
-// a rival-vs-rival playoff series, decided in one deterministic shot
 function simRivalSeries(F, tag, aIdx, bIdx) {
   const rng = seededRandom(`${F.id}|s${F.season}|${tag}`);
   let aw = 0, bw = 0;
   while (aw < 3 && bw < 3) {
-    const pa = clamp(0.5 + (F.rivals[aIdx].ovr - F.rivals[bIdx].ovr) * 0.02, 0.15, 0.85);
+    const pa = clamp(0.5 + (teamOvr(F.rivals[aIdx]) - teamOvr(F.rivals[bIdx])) * 0.02, 0.15, 0.85);
     if (rng() < pa) aw++; else bw++;
   }
   return { winner: aw === 3 ? aIdx : bIdx, aw, bw };
 }
-// offseason: everybody ages a year; decline is gentle past 29, steeper past 33;
-// a big enough fall (or old age) means retirement. Fully deterministic per season.
+
+/* ---- trades ---- */
+const TRADE_DEADLINE = 24;   // no deals from game 24 on
+const MAX_OFFERS_IN = 3, MAX_TRADES_USER = 3;
+// market value: rating now + a cut of remaining upside + youth bonus − aging tax
+function tradeValue(p) {
+  return p.ovr + Math.max(0, (p.pot || p.ovr) - p.ovr) * 0.45
+    + Math.max(0, 25 - p.age) * 0.8 - Math.max(0, p.age - 29) * 1.6;
+}
+// Deterministic per (state, day): most days nobody calls; sometimes a rival covets one of
+// your six most valuable players and offers a same-position 1-for-1. Some offers are
+// genuinely good, some are robbery — value band 0.85×–1.2× — the GM (you) decides.
+function genTradeOffer(F, day) {
+  if (day >= TRADE_DEADLINE || (F.tradesIn || 0) >= MAX_OFFERS_IN) return null;
+  const rng = seededRandom(`${F.id}|s${F.season}|offer${day}`);
+  if (rng() > 0.1) return null;
+  const rivalIdx = Math.floor(rng() * 7);
+  const R = F.rivals[rivalIdx];
+  const mine = F.rotation.map((p, i) => ({ p, where: 'rot', idx: i }))
+    .concat(F.lineup.map((p, i) => ({ p, where: 'line', idx: i })))
+    .filter(x => x.p)
+    .sort((a, b) => tradeValue(b.p) - tradeValue(a.p)).slice(0, 6);
+  if (!mine.length) return null;
+  const target = mine[Math.floor(rng() * mine.length)];
+  const pool = target.where === 'rot' ? R.rot : R.line;
+  const tv = tradeValue(target.p);
+  const cands = pool.map((p, i) => ({ p, idx: i, v: tradeValue(p) })).filter(c => c.v >= tv * 0.85 && c.v <= tv * 1.2);
+  if (!cands.length) return null;
+  cands.sort((a, b) => b.v - a.v);
+  const pick = cands[Math.floor(rng() * Math.min(2, cands.length))];
+  return { rivalIdx, where: target.where, mineIdx: target.idx, theirIdx: pick.idx, day };
+}
+// swap the two players between rosters (same position by construction)
+function applyTrade(F, offer) {
+  const R = F.rivals[offer.rivalIdx];
+  const myArr = offer.where === 'rot' ? F.rotation : F.lineup;
+  const theirArr = offer.where === 'rot' ? R.rot : R.line;
+  const mineP = myArr[offer.mineIdx], theirsP = theirArr[offer.theirIdx];
+  myArr[offer.mineIdx] = theirsP;
+  theirArr[offer.theirIdx] = mineP;
+  // fresh stat line for the newcomer; the departed keeps his stats on the rival's books
+  theirsP.s = blankS(theirsP.game);
+  return { got: theirsP, sent: mineP, team: R.name };
+}
+// Would a rival accept YOUR proposal? They want to clearly win the deal (value + a
+// seeded mood fudge), and it must be before the deadline.
+function rivalAccepts(F, offer) {
+  const R = F.rivals[offer.rivalIdx];
+  const myArr = offer.where === 'rot' ? F.rotation : F.lineup;
+  const theirArr = offer.where === 'rot' ? R.rot : R.line;
+  const mineV = tradeValue(myArr[offer.mineIdx]);
+  const theirV = tradeValue(theirArr[offer.theirIdx]);
+  const rng = seededRandom(`${F.id}|s${F.season}|prop${F.day}|${offer.rivalIdx}|${offer.theirIdx}|${offer.mineIdx}`);
+  const fudge = (rng() - 0.5) * 2;   // ±1 mood
+  return mineV >= theirV + 1.2 + fudge;
+}
+
+/* ---- offseason: development + aging for EVERY club, retirements, awards ---- */
+function developPlayer(rng, p) {
+  const from = p.ovr;
+  p.age += 1;
+  let note = null;
+  if (p.age <= 26) {
+    const room = Math.max(0, (p.pot || p.ovr) - p.ovr);
+    let gain = Math.min(room, Math.floor(rng() * 3));            // 0–2 toward potential
+    if (room >= 4 && rng() < 0.1) { gain = Math.min(room, gain + 3); note = 'breakout'; }
+    p.ovr += gain;
+  } else if (p.age <= 29) {
+    if (rng() < 0.25) p.ovr += 1;                                 // late bloom
+  } else if (p.age <= 33) {
+    p.ovr -= Math.round(rng() * 2);                               // 0–2
+  } else {
+    p.ovr -= 2 + Math.round(rng() * 2);                           // 2–4
+  }
+  p.ovr = clamp(p.ovr, 40, 99);
+  const retired = (p.age >= 38) || (p.age >= 33 && (from - p.ovr) >= 3 && rng() < 0.6) || (p.ovr <= 52);
+  return { from, to: p.ovr, retired, note };
+}
 function agePlayers(F) {
   const rng = seededRandom(`${F.id}|s${F.season}|off`);
   const report = [];
   const ageOne = (p, where, idx) => {
     if (!p) return;
-    const from = p.ovr;
-    p.age += 1;
-    let drop = 0;
-    if (p.age > 33) drop = 2 + Math.round(rng() * 2);        // 2–4
-    else if (p.age > 29) drop = Math.round(rng() * 2);       // 0–2
-    else if (rng() < 0.25) drop = -1;                        // young player improves a tick
-    p.ovr = clamp(p.ovr - drop, 40, 125);
-    const retired = (p.age >= 38) || (p.age >= 33 && drop >= 3 && rng() < 0.6) || (p.ovr <= 52);
-    report.push({ name: p.name, where, idx, age: p.age, from, to: p.ovr, retired });
-    if (retired) { if (where === 'rot') F.rotation[idx] = null; else F.lineup[idx] = null; }
+    const r = developPlayer(rng, p);
+    report.push({ name: p.name, where, idx, age: p.age, from: r.from, to: r.to, retired: r.retired, note: r.note });
+    if (r.retired) { if (where === 'rot') F.rotation[idx] = null; else F.lineup[idx] = null; }
   };
   F.rotation.forEach((p, i) => ageOne(p, 'rot', i));
   F.lineup.forEach((p, i) => ageOne(p, 'line', i));
   return report;
 }
+// rivals live the same winter: develop, retire, and quietly restock via their own drafts
+function rivalOffseason(F) {
+  F.rivals.forEach((R, ri) => {
+    const rng = seededRandom(`${F.id}|s${F.season}|off-r${ri}`);
+    ['rot', 'line'].forEach(kind => {
+      R[kind] = R[kind].map(p => {
+        const r = developPlayer(rng, p);
+        return r.retired ? mkProspect(rng, kind === 'rot' ? 'pitcher' : 'batter') : p;
+      });
+    });
+  });
+}
 function standingsRows(F) {
-  const rows = F.rivals.map((r, i) => ({ name: r.name, w: r.w, l: r.l, ovr: r.ovr, me: false, idx: i }));
-  rows.push({ name: F.name, w: F.wins, l: F.losses, ovr: Math.round((rosterAvg(F.rotation) + rosterAvg(F.lineup)) / 2), me: true, idx: -1 });
+  const rows = F.rivals.map((r, i) => ({ name: r.name, w: r.w, l: r.l, ovr: teamOvr(r), me: false, idx: i }));
+  rows.push({ name: F.name, w: F.wins, l: F.losses, ovr: teamOvr({ rot: F.rotation, line: F.lineup }), me: true, idx: -1 });
   rows.sort((a, b) => (b.w - a.w) || (a.name < b.name ? -1 : 1));
   return rows;
+}
+// v1 saves (single team ovr per rival, bare players) grow into the league world
+function migrateV1(F) {
+  if (!F || F.v !== 1) return F;
+  const rng = seededRandom(F.id + '|migrate2');
+  const up = p => p && Object.assign(p, { id: p.id || ('p' + Math.floor(rng() * 1e9).toString(36)),
+    pot: p.pot || potOf(rng, p.ovr, p.age), s: p.s || null, c: p.c || null });
+  F.rotation = (F.rotation || []).map(up);
+  F.lineup = (F.lineup || []).map(up);
+  F.rivals = (F.rivals || []).map(r => {
+    const ros = mkRivalRoster(rng, r.ovr || 76);
+    return { name: r.name, rot: ros.rot, line: ros.line, w: r.w || 0, l: r.l || 0 };
+  });
+  F.tradesIn = 0; F.tradesUser = 0; F.tradeLog = [];
+  F.v = 2;
+  return F;
 }
 /* ============================ ==/ENGINE== ============================ */
 
 /* ---------- state + persistence ---------- */
 const LS_KEY = 'pl_franchise';
 let F = null;
-function load() { try { F = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); } catch (e) { F = null; } }
+function load() {
+  try { F = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); } catch (e) { F = null; }
+  if (F && F.v === 1) { F = migrateV1(F); save(); }
+}
 function save() {
   if (!F) return;
   try { localStorage.setItem(LS_KEY, JSON.stringify(F)); } catch (e) {}
@@ -493,9 +803,8 @@ function queueSync() {
       const r = await fetch('/api/account', { method: 'POST', headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ action: 'franchiseSync', sub: a.sub, sessionToken: a.sessionToken, franchise: F }) });
       const j = await r.json();
-      // the server returns whichever copy is further along — adopt it if it beat ours
       if (j && j.ok && j.franchise && j.franchise.id && (Number(j.franchise.prog) || 0) > (Number(F && F.prog) || 0)) {
-        F = j.franchise;
+        F = migrateV1(j.franchise);
         try { localStorage.setItem(LS_KEY, JSON.stringify(F)); } catch (e) {}
         render();
       }
@@ -520,41 +829,62 @@ function awardWinXP() {
 
 /* ---------- tiny ui helpers ---------- */
 const tierCls = o => o >= 85 ? 't-d' : o >= 80 ? 't-g' : o >= 75 ? 't-s' : o >= 65 ? 't-b' : 't-x';
+const escapeHTML = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+function potStars(p) {
+  const room = Math.max(0, (p.pot || p.ovr) - p.ovr);
+  const n = room >= 8 ? 3 : room >= 4 ? 2 : room >= 1 ? 1 : 0;
+  return n ? `<span class="potstars" title="Potential ${p.pot}">${'★'.repeat(n)}</span>` : '';
+}
 function toast(msg) {
   const t = $('toast');
   t.textContent = msg; t.style.display = 'block';
   if (window.gsap) gsap.fromTo(t, { y: 14, opacity: 0 }, { y: 0, opacity: 1, duration: .35 });
-  clearTimeout(t._tm); t._tm = setTimeout(() => { t.style.display = 'none'; }, 3200);
+  clearTimeout(t._tm); t._tm = setTimeout(() => { t.style.display = 'none'; }, 3400);
 }
 function show(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('on'));
   $(id).classList.add('on');
 }
+function closeOv(id) { $(id).classList.remove('show'); }
+['pickOv', 'teamOv', 'playerOv'].forEach(id => $(id).addEventListener('click', e => { if (e.target === $(id)) closeOv(id); }));
 
-/* ---------- header ---------- */
+/* ---------- header + tabs ---------- */
+let tab = 'season';
 function renderHead() {
-  if (!F) { $('frHead').style.display = 'none'; return; }
+  if (!F) { $('frHead').style.display = 'none'; $('frTabs').style.display = 'none'; return; }
   $('frHead').style.display = 'flex';
   $('frName').textContent = F.name;
   $('frSeason').textContent = `Season ${F.season}`;
-  $('frRec').textContent = F.phase === 'season' || F.phase === 'playoffs' ? `${F.wins}–${F.losses}` : '';
+  $('frRec').textContent = (F.phase === 'season' || F.phase === 'playoffs') ? `${F.wins}–${F.losses}` : '';
   $('frBanners').innerHTML = (F.history || []).filter(h => h.result === 'CHAMPIONS')
     .map(h => `<span class="banner">🏆 S${h.season}</span>`).join('');
+  const inSeason = F.phase === 'season';
+  $('frTabs').style.display = (inSeason || F.phase === 'playoffs' || F.phase === 'roster') ? 'flex' : 'none';
+  document.querySelectorAll('.frtab').forEach(b => {
+    b.classList.toggle('on', b.dataset.tab === tab);
+    // Trade Hub only mid-season, before the deadline
+    if (b.dataset.tab === 'trades') b.style.display = (inSeason && F.day < TRADE_DEADLINE) ? '' : 'none';
+    if (b.dataset.tab === 'season') b.textContent = F.phase === 'playoffs' ? '🏆 Playoffs' : '📅 Season';
+  });
 }
+document.querySelectorAll('.frtab').forEach(b => b.onclick = () => { tab = b.dataset.tab; render(); });
 
-/* ---------- roster screen ---------- */
-let pickSeat = null;   // { where:'rot'|'line', idx }
-function seatHtml(p, where, i) {
+/* ---------- roster screen (preseason) ---------- */
+let pickSeat = null;
+function seatHtml(p, where, i, withStats) {
   const pos = where === 'rot' ? `SP${i + 1}` : `Batter ${i + 1}`;
   if (!p) return `<div class="seat empty" data-w="${where}" data-i="${i}"><span class="plus">＋</span><span class="pos">${pos} · empty</span></div>`;
-  const srcTag = p.src === 'hof' ? '🏛️' : p.src === 'draft' ? '📋' : '✍️';
+  const srcTag = p.src === 'hof' ? '🏛️' : p.src === 'draft' ? '📋' : p.src === 'rival' ? '🔁' : '✍️';
+  const stat = withStats && p.s ? `<span class="stat">${p.game === 'pitcher'
+    ? `${p.s.w}-${p.s.l} · ${era(p.s)} ERA · ${p.s.k} K`
+    : `${avg(p.s)} · ${p.s.hr} HR · ${p.s.rbi} RBI`}</span>` : '';
   return `<div class="seat" data-w="${where}" data-i="${i}">
     <span class="pos">${pos}</span>
-    <span class="nm">${escapeHTML(p.name)}</span>
+    <span class="nm">${escapeHTML(p.name)} ${potStars(p)}</span>
     <span class="meta">age ${p.age} · ${srcTag} ${p.src}</span>
+    ${stat}
     <span class="ov ${tierCls(p.ovr)}">${p.ovr}</span></div>`;
 }
-const escapeHTML = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 function renderRoster() {
   $('rotSeats').innerHTML = F.rotation.map((p, i) => seatHtml(p, 'rot', i)).join('');
   $('lineSeats').innerHTML = F.lineup.map((p, i) => seatHtml(p, 'line', i)).join('');
@@ -562,7 +892,7 @@ function renderRoster() {
   $('startSeason').disabled = filled < 14;
   $('startSeason').textContent = `▶ Start Season ${F.season}`;
   $('rosterHint').textContent = filled < 14 ? `${14 - filled} seat${filled === 13 ? '' : 's'} to fill` : 'Roster complete — play ball!';
-  document.querySelectorAll('.seat').forEach(el => el.onclick = () => openPicker(el.dataset.w, Number(el.dataset.i)));
+  document.querySelectorAll('#rotSeats .seat, #lineSeats .seat').forEach(el => el.onclick = () => openPicker(el.dataset.w, Number(el.dataset.i)));
 }
 async function openPicker(where, idx) {
   pickSeat = { where, idx };
@@ -580,7 +910,7 @@ async function openPicker(where, idx) {
   try {
     const r = await fetch(`/api/account?action=list&game=${game}&sub=${encodeURIComponent(a.sub)}&sessionToken=${encodeURIComponent(a.sessionToken)}`);
     const j = await r.json();
-    if (!pickSeat || pickSeat.where !== where || pickSeat.idx !== idx) return;   // picker moved on
+    if (!pickSeat || pickSeat.where !== where || pickSeat.idx !== idx) return;
     const hint = $('hofHint');
     if (!j.ok || !j.rows || !j.rows.length) { if (hint) hint.textContent = 'No saved builds for this position yet — finish a build and 💾 save it to your Hall of Fame.'; return; }
     const names = new Set([...F.rotation, ...F.lineup].filter(Boolean).map(p => p.name));
@@ -595,14 +925,17 @@ async function openPicker(where, idx) {
     document.querySelectorAll('[data-hof]').forEach(el => el.onclick = () => {
       const s = j.rows[Number(el.dataset.hof)];
       if (names.has(s.name)) { toast('Already on the roster.'); return; }
-      placePlayer({ name: String(s.name).slice(0, 26), ovr: clamp(Math.round(s.ovr), 40, 125), age: 23, game, src: 'hof' });
+      const rng = seededRandom(`${F.id}|hof|${s.id}`);
+      const p = mkPlayer(rng, game, clamp(Math.round(s.ovr), 40, 99), 23, 'hof');
+      p.name = String(s.name).slice(0, 26);   // your build keeps its name
+      placePlayer(p);
     });
   } catch (e) { const hint = $('hofHint'); if (hint) hint.textContent = 'Could not reach your Hall of Fame — try again.'; }
 }
 function wirePickRows() {
   const fa = document.querySelector('[data-fa]');
   if (fa) fa.onclick = () => {
-    const rng = seededRandom(`${F.id}|fa|${F.season}|${pickSeat.where}${pickSeat.idx}|${Date.now() % 100000}`);
+    const rng = seededRandom(`${F.id}|fa|${F.season}|${pickSeat.where}${pickSeat.idx}|${(F.prog || 0)}`);
     placePlayer(mkFA(rng, pickSeat.where === 'rot' ? 'pitcher' : 'batter'));
   };
   const cut = document.querySelector('[data-cut]');
@@ -611,12 +944,11 @@ function wirePickRows() {
 function setSeat(p) {
   if (pickSeat.where === 'rot') F.rotation[pickSeat.idx] = p; else F.lineup[pickSeat.idx] = p;
   bump(); save();
-  $('pickOv').classList.remove('show');
+  closeOv('pickOv');
   renderRoster();
 }
 function placePlayer(p) { setSeat(p); toast(`${p.name} signed ${p.src === 'hof' ? 'from your Hall of Fame' : 'as a free agent'}.`); }
-$('pickClose').onclick = () => $('pickOv').classList.remove('show');
-$('pickOv').addEventListener('click', e => { if (e.target === $('pickOv')) $('pickOv').classList.remove('show'); });
+$('pickClose').onclick = () => closeOv('pickOv');
 $('autoFill').onclick = () => {
   let n = 0;
   F.rotation = F.rotation.map((p, i) => p || (n++, mkFA(seededRandom(`${F.id}|auto|${F.season}|r${i}`), 'pitcher')));
@@ -624,8 +956,12 @@ $('autoFill').onclick = () => {
   if (n) { bump(); save(); renderRoster(); toast(`${n} free agent${n === 1 ? '' : 's'} signed.`); }
 };
 $('startSeason').onclick = () => {
-  F.rivals = mkRivals(F.id, F.season);
+  if (!F.rivals || !F.rivals.length || !F.rivals[0].rot) F.rivals = mkRivals(F.id, F.season);
+  else F.rivals.forEach(r => { r.w = 0; r.l = 0; });   // league persists across seasons now
   F.day = 0; F.wins = 0; F.losses = 0; F.phase = 'season'; F.playoffs = null;
+  F.tradesIn = 0; F.tradesUser = 0; F.tradeLog = [];
+  resetSeasonStats(F);
+  tab = 'season';
   bump(); save(); render();
   toast(`Season ${F.season} begins — 32 games, top 4 make the playoffs.`);
 };
@@ -635,44 +971,57 @@ const SEASON_GAMES = 32;
 let auto = false, autoTimer2 = null;
 function renderStandings() {
   const rows = standingsRows(F);
-  $('standBody').innerHTML = rows.map((r, i) => `<tr class="${r.me ? 'me' : ''} ${F.day >= SEASON_GAMES && i < 4 ? 'pl' : ''}">
+  $('standBody').innerHTML = rows.map((r, i) => `<tr class="${r.me ? 'me' : ''} ${F.day >= SEASON_GAMES && i < 4 ? 'pl' : ''}" data-team="${r.idx}">
     <td>${escapeHTML(r.name)}</td><td>${r.w}</td><td>${r.l}</td><td style="text-align:right;color:var(--dim)">${r.ovr}</td></tr>`).join('');
+  document.querySelectorAll('#standBody tr').forEach(tr => tr.onclick = () => openTeam(Number(tr.dataset.team)));
 }
 function renderSeason() {
-  $('gProg').textContent = `Game ${Math.min(F.day + 1, SEASON_GAMES)} of ${SEASON_GAMES}`;
+  $('gProg').textContent = `Game ${Math.min(F.day + 1, SEASON_GAMES)} of ${SEASON_GAMES}${F.day < TRADE_DEADLINE ? '' : ' · deadline passed'}`;
   renderStandings();
   $('nextGame').disabled = F.day >= SEASON_GAMES;
+  // next matchup: opponent + both probable starters (the 2K pre-game strip)
+  if (F.day < SEASON_GAMES) {
+    const rival = F.rivals[F.day % 7];
+    const ours = F.rotation[F.day % 5], theirs = rival.rot[F.day % 5];
+    $('nextUp').innerHTML = `<span class="vs">Next up</span> <b>${escapeHTML(F.name)}</b> vs <b>${escapeHTML(rival.name)}</b> (${teamOvr(rival)} OVR)
+      · <span>P: <b>${escapeHTML(ours ? ours.name : '?')}</b> (${ours ? ours.ovr : '?'}) vs <b>${escapeHTML(theirs.name)}</b> (${theirs.ovr})</span>`;
+  } else $('nextUp').innerHTML = `<span class="vs">Regular season complete</span>`;
 }
 function gameCard(g, dayNum, big) {
   return `<div class="gcard ${big ? 'big' : ''}">
     <div class="top"><span class="gnum">G${dayNum}</span>
       <span class="res ${g.win ? 'w' : 'l'}">${g.win ? 'W' : 'L'}</span>
       <span class="score">${g.runsFor}–${g.runsAgainst}</span>
-      <span class="opp">vs ${escapeHTML(g.opp)}</span></div>
+      <span class="opp">vs ${escapeHTML(g.opp)}${g.oppStarter ? ` (${escapeHTML(g.oppStarter)})` : ''}</span></div>
     <div class="line">${escapeHTML(g.line)}</div>
     ${g.hero ? `<div class="hero">${escapeHTML(g.hero)}</div>` : ''}</div>`;
 }
 function playNextGame() {
-  if (F.day >= SEASON_GAMES) return;
+  if (F.phase !== 'season' || F.day >= SEASON_GAMES) return;
+  if (F.pendingOffer) { showOffer(); return; }   // answer the phone first
   const g = simGame(F, F.day);
+  applyGameStats(F, g);
   if (g.win) { F.wins++; F.rivals[g.oppIdx].l++; awardWinXP(); } else { F.losses++; F.rivals[g.oppIdx].w++; }
   simRivalDay(F, F.day).forEach(r => { if (r.aWins) { F.rivals[r.a].w++; F.rivals[r.b].l++; } else { F.rivals[r.b].w++; F.rivals[r.a].l++; } });
   F.day++;
-  bump(); save();
   const feed = $('gameFeed');
   feed.insertAdjacentHTML('afterbegin', gameCard(g, F.day, !!g.hero && g.win));
   if (window.gsap) gsap.fromTo(feed.firstElementChild, { x: -16, opacity: 0 }, { x: 0, opacity: 1, duration: .3 });
-  // milestone headlines
   if (F.wins === 20) feed.insertAdjacentHTML('afterbegin', `<div class="gcard big"><div class="hero">🏅 20 wins! ${escapeHTML(F.name)} are the talk of the league.</div></div>`);
+  // the phones: a rival may call after tonight's game
+  const offer = genTradeOffer(F, F.day);
+  if (offer) { F.pendingOffer = offer; F.tradesIn = (F.tradesIn || 0) + 1; }
+  bump(); save();
   renderSeason(); renderHead();
+  if (F.pendingOffer) { stopAuto(); showOffer(); }
   if (F.day >= SEASON_GAMES) endRegularSeason();
 }
 function endRegularSeason() {
   stopAuto();
+  F.pendingOffer = null;
   const rows = standingsRows(F);
   const myRank = rows.findIndex(r => r.me) + 1;
   if (myRank <= 4) {
-    // seed the bracket: 1v4, 2v3 — our series plays out game-by-game, the other one is pre-decided
     const seeds = rows.slice(0, 4);
     const myPos = seeds.findIndex(r => r.me);
     const oppPos = myPos === 0 ? 3 : myPos === 3 ? 0 : myPos === 1 ? 2 : 1;
@@ -695,25 +1044,204 @@ function stopAuto() { auto = false; clearInterval(autoTimer2); $('autoPlay').tex
 $('autoPlay').onclick = () => {
   if (auto) { stopAuto(); return; }
   auto = true; $('autoPlay').textContent = '⏸ Pause';
-  autoTimer2 = setInterval(() => { if (F.phase !== 'season' || F.day >= SEASON_GAMES) stopAuto(); else playNextGame(); }, 1200);
+  autoTimer2 = setInterval(() => { if (F.phase !== 'season' || F.day >= SEASON_GAMES || F.pendingOffer) stopAuto(); else playNextGame(); }, 1200);
 };
+
+/* ---------- incoming trade offer ---------- */
+function offerPlayers() {
+  const O = F.pendingOffer;
+  const R = F.rivals[O.rivalIdx];
+  const mine = (O.where === 'rot' ? F.rotation : F.lineup)[O.mineIdx];
+  const theirs = (O.where === 'rot' ? R.rot : R.line)[O.theirIdx];
+  return { O, R, mine, theirs };
+}
+function showOffer() {
+  if (!F.pendingOffer) return;
+  const { R, mine, theirs } = offerPlayers();
+  if (!mine || !theirs) { F.pendingOffer = null; save(); return; }
+  $('offerLine').innerHTML = `The <b>${escapeHTML(R.name)}</b> want <b>${escapeHTML(mine.name)}</b>. Their offer, straight up:`;
+  $('offerGetNm').textContent = theirs.name;
+  $('offerGetOv').textContent = theirs.ovr;
+  $('offerGetOv').className = 'ov ' + tierCls(theirs.ovr);
+  $('offerGetMeta').innerHTML = `age ${theirs.age} · ${theirs.game === 'pitcher' ? 'SP' : 'BAT'} ${potStars(theirs)}`;
+  $('offerGiveNm').textContent = mine.name;
+  $('offerGiveOv').textContent = mine.ovr;
+  $('offerGiveOv').className = 'ov ' + tierCls(mine.ovr);
+  $('offerGiveMeta').innerHTML = `age ${mine.age} · ${mine.game === 'pitcher' ? 'SP' : 'BAT'} ${potStars(mine)}`;
+  $('offerOv').classList.add('show');
+  if (window.gsap) gsap.fromTo($('offerOv').firstElementChild, { y: 20, opacity: 0, scale: .95 }, { y: 0, opacity: 1, scale: 1, duration: .4, ease: 'back.out(1.5)' });
+}
+$('offerAccept').onclick = () => {
+  if (!F.pendingOffer) return closeOv('offerOv');
+  const done = applyTrade(F, F.pendingOffer);
+  F.pendingOffer = null;
+  (F.tradeLog = F.tradeLog || []).push({ day: F.day, got: done.got.name, sent: done.sent.name, team: done.team });
+  bump(); save();
+  closeOv('offerOv');
+  $('gameFeed').insertAdjacentHTML('afterbegin', `<div class="gcard trade"><div class="hero">🔁 TRADE: ${escapeHTML(done.got.name)} joins ${escapeHTML(F.name)} — ${escapeHTML(done.sent.name)} heads to the ${escapeHTML(done.team)}.</div></div>`);
+  toast(`Deal! ${done.got.name} is on the roster.`);
+  render();
+};
+$('offerDecline').onclick = () => {
+  F.pendingOffer = null;
+  bump(); save();
+  closeOv('offerOv');
+  toast('You hang up. The clubhouse never hears about it.');
+};
+
+/* ---------- My Team (stats) ---------- */
+function prowHtml(p, pos, statLine, key) {
+  return `<div class="prow" data-pkey="${key}">
+    <span class="pos">${pos}</span>
+    <span class="nm">${escapeHTML(p.name)} ${potStars(p)}</span>
+    <span class="age">${p.age}y</span>
+    <span class="stat" style="font-size:10.5px;color:var(--accent2)">${statLine}</span>
+    <span class="ov ${tierCls(p.ovr)}">${p.ovr}</span></div>`;
+}
+function renderMyTeam() {
+  $('mtRot').innerHTML = F.rotation.map((p, i) => p ? prowHtml(p, `SP${i + 1}`,
+    p.s ? `${p.s.w}-${p.s.l} · ${era(p.s)} · ${p.s.k} K` : '—', `rot${i}`) : '').join('');
+  $('mtLine').innerHTML = F.lineup.map((p, i) => p ? prowHtml(p, `B${i + 1}`,
+    p.s ? `${avg(p.s)} · ${p.s.hr} HR · ${p.s.rbi} RBI` : '—', `line${i}`) : '').join('');
+  document.querySelectorAll('#mtRot .prow, #mtLine .prow').forEach(el => el.onclick = () => {
+    const k = el.dataset.pkey;
+    const p = k.startsWith('rot') ? F.rotation[Number(k.slice(3))] : F.lineup[Number(k.slice(4))];
+    if (p) openPlayerCard(p);
+  });
+}
+function openPlayerCard(p) {
+  const isP = p.game === 'pitcher';
+  const s = p.s, c = p.c;
+  const cells = (st) => isP
+    ? [[`${st.w}-${st.l}`, 'Record'], [st.ip > 0 ? era(st) : '—', 'ERA'], [st.k, 'K']]
+    : [[st.ab > 0 ? avg(st) : '—', 'AVG'], [st.hr, 'HR'], [st.rbi, 'RBI']];
+  const grid = st => `<div class="pcard-stats">${cells(st).map(([v, l]) => `<div class="pstat"><div class="v">${v}</div><div class="l">${l}</div></div>`).join('')}</div>`;
+  $('playerOvCard').innerHTML = `
+    <div class="pcard-head">
+      <div class="pcard-ovr ${tierCls(p.ovr)}" style="color:inherit">${p.ovr}</div>
+      <div><div class="pcard-nm">${escapeHTML(p.name)}</div>
+      <div class="pcard-sub">${isP ? 'Starting Pitcher' : 'Batter'} · age ${p.age} · potential ${p.pot || p.ovr} ${potStars(p)} · via ${p.src}</div></div>
+    </div>
+    ${s ? `<div class="pcard-sec">This season</div>${grid(s)}` : ''}
+    ${c && c.seasons ? `<div class="pcard-sec">Career · ${c.seasons} season${c.seasons === 1 ? '' : 's'}</div>${grid(c)}` : '<div class="hint">Career stats start counting at the end of this season.</div>'}
+    <button class="btn ghost" id="pcardClose" style="width:100%;margin-top:16px">Close</button>`;
+  $('playerOv').classList.add('show');
+  $('pcardClose').onclick = () => closeOv('playerOv');
+}
+
+/* ---------- League + team rosters ---------- */
+function renderLeague() {
+  const rows = standingsRows(F);
+  $('leagueGrid').innerHTML = rows.map(r => `<div class="panel lteam" data-team="${r.idx}">
+    <div class="tn">${r.me ? '⭐ ' : ''}${escapeHTML(r.name)}</div>
+    <div class="tm">${r.w}–${r.l}${F.phase === 'roster' ? ' (last yr)' : ''}</div>
+    <div class="tv">${r.ovr} TEAM OVR</div></div>`).join('');
+  document.querySelectorAll('#leagueGrid .lteam').forEach(el => el.onclick = () => openTeam(Number(el.dataset.team)));
+}
+function openTeam(idx) {
+  const isMe = idx < 0;
+  const T = isMe ? { name: F.name, rot: F.rotation, line: F.lineup, w: F.wins, l: F.losses } : F.rivals[idx];
+  $('teamOvName').textContent = (isMe ? '⭐ ' : '') + T.name;
+  $('teamOvMeta').textContent = `${T.w}–${T.l} · ${teamOvr(T)} team OVR · rotation ${Math.round(rosterAvg(T.rot))} · lineup ${Math.round(rosterAvg(T.line))}`;
+  const row = (p, pos) => p ? `<div class="prow" style="cursor:default">
+    <span class="pos">${pos}</span><span class="nm">${escapeHTML(p.name)} ${potStars(p)}</span>
+    <span class="age">${p.age}y</span><span class="ov ${tierCls(p.ovr)}">${p.ovr}</span></div>` : '';
+  $('teamOvList').innerHTML = T.rot.map((p, i) => row(p, `SP${i + 1}`)).join('') + T.line.map((p, i) => row(p, `B${i + 1}`)).join('');
+  $('teamOv').classList.add('show');
+}
+$('teamOvClose').onclick = () => closeOv('teamOv');
+
+/* ---------- Trade Hub (you propose) ---------- */
+let th = { mine: null, team: null };
+function renderTrades() {
+  const dealsLeft = MAX_TRADES_USER - (F.tradesUser || 0);
+  $('tradeSub').innerHTML = F.day >= TRADE_DEADLINE
+    ? 'The trade deadline has passed — the phones are quiet until next season.'
+    : `Shop anyone on your roster for a same-position player. Rivals only say yes when they <b>win the deal</b> —
+       value is rating + youth + potential. <b>${dealsLeft}</b> deal${dealsLeft === 1 ? '' : 's'} left this season.`;
+  const dead = F.day >= TRADE_DEADLINE || dealsLeft <= 0;
+  $('thMine').innerHTML = dead ? '' : F.rotation.map((p, i) => p ? thRow(p, `SP${i + 1}`, `rot|${i}`, th.mine === `rot|${i}`) : '').join('')
+    + F.lineup.map((p, i) => p ? thRow(p, `B${i + 1}`, `line|${i}`, th.mine === `line|${i}`) : '').join('');
+  document.querySelectorAll('#thMine .prow').forEach(el => el.onclick = () => { th.mine = el.dataset.pkey; th.team = null; renderTrades(); });
+  const showTeams = !dead && th.mine;
+  $('thTeamsTitle').style.display = showTeams ? '' : 'none';
+  $('thTeams').style.display = showTeams ? 'grid' : 'none';
+  if (showTeams) {
+    $('thTeams').innerHTML = F.rivals.map((r, i) => `<div class="panel lteam ${th.team === i ? 'on' : ''}" data-t="${i}" style="${th.team === i ? 'border-color:rgba(59,209,255,.6)' : ''}">
+      <div class="tn">${escapeHTML(r.name)}</div><div class="tv">${teamOvr(r)} TEAM OVR</div></div>`).join('');
+    document.querySelectorAll('#thTeams .lteam').forEach(el => el.onclick = () => { th.team = Number(el.dataset.t); renderTrades(); });
+  }
+  const showTheirs = showTeams && th.team != null;
+  $('thTheirsTitle').style.display = showTheirs ? '' : 'none';
+  $('thTheirs').style.display = showTheirs ? '' : 'none';
+  $('thSummary').style.display = 'none';
+  if (showTheirs) {
+    const [w] = th.mine.split('|');
+    const pool = w === 'rot' ? F.rivals[th.team].rot : F.rivals[th.team].line;
+    $('thTheirs').innerHTML = pool.map((p, i) => thRow(p, w === 'rot' ? `SP${i + 1}` : `B${i + 1}`, String(i), false)).join('');
+    document.querySelectorAll('#thTheirs .prow').forEach(el => el.onclick = () => proposeTrade(Number(el.dataset.pkey)));
+  }
+}
+function thRow(p, pos, key, sel) {
+  return `<div class="prow" data-pkey="${key}" style="${sel ? 'border-color:rgba(59,209,255,.65);background:rgba(25,198,255,.08)' : ''}">
+    <span class="pos">${pos}</span><span class="nm">${escapeHTML(p.name)} ${potStars(p)}</span>
+    <span class="age">${p.age}y</span><span class="ov ${tierCls(p.ovr)}">${p.ovr}</span></div>`;
+}
+function proposeTrade(theirIdx) {
+  const [w, iStr] = th.mine.split('|');
+  const offer = { rivalIdx: th.team, where: w, mineIdx: Number(iStr), theirIdx };
+  const R = F.rivals[offer.rivalIdx];
+  const mine = (w === 'rot' ? F.rotation : F.lineup)[offer.mineIdx];
+  const theirs = (w === 'rot' ? R.rot : R.line)[theirIdx];
+  const ok = rivalAccepts(F, offer);
+  const sum = $('thSummary');
+  sum.style.display = 'flex';
+  if (ok) {
+    const done = applyTrade(F, offer);
+    F.tradesUser = (F.tradesUser || 0) + 1;
+    (F.tradeLog = F.tradeLog || []).push({ day: F.day, got: done.got.name, sent: done.sent.name, team: done.team });
+    th = { mine: null, team: null };
+    bump(); save();
+    sum.innerHTML = `<span style="color:var(--green);font-weight:700">✅ DEAL!</span> <b>${escapeHTML(done.got.name)}</b> (${done.got.ovr})
+      joins for <b>${escapeHTML(done.sent.name)}</b>. The ${escapeHTML(done.team)} fax back the paperwork.`;
+    $('gameFeed').insertAdjacentHTML('afterbegin', `<div class="gcard trade"><div class="hero">🔁 TRADE: ${escapeHTML(done.got.name)} joins ${escapeHTML(F.name)} — ${escapeHTML(done.sent.name)} heads to the ${escapeHTML(done.team)}.</div></div>`);
+    toast(`Deal! ${done.got.name} is on the roster.`);
+    renderTrades(); renderHead();
+  } else {
+    sum.innerHTML = `<span style="color:var(--red);font-weight:700">❌ REJECTED.</span> The ${escapeHTML(R.name)} say
+      <b>${escapeHTML(theirs.name)}</b> for <b>${escapeHTML(mine.name)}</b> doesn't move the needle for them. Sweeten it — offer someone younger or better.`;
+  }
+}
+
+/* ---------- History ---------- */
+function renderHistory() {
+  const hist = (F.history || []).slice().reverse();
+  const trades = (F.tradeLog || []);
+  $('histList').innerHTML = (hist.length ? hist.map(h => `<div class="histrow">
+      <span class="sn">S${h.season}</span><span>${h.w}–${h.l}</span>
+      <span class="${h.result === 'CHAMPIONS' ? 'res-c' : ''}" style="flex:1">${h.result === 'CHAMPIONS' ? '🏆 CHAMPIONS' : h.result === 'lost-final' ? 'Lost the Final' : h.result === 'lost-semis' ? 'Lost in the semis' : 'Missed the playoffs'}</span>
+      ${h.mvp ? `<span style="color:var(--muted);font-size:11px">MVP ${escapeHTML(h.mvp.name)}</span>` : ''}
+      ${h.ace ? `<span style="color:var(--muted);font-size:11px">Ace ${escapeHTML(h.ace.name)}</span>` : ''}
+    </div>`).join('') : '<div class="hint">No completed seasons yet.</div>')
+    + (trades.length ? `<div class="rsec">This season's deals</div>` + trades.map(t => `<div class="histrow"><span class="sn">G${t.day}</span><span style="flex:1">🔁 ${escapeHTML(t.got)} in, ${escapeHTML(t.sent)} out (${escapeHTML(t.team)})</span></div>`).join('') : '');
+}
 
 /* ---------- playoffs ---------- */
 function rivalName(idx) { return F.rivals[idx].name; }
 function renderPlayoffs() {
   const P = F.playoffs;
   if (!P) return;
-  const my = `<div class="panel series"><span class="rd">${P.round === 'semi' ? 'Semifinal' : 'THE FINAL'}</span>
-    <span class="t ${P.myW === 3 ? 'win' : ''}">${escapeHTML(F.name)}</span><span class="sc">${P.myW}</span>
-    <span style="color:var(--dim)">–</span><span class="sc">${P.oppW}</span>
-    <span class="t ${P.oppW === 3 ? 'win' : ''}" style="text-align:right">${escapeHTML(rivalName(P.myOppIdx))}</span></div>`;
+  const my = `<div class="panel" style="padding:12px 14px;display:flex;align-items:center;gap:12px"><span class="eyebrow" style="width:80px">${P.round === 'semi' ? 'Semifinal' : 'THE FINAL'}</span>
+    <span style="flex:1;font-weight:600;${P.myW === 3 ? 'color:var(--green)' : ''}">${escapeHTML(F.name)}</span><span style="font-family:'Oswald',sans-serif;font-size:20px;font-weight:700">${P.myW}</span>
+    <span style="color:var(--dim)">–</span><span style="font-family:'Oswald',sans-serif;font-size:20px;font-weight:700">${P.oppW}</span>
+    <span style="flex:1;text-align:right;font-weight:600;${P.oppW === 3 ? 'color:var(--green)' : ''}">${escapeHTML(rivalName(P.myOppIdx))}</span></div>`;
   let other = '';
   if (P.round === 'semi') {
     const o = P.other;
-    other = `<div class="panel series" style="opacity:.75"><span class="rd">Semifinal</span>
-      <span class="t ${o.winner === P.otherPair[0] ? 'win' : ''}">${escapeHTML(rivalName(P.otherPair[0]))}</span><span class="sc">${o.aw}</span>
-      <span style="color:var(--dim)">–</span><span class="sc">${o.bw}</span>
-      <span class="t ${o.winner === P.otherPair[1] ? 'win' : ''}" style="text-align:right">${escapeHTML(rivalName(P.otherPair[1]))}</span></div>`;
+    other = `<div class="panel" style="padding:12px 14px;display:flex;align-items:center;gap:12px;opacity:.7"><span class="eyebrow" style="width:80px">Semifinal</span>
+      <span style="flex:1;font-weight:600">${escapeHTML(rivalName(P.otherPair[0]))}</span><span style="font-family:'Oswald',sans-serif;font-weight:700">${o.aw}</span>
+      <span style="color:var(--dim)">–</span><span style="font-family:'Oswald',sans-serif;font-weight:700">${o.bw}</span>
+      <span style="flex:1;text-align:right;font-weight:600">${escapeHTML(rivalName(P.otherPair[1]))}</span></div>`;
   }
   $('bracket').innerHTML = my + other;
   $('pProg').textContent = `Best of 5 · Game ${Math.min(P.gameNo + 1, 5)}`;
@@ -727,7 +1255,7 @@ $('nextPGame').onclick = () => {
   if (g.win) { P.myW++; awardWinXP(); } else P.oppW++;
   bump(); save();
   const feed = $('pFeed');
-  feed.insertAdjacentHTML('afterbegin', gameCard({ win: g.win, runsFor: g.runsFor, runsAgainst: g.runsAgainst, opp: rivalName(P.myOppIdx), line: g.line, hero: g.k >= 11 ? `🔥 ${g.starter} strikes out ${g.k} on the big stage.` : null }, `${P.round === 'semi' ? 'SF' : 'F'}${P.gameNo}`, false));
+  feed.insertAdjacentHTML('afterbegin', gameCard({ win: g.win, runsFor: g.runsFor, runsAgainst: g.runsAgainst, opp: rivalName(P.myOppIdx), oppStarter: g.oppStarter, line: g.line, hero: g.k >= 11 ? `🔥 ${g.starter} strikes out ${g.k} on the big stage.` : null }, `${P.round === 'semi' ? 'SF' : 'F'}${P.gameNo}`, false));
   if (window.gsap) gsap.fromTo(feed.firstElementChild, { x: -16, opacity: 0 }, { x: 0, opacity: 1, duration: .3 });
   renderPlayoffs();
   if (P.myW === 3) {
@@ -754,7 +1282,7 @@ function championship() {
   confettiRain($('confettiHost'));
   renderHead();
 }
-$('champClose').onclick = () => { $('champOv').classList.remove('show'); render(); };
+$('champClose').onclick = () => { closeOv('champOv'); render(); };
 function confettiRain(host) {
   host.innerHTML = '';
   const colors = ['#ffd23f', '#ff7a18', '#19c6ff', '#ffffff', '#43e97b'];
@@ -772,28 +1300,37 @@ function confettiRain(host) {
 
 /* ---------- season end / offseason ---------- */
 function finishSeason(result, summary) {
+  const awardsW = seasonAwards(F);
+  foldSeasonStats(F);
   F.history = F.history || [];
-  F.history.push({ season: F.season, w: F.wins, l: F.losses, result });
+  F.history.push({ season: F.season, w: F.wins, l: F.losses, result, mvp: awardsW.mvp, ace: awardsW.ace });
   F.phase = 'offseason';
   F.offReport = agePlayers(F);
+  rivalOffseason(F);
   F.offSummary = summary;
+  F.pendingOffer = null;
   bump(); save();
 }
 function renderOffseason() {
-  const h = (F.history || [])[F.history.length - 1];
-  $('offSummary').innerHTML = `${escapeHTML(F.offSummary || '')} Final record <b>${h ? h.w : F.wins}–${h ? h.l : F.losses}</b>.
-    Everyone ages a year — decline sets in past 29 and bites hard past 33.`;
+  const h = (F.history || [])[F.history.length - 1] || {};
+  $('offSummary').innerHTML = `${escapeHTML(F.offSummary || '')} Final record <b>${h.w != null ? h.w : F.wins}–${h.l != null ? h.l : F.losses}</b>.
+    Young players grow toward their <span class="potstars">★ potential</span>; decline sets in past 29 and bites hard past 33.
+    The other seven clubs are living the same winter.`;
+  $('awards').innerHTML = (h.mvp || h.ace) ? `
+    ${h.mvp ? `<div class="aw"><div class="at">🏅 Team MVP</div><div class="an">${escapeHTML(h.mvp.name)}</div><div class="as">${escapeHTML(h.mvp.line)}</div></div>` : ''}
+    ${h.ace ? `<div class="aw"><div class="at">🔥 Staff Ace</div><div class="an">${escapeHTML(h.ace.name)}</div><div class="as">${escapeHTML(h.ace.line)}</div></div>` : ''}`
+    : '<div class="hint">No award winners this year.</div>';
   $('ageList').innerHTML = (F.offReport || []).map(r => {
     const d = r.to - r.from;
-    const chg = d < 0 ? `<span class="chg down">${d} → ${r.to}</span>` : d > 0 ? `<span class="chg" style="color:var(--green)">+${d} → ${r.to}</span>` : `<span class="chg flat">— ${r.to}</span>`;
-    return `<div class="agerow ${r.retired ? 'retired' : ''}">
-      <span class="nm">${escapeHTML(r.name)}</span><span class="meta" style="color:var(--muted)">age ${r.age}</span>
-      ${chg}${r.retired ? '<span class="ret">RETIRED 👋</span>' : ''}</div>`;
+    const chg = d < 0 ? `<span class="chg down">${d} → ${r.to}</span>` : d > 0 ? `<span class="chg up">+${d} → ${r.to}</span>` : `<span class="chg flat">— ${r.to}</span>`;
+    return `<div class="agerow ${r.retired ? 'retired' : ''} ${r.note === 'breakout' ? 'breakout' : ''}">
+      <span class="nm">${escapeHTML(r.name)}</span><span style="color:var(--muted);font-size:11px">age ${r.age}</span>
+      ${chg}${r.note === 'breakout' ? '<span class="brk">💥 BREAKOUT</span>' : ''}${r.retired ? '<span class="ret">RETIRED 👋</span>' : ''}</div>`;
   }).join('');
 }
 $('toDraft').onclick = () => { F.phase = 'draft'; bump(); save(); render(); };
 
-/* ---------- draft (the slot-machine reel comes home) ---------- */
+/* ---------- draft ---------- */
 let draftPool = null, spinning = false;
 function vacancies() {
   const v = [];
@@ -804,7 +1341,7 @@ function vacancies() {
 function renderDraft() {
   const v = vacancies();
   $('draftSub').textContent = v.length
-    ? `${v.length} roster spot${v.length === 1 ? '' : 's'} to fill. Spin the reel — the pointer picks your prospect. Every pick is final.`
+    ? `${v.length} roster spot${v.length === 1 ? '' : 's'} to fill. Spin the reel — the pointer picks your prospect (watch the ★ potential). Every pick is final.`
     : 'No vacancies — the whole squad is back. Straight to the clubhouse.';
   $('spinDraft').style.display = v.length ? '' : 'none';
   $('reelWrap').style.display = 'none';
@@ -819,10 +1356,10 @@ $('spinDraft').onclick = () => {
   const pickNo = F.rotation.filter(Boolean).length + F.lineup.filter(Boolean).length + 1;
   const rng = seededRandom(`${F.id}|s${F.season}|draft${seat.where}${seat.idx}`);
   draftPool = Array.from({ length: 26 }, () => mkProspect(rng, game));
-  const target = 18 + Math.floor(rng() * 6);   // deterministic landing card
+  const target = 18 + Math.floor(rng() * 6);
   const track = $('rTrack');
   track.innerHTML = draftPool.map(p => `<div class="rcard"><div class="pos">${game === 'pitcher' ? 'SP prospect' : 'Bat prospect'}</div>
-    <div class="nm">${escapeHTML(p.name)}</div><div class="ov ${tierCls(p.ovr)}">${p.ovr}</div></div>`).join('');
+    <div class="nm">${escapeHTML(p.name)} ${potStars(p)}</div><div class="ov ${tierCls(p.ovr)}">${p.ovr}</div></div>`).join('');
   $('reelWrap').style.display = '';
   spinning = true;
   $('spinDraft').disabled = true;
@@ -834,7 +1371,7 @@ $('spinDraft').onclick = () => {
     const p = draftPool[target];
     if (seat.where === 'rot') F.rotation[seat.idx] = p; else F.lineup[seat.idx] = p;
     bump(); save();
-    toast(`With pick #${pickNo}, ${F.name} select ${p.name} (${p.ovr} OVR, age ${p.age})!`);
+    toast(`With pick #${pickNo}, ${F.name} select ${p.name} (${p.ovr} OVR · potential ${p.pot} · age ${p.age})!`);
     const cards = track.children;
     if (window.gsap && cards[target]) gsap.fromTo(cards[target], { scale: 1 }, { scale: 1.12, duration: .4, ease: 'back.out(2)', yoyo: true, repeat: 1 });
     setTimeout(renderDraftAfterPick, 900);
@@ -864,13 +1401,15 @@ $('draftDone').onclick = () => {
 $('newGo').onclick = () => {
   const name = ($('newName').value || '').trim().slice(0, 24) || 'The Underdogs';
   F = {
-    v: 1, id: 'fr_' + Math.random().toString(36).slice(2, 10), name,
+    v: 2, id: 'fr_' + Math.random().toString(36).slice(2, 10), name,
     season: 1, phase: 'roster', prog: 1,
     rotation: [null, null, null, null, null],
     lineup: [null, null, null, null, null, null, null, null, null],
     wins: 0, losses: 0, day: 0, rivals: [], playoffs: null,
+    tradesIn: 0, tradesUser: 0, tradeLog: [],
     history: [], titles: 0,
   };
+  F.rivals = mkRivals(F.id, 1);   // the league exists from day one — go scout it
   save(); render();
   toast(`${name} founded. Now build that roster.`);
 };
@@ -879,9 +1418,18 @@ $('newGo').onclick = () => {
 function render() {
   renderHead();
   if (!F) { show('scrNew'); return; }
+  // league-wide tabs work during roster + season + playoffs
+  if ((F.phase === 'season' || F.phase === 'roster' || F.phase === 'playoffs') && tab !== 'season') {
+    if (tab === 'myteam') { show('scrMyTeam'); renderMyTeam(); return; }
+    if (tab === 'league') { show('scrLeague'); renderLeague(); return; }
+    if (tab === 'trades' && F.phase === 'season' && F.day < TRADE_DEADLINE) { show('scrTrades'); renderTrades(); return; }
+    if (tab === 'history') { show('scrHistory'); renderHistory(); return; }
+    tab = 'season';
+  }
   if (F.phase === 'roster') { show('scrRoster'); renderRoster(); }
   else if (F.phase === 'season') {
     show('scrSeason'); renderSeason();
+    if (F.pendingOffer) showOffer();
     if (F.day >= SEASON_GAMES) endRegularSeason();
   } else if (F.phase === 'playoffs') { show('scrPlayoffs'); renderPlayoffs(); }
   else if (F.phase === 'offseason') { show('scrOff'); renderOffseason(); }
