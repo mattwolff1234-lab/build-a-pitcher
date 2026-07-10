@@ -113,6 +113,7 @@
   async function setAvatar(id) {
     if (id && !avatarUnlocked(id)) return false;
     try { localStorage.setItem('pl_avatar', id || ''); } catch (e) {}
+    decorateAcct();   // sidebar face updates instantly
     try { await api('avatarSet', { avatar: id || '' }); } catch (e) {}
     refresh();
     return true;
@@ -336,7 +337,7 @@
         try { localStorage.setItem('pl_avatar', r.myAvatar || ''); } catch (e) {}   // server is source of truth
         // handle IS the username — keep the local display name (versus, ratings) in lockstep
         if (r.myHandle) { try { localStorage.setItem('pl_guestName', r.myHandle); } catch (e) {} }
-        paintBadge(); maybeToast();
+        paintBadge(); maybeToast(); decorateAcct();
       }
     } catch (e) {}
     return data;
@@ -877,13 +878,57 @@
     };
   }
 
+  /* ---------- the sidebar account row: tap -> your profile, and it wears your avatar ---------- */
+  function decorateAcct() {
+    const row = document.querySelector('#acctSlot .acct');
+    if (!row) return;
+    injectCss();   // the face uses .soc-av styles — make sure they exist before first paint
+    if (!row.__socWired) {
+      row.__socWired = true;
+      row.style.cursor = 'pointer';
+      row.title = 'View my profile';
+    }
+    const avId = myAvatar();
+    if (row.__socAv === (avId || '')) return;
+    row.__socAv = avId || '';
+    const a = avId && AVATARS[avId];
+    let face = row.querySelector('.soc-av');
+    if (a) {
+      if (!face) {
+        face = document.createElement('div');
+        face.className = 'soc-av';
+        const img = row.querySelector('img');
+        if (img) img.replaceWith(face); else row.prepend(face);
+      }
+      face.style.background = a.bg;
+      face.innerHTML = avatarInner(a);
+    } else if (face) {
+      // back to default -> restore the Google picture if there is one
+      const acc = acct();
+      if (acc && acc.picture) {
+        const img = document.createElement('img');
+        img.src = acc.picture; img.alt = ''; img.referrerPolicy = 'no-referrer';
+        face.replaceWith(img);
+      } else face.remove();
+    }
+  }
+  function watchAcct() {
+    const slot = document.getElementById('acctSlot');
+    if (!slot) return;
+    decorateAcct();
+    // renderAcct() rebuilds the row on sign-in/out — re-decorate whenever it does
+    new MutationObserver(decorateAcct).observe(slot, { childList: true, subtree: true });
+  }
+
   /* ---------- wiring ---------- */
   document.addEventListener('click', e => {
     const t = e.target.closest('#miFriends, [data-social-open]');
     if (t) { e.preventDefault(); open(); }
+    const acctRow = e.target.closest('#acctSlot .acct');
+    if (acctRow && !e.target.closest('.signout')) openProfile(null);
   });
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startPolling);
-  else startPolling();
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => { startPolling(); watchAcct(); });
+  else { startPolling(); watchAcct(); }
 
   window.Social = { open, openProfile, refresh, setAvatar, count: pendingCount };
 })();

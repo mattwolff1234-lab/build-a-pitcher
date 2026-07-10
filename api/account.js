@@ -1602,6 +1602,17 @@ module.exports = async (req, res) => {
       }
 
       // admin: look up a player by name and cross-check reported vs logged matches
+      // admin: top accounts by XP (= player level), token-gated read like pvpMatchStats
+      if (action === 'topPlayers') {
+        if (body.token !== STATS_TOKEN) return res.status(403).json({ ok: false, error: 'forbidden' });
+        const lim = Math.max(1, Math.min(100, parseInt(body.limit, 10) || 25));
+        const rows = await sql`SELECT COALESCE(handle, name) AS name, handle, xp, created_at, last_seen,
+            pvp_elo, pvp_wins, pvp_losses,
+            pvp_wins_hoops, pvp_losses_hoops, pvp_wins_soccer, pvp_losses_soccer
+          FROM users WHERE xp > 0 ORDER BY xp DESC LIMIT ${lim}`;
+        return res.status(200).json({ ok: true, rows });
+      }
+
       if (action === 'pvpUserLookup') {
         if (body.token !== STATS_TOKEN) return res.status(403).json({ ok: false, error: 'forbidden' });
         const name = String(body.name || '').trim();
