@@ -25,6 +25,7 @@
 <script src="/collection.js?v=3" defer></script>
 <script src="/quests.js" defer></script>
 <script src="/season-track.js" defer></script>
+<script src="/streak-pop.js" defer></script>
 <script src="/share-card.js" defer></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <!-- Google tag (gtag.js) -->
@@ -2444,6 +2445,7 @@ async function finishDailyChallenge(ovr, name, build) {
   if (mp.firstToday) {
     frozeUsed = mp.frozeUsed;
     checkStreakMilestone(streak.count);
+    if (window.StreakPop) StreakPop.show({ count: streak.count, frozeUsed: mp.frozeUsed });
     if (account) {
       try {
         const r = await fetch('/api/account', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'updateStreak', sub: account.sub, sessionToken: account.sessionToken, count: streak.count }) });
