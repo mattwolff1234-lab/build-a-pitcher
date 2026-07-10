@@ -248,6 +248,7 @@ button.btn.danger { color:#ffdede; background:rgba(255,77,94,.14); border:1px so
     <span class="frseason" id="frSeason"></span>
     <span class="frrec" id="frRec"></span>
     <span class="banners" id="frBanners"></span>
+    <button class="frtab" id="frSaves" style="margin-left:auto" title="Switch save / mode">💾 Saves</button>
   </div>
   <div class="frtabs" id="frTabs" style="display:none">
     <button class="frtab" data-tab="season">📅 Season</button>
@@ -257,6 +258,35 @@ button.btn.danger { color:#ffdede; background:rgba(255,77,94,.14); border:1px so
     <button class="frtab" data-tab="clubs">👥 Clubs</button>
     <button class="frtab" data-tab="history">📜 History</button>
   </div>
+
+  <!-- ============ -1. Mode select ============ -->
+  <section class="screen" id="scrMode">
+    <div class="eyebrow">Franchise Mode</div>
+    <h1 class="h">Pick your <i>game</i></h1>
+    <div class="lgrid" style="margin-top:16px;grid-template-columns:repeat(auto-fill,minmax(280px,1fr))">
+      <div class="panel lteam" id="modeSP" style="padding:20px">
+        <div class="tn" style="font-size:19px">🎮 Single Player</div>
+        <div class="tm" style="margin-top:6px">Your league, your pace. Build a dynasty across seasons —
+          trades, development, drafts, titles.</div>
+        <div class="tv" id="modeSPsub" style="margin-top:10px">3 save slots</div>
+      </div>
+      <div class="panel lteam" id="modeMP" style="padding:20px">
+        <div class="tn" style="font-size:19px">👥 Multiplayer — Clubs</div>
+        <div class="tm" style="margin-top:6px">8 real GMs per club. Drops open <b>twice a day</b> —
+          grab a seat, bring your squad, one game sims per real day.</div>
+        <div class="tv" style="margin-top:10px;color:var(--gold)">🚧 Early access — clubs forming now</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ -0.5 Save slots ============ -->
+  <section class="screen" id="scrSlots">
+    <div class="eyebrow">Single player</div>
+    <h1 class="h">Your <i>Saves</i></h1>
+    <p class="sub">Three franchises, three timelines. Each save keeps its own league, history, and banners.</p>
+    <div id="slotList" style="display:flex;flex-direction:column;gap:10px;margin-top:14px"></div>
+    <div class="rosterbar"><button class="btn ghost" id="slotsBack">‹ Back</button></div>
+  </section>
 
   <!-- ============ 0. New franchise ============ -->
   <section class="screen" id="scrNew">
@@ -354,9 +384,12 @@ button.btn.danger { color:#ffdede; background:rgba(255,77,94,.14); border:1px so
       Check in each morning like a daily challenge, talk trash, win the club title.</p>
     <div class="panel" style="padding:12px 14px;margin:12px 0;border-color:rgba(255,210,63,.4)">
       <span style="font-family:'Oswald',sans-serif;font-size:11px;letter-spacing:2px;color:var(--gold);text-transform:uppercase">🚧 Early access</span>
-      <span class="sub" style="display:block;margin-top:4px">Clubs can <b>form now</b> — grab your crew and claim a name. The daily season itself flips on in an upcoming update, and full clubs are first in line.</span>
+      <span class="sub" style="display:block;margin-top:4px">Clubs can <b>form now</b> — grab your crew and claim a name. When seasons flip on,
+      club <b>drops open twice a day</b> (morning &amp; evening): 8 GMs lock in, then one game sims per real day. Full clubs are first in line.
+      <span id="clubDropEta" style="color:var(--accent2)"></span></span>
     </div>
     <div id="clubBody"><div class="hint">Checking your club…</div></div>
+    <div class="rosterbar"><button class="btn ghost" id="clubsBack" style="display:none">‹ Back to mode select</button></div>
   </section>
 
   <!-- ============ 2f. History ============ -->
@@ -810,17 +843,50 @@ function migrateV1(F) {
 }
 /* ============================ ==/ENGINE== ============================ */
 
-/* ---------- state + persistence ---------- */
+/* ---------- state + persistence ----------
+   Three single-player save slots live in a wrapper (pl_fr_slots). The ACTIVE save is
+   mirrored at pl_franchise so the builder pages' rookie flow (and any older reader)
+   keeps working; on load a fresher mirror (rookie just drafted) wins the reconcile. */
 const LS_KEY = 'pl_franchise';
-let F = null;
+const LS_SLOTS = 'pl_fr_slots';
+let F = null;                              // the active save (or null on the menus)
+let W = { v: 1, active: null, prog: 0, saves: { 0: null, 1: null, 2: null } };
+let uiView = 'mode';                       // 'mode' | 'slots' | 'clubs' | 'game'
+const wrapLegacy = f => ({ v: 1, active: 0, prog: (Number(f && f.prog) || 0) + 1, saves: { 0: f, 1: null, 2: null } });
 function load() {
-  try { F = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); } catch (e) { F = null; }
-  if (F && F.v === 1) { F = migrateV1(F); save(); }
+  let mirror = null;
+  try { mirror = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); } catch (e) {}
+  try { W = JSON.parse(localStorage.getItem(LS_SLOTS) || 'null') || W; } catch (e) {}
+  if (!W.saves) W = { v: 1, active: null, prog: 0, saves: { 0: null, 1: null, 2: null } };
+  // first visit after the slots update: the old single save becomes slot 1
+  if (W.active == null && !W.saves[0] && !W.saves[1] && !W.saves[2] && mirror && mirror.id) W = wrapLegacy(mirror);
+  // the builder pages write into the mirror (pendingRookie + prog bump) — adopt if fresher
+  if (mirror && mirror.id && W.active != null && W.saves[W.active] && mirror.id === W.saves[W.active].id
+      && (Number(mirror.prog) || 0) > (Number(W.saves[W.active].prog) || 0)) {
+    W.saves[W.active] = mirror;
+    W.prog = (Number(W.prog) || 0) + 1;
+  }
+  F = W.active != null ? (W.saves[W.active] || null) : null;
+  if (F && F.v === 1) F = migrateV1(F);
+  if (F) W.saves[W.active] = F;
+  // land back in the game when a save is active (a fresh rookie shouldn't hit a menu);
+  // no active save -> mode select
+  uiView = F ? 'game' : 'mode';
+  persist(false);
+}
+function persist(sync) {
+  try { localStorage.setItem(LS_SLOTS, JSON.stringify(W)); } catch (e) {}
+  try {
+    if (F) localStorage.setItem(LS_KEY, JSON.stringify(F));
+    else if (W.active == null) localStorage.removeItem(LS_KEY);
+  } catch (e) {}
+  if (sync !== false) queueSync();
 }
 function save() {
   if (!F) return;
-  try { localStorage.setItem(LS_KEY, JSON.stringify(F)); } catch (e) {}
-  queueSync();
+  if (W.active != null) W.saves[W.active] = F;
+  W.prog = (Number(W.prog) || 0) + 1;
+  persist();
 }
 function acct() { try { return JSON.parse(localStorage.getItem('pl_account') || 'null'); } catch (e) { return null; } }
 let syncTimer = null;
@@ -831,11 +897,17 @@ function queueSync() {
   syncTimer = setTimeout(async () => {
     try {
       const r = await fetch('/api/account', { method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ action: 'franchiseSync', sub: a.sub, sessionToken: a.sessionToken, franchise: F }) });
+        body: JSON.stringify({ action: 'franchiseSync', sub: a.sub, sessionToken: a.sessionToken, franchise: W }) });
       const j = await r.json();
-      if (j && j.ok && j.franchise && j.franchise.id && (Number(j.franchise.prog) || 0) > (Number(F && F.prog) || 0)) {
-        F = migrateV1(j.franchise);
-        try { localStorage.setItem(LS_KEY, JSON.stringify(F)); } catch (e) {}
+      if (!j || !j.ok || !j.franchise) return;
+      let incoming = j.franchise;
+      if (!incoming.saves && incoming.id) incoming = wrapLegacy(incoming);   // pre-slots server copy
+      if (incoming.saves && (Number(incoming.prog) || 0) > (Number(W.prog) || 0)) {
+        W = incoming;
+        F = W.active != null ? (W.saves[W.active] || null) : null;
+        if (F && F.v === 1) { F = migrateV1(F); W.saves[W.active] = F; }
+        uiView = F ? 'game' : uiView;
+        persist(false);
         render();
       }
     } catch (e) {}
@@ -881,7 +953,7 @@ function closeOv(id) { $(id).classList.remove('show'); }
 /* ---------- header + tabs ---------- */
 let tab = 'season';
 function renderHead() {
-  if (!F) { $('frHead').style.display = 'none'; $('frTabs').style.display = 'none'; return; }
+  if (!F || uiView !== 'game') { $('frHead').style.display = 'none'; $('frTabs').style.display = 'none'; return; }
   $('frHead').style.display = 'flex';
   $('frName').textContent = F.name;
   $('frSeason').textContent = `Season ${F.season}`;
@@ -1301,9 +1373,12 @@ function clubPrincipal() {
   if (a && a.sub && a.sessionToken) return { sub: a.sub, sessionToken: a.sessionToken, playerName: nm };
   return { guestId: guestId(), name: nm, playerName: nm };
 }
-// slim snapshot of the current squad — what your club rivals will face daily
+// slim snapshot of the current squad — what your club rivals will face daily.
+// No single-player save yet? Fine — join empty-handed and bring a squad later.
 function rosterSnapshot() {
-  return F.rotation.concat(F.lineup).filter(Boolean).map(p => ({ name: p.name, ovr: p.ovr, age: p.age, game: p.game }));
+  const src = F || (W.active != null && W.saves[W.active]) || W.saves[0] || null;
+  if (!src) return [];
+  return src.rotation.concat(src.lineup).filter(Boolean).map(p => ({ name: p.name, ovr: p.ovr, age: p.age, game: p.game }));
 }
 function clubApi(action, extra) {
   return fetch('/api/account', { method: 'POST', headers: { 'content-type': 'application/json' },
@@ -1312,9 +1387,11 @@ function clubApi(action, extra) {
 let clubBusy = false;
 async function renderClubs() {
   const body = $('clubBody');
+  const eta = $('clubDropEta');
+  if (eta) eta.textContent = ' ' + nextDropEta();
   let r = null;
   try { r = await clubApi('clubGet'); } catch (e) {}
-  if (tab !== 'clubs') return;   // user moved on while we fetched
+  if (tab !== 'clubs' && uiView !== 'clubs') return;   // user moved on while we fetched
   if (!r || !r.ok) { body.innerHTML = '<div class="hint">Could not reach the club office — check your connection and try again.</div>'; return; }
   if (!r.club) {
     body.innerHTML = `
@@ -1570,8 +1647,70 @@ $('draftDone').onclick = () => {
   toast(`Welcome to Season ${F.season} — set your roster and go again.`);
 };
 
+/* ---------- mode select + save slots ---------- */
+function renderMode() {
+  const act = W.active != null && W.saves[W.active];
+  const n = [0, 1, 2].filter(i => W.saves[i]).length;
+  $('modeSPsub').textContent = act ? `▶ Continue: ${act.name} · Season ${act.season}`
+    : (n ? `${n}/3 saves in use` : '3 save slots');
+}
+function renderSlots() {
+  $('slotList').innerHTML = [0, 1, 2].map(i => {
+    const s = W.saves[i];
+    if (!s) return `<div class="panel lteam" data-slot-new="${i}" style="padding:16px;border-style:dashed">
+      <div class="tn" style="color:var(--accent2)">＋ New Franchise</div><div class="tm">Slot ${i + 1} — empty</div></div>`;
+    const titles = (s.history || []).filter(h => h.result === 'CHAMPIONS').length;
+    return `<div class="panel lteam" data-slot-card="${i}" style="padding:16px;cursor:default;${W.active === i ? 'border-color:rgba(255,210,63,.5)' : ''}">
+      <div class="tn">${W.active === i ? '⭐ ' : ''}${escapeHTML(s.name)}</div>
+      <div class="tm">Season ${s.season} · ${s.wins || 0}–${s.losses || 0} · ${escapeHTML(s.phase || 'roster')}${titles ? ' · ' + '🏆'.repeat(Math.min(titles, 5)) : ''}</div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn" data-slot-play="${i}" style="padding:9px 18px">▶ Play</button>
+        <button class="btn danger" data-slot-del="${i}" style="padding:9px 14px" title="Delete this save">🗑</button>
+      </div></div>`;
+  }).join('');
+  document.querySelectorAll('[data-slot-new]').forEach(el => el.onclick = () => newInSlot(Number(el.dataset.slotNew)));
+  document.querySelectorAll('[data-slot-play]').forEach(el => el.onclick = () => openSlot(Number(el.dataset.slotPlay)));
+  document.querySelectorAll('[data-slot-del]').forEach(el => el.onclick = () => deleteSlot(Number(el.dataset.slotDel)));
+}
+function openSlot(i) {
+  if (!W.saves[i]) return newInSlot(i);
+  W.active = i;
+  F = W.saves[i];
+  if (F.v === 1) { F = migrateV1(F); W.saves[i] = F; }
+  tab = 'season'; uiView = 'game';
+  W.prog = (Number(W.prog) || 0) + 1;
+  persist(); render();
+}
+function newInSlot(i) {
+  W.active = i; F = null; uiView = 'game';
+  persist(false); render();   // scrNew — founding writes into this slot
+}
+function deleteSlot(i) {
+  if (!W.saves[i]) return;
+  if (!confirm(`Delete ${W.saves[i].name}? The whole timeline — seasons, banners, players — is gone forever.`)) return;
+  W.saves[i] = null;
+  if (W.active === i) { W.active = null; F = null; }
+  W.prog = (Number(W.prog) || 0) + 1;
+  persist(); renderSlots(); renderMode();
+}
+$('modeSP').onclick = () => { uiView = 'slots'; render(); };
+$('modeMP').onclick = () => { uiView = 'clubs'; render(); };
+$('slotsBack').onclick = () => { uiView = 'mode'; render(); };
+$('clubsBack').onclick = () => { uiView = 'mode'; render(); };
+$('frSaves').onclick = () => { uiView = 'slots'; render(); };
+// display-only teaser: club drops open 10:00 + 22:00 local once seasons go live
+function nextDropEta() {
+  const now = new Date();
+  const t = new Date(now); t.setMinutes(0, 0, 0);
+  const h = now.getHours();
+  t.setHours(h < 10 ? 10 : h < 22 ? 22 : 34);
+  const ms = t - now;
+  return `Next drop window: ~${Math.floor(ms / 3.6e6)}h ${Math.floor(ms % 3.6e6 / 6e4)}m.`;
+}
+
 /* ---------- new franchise ---------- */
 $('newGo').onclick = () => {
+  if (W.active == null) W.active = [0, 1, 2].find(i => !W.saves[i]) ?? 0;
   const name = ($('newName').value || '').trim().slice(0, 24) || 'The Underdogs';
   F = {
     v: 2, id: 'fr_' + Math.random().toString(36).slice(2, 10), name,
@@ -1590,7 +1729,11 @@ $('newGo').onclick = () => {
 /* ---------- router ---------- */
 function render() {
   renderHead();
-  if (!F) { show('scrNew'); return; }
+  if (uiView === 'mode') { show('scrMode'); renderMode(); return; }
+  if (uiView === 'slots') { show('scrSlots'); renderSlots(); return; }
+  if (uiView === 'clubs') { show('scrClubs'); $('clubsBack').style.display = ''; renderClubs(); return; }
+  if (!F) { show('scrNew'); return; }   // an empty slot was picked — found the franchise
+  $('clubsBack').style.display = 'none';
   // league-wide tabs work during roster + season + playoffs
   if ((F.phase === 'season' || F.phase === 'roster' || F.phase === 'playoffs') && tab !== 'season') {
     if (tab === 'myteam') { show('scrMyTeam'); renderMyTeam(); return; }

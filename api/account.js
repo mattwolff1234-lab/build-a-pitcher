@@ -900,20 +900,23 @@ module.exports = async (req, res) => {
         return res.status(200).json({ ok: true, cosmetics: merged });
       }
 
-      // Franchise mode save: one blob per account. Whichever copy has made more progress
-      // wins (the client bumps a monotonic `prog` counter on every sim/roster step) — the
-      // same incoming-wins posture as trackSync. Always answers with the winning copy so
-      // the client can adopt a further-along save from another device.
+      // Franchise mode save: one blob per account — either a legacy single save
+      // ({id:'fr_…'}) or the 3-slot wrapper ({active, prog, saves:{0,1,2}}). Whichever
+      // copy has made more progress wins (the client bumps a monotonic `prog` counter
+      // on every step, including slot switches/deletes) — same incoming-wins posture as
+      // trackSync. Always answers with the winning copy so another device can adopt it.
       if (action === 'franchiseSync') {
         if (!(await authed(body.sub, body.sessionToken))) return res.status(401).json({ ok: false, error: 'Not signed in' });
         const inc = body.franchise;
         const [row] = await sql`SELECT franchise FROM users WHERE google_sub = ${body.sub}`;
         const stored = (row && row.franchise && typeof row.franchise === 'object') ? row.franchise : null;
         const progOf = f => (f && typeof f === 'object' && Number(f.prog)) || 0;
-        const valid = inc && typeof inc === 'object' && typeof inc.id === 'string' && /^fr_[a-z0-9]{4,16}$/.test(inc.id);
-        if (valid) {
+        const validSingle = f => !!(f && typeof f === 'object' && typeof f.id === 'string' && /^fr_[a-z0-9]{4,16}$/.test(f.id));
+        const validWrap = f => !!(f && typeof f === 'object' && f.saves && typeof f.saves === 'object'
+          && Object.values(f.saves).every(s => s == null || validSingle(s)));
+        if (validWrap(inc) || validSingle(inc)) {
           const s = JSON.stringify(inc);
-          if (s.length <= 60000 && progOf(inc) >= progOf(stored)) {
+          if (s.length <= 160000 && progOf(inc) >= progOf(stored)) {
             await sql`UPDATE users SET franchise = ${s}::jsonb WHERE google_sub = ${body.sub}`;
             return res.status(200).json({ ok: true, franchise: inc });
           }
