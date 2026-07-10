@@ -157,8 +157,23 @@ module.exports = async (req, res) => {
       return res.status(200).json(payload || { ok: false, players: [] });
     }
     await ensure();
+    const yday = addDays(today, -1);
     const [row] = await sql`SELECT payload FROM hot_players WHERE serve_date = ${today}`;
-    if (row) return res.status(200).json(row.payload);
+    // Cached AND already showing yesterday's games -> done. But if the cached list is
+    // OLDER (yesterday was still finishing - a late west-coast game - when it was first
+    // computed, so the walk-back grabbed an earlier day), try to upgrade in place now
+    // that yesterday may be final. Off-days cost one cheap schedule fetch per cache miss.
+    if (row && row.payload && row.payload.gameDate === yday) return res.status(200).json(row.payload);
+    if (row) {
+      let fresh = null;
+      try { fresh = await computeDay(yday); } catch (e) {}
+      if (fresh && fresh.players.length) {
+        await sql`INSERT INTO hot_players (serve_date, payload) VALUES (${today}, ${JSON.stringify(fresh)}::jsonb)
+          ON CONFLICT (serve_date) DO UPDATE SET payload = EXCLUDED.payload`;
+        return res.status(200).json(fresh);
+      }
+      return res.status(200).json(row.payload);
+    }
     const payload = await compute(today);
     if (payload) {
       await sql`INSERT INTO hot_players (serve_date, payload) VALUES (${today}, ${JSON.stringify(payload)}::jsonb)
