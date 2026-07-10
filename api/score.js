@@ -245,6 +245,14 @@ module.exports = async (req, res) => {
       return res.status(200).json({ ok: true, dates: rows.map(r => r.d), today });
     }
 
+    // redactCareers also answers GET (?action=redactCareers&token=…&dryRun=1&…) so it can be
+    // triggered from environments that can only issue GETs. Token-gated either way; a GET
+    // without dryRun=0 defaults to a dry run so a stray crawl can never mutate anything.
+    if (req.method !== 'POST' && (req.query && req.query.action) === 'redactCareers') {
+      req.method = 'POST';
+      req.body = { ...req.query, dryRun: req.query.dryRun == null ? '1' : req.query.dryRun };
+    }
+
     if (req.method === 'POST') {
       const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
 
@@ -272,7 +280,7 @@ module.exports = async (req, res) => {
         const ts = v => (typeof v === 'string' && !Number.isNaN(Date.parse(v)) ? new Date(v).toISOString() : null);
         const since = ts(body.since) || '2026-07-10T05:37:00Z';   // the bad deploy went out 2026-07-10 ~05:37 UTC
         const until = ts(body.until) || new Date().toISOString();
-        if (body.dryRun) {
+        if (body.dryRun && body.dryRun !== 'false' && body.dryRun !== '0') {
           const rows = await sql`
             SELECT id, name, ovr, created_at, build->'career'->'totals' AS totals FROM scores
             WHERE game = ${game} AND created_at >= ${since} AND created_at < ${until}
