@@ -18,6 +18,7 @@
 <meta name="twitter:card" content="summary">
 <meta name="twitter:image" content="/icon-512.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="/namefilter.js"></script>
 <script src="/xp.js" defer></script>
 <script src="/social.js" defer></script>
 <script src="/switcher.js?v=14" defer></script>
@@ -952,6 +953,28 @@ let F = null;                              // the active save (or null on the me
 let W = { v: 1, active: null, prog: 0, saves: { 0: null, 1: null, 2: null } };
 let uiView = 'mode';                       // 'mode' | 'slots' | 'clubs' | 'game'
 const wrapLegacy = f => ({ v: 1, active: 0, prog: (Number(f && f.prog) || 0) + 1, saves: { 0: f, 1: null, 2: null } });
+// retro-scrub: player/team names saved before the name filter shipped (or pulled in from
+// other players' builds via the FA pool) get swapped for a neutral one on every load.
+function scrubSaves() {
+  if (!window.NameFilter) return;
+  let n = 0, changed = false;
+  const fix = p => { if (p && p.name && !NameFilter.isClean(p.name)) { p.name = 'Player ' + (++n + 100); changed = true; } };
+  const fixTeam = t => { if (t && t.name && !NameFilter.isClean(t.name)) { t.name = 'The Renamed'; changed = true; } };
+  for (const k of [0, 1, 2]) {
+    const f = W.saves && W.saves[k];
+    if (!f) continue;
+    fixTeam(f);
+    (f.rotation || []).forEach(fix);
+    (f.lineup || []).forEach(fix);
+    if (f.pendingRookie) fix(f.pendingRookie);
+    (f.rivals || []).forEach(r => { fixTeam(r); (r.rot || []).forEach(fix); (r.line || []).forEach(fix); });
+    (f.history || []).forEach(h => { if (h && h.mvp) fix(h.mvp); if (h && h.ace) fix(h.ace); });
+    // log lines embed names in prose · drop any entry the filter flags
+    if (Array.isArray(f.gameLog)) f.gameLog = f.gameLog.filter(e => !e || !e.note || NameFilter.isClean(e.note));
+    if (Array.isArray(f.tradeLog)) f.tradeLog = f.tradeLog.filter(t => !t || NameFilter.isClean((t.got || '') + ' ' + (t.sent || '')));
+  }
+  if (changed) W.prog = (Number(W.prog) || 0) + 1;
+}
 function load() {
   let mirror = null;
   try { mirror = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); } catch (e) {}
@@ -965,6 +988,7 @@ function load() {
     W.saves[W.active] = mirror;
     W.prog = (Number(W.prog) || 0) + 1;
   }
+  scrubSaves();
   F = W.active != null ? (W.saves[W.active] || null) : null;
   if (F && F.v === 1) F = migrateV1(F);
   if (F) W.saves[W.active] = F;
@@ -990,12 +1014,16 @@ function save() {
 function acct() { try { return JSON.parse(localStorage.getItem('pl_account') || 'null'); } catch (e) { return null; } }
 
 /* ---------- real-builds pool: actual made guys for FAs / prospects / rivals ---------- */
+const scrubPool = p => {
+  if (p && window.NameFilter) for (const k in p) if (Array.isArray(p[k])) p[k] = p[k].filter(r => r && NameFilter.isClean(r.name));
+  return p;
+};
 let POOL = null;
 async function loadPool() {
   if (POOL) return POOL;
   try {
     const c = JSON.parse(sessionStorage.getItem('pl_fr_pool_hoops') || 'null');
-    if (c && Date.now() - c.t < 3600e3 && c.p && c.p.pitcher && c.p.pitcher.length) return POOL = c.p;
+    if (c && Date.now() - c.t < 3600e3 && c.p && c.p.pitcher && c.p.pitcher.length) return POOL = scrubPool(c.p);
   } catch (e) {}
   try {
     const [p] = await Promise.all([fetch('/api/score?action=names&game=baller&min=55&max=99&limit=150').then(r => r.json())]);
@@ -1004,7 +1032,7 @@ async function loadPool() {
       try { sessionStorage.setItem('pl_fr_pool_hoops', JSON.stringify({ t: Date.now(), p: POOL })); } catch (e) {}
     }
   } catch (e) {}
-  return POOL;
+  return scrubPool(POOL);
 }
 loadPool();   // warm it early · founding/autofill/draft all want it
 // every name already in this save's league (no duplicate signings anywhere)
@@ -1682,6 +1710,7 @@ async function renderClubs() {
       </div>
       <div class="hint">Your current 14-man squad rides along as your club roster snapshot.</div>`;
     $('clubCreate').onclick = async () => {
+      if (window.NameFilter && !NameFilter.isClean($('clubName').value || '')) { toast("🚫 That club name isn't allowed — pick a different one."); return; }
       if (clubBusy) return; clubBusy = true;
       const j = await clubApi('clubCreate', { name: $('clubName').value, roster: rosterSnapshot() }).catch(() => null);
       clubBusy = false;
@@ -2047,6 +2076,7 @@ function renderFoundingOpts() {
   gr.querySelectorAll('[data-opt]').forEach(b => b.onclick = () => { newGames = Number(b.dataset.opt); renderFoundingOpts(); });
 }
 $('newGo').onclick = () => {
+  if (window.NameFilter && !NameFilter.isClean($('newName').value || '')) { toast("🚫 That team name isn't allowed — pick a different one."); return; }
   if (W.active == null) W.active = [0, 1, 2].find(i => !W.saves[i]) ?? 0;
   const name = ($('newName').value || '').trim().slice(0, 24) || 'The Underdogs';
   F = {

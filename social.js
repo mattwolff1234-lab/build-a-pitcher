@@ -525,6 +525,7 @@
       if (claimBusy) return;
       const h = input.value.trim();
       if (!/^[A-Za-z0-9_]{3,20}$/.test(h)) { msg.className = 'soc-err'; msg.textContent = 'Handles are 3–20 letters, numbers, or _'; return; }
+      if (window.NameFilter && !NameFilter.isClean(h)) { msg.className = 'soc-err'; msg.textContent = "That handle isn't allowed — pick a different one."; return; }
       claimBusy = true; btn.disabled = true; msg.className = 'soc-err'; msg.textContent = 'Claiming…';
       try {
         const r = await api('handleClaim', { handle: h });
@@ -577,7 +578,9 @@
     const msg = overlay.querySelector('#socAddMsg');
     // guests attach a display name so the recipient sees who's asking
     const nameIn = overlay.querySelector('#socHandle');
-    if (nameIn && nameIn.value.trim()) { try { localStorage.setItem('pl_guestName', nameIn.value.trim().slice(0, 20)); } catch (e) {} }
+    if (nameIn && nameIn.value.trim() && !(window.NameFilter && !NameFilter.isClean(nameIn.value))) {
+      try { localStorage.setItem('pl_guestName', nameIn.value.trim().slice(0, 20)); } catch (e) {}
+    }
     try {
       const r = btn.dataset.sadd === 'accept'
         ? await api('friendRespond', { key, accept: true })

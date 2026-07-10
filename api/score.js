@@ -4,6 +4,11 @@
 // One table, separated by `game` so pitching and batting have their own boards.
 
 const { neon } = require('@neondatabase/serverless');
+// Slur/profanity gate for user-chosen names. New submissions are rejected outright;
+// rows that predate the filter are censored on the way OUT (leaderboards) or dropped
+// (action=names, which feeds franchise mode's free agents/rivals on every client).
+const NameFilter = require('../namefilter.js');
+const BAD_NAME_MSG = "That name isn't allowed — pick a different one.";
 
 function findConn() {
   const e = process.env;
@@ -145,7 +150,7 @@ module.exports = async (req, res) => {
       const [row] = await sql`SELECT id, name, ovr, game, build, created_at FROM scores WHERE id = ${id}`;
       if (!row) return res.status(404).json({ ok: false, error: 'Not found' });
       res.setHeader('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=604800');   // rows are immutable
-      return res.status(200).json({ ok: true, entry: { ...row, id: Number(row.id) } });
+      return res.status(200).json({ ok: true, entry: { ...row, id: Number(row.id), name: NameFilter.clean(row.name, 'Anonymous') } });
     }
 
     // GET ?action=ghost&game=&min=&max= · a random recent build in an OVR band, slots only (no
@@ -162,7 +167,7 @@ module.exports = async (req, res) => {
         ORDER BY created_at DESC LIMIT 150`;
       if (!rows.length) return res.status(200).json({ ok: true, ghost: null });
       const g = rows[Math.floor(Math.random() * rows.length)];
-      return res.status(200).json({ ok: true, ghost: { ...g, id: Number(g.id) } });
+      return res.status(200).json({ ok: true, ghost: { ...g, id: Number(g.id), name: NameFilter.clean(g.name, 'Anonymous') } });
     }
 
     // GET ?action=names&game=&min=&max=&limit= · a random sample of real submitted builds
@@ -182,7 +187,8 @@ module.exports = async (req, res) => {
           ORDER BY lower(name), created_at DESC
         ) t ORDER BY random() LIMIT ${limit}`;
       res.setHeader('Cache-Control', 'public, s-maxage=600, stale-while-revalidate=3600');
-      return res.status(200).json({ ok: true, rows: rows.map(r => ({ name: r.name, ovr: Number(r.ovr) })) });
+      return res.status(200).json({ ok: true,
+        rows: rows.filter(r => NameFilter.isClean(r.name)).map(r => ({ name: r.name, ovr: Number(r.ovr) })) });
     }
 
     // GET ?action=stats[&game=pitcher|batter|all] · total builds, GOAT (99 OVR) count, + live play counter.
@@ -204,7 +210,7 @@ module.exports = async (req, res) => {
       const rows = await sql`SELECT name, ovr FROM daily_scores
         WHERE game = ${game} AND challenge_date = COALESCE(${cd}::date, CURRENT_DATE) ORDER BY ovr DESC, created_at ASC LIMIT ${limit}`;
       const [{ total }] = await sql`SELECT count(*)::int AS total FROM daily_scores WHERE game = ${game} AND challenge_date = COALESCE(${cd}::date, CURRENT_DATE)`;
-      return res.status(200).json({ ok: true, rows, total: Number(total) });
+      return res.status(200).json({ ok: true, rows: rows.map(r => ({ ...r, name: NameFilter.clean(r.name, 'Anonymous') })), total: Number(total) });
     }
 
     // GET ?action=dailyDates&sub=<sub>|&guestId=<id> · the player's daily-play dates (streak calendar)
@@ -254,6 +260,7 @@ module.exports = async (req, res) => {
         if (!chk.ok) return res.status(400).json({ ok: false, error: 'Invalid build' });
         const ovr = chk.ovr;
         const cname = String(body.name == null ? '' : body.name).trim().slice(0, 40) || 'Anonymous';
+        if (!NameFilter.isClean(cname)) return res.status(400).json({ ok: false, error: BAD_NAME_MSG });
         const cbuild = body.build && typeof body.build === 'object' ? JSON.stringify(body.build) : null;
         const cd = dailyDate(body.date);
         await sql`INSERT INTO daily_scores (player_key, game, name, ovr, build, challenge_date)
@@ -268,6 +275,7 @@ module.exports = async (req, res) => {
 
       let name = String(body.name == null ? '' : body.name).trim().slice(0, 20);
       if (!name) name = 'Anonymous';
+      if (!NameFilter.isClean(name)) return res.status(400).json({ ok: false, error: BAD_NAME_MSG });
       const game = gameOf(body.game);
       const chk = checkBuild(game, body.ovr, body.build);
       if (!chk.ok) return res.status(400).json({ ok: false, error: 'Invalid build - ratings exceed what any real card can have' });
@@ -384,11 +392,11 @@ module.exports = async (req, res) => {
         const inScope = daily
           ? (await sql`SELECT 1 FROM scores WHERE id = ${meId} AND created_at >= date_trunc('day', now())`).length > 0
           : true;
-        if (inScope) me = { id: Number(row.id), rank: ahead + 1, name: row.name, ovr: row.ovr, build: row.build, game: row.game,
+        if (inScope) me = { id: Number(row.id), rank: ahead + 1, name: NameFilter.clean(row.name, 'Anonymous'), ovr: row.ovr, build: row.build, game: row.game,
           stat: sortField && row.stat != null ? Number(row.stat) : null };
       }
     }
-    return res.status(200).json({ ok: true, sort: sortField, rows: rows.map(r => ({ ...r, id: Number(r.id), stat: r.stat == null ? null : Number(r.stat) })), me });
+    return res.status(200).json({ ok: true, sort: sortField, rows: rows.map(r => ({ ...r, id: Number(r.id), name: NameFilter.clean(r.name, 'Anonymous'), stat: r.stat == null ? null : Number(r.stat) })), me });
   } catch (e) {
     return res.status(500).json({ ok: false, error: String((e && e.message) || e) });
   }

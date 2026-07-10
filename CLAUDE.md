@@ -199,6 +199,32 @@ Daily real-MLB hot players — the "open the app the morning after" retention ho
   (verified). Versus 1v1 untouched (its balance is separately tuned). Hot builds can post higher
   OVRs to the global leaderboard — accepted trade-off, revisit with the anti-cheat hardening.
 
+### Name filter (slurs/profanity in user-chosen names — shipped)
+**`namefilter.js`** — ONE shared blocklist module for browser (`window.NameFilter`, loaded
+without `defer` on every page so inline scripts can use it) AND server
+(`require('../namefilter.js')` in `api/score.js` + `api/account.js`). Evasion-resistant matching:
+accents stripped, leetspeak mapped (`n1gg3r`), separators dropped (`n i g g e r`), repeated
+letters collapsed (`Nigggggger`), l→i lookalikes. Hard slurs match as substrings; ambiguous terms
+word-boundary only (so Nigeria/raccoon/therapist/Hancock/Scunthorpe stay legal). API:
+`isClean(name)` / `bad(name)` / `clean(name, fallback)`.
+- **Server = enforcement** (client checks are just friendlier UX): `POST /api/score` +
+  `challengeSubmit` reject bad names (400 with a clear error); `action=names` (the franchise
+  FA/rival feed — how one player's slur name used to reach everyone else's franchise) drops
+  them; leaderboard GETs censor legacy rows to "Anonymous". `api/account.js` gates `save` +
+  `clubCreate` (reject), guest names, handles (`handleClaim`/`handleCheck`/`handleFrom`), club
+  roster snapshots, and pvp `oppName`/`winnerName` (neutral fallback).
+- **Client**: build games gate `nameInput` at draft/career/submit (`nameGate()`); franchise gates
+  team + club names AND retro-scrubs saved rosters/rivals/logs on every load (`scrubSaves()` —
+  fixes saves polluted before the filter shipped) + filters the cached FA pool (`scrubPool`);
+  versus pages gate the guest handle; social.js gates handle claiming. Also bundled into the iOS
+  app (`ios-app/build-www.js` SCRIPTS list).
+- **Legacy DB cleanup**: token-gated `nameScrub` action (dry-run by default; `apply:1` writes)
+  purges bad names already stored in users/saves/scores/daily_scores/clubs/pvp tables:
+  `curl -X POST .../api/account -H "content-type: application/json" -d '{"action":"nameScrub","token":"<STATS_TOKEN>","apply":1}'`
+- It's a blocklist — extend `HARD`/`WORD` in `namefilter.js` as new evasions show up (both
+  browser and server pick the change up automatically since it's one file). Franchise clone
+  pages regenerate from `franchise.html` via `gen-franchise-clones.js` as usual.
+
 ### Known caveat — anti-cheat
 Scores are submitted from the browser; the server only clamps `ovr` 1–99 and name length, so the OVR
 is currently trust-the-client. Harden later by recomputing OVR server-side from the submitted `build`

@@ -9,6 +9,15 @@
 
 const { neon } = require('@neondatabase/serverless');
 const crypto = require('crypto');
+// Slur/profanity gate for every user-chosen name that passes through this API
+// (guest handles, display names, HOF saves, club names, roster snapshots).
+// Direct submissions get rejected; passthrough fields get a neutral fallback.
+const NameFilter = require('../namefilter.js');
+const BAD_NAME_MSG = "That name isn't allowed — pick a different one.";
+const cleanName = (v, fb, max) => {
+  const s = String(v == null ? '' : v).trim().slice(0, max || 40);
+  return s && NameFilter.isClean(s) ? s : fb;
+};
 
 // Public OAuth client id (safe to embed). Replace the placeholder with your real id from
 // Google Cloud Console, or set GOOGLE_CLIENT_ID in the Vercel project env.
@@ -211,7 +220,7 @@ async function verifyGoogle(idToken) {
     if (!r.ok) return null;
     const p = await r.json();
     if (!p || p.aud !== GOOGLE_CLIENT_ID || !p.sub) return null;
-    return { sub: p.sub, email: p.email || '', name: p.name || p.email || 'Player', picture: p.picture || '' };
+    return { sub: p.sub, email: p.email || '', name: cleanName(p.name || p.email, 'Player'), picture: p.picture || '' };
   } catch (e) { return null; }
 }
 
@@ -321,7 +330,7 @@ async function hoopsResult(body, key, res) {
   const oppElo = Math.max(100, Math.min(4000, Math.round(Number(body.oppElo) || 1000)));
   const myOvr = Math.round(Number(body.ovr) || 0) || null;
   const oppOvr = Math.round(Number(body.oppOvr) || 0) || null;
-  const oppName = String(body.oppName || '').trim().slice(0, 40) || null;
+  const oppName = cleanName(body.oppName, null);
   // Authoritative opponent from the recorded match (mirrors pvpResult): charge the true loser
   // even if they quit before ever identifying themselves, and reject a reporter who provably
   // wasn't one of the two participants. Matches with no record (pre-fix or friend challenges)
@@ -412,7 +421,7 @@ async function hoopsResult(body, key, res) {
           const { delta: oppDelta } = nextElo(opp.elo, u.elo, false);
           const oppNewElo = Math.max(100, opp.elo + oppDelta);
           await sql`UPDATE users SET pvp_elo_hoops = ${oppNewElo}, pvp_losses_hoops = ${opp.losses + 1}, pvp_streak_hoops = 0 WHERE google_sub = ${validOppKey}`;
-          const winnerName = String(body.name || '').slice(0, 40);
+          const winnerName = cleanName(body.name, 'Player');
           await sql`INSERT INTO pvp_history (player_key, match_id, won, my_role, my_ovr, opp_name, opp_ovr, opp_key, elo_before, elo_after, sport, decided)
             VALUES (${validOppKey}, ${matchId}, false, 'hooper', ${oppOvr}, ${winnerName}, ${myOvr}, ${key}, ${opp.elo}, ${oppNewElo}, 'hoops', ${decided})`;
         }
@@ -438,7 +447,7 @@ async function hoopsLeaderboard(body, res) {
       me = { rank: null, name: u.name, elo: u.elo, wins: u.wins, losses: u.losses };
     }
   }
-  return res.status(200).json({ ok: true, rows, me });
+  return res.status(200).json({ ok: true, rows: rows.map(r => ({ ...r, name: NameFilter.clean(r.name, 'Player') })), me });
 }
 
 // ---- Soccer 1v1 (striker vs keeper) rating: a fully separate Elo board in *_soccer columns,
@@ -458,7 +467,7 @@ async function soccerResult(body, key, res) {
   const oppElo = Math.max(100, Math.min(4000, Math.round(Number(body.oppElo) || 1000)));
   const myOvr = Math.round(Number(body.ovr) || 0) || null;
   const oppOvr = Math.round(Number(body.oppOvr) || 0) || null;
-  const oppName = String(body.oppName || '').trim().slice(0, 40) || null;
+  const oppName = cleanName(body.oppName, null);
   const myRole = (body.role === 'striker' || body.role === 'keeper') ? body.role : null;
   const normKey = p => (p && p.indexOf('acct:') === 0) ? p.slice(5) : p;
   let recordedOpp = null;
@@ -546,7 +555,7 @@ async function soccerResult(body, key, res) {
           const { delta: oppDelta } = nextElo(opp.elo, u.elo, false);
           const oppNewElo = Math.max(100, opp.elo + oppDelta);
           await sql`UPDATE users SET pvp_elo_soccer = ${oppNewElo}, pvp_losses_soccer = ${opp.losses + 1}, pvp_streak_soccer = 0 WHERE google_sub = ${validOppKey}`;
-          const winnerName = String(body.name || '').slice(0, 40);
+          const winnerName = cleanName(body.name, 'Player');
           const oppRole = myRole === 'striker' ? 'keeper' : (myRole === 'keeper' ? 'striker' : 'soccer');
           await sql`INSERT INTO pvp_history (player_key, match_id, won, my_role, my_ovr, opp_name, opp_ovr, opp_key, elo_before, elo_after, sport, decided)
             VALUES (${validOppKey}, ${matchId}, false, ${oppRole}, ${oppOvr}, ${winnerName}, ${myOvr}, ${key}, ${opp.elo}, ${oppNewElo}, 'soccer', ${decided})`;
@@ -573,7 +582,7 @@ async function soccerLeaderboard(body, res) {
       me = { rank: null, name: u.name, elo: u.elo, wins: u.wins, losses: u.losses };
     }
   }
-  return res.status(200).json({ ok: true, rows, me });
+  return res.status(200).json({ ok: true, rows: rows.map(r => ({ ...r, name: NameFilter.clean(r.name, 'Player') })), me });
 }
 
 async function authed(sub, sessionToken) {
@@ -589,7 +598,7 @@ async function authed(sub, sessionToken) {
 async function pvpKey(body) {
   if (body.guestId) {
     const key = 'guest:' + String(body.guestId).slice(0, 48);
-    const name = String(body.name || 'Guest').trim().slice(0, 40) || 'Guest';
+    const name = cleanName(body.name, 'Guest');
     await sql`INSERT INTO users (google_sub, name) VALUES (${key}, ${name})
       ON CONFLICT (google_sub) DO UPDATE SET name = EXCLUDED.name`;
     return key;
@@ -598,7 +607,7 @@ async function pvpKey(body) {
     // let the player set a public 1v1 display name instead of their Google name · but a
     // CLAIMED handle is permanent and nothing may overwrite it
     const nm = String(body.name || '').trim().slice(0, 40);
-    if (nm) await sql`UPDATE users SET name = ${nm} WHERE google_sub = ${body.sub} AND handle IS NULL`;
+    if (nm && NameFilter.isClean(nm)) await sql`UPDATE users SET name = ${nm} WHERE google_sub = ${body.sub} AND handle IS NULL`;
     return body.sub;
   }
   return null;
@@ -623,6 +632,7 @@ function handleFrom(name) {
   s = s.replace(/[^A-Za-z0-9_ ]+/g, ' ').trim().replace(/\s+/g, '_').replace(/_+/g, '_');
   s = s.replace(/^_+|_+$/g, '').slice(0, 20).replace(/_+$/g, '');
   if (s.length < 3 || /^(guest|player)$/i.test(s)) return null;
+  if (!NameFilter.isClean(s)) return null;
   return s;
 }
 // Seed `sub`'s unique @handle from their existing public name, numbering past collisions
@@ -728,6 +738,7 @@ module.exports = async (req, res) => {
       if (action === 'save') {
         if (!(await authed(body.sub, body.sessionToken))) return res.status(401).json({ ok: false, error: 'Not signed in' });
         let name = String(body.name == null ? '' : body.name).trim().slice(0, 40) || 'My Player';
+        if (!NameFilter.isClean(name)) return res.status(400).json({ ok: false, error: BAD_NAME_MSG });
         const ovr = Math.max(1, Math.min(120, Math.round(Number(body.ovr) || 0)));
         const build = body.build && typeof body.build === 'object' ? JSON.stringify(body.build) : null;
         const game = gameOf(body.game);
@@ -938,7 +949,7 @@ module.exports = async (req, res) => {
       const clubRosterOf = raw => {
         if (!Array.isArray(raw)) return [];
         return raw.slice(0, 14).map(p => ({
-          name: String((p && p.name) || 'Player').slice(0, 26),
+          name: cleanName(p && p.name, 'Player', 26),
           ovr: Math.max(40, Math.min(99, Math.round(Number(p && p.ovr) || 60))),
           age: Math.max(18, Math.min(45, Math.round(Number(p && p.age) || 23))),
           game: (p && p.game) === 'pitcher' ? 'pitcher' : 'batter',
@@ -951,11 +962,12 @@ module.exports = async (req, res) => {
         const [existing] = await sql`SELECT club_id FROM club_members WHERE player_key = ${key}`;
         if (existing) return res.status(400).json({ ok: false, error: 'Already in a club · leave it first' });
         const name = String(body.name || '').trim().slice(0, 24) || 'The Club';
+        if (!NameFilter.isClean(name)) return res.status(400).json({ ok: false, error: "That club name isn't allowed — pick a different one." });
         const id = 'club_' + crypto.randomBytes(6).toString('hex');
         const code = crypto.randomBytes(3).toString('hex').toUpperCase();
         await sql`INSERT INTO clubs (id, name, code, owner_key) VALUES (${id}, ${name}, ${code}, ${key})`;
         await sql`INSERT INTO club_members (club_id, player_key, name, roster)
-          VALUES (${id}, ${key}, ${String(body.playerName || 'GM').slice(0, 24)}, ${JSON.stringify(clubRosterOf(body.roster))}::jsonb)`;
+          VALUES (${id}, ${key}, ${cleanName(body.playerName, 'GM', 24)}, ${JSON.stringify(clubRosterOf(body.roster))}::jsonb)`;
         return res.status(200).json({ ok: true, club: { id, name, code, status: 'forming', members: 1 } });
       }
 
@@ -970,7 +982,7 @@ module.exports = async (req, res) => {
         const [{ count: n }] = await sql`SELECT count(*)::int AS count FROM club_members WHERE club_id = ${club.id}`;
         if (n >= 8) return res.status(400).json({ ok: false, error: 'That club is full (8 GMs)' });
         await sql`INSERT INTO club_members (club_id, player_key, name, roster)
-          VALUES (${club.id}, ${key}, ${String(body.playerName || 'GM').slice(0, 24)}, ${JSON.stringify(clubRosterOf(body.roster))}::jsonb)
+          VALUES (${club.id}, ${key}, ${cleanName(body.playerName, 'GM', 24)}, ${JSON.stringify(clubRosterOf(body.roster))}::jsonb)
           ON CONFLICT DO NOTHING`;
         return res.status(200).json({ ok: true, club: { id: club.id, name: club.name, code: club.code, status: club.status, members: n + 1 } });
       }
@@ -1077,6 +1089,7 @@ module.exports = async (req, res) => {
         if (!(await authed(body.sub, body.sessionToken))) return res.status(401).json({ ok: false, error: 'Sign in with Google to claim a handle' });
         const h = String(body.handle || '').trim();
         if (!HANDLE_RE.test(h)) return res.status(400).json({ ok: false, error: 'Handles are 3–20 letters, numbers, or _' });
+        if (!NameFilter.isClean(h)) return res.status(400).json({ ok: false, error: BAD_NAME_MSG });
         try {
           await sql`UPDATE users SET handle = ${h}, name = ${h} WHERE google_sub = ${body.sub}`;
         } catch (e) {
@@ -1088,7 +1101,7 @@ module.exports = async (req, res) => {
       // Live availability check while typing (no auth · it only says taken/free).
       if (action === 'handleCheck') {
         const h = String(body.handle || '').trim();
-        if (!HANDLE_RE.test(h)) return res.status(200).json({ ok: true, valid: false, available: false });
+        if (!HANDLE_RE.test(h) || !NameFilter.isClean(h)) return res.status(200).json({ ok: true, valid: false, available: false });
         const [row] = await sql`SELECT google_sub FROM users WHERE lower(handle) = ${h.toLowerCase()}`;
         const mine = !!(row && body.sub && row.google_sub === body.sub);
         return res.status(200).json({ ok: true, valid: true, available: !row || mine });
@@ -1365,7 +1378,7 @@ module.exports = async (req, res) => {
         const role = (body.role === 'pitcher' || body.role === 'batter') ? body.role : null;
         const myOvr = Math.round(Number(body.ovr) || 0) || null;
         const oppOvr = Math.round(Number(body.oppOvr) || 0) || null;
-        const oppName = String(body.oppName || '').trim().slice(0, 40) || null;
+        const oppName = cleanName(body.oppName, null);
 
         // Authoritative opponent from the recorded match. Closes loss-dodging (we charge the true
         // loser from the record even if they never report) and rejects a reporter who was provably
@@ -1490,7 +1503,7 @@ module.exports = async (req, res) => {
                   await sql`UPDATE users SET pvp_elo = ${or.elo}, pvp_losses = ${or.losses}, pvp_streak = 0 WHERE google_sub = ${validOppKey}`;
                 }
                 const oppHistRole = role ? (role === 'pitcher' ? 'batter' : 'pitcher') : null;
-                const winnerName = String(body.name || '').slice(0, 40);
+                const winnerName = cleanName(body.name, 'Player');
                 await sql`INSERT INTO pvp_history (player_key, match_id, won, my_role, my_ovr, opp_name, opp_ovr, opp_key, elo_before, elo_after, decided)
                   VALUES (${validOppKey}, ${matchId}, false, ${oppHistRole}, ${oppOvr}, ${winnerName}, ${myOvr}, ${key}, ${or.startElo}, ${or.elo}, ${decided})`;
               }
@@ -1592,7 +1605,7 @@ module.exports = async (req, res) => {
               me = { rank: null, name: u.name, elo: u.elo, wins: u.wins, losses: u.losses };
             }
           }
-          return res.status(200).json({ ok: true, rows, me, season: wantSeason });
+          return res.status(200).json({ ok: true, rows: rows.map(r => ({ ...r, name: NameFilter.clean(r.name, 'Player') })), me, season: wantSeason });
         }
         const rows = await sql`SELECT name, pvp_elo AS elo, pvp_wins AS wins, pvp_losses AS losses
           FROM users WHERE (pvp_wins + pvp_losses) > 0
@@ -1610,7 +1623,7 @@ module.exports = async (req, res) => {
             me = { rank: null, name: u.name, elo: u.elo, wins: u.wins, losses: u.losses };
           }
         }
-        return res.status(200).json({ ok: true, rows, me });
+        return res.status(200).json({ ok: true, rows: rows.map(r => ({ ...r, name: NameFilter.clean(r.name, 'Player') })), me });
       }
 
       // The caller's season-by-season history (for the Seasons tab). Each row carries the player's
@@ -1655,6 +1668,51 @@ module.exports = async (req, res) => {
         return res.status(200).json({ ok: true, stats: r,
           pitcher_win_pct: pr == null ? null : Number(pr.toFixed(1)),
           batter_win_pct: br == null ? null : Number(br.toFixed(1)) });
+      }
+
+      // admin: retro-scrub names stored BEFORE the name filter shipped (token-gated, like
+      // pvpMatchStats). Finds every stored user-chosen name the filter now rejects and replaces
+      // it with a neutral fallback across all tables. Dry-run by default (reports what would
+      // change); pass apply:1 to write. Safe to run repeatedly.
+      //   curl -X POST .../api/account -H "content-type: application/json"
+      //        -d '{"action":"nameScrub","token":"<STATS_TOKEN>","apply":1}'
+      if (action === 'nameScrub') {
+        if (body.token !== STATS_TOKEN) return res.status(403).json({ ok: false, error: 'forbidden' });
+        const apply = body.apply === 1 || body.apply === '1' || body.apply === true;
+        const safe = async fn => { try { return await fn(); } catch (e) { return []; } };   // table may not exist yet
+        const bad = rows => [...new Set(rows.map(r => r.name).filter(n => n && !NameFilter.isClean(n)))];
+        const users = bad(await safe(() => sql`SELECT DISTINCT name FROM users WHERE name IS NOT NULL`));
+        if (apply && users.length) await sql`UPDATE users SET name = 'Player' WHERE name = ANY(${users})`;
+        const handles = bad(await safe(() => sql`SELECT DISTINCT handle AS name FROM users WHERE handle IS NOT NULL`));
+        if (apply && handles.length) await sql`UPDATE users SET handle = NULL, name = 'Player' WHERE handle = ANY(${handles})`;
+        const saveNames = bad(await safe(() => sql`SELECT DISTINCT name FROM saves`));
+        if (apply && saveNames.length) await sql`UPDATE saves SET name = 'My Player' WHERE name = ANY(${saveNames})`;
+        const scoreNames = bad(await safe(() => sql`SELECT DISTINCT name FROM scores`));
+        if (apply && scoreNames.length) await sql`UPDATE scores SET name = 'Anonymous' WHERE name = ANY(${scoreNames})`;
+        const dailyNames = bad(await safe(() => sql`SELECT DISTINCT name FROM daily_scores`));
+        if (apply && dailyNames.length) await sql`UPDATE daily_scores SET name = 'Anonymous' WHERE name = ANY(${dailyNames})`;
+        const clubNames = bad(await safe(() => sql`SELECT DISTINCT name FROM clubs`));
+        if (apply && clubNames.length) await sql`UPDATE clubs SET name = 'The Club' WHERE name = ANY(${clubNames})`;
+        const gmNames = bad(await safe(() => sql`SELECT DISTINCT name FROM club_members WHERE name IS NOT NULL`));
+        if (apply && gmNames.length) await sql`UPDATE club_members SET name = 'GM' WHERE name = ANY(${gmNames})`;
+        const oppNames = bad(await safe(() => sql`SELECT DISTINCT opp_name AS name FROM pvp_history WHERE opp_name IS NOT NULL`));
+        if (apply && oppNames.length) await sql`UPDATE pvp_history SET opp_name = 'Player' WHERE opp_name = ANY(${oppNames})`;
+        const seasonNames = bad(await safe(() => sql`SELECT DISTINCT name FROM pvp_seasons WHERE name IS NOT NULL`));
+        if (apply && seasonNames.length) await sql`UPDATE pvp_seasons SET name = 'Player' WHERE name = ANY(${seasonNames})`;
+        // club roster snapshots (jsonb): scrub player names inside each member's stored roster
+        let rosterFixed = 0;
+        for (const m of await safe(() => sql`SELECT club_id, player_key, roster FROM club_members WHERE roster IS NOT NULL`)) {
+          const ros = Array.isArray(m.roster) ? m.roster : [];
+          let dirty = false;
+          const fixed = ros.map(p => (p && p.name && !NameFilter.isClean(p.name)) ? (dirty = true, { ...p, name: 'Player' }) : p);
+          if (!dirty) continue;
+          rosterFixed++;
+          if (apply) await sql`UPDATE club_members SET roster = ${JSON.stringify(fixed)}::jsonb WHERE club_id = ${m.club_id} AND player_key = ${m.player_key}`;
+        }
+        return res.status(200).json({ ok: true, applied: apply, found: {
+          users, handles, saves: saveNames, scores: scoreNames, daily_scores: dailyNames,
+          clubs: clubNames, club_gms: gmNames, pvp_opp_names: oppNames, pvp_seasons: seasonNames,
+          club_rosters_touched: rosterFixed } });
       }
 
       // admin: dump a single player's full 1v1 match history (token-gated) · for investigating

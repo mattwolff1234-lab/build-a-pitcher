@@ -18,6 +18,7 @@
 <meta name="twitter:card" content="summary">
 <meta name="twitter:image" content="/icon-512.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="/namefilter.js"></script>
 <script src="/achievements.js" defer></script>
 <script src="/xp.js" defer></script>
 <script src="/social.js" defer></script>
@@ -2028,7 +2029,8 @@ async function showDailyResults() {
   document.body.classList.add('ach-open');
   gsap.fromTo($('dResCard'), { y: 26, opacity: 0, scale: .92 }, { y: 0, opacity: 1, scale: 1, duration: .55, ease: 'back.out(1.6)' });
   try {
-    const name = $('nameInput').value.trim() || (account && account.name) || 'Anonymous';
+    let name = $('nameInput').value.trim() || (account && account.name) || 'Anonymous';
+    if (window.NameFilter && !NameFilter.isClean(name)) name = 'Anonymous';
     if (name !== 'Anonymous') { try { localStorage.setItem('pl_lastName', name); } catch (e) {} }
     const res = (await finishDailyChallenge(state.finalOvr, name, { slots: state.build, career: null })) || { ovr: state.finalOvr, rank: 1, total: 1, isPB: false, frozeUsed: false };
     let best = null;
@@ -3303,8 +3305,24 @@ if (FRANCHISE_DRAFT) {
   const fb = $('simBtn');
   if (fb) fb.textContent = '➕ Add to ' + FRANCHISE_DRAFT.name;
 }
+// name gate: block slurs/profanity at the source (the server enforces this too on
+// submit/save — this is just the friendly catch before anything renders or uploads)
+function nameGate() {
+  const i = $('nameInput');
+  if (!i) return true;
+  const v = i.value.trim();
+  if (v && window.NameFilter && !NameFilter.isClean(v)) {
+    i.value = '';
+    i.placeholder = "That name isn't allowed — try another";
+    try { i.focus(); } catch (e) {}
+    if (typeof toast === 'function') toast("🚫 That name isn't allowed — pick a different one.");
+    return false;
+  }
+  return true;
+}
 function franchiseDraft() {
   if (state.rookieDrafted) return;
+  if (!nameGate()) return;
   state.rookieDrafted = true;
   $('simBtn').disabled = true;
   if (!$('nameInput').value.trim()) $('nameInput').value = randomPlayerName();
@@ -3323,6 +3341,7 @@ function franchiseDraft() {
 
 function runCareerPlaythrough() {
   if (state.career) return;
+  if (!nameGate()) return;
   if (FRANCHISE_DRAFT && !dailyMode) return franchiseDraft();   // 🏟️ rookie build, not a career
   // Daily: if the auto-popup hasn't fired yet, show the results panel first (fallback path).
   if (dailyMode && !dailyResultsShown) { showDailyResults(); return; }
@@ -3795,6 +3814,7 @@ async function submitScore() {
   $('submitBtn').disabled = true;
   $('submitMsg').textContent = 'Submitting…';
   Sound.click();
+  if (!nameGate()) { $('submitBtn').disabled = false; $('submitMsg').textContent = ''; return; }
   const name = $('nameInput').value.trim() || 'Anonymous';
   if (name !== 'Anonymous') { try { localStorage.setItem('pl_lastName', name); } catch (e) {} }   // pre-fill next time
   try {

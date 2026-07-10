@@ -6,6 +6,7 @@
 <title>Hoops Face Off · GoatLab 1v1</title>
 <meta name="theme-color" content="#0a1320">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="/namefilter.js"></script>
 <script src="/switcher.js?v=14" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/MotionPathPlugin.min.js"></script>
 <script src="/achievements.js" defer></script>
@@ -926,7 +927,9 @@ try { guestId = localStorage.getItem('pl_guestId'); } catch(e){}
 if (!guestId){ guestId = 'g_' + Math.random().toString(36).slice(2) + Date.now().toString(36); try{ localStorage.setItem('pl_guestId', guestId); }catch(e){} }
 try { guestName = localStorage.getItem('pl_guestName'); } catch(e){}
 if (!guestName){ guestName = 'Player' + Math.floor(1000 + Math.random()*9000); try{ localStorage.setItem('pl_guestName', guestName); }catch(e){} }
-function setGuestName(n){ guestName = (String(n||'').trim().slice(0,20)) || guestName; try{ localStorage.setItem('pl_guestName', guestName); }catch(e){} }
+function setGuestName(n){ let v = String(n||'').trim().slice(0,20);
+  if (v && window.NameFilter && !NameFilter.isClean(v)) v = '';   // slur gate · server rejects these too
+  guestName = v || guestName; try{ localStorage.setItem('pl_guestName', guestName); }catch(e){} }
 
 // who the server should treat this request as. `name` is the player's chosen 1v1 handle (NOT their
 // Google full name) - sent for guests AND signed-in users so the leaderboard shows the handle.
@@ -993,7 +996,13 @@ function updateRatingChip(){
     if (gsiReady){ try { google.accounts.id.renderButton(wrap, { theme:'filled_black', size:'medium', shape:'pill', text:'signin_with' }); } catch(e){} }
   }
   const inp = $('guestNameInput');
-  inp.onchange = () => { setGuestName(inp.value); refreshStats().then(updateRatingChip); };
+  inp.onchange = () => {
+    if (inp.value.trim() && window.NameFilter && !NameFilter.isClean(inp.value)) {
+      inp.value = guestName; inp.placeholder = "That name isn't allowed";
+      return;
+    }
+    setGuestName(inp.value); refreshStats().then(updateRatingChip);
+  };
   inp.onkeydown = e => { if (e.key==='Enter') inp.blur(); };
 }
 async function applyResult(){
