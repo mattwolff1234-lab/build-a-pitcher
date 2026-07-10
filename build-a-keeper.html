@@ -21,7 +21,7 @@
 <script src="/achievements.js" defer></script>
 <script src="/xp.js" defer></script>
 <script src="/social.js" defer></script>
-<script src="/switcher.js?v=10" defer></script>
+<script src="/switcher.js?v=11" defer></script>
 <script src="/collection.js?v=3" defer></script>
 <script src="/quests.js" defer></script>
 <script src="/season-track.js" defer></script>
@@ -888,6 +888,7 @@
       <button class="menu-item" id="miDaily">🎯 Daily Challenge</button>
       <button class="menu-item" id="miStreak">🔥 Streak Calendar</button>
       <a class="menu-item" href="build-a-striker.html">⚽ Build a Striker</a>
+      <a class="menu-item" href="/franchise-soccer">🏟️ Franchise Mode</a>
       <div class="menu-sec">Your Stuff</div>
       <button class="menu-item" id="miFriends">👥 Friends<span class="mi-chev" data-social-badge></span></button>
       <button class="menu-item" id="miHof">🏛️ My Hall of Fame</button>
@@ -3193,8 +3194,41 @@ function randomPlayerName() {
   return NAME_FIRST[Math.floor(Math.random() * NAME_FIRST.length)] + ' ' + NAME_LAST[Math.floor(Math.random() * NAME_LAST.length)];
 }
 
+
+/* ===== 🏟️ Franchise Draft (?franchise=1): this build becomes your franchise's rookie.
+   One press writes them into the franchise save and rides back for the ceremony. ===== */
+const FRANCHISE_DRAFT = (() => {
+  try {
+    if (new URLSearchParams(location.search).get('franchise') !== '1') return null;
+    const f = JSON.parse(localStorage.getItem('pl_franchise_soccer') || 'null');
+    return (f && f.id) ? { id: f.id, name: f.name || 'Your Franchise' } : null;
+  } catch (e) { return null; }
+})();
+if (FRANCHISE_DRAFT) {
+  const fb = $('simBtn');
+  if (fb) fb.textContent = '➕ Add to ' + FRANCHISE_DRAFT.name;
+}
+function franchiseDraft() {
+  if (state.rookieDrafted) return;
+  state.rookieDrafted = true;
+  $('simBtn').disabled = true;
+  if (!$('nameInput').value.trim()) $('nameInput').value = randomPlayerName();
+  const rookieName = $('nameInput').value.trim().slice(0, 26);
+  try {
+    const F = JSON.parse(localStorage.getItem('pl_franchise_soccer') || 'null');
+    if (F && F.id) {
+      F.pendingRookie = { name: rookieName, ovr: Math.round(state.finalOvr), game: 'keeper' };
+      F.prog = (Number(F.prog) || 0) + 1;
+      localStorage.setItem('pl_franchise_soccer', JSON.stringify(F));
+    }
+  } catch (e) {}
+  toast('➕ ' + rookieName + ' is headed to ' + FRANCHISE_DRAFT.name + '…');
+  setTimeout(() => { location.href = '/franchise-soccer'; }, 800);
+}
+
 function runCareerPlaythrough() {
   if (state.career) return;
+  if (FRANCHISE_DRAFT && !dailyMode) return franchiseDraft();   // 🏟️ rookie build, not a career
   // Daily: if the auto-popup hasn't fired yet, show the results panel first (fallback path).
   if (dailyMode && !dailyResultsShown) { showDailyResults(); return; }
   $('simBtn').disabled = true;

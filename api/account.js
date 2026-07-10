@@ -900,24 +900,29 @@ module.exports = async (req, res) => {
         return res.status(200).json({ ok: true, cosmetics: merged });
       }
 
-      // Franchise mode save: one blob per account — either a legacy single save
-      // ({id:'fr_…'}) or the 3-slot wrapper ({active, prog, saves:{0,1,2}}). Whichever
-      // copy has made more progress wins (the client bumps a monotonic `prog` counter
-      // on every step, including slot switches/deletes) — same incoming-wins posture as
-      // trackSync. Always answers with the winning copy so another device can adopt it.
+      // Franchise mode save: one blob per account per SPORT (baseball/hoops/soccer),
+      // stored together as { baseball: wrapper, hoops: wrapper, soccer: wrapper }. Each
+      // sport's copy is either a legacy single save ({id:'fr_…'}) or the 3-slot wrapper
+      // ({active, prog, saves:{0,1,2}}). Whichever copy has made more progress wins (the
+      // client bumps a monotonic `prog` on every step) — same incoming-wins posture as
+      // trackSync. Always answers with that sport's winning copy. A legacy top-level
+      // blob (pre-sports) is treated as the baseball save.
       if (action === 'franchiseSync') {
         if (!(await authed(body.sub, body.sessionToken))) return res.status(401).json({ ok: false, error: 'Not signed in' });
+        const sport = (body.sport === 'hoops' || body.sport === 'soccer') ? body.sport : 'baseball';
         const inc = body.franchise;
         const [row] = await sql`SELECT franchise FROM users WHERE google_sub = ${body.sub}`;
-        const stored = (row && row.franchise && typeof row.franchise === 'object') ? row.franchise : null;
+        let all = (row && row.franchise && typeof row.franchise === 'object') ? row.franchise : {};
+        if (all.saves || all.id) all = { baseball: all };
+        const stored = (all[sport] && typeof all[sport] === 'object') ? all[sport] : null;
         const progOf = f => (f && typeof f === 'object' && Number(f.prog)) || 0;
         const validSingle = f => !!(f && typeof f === 'object' && typeof f.id === 'string' && /^fr_[a-z0-9]{4,16}$/.test(f.id));
         const validWrap = f => !!(f && typeof f === 'object' && f.saves && typeof f.saves === 'object'
           && Object.values(f.saves).every(s => s == null || validSingle(s)));
         if (validWrap(inc) || validSingle(inc)) {
-          const s = JSON.stringify(inc);
-          if (s.length <= 160000 && progOf(inc) >= progOf(stored)) {
-            await sql`UPDATE users SET franchise = ${s}::jsonb WHERE google_sub = ${body.sub}`;
+          if (JSON.stringify(inc).length <= 160000 && progOf(inc) >= progOf(stored)) {
+            all[sport] = inc;
+            await sql`UPDATE users SET franchise = ${JSON.stringify(all)}::jsonb WHERE google_sub = ${body.sub}`;
             return res.status(200).json({ ok: true, franchise: inc });
           }
         }

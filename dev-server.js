@@ -11,7 +11,9 @@ const root = __dirname;
 const mime = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json',
   '.png': 'image/png', '.webp': 'image/webp', '.css': 'text/css', '.webmanifest': 'application/manifest+json' };
 const rewrites = {
-  '/': '/index.html', '/franchise': '/franchise.html', '/pitching': '/pitcher.html',
+  '/': '/index.html', '/franchise': '/franchise.html',
+  '/franchise-hoops': '/franchise-hoops.html', '/franchise-soccer': '/franchise-soccer.html',
+  '/pitching': '/pitcher.html',
   '/batting': '/build-a-batter.html', '/hoops': '/build-a-baller.html',
   '/striker': '/build-a-striker.html', '/keeper': '/build-a-keeper.html',
   '/versus': '/versus.html', '/versus-hoops': '/versus-hoops.html', '/versus-soccer': '/versus-soccer.html',

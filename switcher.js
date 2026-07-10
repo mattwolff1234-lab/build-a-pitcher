@@ -170,8 +170,10 @@
       <a class="gs-row" href="${VERSUS.baseball}"><span class="gs-ico">⚾</span>Baseball</a>
       <a class="gs-row" href="${VERSUS.hoops}"><span class="gs-ico">🏀</span>Hoops</a>
       <a class="gs-row" href="${VERSUS.soccer}"><span class="gs-ico">⚽</span>Soccer</a></div>`;
-    rows += `<div class="gs-sport">🏟️ Franchise</div>
-      <a class="gs-row" href="${LOCAL ? '/franchise.html' : '/franchise'}"><span class="gs-ico">⚾</span>Franchise Mode<span class="gs-go" style="color:#ffce3a;font-size:10.5px;letter-spacing:1px">NEW</span></a>`;
+    rows += `<div class="gs-sport">🏟️ Franchise</div><div class="gs-vs">
+      <a class="gs-row" href="${LOCAL ? '/franchise.html' : '/franchise'}"><span class="gs-ico">⚾</span>Baseball</a>
+      <a class="gs-row" href="${LOCAL ? '/franchise-hoops.html' : '/franchise-hoops'}"><span class="gs-ico">🏀</span>Hoops</a>
+      <a class="gs-row" href="${LOCAL ? '/franchise-soccer.html' : '/franchise-soccer'}"><span class="gs-ico">⚽</span>Soccer</a></div>`;
     sheet.innerHTML = `<div class="gs-card">
       <div class="gs-head"><span class="gs-title">🎮 Switch Game</span><button class="gs-x" aria-label="Close">✕</button></div>
       ${rows}</div>`;
