@@ -595,6 +595,33 @@ const ONLINE_MS = 150000;   // "online" = seen in the last 2.5 min (friendList p
 const isOnline = t => !!(t && (Date.now() - new Date(t).getTime()) < ONLINE_MS);
 // Claimed-handle rules: 3–20 chars, letters/numbers/underscore, unique ignoring case.
 const HANDLE_RE = /^[A-Za-z0-9_]{3,20}$/;
+// Derive a valid handle from a display name (accents stripped, spaces → _, other chars
+// dropped). Returns null when nothing usable is left (too short, or a generic default).
+function handleFrom(name) {
+  let s = String(name || '').normalize('NFKD').replace(new RegExp('[\\u0300-\\u036f]', 'g'), '');
+  s = s.replace(/[^A-Za-z0-9_ ]+/g, ' ').trim().replace(/\s+/g, '_').replace(/_+/g, '_');
+  s = s.replace(/^_+|_+$/g, '').slice(0, 20).replace(/_+$/g, '');
+  if (s.length < 3 || /^(guest|player)$/i.test(s)) return null;
+  return s;
+}
+// Seed `sub`'s unique @handle from their existing public name, numbering past collisions
+// (Chu, Chu2, Chu3, …). No-ops if the account already has one. Returns the handle or null.
+async function autoClaimHandle(sub, baseName) {
+  const base = handleFrom(baseName);
+  if (!base) return null;
+  for (let i = 0; i < 12; i++) {
+    const suffix = i === 0 ? '' : String(i + 1);
+    const cand = base.slice(0, 20 - suffix.length) + suffix;
+    try {
+      const rows = await sql`UPDATE users SET handle = ${cand}, name = ${cand}
+        WHERE google_sub = ${sub} AND handle IS NULL RETURNING handle`;
+      if (rows.length) return rows[0].handle;
+      const [u] = await sql`SELECT handle FROM users WHERE google_sub = ${sub}`;
+      return (u && u.handle) || null;   // another tab won the race — keep theirs
+    } catch (e) { /* unique-index collision — try the next number */ }
+  }
+  return null;
+}
 // Accepted-friends check (most social actions are friends-only).
 async function areFriends(k1, k2) {
   const [a, b] = pairOf(k1, k2);
@@ -610,7 +637,7 @@ module.exports = async (req, res) => {
     // The token-gated admin backfills are also reachable via GET (handy where only fetches are
     // possible): ?action=achBackfill|xpBackfill&token=...&apply=1 — apply=1 ⇒ dryRun:false.
     const qAction = req.query && req.query.action;
-    if (req.method === 'GET' && (qAction === 'achBackfill' || qAction === 'xpBackfill')) {
+    if (req.method === 'GET' && (qAction === 'achBackfill' || qAction === 'xpBackfill' || qAction === 'handleBackfill')) {
       req.method = 'POST';
       req.body = { action: qAction, token: req.query.token, dryRun: req.query.apply !== '1' };
     }
@@ -626,14 +653,16 @@ module.exports = async (req, res) => {
         // KEEP an existing session token instead of rotating it on every login — otherwise the
         // Google One Tap auto-sign-in that fires on each page load would invalidate the token
         // other tabs/pages are holding (which made you "get signed out" moving between pages).
+        // name: a claimed @handle wins; else keep the name they play under (their rating
+        // name); the Google name only seeds brand-new accounts.
         const [row] = await sql`INSERT INTO users (google_sub, email, name, picture, session_token)
           VALUES (${profile.sub}, ${profile.email}, ${profile.name}, ${profile.picture}, ${newToken})
           ON CONFLICT (google_sub) DO UPDATE SET
             email = EXCLUDED.email,
-            name = COALESCE(users.handle, EXCLUDED.name),
+            name = COALESCE(users.handle, users.name, EXCLUDED.name),
             picture = EXCLUDED.picture,
             session_token = COALESCE(users.session_token, EXCLUDED.session_token)
-          RETURNING session_token, current_streak, best_streak, last_active_date, (xmax = 0) AS is_new`;
+          RETURNING session_token, current_streak, best_streak, last_active_date, (xmax = 0) AS is_new, handle, name`;
         let streakOut = Number(row.current_streak) || 0, bestOut = Number(row.best_streak) || 0;
         // Adopt this device's guest daily-challenge history into the account, so days played
         // before signing in keep counting toward the streak/calendar. Days the account already
@@ -662,7 +691,16 @@ module.exports = async (req, res) => {
             }
           } catch (e) {}
         }
-        return res.status(200).json({ ok: true, sub: profile.sub, email: profile.email, name: profile.name, picture: profile.picture, sessionToken: row.session_token,
+        // Unified identity: every signed-in player gets a unique @handle seeded from the
+        // name they already play under. First come, first served; collisions get a number.
+        // Changing the handle later (profile Settings) changes the public name with it.
+        let handleOut = row.handle || null;
+        if (!handleOut) {
+          try { handleOut = await autoClaimHandle(profile.sub, row.name || profile.name); } catch (e) {}
+        }
+        return res.status(200).json({ ok: true, sub: profile.sub, email: profile.email,
+          name: handleOut || row.name || profile.name, handle: handleOut,
+          picture: profile.picture, sessionToken: row.session_token,
           streak: streakOut, bestStreak: bestOut, isNew: row.is_new === true });
       }
 
@@ -1138,6 +1176,33 @@ module.exports = async (req, res) => {
         if (a === key) await sql`UPDATE friends SET a_wins = a_wins + 1 WHERE a = ${a} AND b = ${b}`;
         else await sql`UPDATE friends SET b_wins = b_wins + 1 WHERE a = ${a} AND b = ${b}`;
         return res.status(200).json({ ok: true, counted: true });
+      }
+
+      // One-time migration: seed a unique @handle for every existing signed-in account from
+      // its current public name — most-active first, so the real "Chu" beats a dead account
+      // with the same name. Token-gated like achBackfill; dryRun by default; run repeatedly
+      // (each apply pass shrinks the handle-less pool) until claimed comes back 0.
+      if (action === 'handleBackfill') {
+        if (!body.token || body.token !== STATS_TOKEN) return res.status(403).json({ ok: false, error: 'forbidden' });
+        const dryRun = body.dryRun !== false;
+        const lim = Math.max(1, Math.min(500, parseInt(body.limit, 10) || 200));
+        const rows = await sql`SELECT google_sub, name, xp FROM users
+          WHERE handle IS NULL AND google_sub NOT LIKE 'guest:%' AND name IS NOT NULL
+          ORDER BY xp DESC, created_at ASC LIMIT ${lim}`;
+        let claimed = 0, skipped = 0;
+        const sample = [];
+        for (const r of rows) {
+          if (dryRun) {
+            const base = handleFrom(r.name);
+            if (base) { claimed++; if (sample.length < 20) sample.push(`${r.name} -> @${base}${'?'}`); }
+            else { skipped++; if (sample.length < 20) sample.push(`${r.name} -> (skipped: no usable handle)`); }
+            continue;
+          }
+          const h = await autoClaimHandle(r.google_sub, r.name);
+          if (h) { claimed++; if (sample.length < 20) sample.push(`${r.name} -> @${h}`); }
+          else skipped++;
+        }
+        return res.status(200).json({ ok: true, dryRun, scanned: rows.length, claimed, skipped, sample });
       }
 
       if (action === 'pvpStats') {

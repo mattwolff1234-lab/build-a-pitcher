@@ -334,6 +334,8 @@
       if (r && r.ok) {
         data = r;
         try { localStorage.setItem('pl_avatar', r.myAvatar || ''); } catch (e) {}   // server is source of truth
+        // handle IS the username — keep the local display name (versus, ratings) in lockstep
+        if (r.myHandle) { try { localStorage.setItem('pl_guestName', r.myHandle); } catch (e) {} }
         paintBadge(); maybeToast();
       }
     } catch (e) {}
