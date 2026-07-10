@@ -459,6 +459,12 @@
   .draft-skip { margin-top:28px; font-size:11px; color:var(--dim); letter-spacing:2px; text-transform:uppercase;
     pointer-events:none; opacity:0; transition:opacity .4s; }
   .draft-skip.show { opacity:.55; }
+  /* cinematic stage: spotlight + confetti (elements created by runDraftAnimation) */
+  .draft-spot { position:absolute; top:-25%; left:50%; margin-left:-23vmax; width:46vmax; height:150%;
+    pointer-events:none; opacity:0;
+    background:radial-gradient(ellipse 50% 40% at 50% 25%, rgba(255,244,214,.22), rgba(255,244,214,.05) 55%, transparent 72%); }
+  .draft-confetti { position:absolute; inset:0; overflow:hidden; pointer-events:none; }
+  .draft-confetti i { position:absolute; top:0; width:9px; height:14px; border-radius:2px; display:block; }
 
   @media (max-width: 560px) {
     .done { padding:16px 12px; }
@@ -3025,8 +3031,6 @@ function runDraftAnimation({ feeM, teamAbbr, teamName, tColor, hitter, ovr, role
   if (feeM >= 200 && window.Ach) Ach.unlock('first_overall');
   const bColor = brightColor(tColor);
   $('draftRoundTag').textContent = feeM >= 200 ? `World-record $${feeM}M fee` : `$${feeM}M Transfer`;
-  $('draftPickOrd').textContent = `$${feeM}M`;
-  $('draftRoundNum').textContent = '';
   $('draftSelecting').textContent = '';
   $('draftSelecting').style.color = bColor;
   const reveal = $('draftReveal');
@@ -3056,25 +3060,64 @@ function runDraftAnimation({ feeM, teamAbbr, teamName, tColor, hitter, ovr, role
   const divider = overlay.querySelector('.draft-divider');
   const call = $('draftCall');
   const selecting = $('draftSelecting');
+  // cinematic stage bits — created once, reused every run
+  let spot = overlay.querySelector('.draft-spot');
+  if (!spot) { spot = document.createElement('div'); spot.className = 'draft-spot'; overlay.prepend(spot); }
+  let confetti = overlay.querySelector('.draft-confetti');
+  if (!confetti) { confetti = document.createElement('div'); confetti.className = 'draft-confetti'; overlay.prepend(confetti); }
+  confetti.innerHTML = '';
+  const callText = `The fax machine hums... a ${feeM}M bid is accepted...`;
+  call.textContent = '';
+  // the reveal wears the club's colors — flipped in like a draft card
+  reveal.style.cssText = `margin-top:22px; padding:20px 18px 22px; border-radius:16px; border:1px solid ${bColor}66;` +
+    `background:linear-gradient(165deg, ${bColor}24, rgba(10,16,26,.92) 58%); box-shadow:0 24px 70px rgba(0,0,0,.55), 0 0 46px -12px ${bColor}aa;`;
   gsap.set([league, headline, roundTag, divider, call, selecting, reveal], { opacity: 0, y: 0 });
+  gsap.set(spot, { opacity: 0, x: '-38%' });
 
   overlay.classList.add('show');
   gsap.fromTo(overlay, { opacity: 0 }, { opacity: 1, duration: .35 });
 
+  const typeText = (el, text, dur) => {   // commissioner-at-the-podium typewriter
+    const st = { n: 0 };
+    return gsap.to(st, { n: text.length, duration: dur, ease: 'none', onUpdate: () => {
+      const k = Math.round(st.n);
+      if (k !== el.__tw) { el.__tw = k; el.textContent = text.slice(0, k); if (k % 3 === 1 && Sound.tick) Sound.tick(0.12); }
+    } });
+  };
+  const confettiBurst = () => {
+    const n = window.innerWidth < 600 ? 30 : 54;
+    const colors = [bColor, '#ffd23f', '#ffffff'];
+    for (let i = 0; i < n; i++) {
+      const p = document.createElement('i');
+      p.style.left = (6 + Math.random() * 88) + '%';
+      p.style.background = colors[i % colors.length];
+      confetti.appendChild(p);
+      gsap.fromTo(p, { y: -40 - Math.random() * 40, rotation: Math.random() * 360, opacity: 1 },
+        { y: overlay.clientHeight + 60, x: (Math.random() - .5) * 140, rotation: '+=' + (240 + Math.random() * 480),
+          opacity: .75, duration: 2.2 + Math.random() * 1.6, delay: Math.random() * .35, ease: 'power1.in',
+          onComplete: () => p.remove() });
+    }
+  };
+
   const tl = gsap.timeline();
-  tl.to(league,   { opacity: 1, y: 0, duration: .4, ease: 'power2.out' }, 0.2)
-    .fromTo(headline, { y: 14, opacity: 0 }, { y: 0, opacity: 1, duration: .55, ease: 'power3.out' }, 0.38)
-    .to(roundTag,  { opacity: 1, duration: .4 }, 0.7)
-    .to(divider,   { opacity: 1, duration: .5 }, 0.9)
-    .to(call,      { opacity: 1, duration: .45 }, 1.2)
-    .add(() => { selecting.textContent = `${teamName} announce the signing of...`; }, 2.0)
-    .to(selecting, { opacity: 1, duration: .35 }, 2.0)
-    .fromTo(reveal, { y: 18, opacity: 0 }, { y: 0, opacity: 1, duration: .55, ease: 'back.out(1.6)' }, 2.7)
+  tl.to(league,   { opacity: 1, y: 0, duration: .4, ease: 'power2.out' }, 0.15)
+    .to(spot,     { opacity: 1, duration: .8, ease: 'power2.out' }, 0.15)          // house lights down, spotlight up
+    .to(spot,     { x: '38%', duration: 1.4, ease: 'sine.inOut' }, 0.3)            // sweep the stage
+    .to(spot,     { x: '0%', duration: .9, ease: 'sine.inOut' }, 1.7)              // settle centre stage
+    .fromTo(headline, { y: 16, opacity: 0, letterSpacing: '12px' }, { y: 0, opacity: 1, letterSpacing: '5px', duration: .7, ease: 'power3.out' }, 0.35)
+    .to(roundTag,  { opacity: 1, duration: .4 }, 0.9)
+    .to(divider,   { opacity: 1, duration: .5 }, 1.05)
+    .to(call,      { opacity: 1, duration: .2 }, 1.3)
+    .add(typeText(call, callText, 1.3), 1.35)
+    .add(() => { selecting.textContent = `${teamName} announce the signing of...`; if (Sound.whoosh) Sound.whoosh(); }, 3.0)
+    .fromTo(selecting, { opacity: 0, y: 8, scale: .96 }, { opacity: 1, y: 0, scale: 1, duration: .45, ease: 'power2.out' }, 3.0)
+    .fromTo(reveal, { rotationY: 90, opacity: 0, transformPerspective: 800 }, { rotationY: 0, opacity: 1, duration: .7, ease: 'back.out(1.4)' }, 3.9)
     .add(() => {
       if (ovr >= 90) Sound.legend(); else if (ovr >= 85) Sound.diamond(); else Sound.gold();
-      gsap.fromTo(reveal, { scale: .92 }, { scale: 1, duration: .5, ease: 'back.out(2)' });
-    }, 2.7)
-    .add(() => { $('draftSkip').classList.add('show'); }, 3.4);
+      confettiBurst();
+      gsap.fromTo(reveal, { scale: .94 }, { scale: 1, duration: .5, ease: 'back.out(2)' });
+    }, 4.0)
+    .add(() => { $('draftSkip').classList.add('show'); }, 4.8);
 
   let done = false;
   function complete() {
@@ -3088,7 +3131,7 @@ function runDraftAnimation({ feeM, teamAbbr, teamName, tColor, hitter, ovr, role
       onDone();
     }});
   }
-  const autoTimer = setTimeout(complete, 5200);
+  const autoTimer = setTimeout(complete, 7400);
   overlay.onclick = () => { clearTimeout(autoTimer); complete(); };
 }
 
