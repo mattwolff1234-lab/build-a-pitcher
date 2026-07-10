@@ -196,9 +196,9 @@
   .soc-sec { font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:2px; text-transform:uppercase; color:#8ea2bd;
     margin:4px 2px 0; }
   .soc-chal { border-color:rgba(255,176,46,.4); background:rgba(255,140,46,.08); }
-  .soc-x { position:absolute; top:9px; right:11px; background:none; border:none; color:#8ea2bd; font-size:20px;
+  .soc-close { position:absolute; top:9px; right:11px; background:none; border:none; color:#8ea2bd; font-size:20px;
     cursor:pointer; padding:4px 8px; line-height:1; font-family:Inter,sans-serif; z-index:2; }
-  .soc-x:hover { color:#f2f6fb; }
+  .soc-close:hover { color:#f2f6fb; }
   .soc-input { width:100%; box-sizing:border-box; font-family:'Oswald',sans-serif; font-size:16px; letter-spacing:2px;
     text-transform:uppercase; color:#f2f6fb; background:rgba(10,16,26,.8); border:1px solid rgba(120,170,220,.3);
     border-radius:8px; padding:10px 12px; outline:none; }
@@ -369,10 +369,10 @@
     ga('friends_open');
   }
   function renderLoading(msg) {
-    overlay.innerHTML = `<div class="soc-panel"><button class="soc-x">✕</button>
+    overlay.innerHTML = `<div class="soc-panel"><button class="soc-close">✕</button>
       <div class="soc-head"><div class="soc-eyebrow">GoatLab Social</div><div class="soc-title">👥 Friends</div></div>
       <div class="soc-body"><div class="soc-empty">${esc(msg)}</div></div></div>`;
-    overlay.querySelector('.soc-x').onclick = close;
+    overlay.querySelector('.soc-close').onclick = close;
   }
 
   /* ---------- friends panel ---------- */
@@ -466,7 +466,7 @@
           <span class="hint">Sign in with Google (☰ menu) to claim a unique handle so friends can find <i>you</i>. You can still search and add friends below.</span></div>`
         : claimUi;
 
-    overlay.innerHTML = `<div class="soc-panel"><button class="soc-x">✕</button>
+    overlay.innerHTML = `<div class="soc-panel"><button class="soc-close">✕</button>
       <div class="soc-head">
         <div class="soc-eyebrow">GoatLab Social</div>
         <div class="soc-title">👥 Friends</div>
@@ -479,7 +479,7 @@
       </div>
       <div class="soc-body">${bodies[tab] || ''}</div></div>`;
 
-    overlay.querySelector('.soc-x').onclick = close;
+    overlay.querySelector('.soc-close').onclick = close;
     overlay.querySelectorAll('.soc-tab').forEach(b => b.onclick = () => { tab = b.dataset.tab; renderFriends(); });
     const renameBtn = overlay.querySelector('#socRename');
     if (renameBtn) renameBtn.onclick = () => { renaming = true; renderFriends(); };
@@ -802,7 +802,7 @@
     ];
     if (p.self) { tabs.push(['settings', 'Settings'], ['style', 'Style']); }
     const bodies = { overview: profOverview, friends: profFriends, stats: profStats, settings: profSettings, style: profStyle };
-    overlay.innerHTML = `<div class="soc-panel"><button class="soc-x">✕</button>
+    overlay.innerHTML = `<div class="soc-panel"><button class="soc-close">✕</button>
       <div class="soc-head" style="padding-bottom:0">
         <div class="soc-phead">
           ${avatarHtml(p)}
@@ -814,7 +814,7 @@
         </div>
       </div>
       <div class="soc-body">${(bodies[profTab] || profOverview)(p)}</div></div>`;
-    overlay.querySelector('.soc-x').onclick = close;
+    overlay.querySelector('.soc-close').onclick = close;
     overlay.querySelectorAll('[data-ptab]').forEach(b => b.onclick = () => { profTab = b.dataset.ptab; renderProfile(); });
     wireProfileBody(p);
   }
