@@ -58,25 +58,35 @@
     title_goat:     { type: 'title', name: 'Opening Day GOAT',      icon: '🐐' },
     scout_3:        { type: 'item',  name: 'Scout Tokens ×3',       icon: '🔭', item: 'scout', qty: 3 },
     frame_holo:     { type: 'frame', name: 'Holo Legend',           icon: '🌈', cls: 'st-frame-holo' },
+    // profile avatars — ids must match the AVATARS registry in social.js; unlocking here
+    // makes them selectable in the profile's Style tab (equip lives there, not in the track)
+    av_goat_crown:  { type: 'avatar', name: 'Crowned GOAT Avatar',  icon: '👑' },
+    av_flame_ball:  { type: 'avatar', name: 'Heat Check Avatar',    icon: '🔥' },
+    av_octo_keeper: { type: 'avatar', name: 'Octo Keeper Avatar',   icon: '🐙' },
+    av_golden_goat: { type: 'avatar', name: 'Golden GOAT Avatar',   icon: '🐐' },
   };
   // "frame" = the CAREER card (the shareable trophy) — never the reel cards, whose
   // borders are tier information (grey→legend) that cosmetics must not repaint.
   // "item" = consumables (Scout = peek the next spin; Re-sim = re-roll a finished career).
-  const TYPE_LABEL = { frame: 'Career Card Frame', title: 'Title', trail: 'Reel Effect', item: 'Consumable' };
+  const TYPE_LABEL = { frame: 'Career Card Frame', title: 'Title', trail: 'Reel Effect', item: 'Consumable', avatar: 'Profile Avatar' };
   // Define SEASONS[2] before 2026-08-15 — an undefined month falls back to re-running
   // this track (already-owned rewards just show as unlocked, nothing new to earn).
   const SEASONS = {
     1: { name: 'Opening Day', icon: '⚾', tiers: [
       { req: 100,  id: 'title_original' },
+      { req: 200,  id: 'av_goat_crown' },
       { req: 300,  id: 'frame_cyan' },
       { req: 600,  id: 'scout_2' },
       { req: 1000, id: 'title_grinder' },
+      { req: 1250, id: 'av_flame_ball' },
       { req: 1500, id: 'frame_gold' },
       { req: 2100, id: 'trail_comet' },
       { req: 2800, id: 'resim_2' },
+      { req: 3200, id: 'av_octo_keeper' },
       { req: 3600, id: 'title_goat' },
       { req: 4500, id: 'scout_3' },
       { req: 5500, id: 'frame_holo' },
+      { req: 6200, id: 'av_golden_goat' },
     ] },
   };
   const seasonDef = n => SEASONS[n] || { name: `Season ${n}`, icon: '🏟️', tiers: SEASONS[1].tiers };
@@ -318,6 +328,7 @@
       const on = equipable && s.equipped[c.type] === t.id;
       const right = got
         ? (c.soon ? '<span class="st-soon">SOON</span>'
+          : c.type === 'avatar' ? '<button class="st-eq" data-av-open="1">Use in Profile</button>'
           : equipable ? `<button class="st-eq${on ? ' on' : ''}" data-eq="${t.id}">${on ? 'Equipped' : 'Equip'}</button>` : '✅')
         : `<span class="st-req">${t.req.toLocaleString()} SXP</span>`;
       return `<div class="st-row${got ? ' got' : ''}${isNext ? ' next' : ''}">
@@ -328,6 +339,10 @@
       </div>`;
     }).join('');
     listEl.querySelectorAll('[data-eq]').forEach(b => { b.onclick = () => equip(b.dataset.eq); });
+    // avatars equip in the profile's Style tab (social.js owns the server-visible avatar)
+    listEl.querySelectorAll('[data-av-open]').forEach(b => {
+      b.onclick = () => { close(); if (window.Social) Social.openProfile(null, 'style'); };
+    });
   }
   function renderIfOpen() { if (ov && ov.classList.contains('show')) render(); }
 

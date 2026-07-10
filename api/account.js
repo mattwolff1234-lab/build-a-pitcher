@@ -142,6 +142,40 @@ function ensure() {
       await sql`CREATE INDEX IF NOT EXISTS idx_pvp_seasons_player ON pvp_seasons (player_key)`;
       await sql`CREATE INDEX IF NOT EXISTS idx_pvp_history_player ON pvp_history (player_key, created_at DESC)`;
       await sql`CREATE INDEX IF NOT EXISTS idx_pvp_history_opp_key ON pvp_history (opp_key) WHERE opp_key IS NOT NULL`;
+      // ---- Social: friends + friendly 1v1 challenges. Player keys are the users-table keys
+      // (raw google sub for accounts, 'guest:<id>' for guests) — same keys pvpKey() returns. ----
+      // handle = the CLAIMED unique username (signed-in accounts only; case-insensitively unique,
+      // first come first served). Once claimed it becomes the display name and nothing may
+      // overwrite it (login + pvpKey name updates are guarded). Friends find each other by it.
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS handle text`;
+      await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_handle ON users (lower(handle)) WHERE handle IS NOT NULL`;
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen timestamptz`;
+      // equipped avatar id (registry lives in social.js; some are Season Track rewards)
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar text`;
+      // One row per pair, keys stored in sorted order (a < b). a_wins/b_wins = friendly head-to-head.
+      await sql`CREATE TABLE IF NOT EXISTS friends (
+        a text NOT NULL,
+        b text NOT NULL,
+        status text NOT NULL DEFAULT 'pending',
+        requested_by text NOT NULL,
+        a_wins int NOT NULL DEFAULT 0,
+        b_wins int NOT NULL DEFAULT 0,
+        created_at timestamptz NOT NULL DEFAULT now(),
+        accepted_at timestamptz,
+        PRIMARY KEY (a, b)
+      )`;
+      await sql`CREATE INDEX IF NOT EXISTS idx_friends_b ON friends (b)`;
+      await sql`CREATE TABLE IF NOT EXISTS challenges (
+        id text PRIMARY KEY,
+        from_key text NOT NULL,
+        to_key text NOT NULL,
+        sport text NOT NULL,
+        status text NOT NULL DEFAULT 'pending',
+        created_at timestamptz NOT NULL DEFAULT now(),
+        responded_at timestamptz
+      )`;
+      await sql`CREATE INDEX IF NOT EXISTS idx_challenges_to ON challenges (to_key, status)`;
+      await sql`CREATE INDEX IF NOT EXISTS idx_challenges_from ON challenges (from_key, status)`;
     })().catch(e => { ready = null; throw e; });   // don't cache a transient failure forever
   }
   return ready;
@@ -540,12 +574,59 @@ async function pvpKey(body) {
     return key;
   }
   if (await authed(body.sub, body.sessionToken)) {
-    // let the player set a public 1v1 handle (shown on the leaderboard) instead of their Google name
+    // let the player set a public 1v1 display name instead of their Google name — but a
+    // CLAIMED handle is permanent and nothing may overwrite it
     const nm = String(body.name || '').trim().slice(0, 40);
-    if (nm) await sql`UPDATE users SET name = ${nm} WHERE google_sub = ${body.sub}`;
+    if (nm) await sql`UPDATE users SET name = ${nm} WHERE google_sub = ${body.sub} AND handle IS NULL`;
     return body.sub;
   }
   return null;
+}
+
+// ---- Social helpers ---------------------------------------------------------
+// Friend pairs are stored once, keys in sorted order.
+const pairOf = (k1, k2) => (k1 < k2 ? [k1, k2] : [k2, k1]);
+// The client-side personId() form of a stored key ('acct:' + sub for accounts) — this is what
+// the ?ch= challenge links and the Ably challenge-inbox channels are named with.
+const personIdOf = key => key.indexOf('guest:') === 0 ? key : ('acct:' + key);
+// Normalize a client-sent key (either form) back to the users-table key.
+const keyOf = p => { const s = String(p || '').slice(0, 90); return s.indexOf('acct:') === 0 ? s.slice(5) : s; };
+const ONLINE_MS = 150000;   // "online" = seen in the last 2.5 min (friendList polls every 60s)
+const isOnline = t => !!(t && (Date.now() - new Date(t).getTime()) < ONLINE_MS);
+// Claimed-handle rules: 3–20 chars, letters/numbers/underscore, unique ignoring case.
+const HANDLE_RE = /^[A-Za-z0-9_]{3,20}$/;
+// Derive a valid handle from a display name (accents stripped, spaces → _, other chars
+// dropped). Returns null when nothing usable is left (too short, or a generic default).
+function handleFrom(name) {
+  let s = String(name || '').normalize('NFKD').replace(new RegExp('[\\u0300-\\u036f]', 'g'), '');
+  s = s.replace(/[^A-Za-z0-9_ ]+/g, ' ').trim().replace(/\s+/g, '_').replace(/_+/g, '_');
+  s = s.replace(/^_+|_+$/g, '').slice(0, 20).replace(/_+$/g, '');
+  if (s.length < 3 || /^(guest|player)$/i.test(s)) return null;
+  return s;
+}
+// Seed `sub`'s unique @handle from their existing public name, numbering past collisions
+// (Chu, Chu2, Chu3, …). No-ops if the account already has one. Returns the handle or null.
+async function autoClaimHandle(sub, baseName) {
+  const base = handleFrom(baseName);
+  if (!base) return null;
+  for (let i = 0; i < 12; i++) {
+    const suffix = i === 0 ? '' : String(i + 1);
+    const cand = base.slice(0, 20 - suffix.length) + suffix;
+    try {
+      const rows = await sql`UPDATE users SET handle = ${cand}, name = ${cand}
+        WHERE google_sub = ${sub} AND handle IS NULL RETURNING handle`;
+      if (rows.length) return rows[0].handle;
+      const [u] = await sql`SELECT handle FROM users WHERE google_sub = ${sub}`;
+      return (u && u.handle) || null;   // another tab won the race — keep theirs
+    } catch (e) { /* unique-index collision — try the next number */ }
+  }
+  return null;
+}
+// Accepted-friends check (most social actions are friends-only).
+async function areFriends(k1, k2) {
+  const [a, b] = pairOf(k1, k2);
+  const [fr] = await sql`SELECT 1 FROM friends WHERE a = ${a} AND b = ${b} AND status = 'accepted'`;
+  return !!fr;
 }
 
 module.exports = async (req, res) => {
@@ -556,7 +637,7 @@ module.exports = async (req, res) => {
     // The token-gated admin backfills are also reachable via GET (handy where only fetches are
     // possible): ?action=achBackfill|xpBackfill&token=...&apply=1 — apply=1 ⇒ dryRun:false.
     const qAction = req.query && req.query.action;
-    if (req.method === 'GET' && (qAction === 'achBackfill' || qAction === 'xpBackfill')) {
+    if (req.method === 'GET' && (qAction === 'achBackfill' || qAction === 'xpBackfill' || qAction === 'handleBackfill')) {
       req.method = 'POST';
       req.body = { action: qAction, token: req.query.token, dryRun: req.query.apply !== '1' };
     }
@@ -572,12 +653,16 @@ module.exports = async (req, res) => {
         // KEEP an existing session token instead of rotating it on every login — otherwise the
         // Google One Tap auto-sign-in that fires on each page load would invalidate the token
         // other tabs/pages are holding (which made you "get signed out" moving between pages).
+        // name: a claimed @handle wins; else keep the name they play under (their rating
+        // name); the Google name only seeds brand-new accounts.
         const [row] = await sql`INSERT INTO users (google_sub, email, name, picture, session_token)
           VALUES (${profile.sub}, ${profile.email}, ${profile.name}, ${profile.picture}, ${newToken})
           ON CONFLICT (google_sub) DO UPDATE SET
-            email = EXCLUDED.email, name = EXCLUDED.name, picture = EXCLUDED.picture,
+            email = EXCLUDED.email,
+            name = COALESCE(users.handle, users.name, EXCLUDED.name),
+            picture = EXCLUDED.picture,
             session_token = COALESCE(users.session_token, EXCLUDED.session_token)
-          RETURNING session_token, current_streak, best_streak, last_active_date, (xmax = 0) AS is_new`;
+          RETURNING session_token, current_streak, best_streak, last_active_date, (xmax = 0) AS is_new, handle, name`;
         let streakOut = Number(row.current_streak) || 0, bestOut = Number(row.best_streak) || 0;
         // Adopt this device's guest daily-challenge history into the account, so days played
         // before signing in keep counting toward the streak/calendar. Days the account already
@@ -606,7 +691,16 @@ module.exports = async (req, res) => {
             }
           } catch (e) {}
         }
-        return res.status(200).json({ ok: true, sub: profile.sub, email: profile.email, name: profile.name, picture: profile.picture, sessionToken: row.session_token,
+        // Unified identity: every signed-in player gets a unique @handle seeded from the
+        // name they already play under. First come, first served; collisions get a number.
+        // Changing the handle later (profile Settings) changes the public name with it.
+        let handleOut = row.handle || null;
+        if (!handleOut) {
+          try { handleOut = await autoClaimHandle(profile.sub, row.name || profile.name); } catch (e) {}
+        }
+        return res.status(200).json({ ok: true, sub: profile.sub, email: profile.email,
+          name: handleOut || row.name || profile.name, handle: handleOut,
+          picture: profile.picture, sessionToken: row.session_token,
           streak: streakOut, bestStreak: bestOut, isNew: row.is_new === true });
       }
 
@@ -783,6 +877,332 @@ module.exports = async (req, res) => {
         }
         await sql`UPDATE users SET cosmetics = ${JSON.stringify(merged)}::jsonb WHERE google_sub = ${body.sub}`;
         return res.status(200).json({ ok: true, cosmetics: merged });
+      }
+
+      // ===================================================================
+      // Social: friends, profiles, and friendly 1v1 challenges. Every action
+      // resolves the caller via pvpKey() (signed-in user OR device guest) —
+      // the same trust model as the 1v1 Elo actions.
+      // ===================================================================
+
+      // The friends panel's one-stop fetch: my handle, friends, pending requests both ways, and
+      // live challenges. Also bumps last_seen, so polling this IS the online-status heartbeat.
+      if (action === 'friendList') {
+        const key = await pvpKey(body);
+        if (!key) return res.status(401).json({ ok: false, error: 'Not signed in' });
+        try { await sql`UPDATE users SET last_seen = now() WHERE google_sub = ${key}`; } catch (e) {}
+        const [me] = await sql`SELECT handle, avatar FROM users WHERE google_sub = ${key}`;
+        try { await sql`UPDATE challenges SET status = 'expired' WHERE status = 'pending' AND created_at < now() - interval '24 hours'`; } catch (e) {}
+        const rows = await sql`
+          SELECT f.a, f.b, f.status, f.requested_by, f.a_wins, f.b_wins,
+                 u.name, u.picture, u.avatar, u.xp, u.pvp_elo, u.pvp_wins, u.pvp_losses, u.last_seen
+          FROM friends f
+          JOIN users u ON u.google_sub = (CASE WHEN f.a = ${key} THEN f.b ELSE f.a END)
+          WHERE f.a = ${key} OR f.b = ${key}
+          ORDER BY u.last_seen DESC NULLS LAST`;
+        const friendsOut = [], requestsIn = [], requestsOut = [];
+        for (const r of rows) {
+          const other = r.a === key ? r.b : r.a;
+          const item = {
+            key: other, personId: personIdOf(other), name: r.name || 'Player', picture: r.picture || '',
+            avatar: r.avatar || null,
+            xp: Number(r.xp) || 0, elo: r.pvp_elo, wins: r.pvp_wins, losses: r.pvp_losses,
+            online: isOnline(r.last_seen),
+            myWins: r.a === key ? r.a_wins : r.b_wins,
+            theirWins: r.a === key ? r.b_wins : r.a_wins,
+          };
+          if (r.status === 'accepted') friendsOut.push(item);
+          else if (r.requested_by === key) requestsOut.push(item);
+          else requestsIn.push(item);
+        }
+        const chals = await sql`SELECT c.id, c.from_key, c.to_key, c.sport, c.created_at,
+            fu.name AS from_name, tu.name AS to_name
+          FROM challenges c
+          LEFT JOIN users fu ON fu.google_sub = c.from_key
+          LEFT JOIN users tu ON tu.google_sub = c.to_key
+          WHERE (c.to_key = ${key} OR c.from_key = ${key}) AND c.status = 'pending'
+          ORDER BY c.created_at DESC LIMIT 20`;
+        const challenges = chals.map(c => ({
+          id: c.id, sport: c.sport, incoming: c.to_key === key,
+          fromKey: c.from_key, fromPersonId: personIdOf(c.from_key),
+          fromName: c.from_name || 'Player', toName: c.to_name || 'Player', at: c.created_at,
+        }));
+        return res.status(200).json({ ok: true,
+          myHandle: (me && me.handle) || null,
+          myAvatar: (me && me.avatar) || null,
+          guest: key.indexOf('guest:') === 0,
+          friends: friendsOut, requestsIn, requestsOut, challenges });
+      }
+
+      // Equip an avatar (id from the social.js registry; unlock state is trust-the-client,
+      // same as XP/cosmetics). Empty/null clears back to the default initial.
+      if (action === 'avatarSet') {
+        const key = await pvpKey(body);
+        if (!key) return res.status(401).json({ ok: false, error: 'Not signed in' });
+        const av = String(body.avatar || '').trim();
+        if (av && !/^[a-z0-9_]{1,32}$/.test(av)) return res.status(400).json({ ok: false, error: 'bad avatar id' });
+        await sql`UPDATE users SET avatar = ${av || null} WHERE google_sub = ${key}`;
+        return res.status(200).json({ ok: true, avatar: av || null });
+      }
+
+      // Claim (or change) your unique handle — signed-in accounts only, so a handle can never
+      // be stranded in an abandoned browser profile. Changing frees the old one automatically.
+      if (action === 'handleClaim') {
+        if (!(await authed(body.sub, body.sessionToken))) return res.status(401).json({ ok: false, error: 'Sign in with Google to claim a handle' });
+        const h = String(body.handle || '').trim();
+        if (!HANDLE_RE.test(h)) return res.status(400).json({ ok: false, error: 'Handles are 3–20 letters, numbers, or _' });
+        try {
+          await sql`UPDATE users SET handle = ${h}, name = ${h} WHERE google_sub = ${body.sub}`;
+        } catch (e) {
+          return res.status(409).json({ ok: false, error: 'That handle is taken' });   // unique-index hit
+        }
+        return res.status(200).json({ ok: true, handle: h });
+      }
+
+      // Live availability check while typing (no auth — it only says taken/free).
+      if (action === 'handleCheck') {
+        const h = String(body.handle || '').trim();
+        if (!HANDLE_RE.test(h)) return res.status(200).json({ ok: true, valid: false, available: false });
+        const [row] = await sql`SELECT google_sub FROM users WHERE lower(handle) = ${h.toLowerCase()}`;
+        const mine = !!(row && body.sub && row.google_sub === body.sub);
+        return res.status(200).json({ ok: true, valid: true, available: !row || mine });
+      }
+
+      // Search claimed handles (exact match ranked first, then prefix matches). Each result
+      // carries its relationship to the caller so the UI can show Add / Requested / Friends.
+      if (action === 'friendSearch') {
+        const key = await pvpKey(body);
+        if (!key) return res.status(401).json({ ok: false, error: 'Not signed in' });
+        const q = String(body.q || '').trim();
+        if (!/^[A-Za-z0-9_]{2,20}$/.test(q)) return res.status(200).json({ ok: true, results: [] });
+        const like = q.toLowerCase().replace(/_/g, '\\_') + '%';   // _ is a LIKE wildcard — escape it
+        const rows = await sql`SELECT google_sub, handle, picture, avatar, xp, pvp_elo FROM users
+          WHERE handle IS NOT NULL AND lower(handle) LIKE ${like} AND google_sub <> ${key}
+          ORDER BY (lower(handle) = ${q.toLowerCase()}) DESC, lower(handle) LIMIT 6`;
+        const results = [];
+        for (const r of rows) {
+          const [a, b] = pairOf(key, r.google_sub);
+          const [fr] = await sql`SELECT status, requested_by FROM friends WHERE a = ${a} AND b = ${b}`;
+          results.push({ key: r.google_sub, handle: r.handle, picture: r.picture || '',
+            avatar: r.avatar || null,
+            xp: Number(r.xp) || 0, elo: r.pvp_elo,
+            rel: fr ? (fr.status === 'accepted' ? 'friends' : (fr.requested_by === key ? 'pending' : 'incoming')) : 'none' });
+        }
+        return res.status(200).json({ ok: true, results });
+      }
+
+      // Send a friend request to a player found via friendSearch. If they already asked US,
+      // this accepts instead.
+      if (action === 'friendRequest') {
+        const key = await pvpKey(body);
+        if (!key) return res.status(401).json({ ok: false, error: 'Not signed in' });
+        const other = keyOf(body.toKey);
+        if (!other) return res.status(400).json({ ok: false, error: 'missing toKey' });
+        const [target] = await sql`SELECT google_sub, COALESCE(handle, name) AS name FROM users WHERE google_sub = ${other}`;
+        if (!target) return res.status(404).json({ ok: false, error: 'Player not found' });
+        if (other === key) return res.status(400).json({ ok: false, error: "That's you" });
+        const [a, b] = pairOf(key, other);
+        const [existing] = await sql`SELECT status, requested_by FROM friends WHERE a = ${a} AND b = ${b}`;
+        if (existing) {
+          if (existing.status !== 'accepted' && existing.requested_by !== key) {
+            await sql`UPDATE friends SET status = 'accepted', accepted_at = now() WHERE a = ${a} AND b = ${b}`;
+            return res.status(200).json({ ok: true, status: 'accepted', name: target.name || 'Player' });
+          }
+          return res.status(200).json({ ok: true, status: existing.status, name: target.name || 'Player' });
+        }
+        const [{ count: n }] = await sql`SELECT count(*)::int AS count FROM friends WHERE a = ${key} OR b = ${key}`;
+        if (n >= 200) return res.status(400).json({ ok: false, error: 'Friend list full (200 max)' });
+        await sql`INSERT INTO friends (a, b, status, requested_by) VALUES (${a}, ${b}, 'pending', ${key}) ON CONFLICT DO NOTHING`;
+        return res.status(200).json({ ok: true, status: 'pending', name: target.name || 'Player' });
+      }
+
+      // Accept (accept:true) or decline an incoming request; decline also lets the
+      // original sender cancel their own outgoing request.
+      if (action === 'friendRespond') {
+        const key = await pvpKey(body);
+        if (!key) return res.status(401).json({ ok: false, error: 'Not signed in' });
+        const other = keyOf(body.key);
+        if (!other || other === key) return res.status(400).json({ ok: false, error: 'missing key' });
+        const [a, b] = pairOf(key, other);
+        if (body.accept) {
+          await sql`UPDATE friends SET status = 'accepted', accepted_at = now()
+            WHERE a = ${a} AND b = ${b} AND status = 'pending' AND requested_by = ${other}`;
+        } else {
+          await sql`DELETE FROM friends WHERE a = ${a} AND b = ${b} AND status = 'pending'`;
+        }
+        return res.status(200).json({ ok: true });
+      }
+
+      if (action === 'friendRemove') {
+        const key = await pvpKey(body);
+        if (!key) return res.status(401).json({ ok: false, error: 'Not signed in' });
+        const other = keyOf(body.key);
+        if (!other || other === key) return res.status(400).json({ ok: false, error: 'missing key' });
+        const [a, b] = pairOf(key, other);
+        await sql`DELETE FROM friends WHERE a = ${a} AND b = ${b}`;
+        try { await sql`UPDATE challenges SET status = 'expired' WHERE status = 'pending'
+          AND ((from_key = ${key} AND to_key = ${other}) OR (from_key = ${other} AND to_key = ${key}))`; } catch (e) {}
+        return res.status(200).json({ ok: true });
+      }
+
+      // A player's profile (tabbed in the UI): identity + per-sport 1v1 records, top build per
+      // game, recent Hall of Fame saves, builds summary, THEIR friends list (with each friend's
+      // relationship to the CALLER, so the UI can offer Add/Accept), progress numbers, and
+      // head-to-head. Friends-only (except your own), enforced server-side.
+      if (action === 'profile') {
+        const key = await pvpKey(body);
+        if (!key) return res.status(401).json({ ok: false, error: 'Not signed in' });
+        const other = keyOf(body.key) || key;
+        if (other !== key && !(await areFriends(key, other))) {
+          return res.status(403).json({ ok: false, error: 'Friends only' });
+        }
+        const [u] = await sql`SELECT name, handle, picture, avatar, xp, created_at, last_seen,
+            achievements, current_streak, best_streak,
+            pvp_elo, pvp_wins, pvp_losses, pvp_streak,
+            pvp_elo_hoops, pvp_wins_hoops, pvp_losses_hoops, pvp_streak_hoops,
+            pvp_elo_soccer, pvp_wins_soccer, pvp_losses_soccer, pvp_streak_soccer
+          FROM users WHERE google_sub = ${other}`;
+        if (!u) return res.status(404).json({ ok: false, error: 'Player not found' });
+        // Builds only exist for signed-in players (Hall of Fame saves are account-only).
+        let top = [], recent = [], buildsByGame = [];
+        if (other.indexOf('guest:') !== 0) {
+          try {
+            top = await sql`SELECT DISTINCT ON (game) game, name, ovr, created_at FROM saves
+              WHERE google_sub = ${other} ORDER BY game, ovr DESC, created_at DESC`;
+            recent = await sql`SELECT game, name, ovr, created_at FROM saves
+              WHERE google_sub = ${other} ORDER BY created_at DESC LIMIT 6`;
+            buildsByGame = await sql`SELECT game, count(*)::int AS count, max(ovr)::int AS best
+              FROM saves WHERE google_sub = ${other} GROUP BY game ORDER BY count DESC`;
+          } catch (e) {}
+        }
+        // The subject's friends, each tagged with how they relate to the CALLER
+        // (you / friends / pending / incoming / none) — lets you add friends-of-friends.
+        let friendsOut = [];
+        try {
+          const frRows = await sql`SELECT u.google_sub AS fkey, u.name, u.picture, u.avatar, u.xp, u.pvp_elo, u.last_seen
+            FROM friends f JOIN users u ON u.google_sub = (CASE WHEN f.a = ${other} THEN f.b ELSE f.a END)
+            WHERE (f.a = ${other} OR f.b = ${other}) AND f.status = 'accepted'
+            ORDER BY u.last_seen DESC NULLS LAST LIMIT 50`;
+          const mine = await sql`SELECT a, b, status, requested_by FROM friends WHERE a = ${key} OR b = ${key}`;
+          const relOf = fk => {
+            if (fk === key) return 'you';
+            const [a, b] = pairOf(key, fk);
+            const m = mine.find(r => r.a === a && r.b === b);
+            if (!m) return 'none';
+            if (m.status === 'accepted') return 'friends';
+            return m.requested_by === key ? 'pending' : 'incoming';
+          };
+          friendsOut = frRows.map(r => ({ key: r.fkey, name: r.name || 'Player', picture: r.picture || '',
+            avatar: r.avatar || null,
+            xp: Number(r.xp) || 0, elo: r.pvp_elo, online: isOnline(r.last_seen), rel: relOf(r.fkey) }));
+        } catch (e) {}
+        let h2h = null;
+        if (other !== key) {
+          const [a, b] = pairOf(key, other);
+          const [fr] = await sql`SELECT a_wins, b_wins FROM friends WHERE a = ${a} AND b = ${b}`;
+          if (fr) h2h = { mine: a === key ? fr.a_wins : fr.b_wins, theirs: a === key ? fr.b_wins : fr.a_wins };
+        }
+        const achCount = (u.achievements && typeof u.achievements === 'object') ? Object.keys(u.achievements).length : 0;
+        return res.status(200).json({ ok: true, profile: {
+          key: other, personId: personIdOf(other), name: u.name || 'Player', handle: u.handle || null,
+          picture: u.picture || '', avatar: u.avatar || null, self: other === key,
+          xp: Number(u.xp) || 0, memberSince: u.created_at, online: isOnline(u.last_seen),
+          guest: other.indexOf('guest:') === 0,
+          baseball: { elo: u.pvp_elo, wins: u.pvp_wins, losses: u.pvp_losses, streak: u.pvp_streak },
+          hoops: { elo: u.pvp_elo_hoops, wins: u.pvp_wins_hoops, losses: u.pvp_losses_hoops, streak: u.pvp_streak_hoops },
+          soccer: { elo: u.pvp_elo_soccer, wins: u.pvp_wins_soccer, losses: u.pvp_losses_soccer, streak: u.pvp_streak_soccer },
+          topBuilds: top, recentBuilds: recent, h2h,
+          friends: friendsOut,
+          stats: {
+            achievements: achCount,
+            dailyStreak: u.current_streak || 0, bestDailyStreak: u.best_streak || 0,
+            builds: buildsByGame, buildsTotal: buildsByGame.reduce((s, b) => s + b.count, 0),
+          },
+        }});
+      }
+
+      // Challenge a friend to a friendly 1v1 in a sport. Pending for 24h; one live
+      // challenge per direction (a re-challenge replaces the old one).
+      if (action === 'challengeCreate') {
+        const key = await pvpKey(body);
+        if (!key) return res.status(401).json({ ok: false, error: 'Not signed in' });
+        const other = keyOf(body.toKey);
+        if (!other || other === key) return res.status(400).json({ ok: false, error: 'missing toKey' });
+        const sport = (body.sport === 'hoops' || body.sport === 'soccer') ? body.sport : 'baseball';
+        if (!(await areFriends(key, other))) return res.status(403).json({ ok: false, error: 'Friends only' });
+        await sql`UPDATE challenges SET status = 'expired', responded_at = now()
+          WHERE status = 'pending' AND from_key = ${key} AND to_key = ${other}`;
+        const id = 'chal_' + crypto.randomBytes(8).toString('hex');
+        await sql`INSERT INTO challenges (id, from_key, to_key, sport) VALUES (${id}, ${key}, ${other}, ${sport})`;
+        return res.status(200).json({ ok: true, id, sport });
+      }
+
+      // Accept/decline an incoming challenge (accepting returns where to go), or cancel your own.
+      if (action === 'challengeRespond') {
+        const key = await pvpKey(body);
+        if (!key) return res.status(401).json({ ok: false, error: 'Not signed in' });
+        const id = String(body.id || '').slice(0, 40);
+        const [c] = await sql`SELECT id, from_key, to_key, sport, status FROM challenges WHERE id = ${id}`;
+        if (!c) return res.status(404).json({ ok: false, error: 'Challenge not found' });
+        if (c.from_key !== key && c.to_key !== key) return res.status(403).json({ ok: false, error: 'Not your challenge' });
+        if (c.status !== 'pending') return res.status(200).json({ ok: true, status: c.status });
+        if (c.from_key === key) {
+          await sql`UPDATE challenges SET status = 'expired', responded_at = now() WHERE id = ${id}`;
+          return res.status(200).json({ ok: true, status: 'expired' });
+        }
+        const status = body.accept ? 'accepted' : 'declined';
+        await sql`UPDATE challenges SET status = ${status}, responded_at = now() WHERE id = ${id}`;
+        const [fu] = await sql`SELECT name FROM users WHERE google_sub = ${c.from_key}`;
+        return res.status(200).json({ ok: true, status, sport: c.sport,
+          fromPersonId: personIdOf(c.from_key), fromName: (fu && fu.name) || 'Player' });
+      }
+
+      // A finished FRIENDLY 1v1 (no Elo). Only the winner's report counts, deduped per match
+      // in the shared pvp_results table ('f:' namespace), and only moves head-to-head between
+      // accepted friends — random challenge-link matches are ignored.
+      if (action === 'friendlyResult') {
+        const key = await pvpKey(body);
+        if (!key) return res.status(401).json({ ok: false, error: 'Not signed in' });
+        if (!body.won) return res.status(200).json({ ok: true, counted: false });
+        const matchId = String(body.matchId || '').slice(0, 80);
+        const other = keyOf(body.oppKey);
+        if (!matchId || !other || other === key) return res.status(200).json({ ok: true, counted: false });
+        const [a, b] = pairOf(key, other);
+        const [fr] = await sql`SELECT status FROM friends WHERE a = ${a} AND b = ${b} AND status = 'accepted'`;
+        if (!fr) return res.status(200).json({ ok: true, counted: false });
+        const ins = await sql`INSERT INTO pvp_results (match_id, google_sub) VALUES (${'f:' + matchId}, 'h2h')
+          ON CONFLICT DO NOTHING RETURNING match_id`;
+        if (!ins.length) return res.status(200).json({ ok: true, counted: false });
+        if (a === key) await sql`UPDATE friends SET a_wins = a_wins + 1 WHERE a = ${a} AND b = ${b}`;
+        else await sql`UPDATE friends SET b_wins = b_wins + 1 WHERE a = ${a} AND b = ${b}`;
+        return res.status(200).json({ ok: true, counted: true });
+      }
+
+      // One-time migration: seed a unique @handle for every existing signed-in account from
+      // its current public name — most-active first, so the real "Chu" beats a dead account
+      // with the same name. Token-gated like achBackfill; dryRun by default; run repeatedly
+      // (each apply pass shrinks the handle-less pool) until claimed comes back 0.
+      if (action === 'handleBackfill') {
+        if (!body.token || body.token !== STATS_TOKEN) return res.status(403).json({ ok: false, error: 'forbidden' });
+        const dryRun = body.dryRun !== false;
+        const lim = Math.max(1, Math.min(500, parseInt(body.limit, 10) || 200));
+        const rows = await sql`SELECT google_sub, name, xp FROM users
+          WHERE handle IS NULL AND google_sub NOT LIKE 'guest:%' AND name IS NOT NULL
+          ORDER BY xp DESC, created_at ASC LIMIT ${lim}`;
+        let claimed = 0, skipped = 0;
+        const sample = [];
+        for (const r of rows) {
+          if (dryRun) {
+            const base = handleFrom(r.name);
+            if (base) { claimed++; if (sample.length < 20) sample.push(`${r.name} -> @${base}${'?'}`); }
+            else { skipped++; if (sample.length < 20) sample.push(`${r.name} -> (skipped: no usable handle)`); }
+            continue;
+          }
+          const h = await autoClaimHandle(r.google_sub, r.name);
+          if (h) { claimed++; if (sample.length < 20) sample.push(`${r.name} -> @${h}`); }
+          else skipped++;
+        }
+        return res.status(200).json({ ok: true, dryRun, scanned: rows.length, claimed, skipped, sample });
       }
 
       if (action === 'pvpStats') {

@@ -81,10 +81,13 @@
   .gnav-bar { pointer-events:auto; display:flex; width:100%; max-width:520px; border-radius:16px;
     border:1px solid rgba(120,160,210,.22); background:linear-gradient(180deg,rgba(19,29,45,.94),rgba(8,13,22,.97));
     backdrop-filter:blur(10px); box-shadow:0 -6px 30px rgba(0,0,0,.45), 0 10px 34px rgba(0,0,0,.5); overflow:hidden; }
-  .gnav-tab { flex:1; display:flex; flex-direction:column; align-items:center; gap:2px; padding:9px 2px 8px;
+  .gnav-tab { flex:1; position:relative; display:flex; flex-direction:column; align-items:center; gap:2px; padding:9px 2px 8px;
     font-family:'Oswald',sans-serif; font-size:9.5px; font-weight:600; letter-spacing:.8px; text-transform:uppercase;
     color:#7e8da3; text-decoration:none; background:none; border:none; cursor:pointer; line-height:1; min-width:0; }
   .gnav-tab i { font-style:normal; font-size:17px; line-height:1; }
+  /* pending friend requests/challenges count — painted by social.js into any [data-social-badge] */
+  .gnav-tab [data-social-badge] { position:absolute; top:3px; left:calc(50% + 5px); min-width:15px; padding:1px 4px;
+    border-radius:9px; background:#ff4d5e; color:#fff; font-size:9.5px; font-weight:700; text-align:center; line-height:1.3; }
   .gnav-tab.on { color:#eaf2fb; }
   .gnav-tab.on i { filter:drop-shadow(0 0 8px rgba(255,122,24,.8)); }
   .gnav-tab:hover { color:#eaf2fb; }
@@ -263,6 +266,7 @@
         ? `<a class="gnav-tab${onVersus ? ' on' : ''}" href="${vsPath}"><i>⚔️</i>1v1</a>`
         : `<button class="gnav-tab" data-nav="vs-pick"><i>⚔️</i>1v1</button>`}
       <a class="gnav-tab${onRanks ? ' on' : ''}" data-nav="ranks" href="${A.path}#leaderboard"><i>🏆</i>Ranks</a>
+      <button class="gnav-tab" data-nav="profile"><i>👤</i>Profile<span data-social-badge></span></button>
       <button class="gnav-tab" data-nav="more"><i>☰</i>More</button>
     </nav>`;
     document.body.appendChild(nav);
@@ -283,6 +287,10 @@
     nav.querySelector('[data-nav="more"]').addEventListener('click', () => {
       const m = document.getElementById('menuBtn');
       if (m) m.click();
+    });
+    // your own tabbed profile (social.js); falls back to the Friends panel if profiles are down
+    nav.querySelector('[data-nav="profile"]').addEventListener('click', () => {
+      if (window.Social) Social.openProfile(null);
     });
   }
 
