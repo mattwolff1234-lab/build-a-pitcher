@@ -2844,8 +2844,9 @@ function simulateCareer(filled, finalOvr, draftTeamAb, choices, salt) {
     const seasonOvr = clamp(finalOvr * ageFactor + bell(rng, 2.2), 35, 99);
 
     const contact = clamp(vals.contact * ageFactor + bell(rng, 3), 20, 99);
-    // over-99 power cards (Judge-class) keep their headroom; every ≤99 build clamps at 99 as before
-    const power = clamp(vals.power * ageFactor + bell(rng, 3), 20, Math.max(99, vals.power));
+    // over-99 power cards (Judge-class) keep HALF their headroom (114 → seasonal cap ~106.5);
+    // every ≤99 build clamps at 99 as before. Half-rate keeps the top-end HR gain ~10%.
+    const power = clamp(vals.power * ageFactor + bell(rng, 3), 20, 99 + Math.max(0, vals.power - 99) * 0.5);
     const vision = clamp(vals.plate_vision * ageFactor + bell(rng, 3), 20, 99);
     const disc = clamp(vals.plate_discipline * ageFactor + bell(rng, 3), 20, 99);
     const clutch = clamp(vals.batting_clutch * ageFactor + bell(rng, 4) + mods.clutch, 20, 99);
@@ -2874,10 +2875,12 @@ function simulateCareer(filled, finalOvr, draftTeamAb, choices, salt) {
     const ab = Math.max(1, pa - bb);
     const avg = clamp(0.214 + contact * 0.0009 + (vision - 50) * 0.0003 + bell(rng, 0.013), 0.195, 0.350);
     const h = Math.round(ab * avg);
-    // beyond seasonal power 99 the HR rate gains slope AND variance · that's where 60/70-HR
-    // record chases live. ≤99 builds: superPow = 0, formula identical to the old one bar the cap.
+    // beyond seasonal power 99 the HR rate gains a touch of extra variance (peak-season pop),
+    // tuned so a maxed build lands ~10-12% above the pre-superPow baseline (career ~680 avg,
+    // best seasons ~50 max · NOT the 750/78 the first cut produced). ≤99 builds: superPow = 0,
+    // formula identical to the classic one bar the cap.
     const superPow = Math.max(0, power - 99);
-    const hrRate = clamp((power - 32) * 0.00072 + superPow * 0.0004 + bell(rng, 0.0035 + superPow * 0.002), 0.004, 0.115);
+    const hrRate = clamp((power - 32) * 0.00072 + superPow * 0.00015 + bell(rng, 0.0035 + superPow * 0.0008), 0.004, 0.078);
     const hr = Math.round(pa * hrRate);
     const iso = clamp((power - 25) * 0.0036 + bell(rng, 0.02), 0.05, 0.37);
     const k = Math.round(pa * kRate);
