@@ -905,9 +905,9 @@ const KEEPER_SLOTS = [
   { key:'clutch', label:'Clutch', part:'Heart', mask:'kp-seg-clutch.png', ax:52, ay:25, lx:14, ly:7 },
   { key:'frame', label:'Frame', part:'Height', mask:'kp-seg-frame.png', ax:51, ay:54, lx:50, ly:72, type:'height' },
 ];
-const WEIGHTS_S = { finishing:1.2, pace:1.2, dribbling:1.1, power:1.1, passing:1.1, clutch:1.1, heading:1.0, physical:1.0, frame:0.9 };
+const WEIGHTS_S = { finishing:1.2, pace:1.2, dribbling:1.1, power:1.1, passing:1.1, clutch:1.1, heading:1.0, physical:1.0, frame:0.7 };
 const WEIGHTS_K = { reflexes:1.2, diving:1.2, positioning:1.1, handling:1.1, clutch:1.1, frame:1.1, command:1.0, distribution:1.0, agility:1.0 };
-function heightToRatingS(inches){ return inches ? clamp(Math.round(48+(inches-64)*3.4),1,125) : 65; }
+function heightToRatingS(inches){ return inches ? (inches > 77 ? Math.min(99, 95+(inches-77)*2) : clamp(Math.round(95-(77-inches)*1.5),1,125)) : 65; }
 function heightToRatingK(inches){ return inches ? clamp(Math.round(38+(inches-64)*4.2),1,125) : 70; }
 
 const ROLE = {
