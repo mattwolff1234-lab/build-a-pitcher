@@ -2843,7 +2843,8 @@ function simulateCareer(filled, finalOvr, draftTeamAb, choices, salt) {
     const seasonOvr = clamp(finalOvr * ageFactor + bell(rng, 2.2), 35, 99);
 
     const contact = clamp(vals.contact * ageFactor + bell(rng, 3), 20, 99);
-    const power = clamp(vals.power * ageFactor + bell(rng, 3), 20, 99);
+    // over-99 power cards (Judge-class) keep their headroom; every ≤99 build clamps at 99 as before
+    const power = clamp(vals.power * ageFactor + bell(rng, 3), 20, Math.max(99, vals.power));
     const vision = clamp(vals.plate_vision * ageFactor + bell(rng, 3), 20, 99);
     const disc = clamp(vals.plate_discipline * ageFactor + bell(rng, 3), 20, 99);
     const clutch = clamp(vals.batting_clutch * ageFactor + bell(rng, 4) + mods.clutch, 20, 99);
@@ -2872,7 +2873,10 @@ function simulateCareer(filled, finalOvr, draftTeamAb, choices, salt) {
     const ab = Math.max(1, pa - bb);
     const avg = clamp(0.214 + contact * 0.0009 + (vision - 50) * 0.0003 + bell(rng, 0.013), 0.195, 0.350);
     const h = Math.round(ab * avg);
-    const hrRate = clamp((power - 32) * 0.00072 + bell(rng, 0.0035), 0.004, 0.062);
+    // beyond seasonal power 99 the HR rate gains slope AND variance — that's where 60/70-HR
+    // record chases live. ≤99 builds: superPow = 0, formula identical to the old one bar the cap.
+    const superPow = Math.max(0, power - 99);
+    const hrRate = clamp((power - 32) * 0.00072 + superPow * 0.0004 + bell(rng, 0.0035 + superPow * 0.002), 0.004, 0.115);
     const hr = Math.round(pa * hrRate);
     const iso = clamp((power - 25) * 0.0036 + bell(rng, 0.02), 0.05, 0.37);
     const k = Math.round(pa * kRate);
@@ -3225,7 +3229,7 @@ function _doCareerSim() {
   $('tkK').textContent = '0'; $('tkW').textContent = '0'; $('tkWar').textContent = '0.0'; $('tkMoney').textContent = '$0';
 
   let runH = 0, runHR = 0, runWar = 0, runMoney = 0;
-  const hMiles = [1000, 2000, 3000], hrMiles = [100, 200, 300, 400, 500];
+  const hMiles = [1000, 2000, 3000], hrMiles = [100, 200, 300, 400, 500, 600, 700, 800];
   let delay = clamp(3400 / seasons.length, 130, 320);
   let careerSkip = false;
   const skipBtn = $('skipCareerBtn');
@@ -3280,6 +3284,7 @@ function _doCareerSim() {
     let milestone = false;
     for (const m of hMiles) if (beforeH < m && runH >= m) { heads.push({ text: `${P} collects his <b>${m.toLocaleString()}th career hit</b>.`, big: true }); flashTk('tkK'); milestone = true; }
     for (const m of hrMiles) if (beforeHR < m && runHR >= m) { heads.push({ text: `${P} launches career home run <b>#${m}</b>.`, big: true }); flashTk('tkW'); milestone = true; }
+    if (beforeHR < 763 && runHR >= 763) { heads.push({ text: `🚨 ${P} hits career home run <b>#763 — passing Barry Bonds as the all-time home run king!</b>`, big: true }); flashTk('tkW'); milestone = true; }
     heads.forEach(h => addNews(news, h));
 
     if (!careerSkip) {   // skipping: no per-season chatter, the verdict fanfare still plays
@@ -3297,7 +3302,9 @@ function _doCareerSim() {
 // act as the trigger for the special "Hall of Compilers" tier.
 function milestoneBonus(t) {
   let pts = 0; const clubs = [];
-  if (t.hr >= 600)      { pts += 8; clubs.push('600 HR'); }
+  if (t.hr >= 763)      { pts += 10; clubs.push('All-Time HR King'); }
+  else if (t.hr >= 700) { pts += 9; clubs.push('700 HR'); }
+  else if (t.hr >= 600) { pts += 8; clubs.push('600 HR'); }
   else if (t.hr >= 500) { pts += 6; clubs.push('500 HR'); }
   else if (t.hr >= 400) { pts += 4; clubs.push('400 HR'); }
   else if (t.hr >= 300) { pts += 2; }

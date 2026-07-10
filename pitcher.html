@@ -2911,6 +2911,10 @@ function simulateCareer(filled, finalOvr, draftTeamAb, choices, salt) {
     const clutch = clamp(vals.pitching_clutch * ageFactor + bell(rng, 4) + mods.clutch, 20, 99);
     const stamina = clamp(vals.stamina * ageFactor + bell(rng, 3), 20, 99);
     const frame = vals.frame;
+    // God-tier top end: these only switch on above a 95 BUILD rating (mid builds get
+    // exactly 0), so a maxed K+Stamina ace can chase Nolan Ryan instead of plateauing.
+    const eliteK = Math.max(0, vals.k_per_bf - 94);
+    const eliteSta = Math.max(0, vals.stamina - 94);
 
     const injuryRisk = clamp(0.12 - (stamina - 50) * 0.0018 - (frame - 50) * 0.0014 + Math.max(0, age - 31) * 0.018, 0.035, 0.34);
     const hurt = rng() < injuryRisk;
@@ -2928,20 +2932,20 @@ function simulateCareer(filled, finalOvr, draftTeamAb, choices, salt) {
 
     // attribute linkages - cranked so the extremes really pop
     // Strikeout rate is tightly tied to the Strikeout rating: ~97 => ~13.5 K/9 (1.5 K per inning).
-    const k9 = clamp(-0.5 + strikeout * 0.145 + (velocity - 50) * 0.008 + (breakVal - 50) * 0.008, 2.5, 16.5);
+    const k9 = clamp(-0.5 + strikeout * 0.145 + (velocity - 50) * 0.008 + (breakVal - 50) * 0.008 + eliteK * 0.1, 2.5, 17.5);
     const bb9 = clamp(7.4 - command * 0.062 + bell(rng, 0.18), 0.9, 7.0);
     const hr9 = clamp(2.5 - groundBall * 0.019 + bell(rng, 0.09), 0.4, 2.45);
     const babip = clamp(0.308 - (defense - 50) * 0.0009 - (breakVal - 50) * 0.0006 - (groundBall - 50) * 0.0005 + bell(rng, 0.01), 0.24, 0.35);
     // Innings per year scale hard with Stamina (how deep you go + how many starts).
-    const ipPerStart = clamp(3.1 + stamina * 0.038 + frame * 0.008, 3.6, 7.6);
+    const ipPerStart = clamp(3.1 + stamina * 0.038 + frame * 0.008, 3.6, 7.6) + eliteSta * 0.02;
     const starts = role === 'Starter'
-      ? Math.round(clamp(26 + (stamina - 55) * 0.11 + bell(rng, 2.2), 12, 35) * injuryPenalty * volOnce)
+      ? Math.round(clamp(26 + (stamina - 55) * 0.11 + eliteSta * 0.12 + bell(rng, 2.2), 12, 36) * injuryPenalty * volOnce)
       : 0;
     const appearances = role === 'Starter'
       ? starts
       : Math.round(clamp(56 + (stamina - 50) * 0.32 + bell(rng, 5), 30, 80) * injuryPenalty * volOnce);
     const ip = role === 'Starter'
-      ? clamp(starts * ipPerStart + bell(rng, 11), 60, 250)
+      ? clamp(starts * ipPerStart + bell(rng, 11), 60, 250 + eliteSta * 2)
       : clamp(appearances * randRange(rng, 0.9, 1.25), 30, 100);
     const k = Math.round(ip * k9 / 9);
     const bb = Math.round(ip * bb9 / 9);
@@ -3363,7 +3367,7 @@ function _doCareerSim() {
   if ($('careerArchetype')) $('careerArchetype').textContent = state.archetype ? state.archetype.name : '';
 
   let runK = 0, runW = 0, runWar = 0, runMoney = 0, runSv = 0;
-  const kMiles = [1000, 2000, 3000, 4000, 5000], wMiles = [100, 200, 300], svMiles = [100, 200, 300, 400, 500, 600];
+  const kMiles = [1000, 2000, 3000, 4000, 5000, 6000], wMiles = [100, 200, 300], svMiles = [100, 200, 300, 400, 500, 600];
   const closerRun = seasons.length > 0 && seasons[0].role !== 'Starter';
   $('tkW').nextElementSibling.textContent = closerRun ? 'Saves' : 'Wins';
   let delay = clamp(3400 / seasons.length, 130, 320);
@@ -3419,6 +3423,7 @@ function _doCareerSim() {
     const heads = seasonHeadlines(s, i - 1, seasons.length, P, T, !career.pendingDecision);
     let milestone = false;
     for (const m of kMiles) if (beforeK < m && runK >= m) { heads.push({ text: `${P} reaches <b>${m.toLocaleString()} career strikeouts</b>.`, big: true }); flashTk('tkK'); milestone = true; }
+    if (beforeK < 5714 && runK >= 5714) { heads.push({ text: `🚨 ${P} passes <b>Nolan Ryan's 5,714</b> — the most strikeouts in baseball history!`, big: true }); flashTk('tkK'); milestone = true; }
     if (closerRun) for (const m of svMiles) { if (beforeSv < m && runSv >= m) { heads.push({ text: `${P} locks down career save <b>#${m}</b>.`, big: true }); flashTk('tkW'); milestone = true; } }
     else for (const m of wMiles) if (beforeW < m && runW >= m) { heads.push({ text: `${P} earns career win <b>#${m}</b>.`, big: true }); flashTk('tkW'); milestone = true; }
     heads.forEach(h => addNews(news, h));
