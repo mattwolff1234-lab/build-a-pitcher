@@ -214,6 +214,15 @@ module.exports = async (req, res) => {
         const key = playerKey(body);
         if (!key) return res.status(400).json({ ok: false, error: 'No player key' });
         const game = gameOf(body.game);
+        // Rotation guard: pitcher/batter and striker/keeper each alternate ONE daily per date
+        // (same parity formula as the clients); hoops runs daily. The clients redirect on
+        // off-days, so only stale pages and direct POSTs land here — reject them.
+        const rd = dailyDate(body.date);
+        if (rd && (game === 'pitcher' || game === 'batter' || game === 'striker' || game === 'keeper')) {
+          const odd = Math.floor(Date.parse(rd + 'T00:00:00Z') / 86400000) % 2 === 1;
+          const host = (game === 'pitcher' || game === 'batter') ? (odd ? 'pitcher' : 'batter') : (odd ? 'striker' : 'keeper');
+          if (game !== host) return res.status(400).json({ ok: false, error: `Today's daily is ${host} — this one runs tomorrow` });
+        }
         const chk = checkBuild(game, body.ovr, body.build);
         if (!chk.ok) return res.status(400).json({ ok: false, error: 'Invalid build' });
         const ovr = chk.ovr;
@@ -254,6 +263,7 @@ module.exports = async (req, res) => {
     // Optional sort by a career-total stat (trust-the-client, same as ovr). Whitelisted keys map to build.career.totals fields.
     const SORT_FIELDS = { k: 'k', war: 'war', wins: 'wins', rings: 'rings', cyYoung: 'cyYoung', hr: 'hr', hits: 'h', mvp: 'mvp', pts: 'pts', reb: 'reb', ast: 'ast', goals: 'goals', assists: 'assists', cs: 'cs', saves: 'saves' };
     const sortField = SORT_FIELDS[req.query && req.query.sort] || null;
+    const asc = (req.query && req.query.dir) === 'asc';       // flip any stat sort to worst-first
     const worst = (req.query && req.query.sort) === 'ovrAsc'; // ascending OVR ("worst overall")
     const NULL_SENTINEL = -1e30; // ranks missing-career entries last under a stat sort
 
@@ -270,6 +280,19 @@ module.exports = async (req, res) => {
               game, created_at FROM scores
               WHERE game = ${game}
               ORDER BY ovr ASC, created_at ASC LIMIT ${limit}`;
+    } else if (sortField && asc) {
+      // worst-first stat sort (dir=asc); NULLS LAST still ranks missing-career entries at the end
+      rows = daily
+        ? await sql`SELECT id, name, ovr,
+              CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots') ELSE build END AS build,
+              game, created_at, (build->'career'->'totals'->>${sortField})::numeric AS stat FROM scores
+              WHERE game = ${game} AND created_at >= date_trunc('day', now())
+              ORDER BY (build->'career'->'totals'->>${sortField})::numeric ASC NULLS LAST, ovr ASC, created_at ASC LIMIT ${limit}`
+        : await sql`SELECT id, name, ovr,
+              CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots') ELSE build END AS build,
+              game, created_at, (build->'career'->'totals'->>${sortField})::numeric AS stat FROM scores
+              WHERE game = ${game}
+              ORDER BY (build->'career'->'totals'->>${sortField})::numeric ASC NULLS LAST, ovr ASC, created_at ASC LIMIT ${limit}`;
     } else if (sortField) {
       rows = daily
         ? await sql`SELECT id, name, ovr,

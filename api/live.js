@@ -22,7 +22,7 @@ function findConn() {
 }
 const CONN = findConn();
 const sql = CONN ? neon(CONN) : null;
-const gameOf = g => (g === 'hoops') ? 'hoops' : 'versus';   // baseball 1v1 = 'versus', hoops 1v1 = 'hoops'
+const gameOf = g => (g === 'hoops' || g === 'versus-soccer') ? g : 'versus';   // baseball 1v1 = 'versus'
 const statusOf = s => (s === 'searching' || s === 'playing') ? s : 'idle';
 
 let ready;

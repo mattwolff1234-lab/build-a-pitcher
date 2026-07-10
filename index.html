@@ -20,6 +20,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="/xp.js" defer></script>
 <script src="/hotboard.js" defer></script>
+<script src="/switcher.js?v=6" defer></script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-TVL2XEQ2Q7"></script>
@@ -130,7 +131,49 @@
   .hero h1 i { color:var(--accent); font-style:normal; }
   .hero p { color:var(--muted); font-size:clamp(14px,2.4vw,17px); margin:14px 0 0; letter-spacing:.3px; }
 
-  .picks { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:18px; width:100%; }
+  /* ---------- the hub: two dials (sport+role = WHAT, mode grid = HOW) ---------- */
+  .hub { width:100%; max-width:560px; --hubac:#ff7a18; }
+  .sportseg { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  .sport-chip { position:relative; display:flex; flex-direction:column; align-items:center; gap:3px; padding:13px 6px 11px;
+    border-radius:13px; cursor:pointer; border:1px solid var(--line); background:linear-gradient(180deg,rgba(20,31,48,.6),rgba(9,15,25,.7));
+    font-family:'Oswald',sans-serif; font-size:12.5px; font-weight:600; letter-spacing:1.6px; text-transform:uppercase; color:var(--muted); }
+  .sport-chip i { font-style:normal; font-size:22px; line-height:1; filter:grayscale(.5); opacity:.8; }
+  .sport-chip:hover { border-color:rgba(120,160,210,.4); color:var(--ink); }
+  .sport-chip.on { color:var(--ink); border-color:var(--hubac); box-shadow:0 0 16px -4px var(--hubac), inset 0 0 22px -14px var(--hubac); }
+  .sport-chip.on i { filter:none; opacity:1; }
+  .sport-chip .sp-new { position:absolute; top:-7px; right:-4px; font-size:8.5px; font-weight:700; letter-spacing:1px; color:#04140a;
+    padding:2px 7px; border-radius:10px; background:linear-gradient(90deg,#43e97b,#38f9d7); box-shadow:0 0 10px rgba(67,233,123,.5); }
+  .roleseg { display:flex; justify-content:center; gap:6px; margin-top:10px; min-height:34px; }
+  .role-chip { padding:8px 20px; border-radius:999px; cursor:pointer; border:1px solid var(--line); background:rgba(255,255,255,.03);
+    font-family:'Oswald',sans-serif; font-size:12px; font-weight:600; letter-spacing:1.4px; text-transform:uppercase; color:var(--muted); }
+  .role-chip.on { color:#0d1420; background:var(--hubac); border-color:var(--hubac); box-shadow:0 0 14px -2px var(--hubac); }
+  .resume { position:relative; display:flex; align-items:center; gap:14px; width:100%; box-sizing:border-box; margin-top:14px;
+    padding:15px 17px; border-radius:15px; text-decoration:none; overflow:hidden; border:1px solid var(--line);
+    background:linear-gradient(115deg, rgba(20,31,48,.85), rgba(9,15,25,.9)); }
+  .resume::before { content:''; position:absolute; inset:0; background:linear-gradient(115deg, var(--hubac), transparent 55%); opacity:.14; pointer-events:none; }
+  .resume:hover { border-color:var(--hubac); }
+  .rz-txt { flex:1; min-width:0; position:relative; }
+  .rz-kick { font-family:'Oswald',sans-serif; font-size:10.5px; letter-spacing:2.5px; text-transform:uppercase; color:var(--hubac); filter:brightness(1.25); }
+  .rz-line { font-family:'Oswald',sans-serif; font-size:18px; font-weight:600; color:var(--ink); margin-top:3px; line-height:1.25; }
+  .rz-line b { color:var(--gold); }
+  .rz-sub { font-size:11.5px; color:var(--muted); margin-top:3px; min-height:14px; }
+  .rz-fig { height:74px; width:auto; flex:0 0 auto; filter:drop-shadow(0 0 14px var(--hubac)); opacity:.9; position:relative; }
+  .rz-go { position:relative; flex:0 0 auto; font-family:'Oswald',sans-serif; font-size:13px; font-weight:600; letter-spacing:1px;
+    text-transform:uppercase; color:#1a1004; padding:11px 18px; border-radius:10px; white-space:nowrap;
+    background:linear-gradient(180deg,#ff9038,#f06a0c); border:1px solid #ffae6a; box-shadow:0 6px 18px rgba(240,106,12,.4); }
+  .modes-label { display:flex; align-items:center; gap:10px; margin:18px 2px 9px; font-family:'Oswald',sans-serif;
+    font-size:11.5px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:var(--dim); }
+  .modes-label::after { content:''; flex:1; height:1px; background:linear-gradient(90deg,var(--line),transparent); }
+  .modes { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; width:100%; }
+  .mtile { display:flex; flex-direction:column; gap:3px; padding:13px 13px 11px; border-radius:13px; text-decoration:none;
+    border:1px solid var(--line); background:linear-gradient(180deg,rgba(20,31,48,.6),rgba(9,15,25,.7)); }
+  .mtile:hover { border-color:var(--hubac); box-shadow:0 0 16px -6px var(--hubac); transform:translateY(-1px); }
+  .mtile i { font-style:normal; font-size:19px; line-height:1; }
+  .mtile b { font-family:'Oswald',sans-serif; font-size:13px; font-weight:600; letter-spacing:1.2px; text-transform:uppercase; color:var(--ink); margin-top:2px; }
+  .mtile span { font-size:10.5px; color:var(--muted); line-height:1.3; }
+  .mtile.lock { opacity:.55; cursor:default; }
+  .mtile.lock:hover { border-color:var(--line); box-shadow:none; transform:none; }
+  .mtile .done { color:#43e97b; font-weight:600; }
   .pick { position:relative; display:flex; flex-direction:column; align-items:center; text-align:center;
     border:1px solid var(--line); border-radius:18px; padding:26px 20px 22px; overflow:hidden; cursor:pointer;
     text-decoration:none; color:var(--ink); transform-style:preserve-3d; transition:transform .12s ease;
@@ -161,9 +204,6 @@
   .pick.ball { --ac:rgba(255,138,60,.30); --ac2:#e8702a; --acb:#ff8a3c; }
   .pick.strk { --ac:rgba(74,222,128,.28); --ac2:#1fa055; --acb:#4ade80; }
   .pick.keep { --ac:rgba(255,206,58,.30); --ac2:#d9a616; --acb:#ffce3a; }
-  .pick .newtag { position:absolute; top:10px; right:10px; z-index:2; font-family:'Oswald',sans-serif;
-    font-size:10px; font-weight:700; letter-spacing:1.2px; color:#04140a; padding:3px 9px; border-radius:12px;
-    background:linear-gradient(90deg,#43e97b,#38f9d7); box-shadow:0 0 12px rgba(67,233,123,.45); }
 
   /* ---------- hard mode toggle ---------- */
   .opt { margin-top:34px; width:100%; display:flex; align-items:center; gap:16px;
@@ -300,8 +340,12 @@
   }
   @media (max-width: 620px) {
     .stage { padding:18px 12px 30px; }
-    /* shrink the panels so the floating background shows through the side gutters */
-    .picks { grid-template-columns:1fr; gap:12px; max-width:300px; margin:0 auto; }
+    /* tighter hub so the floating background shows through the side gutters */
+    .modes { grid-template-columns:repeat(2,1fr); gap:8px; }
+    .resume { flex-wrap:wrap; }
+    .rz-fig { height:58px; }
+    .rz-go { flex:1; text-align:center; }
+    .sport-chip { padding:11px 4px 9px; font-size:11px; letter-spacing:1px; }
     .pick { padding:18px 16px 16px; border-radius:16px; }
     .pick .fig { height:120px; }
     .pick .label { font-size:21px; margin-top:11px; }
@@ -404,75 +448,22 @@
   })();
   </script>
 
-  <div id="streakBanner" class="streak-banner" style="display:none"></div>
+  <div class="hub" id="hub">
+    <div class="sportseg" id="sportSeg"></div>
+    <div class="roleseg" id="roleSeg"></div>
 
-  <a class="versus daily-cta" id="dailyCta" href="/pitching#daily">
-    <span class="vbadge dc-badge">DAILY</span>
-    <div class="vtxt">
-      <div class="vtitle">🎯 Daily <b>Challenge</b> <span id="dailyCount" class="vlive" style="display:none"></span></div>
-      <div class="vdesc" id="dailyDesc">Everyone gets the same pitchers today. One shot - climb the daily leaderboard.</div>
-    </div>
-    <div class="vgo" id="dailyGo">▶ Play Today</div>
-  </a>
+    <a class="resume" id="resumeCard" href="/pitching#daily">
+      <div class="rz-txt">
+        <div class="rz-kick" id="rzKick">▶ Continue</div>
+        <div class="rz-line" id="rzLine">Today's Daily is live</div>
+        <div class="rz-sub" id="rzSub"></div>
+      </div>
+      <img class="rz-fig" id="rzFig" src="/pitcher-figure.png" alt="">
+      <div class="rz-go" id="rzGo">Play Daily</div>
+    </a>
 
-  <div class="versus">
-    <span class="vbadge">NEW</span>
-    <div class="vtxt">
-      <div class="vtitle">⚔️ Face Off <b>1v1</b> <span class="vlive">● LIVE</span></div>
-      <div class="vdesc">Match up with a real player online. Build fast, highest Overall wins. Pick your sport:</div>
-    </div>
-    <div class="vbtns">
-      <a class="vgo vgo-baseball" href="/versus">⚾ Baseball</a>
-      <a class="vgo vgo-hoops" href="/versus-hoops">🏀 Hoops</a>
-    </div>
-  </div>
-
-  <div class="picks">
-    <a class="pick pitch" href="/pitching">
-      <span class="br tl"></span><span class="br tr"></span><span class="br bl"></span><span class="br br2"></span>
-      <div class="fig"><img src="/pitcher-figure.png" alt="Pitcher"></div>
-      <div class="label">Build a <b>Pitcher</b></div>
-      <div class="desc">Velocity, break, command &amp; more. Chase a Cy Young.</div>
-      <div class="go">▶ Play</div>
-    </a>
-    <a class="pick bat" href="/batting">
-      <span class="br tl"></span><span class="br tr"></span><span class="br bl"></span><span class="br br2"></span>
-      <div class="fig"><img src="/batter-figure.png" alt="Batter"></div>
-      <div class="label">Build a <b>Batter</b></div>
-      <div class="desc">Power, contact, speed &amp; more. Chase a ring.</div>
-      <div class="go">▶ Play</div>
-    </a>
-    <a class="pick ball" href="/hoops">
-      <span class="br tl"></span><span class="br tr"></span><span class="br bl"></span><span class="br br2"></span>
-      <div class="fig"><img src="/baller-figure.png" alt="Hooper"></div>
-      <div class="label">Build a <b>Hooper</b></div>
-      <div class="desc">Shooting, dunks, defense &amp; more. Chase the title.</div>
-      <div class="go">▶ Play</div>
-    </a>
-    <a class="pick strk" href="/striker">
-      <span class="newtag">⚽ NEW</span>
-      <span class="br tl"></span><span class="br tr"></span><span class="br bl"></span><span class="br br2"></span>
-      <div class="fig"><img src="/striker-figure.png" alt="Striker"></div>
-      <div class="label">Build a <b>Striker</b></div>
-      <div class="desc">Pace, finishing, flair &amp; more. Chase the Ballon d'Or.</div>
-      <div class="go">▶ Play</div>
-    </a>
-    <a class="pick keep" href="/keeper">
-      <span class="newtag">🧤 NEW</span>
-      <span class="br tl"></span><span class="br tr"></span><span class="br bl"></span><span class="br br2"></span>
-      <div class="fig"><img src="/keeper-figure.png" alt="Keeper"></div>
-      <div class="label">Build a <b>Keeper</b></div>
-      <div class="desc">Reflexes, diving, command &amp; more. Keep them all out.</div>
-      <div class="go">▶ Play</div>
-    </a>
-  </div>
-
-  <div class="opt">
-    <div class="otxt">
-      <div class="otitle">🙈 Hard Mode <span class="badge">HIDE RATINGS</span></div>
-      <div class="odesc">Every rating stays hidden while you draft. No numbers, no overall. Build completely blind on feel alone, then everything is revealed at the finish.</div>
-    </div>
-    <div id="hardSw" class="sw" role="switch" tabindex="0" aria-label="Hard Mode"><div class="knob"></div></div>
+    <div class="modes-label">Modes</div>
+    <div class="modes" id="modeGrid"></div>
   </div>
 
   <div class="foot">
@@ -489,37 +480,136 @@
 <script>
 const $ = id => document.getElementById(id);
 
-/* ---- Hard Mode toggle (shared with both games via localStorage) ---- */
-const sw = $('hardSw');
-function readHard() { try { return localStorage.getItem('pl_hardMode') === '1'; } catch (e) { return false; } }
-function paintHard(on) { sw.classList.toggle('on', on); sw.setAttribute('aria-checked', on); }
-function toggleHard() {
-  const on = !readHard();
-  try { localStorage.setItem('pl_hardMode', on ? '1' : '0'); } catch (e) {}
-  paintHard(on);
-  gsap.fromTo(sw, { scale: .9 }, { scale: 1, duration: .3, ease: 'back.out(3)' });
-}
-paintHard(readHard());
-sw.addEventListener('click', toggleHard);
-sw.addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); toggleHard(); } });
+/* (Hard Mode toggle now lives in the ☰ menu on every page — injected by switcher.js.) */
 
 /* ---- entrance (kept snappy so the options land fast) ---- */
 gsap.from('.hero .kick', { y: -10, opacity: 0, duration: .35, ease: 'power2.out' });
 gsap.from('.hero h1', { y: 14, opacity: 0, duration: .4, delay: .04, ease: 'power3.out' });
 gsap.from('.hero p', { y: 10, opacity: 0, duration: .35, delay: .1, ease: 'power2.out' });
-gsap.from('.pick', { y: 22, opacity: 0, duration: .4, delay: .14, stagger: .07, ease: 'back.out(1.4)' });
-gsap.from('.versus', { y: 14, opacity: 0, duration: .4, delay: .22, ease: 'back.out(1.3)' });
-gsap.from('.opt', { y: 12, opacity: 0, duration: .35, delay: .28, ease: 'power2.out' });
 
-/* ---- pointer tilt on the pick cards ---- */
-document.querySelectorAll('.pick').forEach(card => {
-  card.addEventListener('pointermove', e => {
-    const r = card.getBoundingClientRect();
-    const dx = (e.clientX - r.left) / r.width - .5, dy = (e.clientY - r.top) / r.height - .5;
-    gsap.to(card, { rotateY: dx * 9, rotateX: -dy * 9, duration: .3, ease: 'power2.out', transformPerspective: 700 });
-  });
-  card.addEventListener('pointerleave', () => gsap.to(card, { rotateY: 0, rotateX: 0, duration: .5, ease: 'power2.out' }));
-});
+/* ---------- the hub: two dials — sport+role (WHAT) and the mode grid (HOW) ---------- */
+(function hub() {
+  // Pretty routes are Vercel rewrites — a bare local preview server 404s on them, so link files directly there.
+  const LOCAL = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+  const GAME = {
+    pitcher: { icon: '⚾', name: 'Pitcher', path: LOCAL ? '/pitcher.html' : '/pitching', fig: '/pitcher-figure.png', sport: 'baseball' },
+    batter:  { icon: '⚾', name: 'Batter',  path: LOCAL ? '/build-a-batter.html' : '/batting',  fig: '/batter-figure.png',  sport: 'baseball' },
+    baller:  { icon: '🏀', name: 'Hooper',  path: LOCAL ? '/build-a-baller.html' : '/hoops',    fig: '/baller-figure.png',  sport: 'hoops' },
+    striker: { icon: '⚽', name: 'Striker', path: LOCAL ? '/build-a-striker.html' : '/striker',  fig: '/striker-figure.png', sport: 'soccer' },
+    keeper:  { icon: '⚽', name: 'Keeper',  path: LOCAL ? '/build-a-keeper.html' : '/keeper',   fig: '/keeper-figure.png',  sport: 'soccer' },
+  };
+  const SPORTS = [
+    { id: 'baseball', icon: '⚾', name: 'Baseball', roles: ['pitcher', 'batter'], accent: '#ff7a18', vs: LOCAL ? '/versus.html' : '/versus' },
+    { id: 'hoops',    icon: '🏀', name: 'Hoops',    roles: ['baller'],            accent: '#ff8a3c', vs: LOCAL ? '/versus-hoops.html' : '/versus-hoops' },
+    { id: 'soccer',   icon: '⚽', name: 'Soccer',   roles: ['striker', 'keeper'], accent: '#4ade80', vs: LOCAL ? '/versus-soccer.html' : '/versus-soccer', isNew: true },
+  ];
+  const todayLocal = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+  // Baseball and soccer each rotate ONE shared daily between their two games (date-seeded, same
+  // worldwide — don't disrupt); hoops runs its own daily every day.
+  const rotDay = () => Math.floor(Date.parse(todayLocal() + 'T00:00:00Z') / 86400000);
+  const rotationGame = () => (rotDay() % 2 === 1) ? 'pitcher' : 'batter';
+  const soccerRotation = () => (rotDay() % 2 === 1) ? 'striker' : 'keeper';
+  const dailyGameOf = g => GAME[g].sport === 'baseball' ? rotationGame() : (GAME[g].sport === 'soccer' ? soccerRotation() : g);
+
+  let active = 'pitcher';
+  try { const g = localStorage.getItem('pl_activeGame'); if (GAME[g]) active = g; } catch (e) {}
+  const sportOf = g => SPORTS.find(s => s.id === GAME[g].sport);
+  const roleFor = sport => { let r = null; try { r = localStorage.getItem('pl_role_' + sport.id); } catch (e) {} return (r && GAME[r] && GAME[r].sport === sport.id) ? r : sport.roles[0]; };
+  const setActive = g => { active = g; try { localStorage.setItem('pl_activeGame', g); localStorage.setItem('pl_role_' + GAME[g].sport, g); } catch (e) {} render(true); };
+
+  let streak = null;
+  try { streak = JSON.parse(localStorage.getItem('pl_streak') || 'null'); } catch (e) {}
+  const streakN = (streak && Number(streak.count)) || 0;
+  // daily locks: baseball's rotation shares the legacy key, soccer's rotation shares one soccer
+  // key, hoops has its own — matching each game's dcKey()
+  const playedFor = g => {
+    const sport = GAME[g].sport;
+    const suffix = sport === 'baseball' ? '' : (sport === 'soccer' ? '_soccer' : '_' + g);
+    try { return !!JSON.parse(localStorage.getItem('pl_dc_' + todayLocal() + suffix) || 'null'); } catch (e) { return false; }
+  };
+
+  function render(animate) {
+    const sport = sportOf(active), g = GAME[active];
+    const playedToday = playedFor(dailyGameOf(active));
+    $('hub').style.setProperty('--hubac', sport.accent);
+    $('sportSeg').innerHTML = SPORTS.map(s =>
+      `<button class="sport-chip${s.id === sport.id ? ' on' : ''}" data-sport="${s.id}">
+        ${s.isNew ? '<span class="sp-new">NEW</span>' : ''}<i>${s.icon}</i>${s.name}</button>`).join('');
+    $('roleSeg').innerHTML = sport.roles.length > 1
+      ? sport.roles.map(r => `<button class="role-chip${r === active ? ' on' : ''}" data-role="${r}">${GAME[r].icon} ${GAME[r].name}</button>`).join('')
+      : '';
+
+    // resume hero: streak at risk > daily ready > daily done. Always badge it as the DAILY and
+    // name the host game — the rotation means "Play Daily" as a Batter fan opens the Pitcher
+    // daily today, which read as a glitch when the button didn't say so.
+    const dg = dailyGameOf(active);
+    const D = GAME[dg];
+    const rc = $('resumeCard');
+    if (playedToday) {
+      $('rzKick').textContent = '✅ Daily done for today';
+      $('rzLine').innerHTML = `${streakN >= 2 ? `<b>${streakN}-day</b> streak is safe — ` : ''}run a new build?`;
+      $('rzGo').textContent = `Build a ${g.name}`;
+      rc.href = g.path;
+    } else if (streakN >= 2) {
+      $('rzKick').textContent = '🎯 Daily Challenge · 🔥 streak at risk';
+      $('rzLine').innerHTML = `Your <b>${streakN}-day</b> streak resets tonight — any game's daily saves it`;
+      $('rzGo').textContent = `Play ${D.icon} ${D.name} Daily`;
+      rc.href = D.path + '#daily';
+    } else {
+      $('rzKick').textContent = '🎯 Daily Challenge';
+      $('rzLine').textContent = `Today's ${D.icon} ${D.name} Daily is live — same cards for everyone`;
+      $('rzGo').textContent = `Play ${D.icon} ${D.name} Daily`;
+      rc.href = D.path + '#daily';
+    }
+    $('rzFig').src = g.fig;
+
+    // mode grid, scoped to the active game
+    const tiles = [
+      { i: '🎯', b: 'Daily', s: (playedToday ? '<span class="done">✅ Done today</span>' : `Today: ${D.icon} ${D.name}`) + '<span id="dcCount" style="display:block;color:var(--accent2)"></span>', href: D.path + '#daily' },
+      { i: '🛠️', b: 'Build', s: `Draft a ${g.name.toLowerCase()}, sim the career`, href: g.path },
+      sport.vs ? { i: '⚔️', b: '1v1 Live', s: 'Real players, live builds', href: sport.vs }
+               : { i: '⚔️', b: '1v1 Live', s: 'Soccer 1v1 — coming soon', lock: true },
+      { i: '🏆', b: 'Leaderboard', s: 'Top builds, all-time & today', href: g.path + '#leaderboard' },
+      { i: '📇', b: 'Collection', s: 'Every card you\'ve pulled', href: g.path + '#collection' },
+      { i: '🏛️', b: 'Hall of Fame', s: 'Your saved careers', href: g.path + '#hof' },
+    ];
+    $('modeGrid').innerHTML = tiles.map(t => t.lock
+      ? `<div class="mtile lock"><i>${t.i}</i><b>${t.b} 🔒</b><span>${t.s}</span></div>`
+      : `<a class="mtile" href="${t.href}"><i>${t.i}</i><b>${t.b}</b><span>${t.s}</span></a>`).join('');
+
+    $('sportSeg').querySelectorAll('[data-sport]').forEach(b => b.onclick = () => { const s = SPORTS.find(x => x.id === b.dataset.sport); setActive(roleFor(s)); });
+    $('roleSeg').querySelectorAll('[data-role]').forEach(b => b.onclick = () => setActive(b.dataset.role));
+    // ☰ menu deep links follow the ACTIVE game (daily/streak follow its rotation)
+    const dgP = GAME[dg].path;
+    const deep = { daily: dgP, streak: dgP, quests: g.path, hof: g.path, achievements: g.path, collection: g.path, leaderboard: g.path };
+    document.querySelectorAll('#menu a[href*="#"]').forEach(a => {
+      const h = (a.getAttribute('href').split('#')[1] || '').toLowerCase();
+      if (deep[h]) a.setAttribute('href', deep[h] + '#' + h);
+    });
+    refreshPlayCount();
+    if (animate && window.gsap) gsap.from('#resumeCard, .mtile', { y: 10, opacity: 0, duration: .3, stagger: .035, ease: 'power2.out', clearProps: 'all' });
+  }
+
+  // social proof: how many played today's daily for the active sport (cached per game per visit,
+  // shown on both the resume hero and the Daily tile; re-resolves when you switch sports)
+  const dcCounts = {};
+  function refreshPlayCount() {
+    const dg = dailyGameOf(active);
+    const paint = n => {
+      const a = $('dcCount'); if (a) a.textContent = n > 0 ? `${n.toLocaleString()} played today` : '';
+      const b = $('rzSub'); if (b) b.textContent = n > 0 ? `${n.toLocaleString()} played today's daily` : '';
+    };
+    if (dcCounts[dg] != null) return paint(dcCounts[dg]);
+    fetch(`/api/score?action=challengeLeaderboard&game=${dg}&limit=1&date=${todayLocal()}`).then(r => r.json()).then(j => {
+      dcCounts[dg] = (j && j.ok && j.total) || 0;
+      if (dailyGameOf(active) === dg) paint(dcCounts[dg]);
+    }).catch(() => {});
+  }
+  render(false);
+  gsap.from('.sport-chip', { y: 14, opacity: 0, duration: .35, delay: .12, stagger: .06, ease: 'back.out(1.5)', clearProps: 'all' });
+  gsap.from('.resume', { y: 16, opacity: 0, duration: .4, delay: .22, ease: 'back.out(1.3)', clearProps: 'all' });
+  gsap.from('.mtile', { y: 14, opacity: 0, duration: .32, delay: .28, stagger: .04, ease: 'power2.out', clearProps: 'all' });
+})();
 
 /* ---- drifting "careers being built" background cards ---- */
 const COLORS = { pitch: '#ff7a18', bat: '#19c6ff', gold: '#ffce3a', legend: '#a366ff' };
@@ -536,7 +626,7 @@ const TEMPLATES = [
 ];
 function rnd(a, b) { return Math.floor(a + Math.random() * (b - a)); }
 
-function spawnCard() {
+function spawnCard(lane, onDone) {
   const t = TEMPLATES[rnd(0, TEMPLATES.length)]();
   const pipsOn = rnd(2, 8), pips = Array.from({ length: 9 }, (_, i) => `<i class="${i < pipsOn ? 'on' : ''}"></i>`).join('');
   const el = document.createElement('div');
@@ -545,8 +635,10 @@ function spawnCard() {
     <div class="ch"><span class="ring" style="--rc:${t.col}"><i>${t.icon}</i></span>${t.label}</div>
     <div class="cstat"><b>0</b><span>${t.unit}</span></div>
     <div class="pips">${pips}</div>`;
-  const left = rnd(2, 86);
-  el.style.left = left + 'vw';
+  // lane-based x position (full width incl. the middle) + a little jitter — lanes stop cards
+  // from drifting on top of each other
+  const laneW = 90 / CC_LANES;
+  el.style.left = (2 + lane * laneW + rnd(0, Math.max(1, Math.round(laneW * 0.3)))) + 'vw';
   $('careers').appendChild(el);
 
   const num = el.querySelector('.cstat b'), ring = el.querySelector('.ring');
@@ -554,8 +646,8 @@ function spawnCard() {
   const dur = rnd(26, 40);
 
   gsap.set(el, { y: '108vh', opacity: 0 });
-  const tl = gsap.timeline({ onComplete: () => el.remove() });
-  tl.to(el, { opacity: .92, duration: 3, ease: 'power1.out' }, 0)
+  const tl = gsap.timeline({ onComplete: () => { el.remove(); if (onDone) onDone(); } });
+  tl.to(el, { opacity: .72, duration: 3, ease: 'power1.out' }, 0)
     .to(el, { y: '-30vh', duration: dur, ease: 'none' }, 0)
     .to(el, { opacity: 0, duration: 5, ease: 'power1.in' }, dur - 5);
   // counter + ring fill timed to the drift
@@ -568,9 +660,25 @@ function spawnCard() {
     onUpdate: () => ring.style.setProperty('--p', p.v) });
 }
 
-// seed a few immediately (pre-aged so the screen isn't empty), then a steady drip
-for (let i = 0; i < 4; i++) setTimeout(spawnCard, i * 400);
-setInterval(spawnCard, 4200);
+// Steady drip, capped by LANES. Two guards fix the old pile-up: (1) background tabs pause
+// requestAnimationFrame (so exit animations froze) while setInterval kept spawning — never spawn
+// while hidden; (2) one card per lane, so the count can never run away AND cards don't overlap.
+// Skipped entirely for reduced-motion users.
+const CC_LANES = window.matchMedia('(max-width:620px)').matches ? 4 : 8;
+const ccBusy = new Array(CC_LANES).fill(false);
+function trySpawnCard() {
+  if (document.hidden) return;
+  const free = [];
+  ccBusy.forEach((b, i) => { if (!b) free.push(i); });
+  if (!free.length) return;
+  const lane = free[rnd(0, free.length)];
+  ccBusy[lane] = true;
+  spawnCard(lane, () => { ccBusy[lane] = false; });
+}
+if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  for (let i = 0; i < 5; i++) setTimeout(trySpawnCard, i * 450);
+  setInterval(trySpawnCard, 4500);
+}
 
 /* ---------- hamburger menu + Sign in with Google (shared with the games via 'pl_account') ---------- */
 const GOOGLE_CLIENT_ID = '349698720898-t9bpb8fp7ks6scf8ci8mmoeec1lpm3d3.apps.googleusercontent.com';
@@ -638,40 +746,7 @@ $('installNowBtn').onclick = async () => {
   $('installNowBtn').style.display = 'none';
 };
 
-// Daily Challenge cues on the landing page (cue + easy path into the loop)
-(function dailyLanding() {
-  const todayUTC = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }; // LOCAL date — must match each game's local-midnight daily reset
-  // The daily alternates between the pitcher and batter games each day (date-seeded, same for
-  // everyone worldwide). Point every daily/streak link at today's game.
-  // Featured daily rotates pitcher/batter only (the proven 2-way). Basketball has its OWN daily,
-  // always available at /hoops — intentionally NOT in this rotation.
-  const dailyGameFor = (s) => { const days = Math.floor(Date.parse(s + 'T00:00:00Z') / 86400000); return (days % 2 === 1) ? 'pitcher' : 'batter'; };
-  const dg = dailyGameFor(todayUTC()), dgPath = dg === 'batter' ? '/batting' : '/pitching';
-  document.querySelectorAll('a[href="/pitching#daily"]').forEach(a => { a.href = dgPath + '#daily'; });
-  document.querySelectorAll('a[href="/pitching#streak"]').forEach(a => { a.href = dgPath + '#streak'; });
-  let streak = null, playedToday = false;
-  try { streak = JSON.parse(localStorage.getItem('pl_streak') || 'null'); } catch (e) {}
-  try { playedToday = !!JSON.parse(localStorage.getItem('pl_dc_' + todayUTC()) || 'null'); } catch (e) {}
-  const count = (streak && Number(streak.count)) || 0;
-  // cue: at-risk streak banner
-  if (count >= 2 && !playedToday) {
-    const sb = $('streakBanner');
-    if (sb) { sb.innerHTML = `🔥 Your <b style="color:var(--gold)">${count}-day</b> streak resets tonight! <a href="${dgPath}#daily">Play today's challenge →</a>`; sb.style.display = 'flex'; }
-  }
-  // today's discipline on the CTA copy
-  const _dcDesc = $('dailyDesc');
-  if (_dcDesc && !playedToday) _dcDesc.textContent = `Everyone gets the same ${dg === 'batter' ? 'hitters' : 'pitchers'} today. One shot - climb the daily leaderboard.`;
-  // already played → reflect "Done" on the CTA
-  if (playedToday) {
-    const cta = $('dailyCta'); if (cta) cta.classList.add('done');
-    const desc = $('dailyDesc'); if (desc) desc.textContent = "You've played today - come back tomorrow for a new puzzle. (Tap to see your result.)";
-    const go = $('dailyGo'); if (go) go.textContent = '✅ Done';
-  }
-  // social proof: how many played today
-  fetch(`/api/score?action=challengeLeaderboard&game=${dg}&limit=1&date=${todayUTC()}`).then(r => r.json()).then(j => {
-    if (j && j.ok && j.total > 0) { const c = $('dailyCount'); if (c) { c.textContent = `${j.total} played today`; c.style.display = 'inline-block'; } }
-  }).catch(() => {});
-})();
+// (Daily cues now live in the hub above — resume hero + mode grid.)
 </script>
 <script>
 /* One-time "Join the Discord" invite popup (shows once per device). */

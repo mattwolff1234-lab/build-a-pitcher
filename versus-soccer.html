@@ -3,15 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>Hoops Face Off · GoatLab 1v1</title>
+<title>Soccer Face Off · GoatLab 1v1 Penalty Shootout</title>
 <meta name="theme-color" content="#0a1320">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="/switcher.js?v=6" defer></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/MotionPathPlugin.min.js"></script>
 <script src="/achievements.js" defer></script>
 <script src="/xp.js" defer></script>
 <script src="/quests.js" defer></script>
-<script src="/season-track.js" defer></script>
 <script src="https://cdn.ably.com/lib/ably.min-2.js"></script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <!-- Google tag (gtag.js) -->
@@ -74,7 +72,7 @@
   .bg .g2 { background:radial-gradient(circle,#19c6ff44,transparent 60%); bottom:-18%; right:-12%; animation:drift2 32s ease-in-out infinite; }
   @keyframes drift1 { 0%,100%{ transform:translate(-6%,-4%);} 50%{ transform:translate(8%,6%);} }
   @keyframes drift2 { 0%,100%{ transform:translate(6%,4%);} 50%{ transform:translate(-8%,-6%);} }
-  /* Battery/heat: animating a 90px blur (scale) + the scrolling grid pegs the mobile GPU. Drop the
+  /* Keepery/heat: animating a 90px blur (scale) + the scrolling grid pegs the mobile GPU. Drop the
      scale (above) and go fully static on phones / reduced-motion so backdrop-filters composite once. */
   @media (prefers-reduced-motion: reduce){ .bg .glow, .bg .grid{ animation:none!important; } }
   @media (max-width:820px){ .bg .glow, .bg .grid{ animation:none; } .bg .glow{ filter:none; } }
@@ -183,6 +181,14 @@
     color:var(--muted); cursor:pointer; transition:color .15s; }
   .stab.active { color:var(--accent2); border-bottom-color:var(--accent2); }
   .stab:hover:not(.active) { color:var(--ink); }
+  .season-bar { font-size:12.5px; line-height:1.5; color:var(--muted); text-align:center; padding:9px 12px; margin:0 0 12px;
+    border:1px solid rgba(255,206,58,.28); border-radius:11px; background:linear-gradient(180deg, rgba(255,206,58,.08), rgba(9,15,25,.4)); }
+  .season-bar b { color:var(--ink); font-family:'Oswald',sans-serif; letter-spacing:.5px; }
+  .seasons-row { display:flex; align-items:center; gap:11px; padding:11px 13px; border-radius:11px; margin-bottom:8px;
+    border:1px solid var(--line); background:linear-gradient(180deg, rgba(25,198,255,.05), rgba(9,15,25,.4)); }
+  .seasons-row .sr-num { font-family:'Oswald',sans-serif; font-size:12px; letter-spacing:1px; color:var(--muted); min-width:62px; }
+  .seasons-row .sr-rank { margin-left:auto; font-family:'Oswald',sans-serif; font-size:14px; color:var(--ink); }
+  .seasons-row .sr-rank span { color:var(--muted); font-size:11px; }
 
   /* ---------- role reveal ---------- */
   #roleScreen { justify-content:center; align-items:center; min-height:74vh; text-align:center; }
@@ -197,10 +203,10 @@
     50%     { filter:drop-shadow(0 0 26px var(--rc)) drop-shadow(0 0 46px var(--rc)); }
   }
   .role-card .rl { font-family:'Oswald',sans-serif; font-size:30px; font-weight:700; letter-spacing:2.5px; text-transform:uppercase; color:var(--rc); line-height:1.05; }
-  .role-card.pitcher { --rc:var(--pitch); border-color:var(--pitch); }
-  .role-card.pitcher .role-fig { -webkit-mask-image:url(baller-figure.png); mask-image:url(baller-figure.png); }
-  .role-card.batter { --rc:var(--bat); border-color:var(--bat); }
-  .role-card.batter .role-fig { -webkit-mask-image:url(baller-figure.png); mask-image:url(baller-figure.png); }
+  .role-card.striker { --rc:var(--pitch); border-color:var(--pitch); }
+  .role-card.striker .role-fig { -webkit-mask-image:url(striker-figure.png); mask-image:url(striker-figure.png); }
+  .role-card.keeper { --rc:var(--bat); border-color:var(--bat); }
+  .role-card.keeper .role-fig { -webkit-mask-image:url(keeper-figure.png); mask-image:url(keeper-figure.png); }
   .role-sub { color:var(--muted); margin-top:18px; font-size:14px; max-width:340px; }
   .hist-head { font-family:'Oswald',sans-serif; font-size:13px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin:22px 0 8px; }
   .hist-row { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--line); }
@@ -293,7 +299,7 @@
   .slot .shot { width:26px; height:26px; border-radius:6px; object-fit:cover; background:#11161d; }
 
   .reel-wrap { width:100%; }
-  /* full-size reel - identical layout to the Build a Pitcher game */
+  /* full-size reel - identical layout to the Build a Striker game */
   .reel { position:relative; height:226px; overflow:hidden; border-radius:14px; margin-top:6px; }
   .reel .pointer { position:absolute; top:0; left:50%; transform:translateX(-50%); width:0; height:0;
     border-left:9px solid transparent; border-right:9px solid transparent; border-top:13px solid var(--accent);
@@ -315,7 +321,6 @@
   .rcard .pos { font-size:10px; color:var(--muted); margin-top:2px; letter-spacing:.5px; }
   .rcard .yr { font-family:'Oswald',sans-serif; font-size:11px; color:var(--accent); font-weight:600; }
   .rcard .legend-tag { font-family:'Oswald',sans-serif; font-size:11px; font-weight:600; color:var(--legend); letter-spacing:1px; }
-  .rcard .prime-tag { font-family:'Oswald',sans-serif; font-size:11px; font-weight:700; color:#ffb02e; letter-spacing:1px; text-shadow:0 0 8px rgba(255,176,46,.45); }
   .rcard.win { border-color:#fff; box-shadow:0 0 0 2px rgba(255,255,255,.5),0 0 26px rgba(25,198,255,.55); }
   /* tier coloring - border + OVR + a faint glow, like the main game */
   .rcard.t-grey    { --tc:#9aa6b8; border-color:#9aa6b8; }
@@ -344,64 +349,52 @@
   .mini-spin { display:inline-block; width:12px; height:12px; border-radius:50%; border:2px solid rgba(255,255,255,.18);
     border-top-color:var(--accent); animation:spin .8s linear infinite; vertical-align:-1px; margin-right:6px; }
 
-  /* ---------- the 1v1 game (half-court-to-11 on a full court) ---------- */
+  /* ---------- at-bat ---------- */
   #atbatScreen { min-height:70vh; justify-content:center; }
-  .hv-sb { display:flex; align-items:center; gap:14px; margin-bottom:10px;
-    font-family:'Oswald',sans-serif; user-select:none; }
-  .hv-sb b { font-size:30px; line-height:1; min-width:38px; text-align:center; }
-  .hv-sb .hv-tag { display:flex; flex-direction:column; align-items:center; gap:1px;
-    font-size:10px; letter-spacing:2.5px; color:var(--muted); text-transform:uppercase; }
-  .hv-sb .hv-tag i { font-style:normal; font-size:13px; }
-  .hv-court { position:relative; width:100%; max-width:680px; aspect-ratio:980/500; border-radius:16px; overflow:hidden;
+  .diamond { position:relative; width:100%; max-width:680px; height:380px; border-radius:18px; overflow:hidden;
     border:1px solid var(--line); background:
-      radial-gradient(120% 100% at 50% 0%, rgba(8,14,26,.42), transparent 44%),
-      radial-gradient(130% 90% at 50% 112%, rgba(0,0,0,.38), transparent 60%),
-      repeating-linear-gradient(90deg,#c99b63 0 44px,#c1924f 44px 88px);
-    box-shadow:inset 0 0 0 3px rgba(255,255,255,.08); }
-  .hv-baseline { position:absolute; left:0; right:0; bottom:13%; height:3px; background:rgba(255,255,255,.20); }
-  .hv-mid { position:absolute; left:50%; top:6%; bottom:6%; width:3px; margin-left:-1.5px; background:rgba(255,255,255,.16); }
-  .hv-circle { position:absolute; left:50%; top:50%; width:20%; aspect-ratio:1; transform:translate(-50%,-50%);
-    border:3px solid rgba(255,255,255,.16); border-radius:50%; }
-  .hv-key { position:absolute; bottom:13%; width:20%; height:52%; border:3px solid rgba(255,255,255,.22);
-    border-bottom:none; background:rgba(210,120,60,.14); }
-  .hv-key.l { left:0; border-left:none; } .hv-key.r { right:0; border-right:none; }
-  .hv-arc3 { position:absolute; bottom:13%; width:38%; height:76%; border:3px solid rgba(255,255,255,.13); }
-  .hv-arc3.l { left:-12%; border-left:none; border-radius:0 50% 50% 0 / 0 50% 50% 0; }
-  .hv-arc3.r { right:-12%; border-right:none; border-radius:50% 0 0 50% / 50% 0 0 50%; }
-  .hv-figwrap { position:absolute; bottom:13%; left:0; height:56%; aspect-ratio:543/724; will-change:transform; z-index:8; }
-  #hvOffW { z-index:9; }   /* the ball-handler always reads in front of the defender */
-  .hv-fig { width:100%; height:100%;
-    -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat;
-    -webkit-mask-size:contain; mask-size:contain;
-    -webkit-mask-position:center bottom; mask-position:center bottom;
-    filter:drop-shadow(0 6px 6px rgba(0,0,0,.4)); }
-  .hv-fig.dim { opacity:.18; filter:grayscale(1); }
-  /* name tag rides under the figure: sibling of .hv-fig inside the moving wrapper, so it
-     translates with the player but never inherits the fig's scaleX(-1) mirror */
-  .hv-name { position:absolute; left:50%; top:100%; transform:translate(-50%,3px); z-index:2;
-    font-family:'Oswald',sans-serif; font-size:10px; font-weight:600; letter-spacing:1.2px;
-    text-transform:uppercase; color:#eaf1fa; background:rgba(8,14,24,.78);
-    border:1px solid rgba(255,255,255,.22); border-radius:999px; padding:2px 9px;
-    white-space:nowrap; max-width:150%; overflow:hidden; text-overflow:ellipsis; pointer-events:none; }
-  #hvSkipBtn { margin-top:12px; }
-  .hv-hoop { position:absolute; bottom:13%; height:60%; aspect-ratio:543/724; pointer-events:none; z-index:12; }
-  .hv-hoop.l { left:-2%; transform:scaleX(-1); } .hv-hoop.r { right:-2%; }
-  #hvBall { position:absolute; left:0; top:0; width:22px; height:22px; border-radius:50%; z-index:20;
-    background:radial-gradient(circle at 35% 30%,#ffbb74,#e8792a 68%,#b8551a);
-    box-shadow:0 2px 6px rgba(0,0,0,.5); opacity:0; will-change:transform; }
-  #hvSeam { position:absolute; inset:0; border-radius:50%; overflow:hidden; display:block; }
-  #hvSeam::before { content:''; position:absolute; left:0; right:0; top:46%; height:8%; background:rgba(70,25,6,.5); }
-  #hvSeam::after { content:''; position:absolute; top:0; bottom:0; left:46%; width:8%; background:rgba(70,25,6,.35); }
-  .hv-tr { position:absolute; width:9px; height:9px; border-radius:50%; z-index:19; pointer-events:none;
-    background:radial-gradient(circle,#ffc27a,#e8792a 70%); }
-  #hvNetFlash { position:absolute; width:40px; height:40px; border-radius:50%; z-index:13; opacity:0; pointer-events:none;
-    border:3px solid rgba(255,255,255,.95); box-shadow:0 0 18px rgba(255,220,150,.9), inset 0 0 12px rgba(255,220,150,.7); }
-  .hv-pop { position:absolute; left:50%; top:20%; transform:translateX(-50%); z-index:30;
-    font-family:'Oswald',sans-serif; font-size:clamp(26px,5.4vw,44px); font-weight:700; letter-spacing:3px;
-    color:#ffd34d; text-shadow:0 3px 0 rgba(0,0,0,.4),0 0 22px rgba(255,180,60,.8); opacity:0; pointer-events:none; white-space:nowrap; }
-  .hv-call { position:absolute; left:50%; bottom:6%; transform:translateX(-50%); z-index:30; pointer-events:none; }
-  .hv-call span { font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:2px; text-transform:uppercase;
-    padding:4px 13px; border-radius:999px; background:rgba(10,18,30,.72); border:1px solid rgba(25,198,255,.35); color:#9fdcff; display:inline-block; }
+      radial-gradient(120% 80% at 50% 120%, #1f6b2e 0%, #14502160 45%, transparent 70%),
+      linear-gradient(180deg,#0b1b2e,#04070d); }
+  .crowd { position:absolute; top:0; left:0; right:0; height:64px; background:repeating-linear-gradient(90deg,#1a2335 0 6px,#222d44 6px 12px); opacity:.5; }
+  .goal { position:absolute; right:5.5%; bottom:27%; width:28%; height:50%; z-index:1;
+    border:5px solid #e9eef6; border-bottom:none; border-radius:3px 3px 0 0;
+    filter:drop-shadow(0 4px 14px rgba(0,0,0,.45)); }
+  .goal-net { position:absolute; inset:0; opacity:.6; background:
+    repeating-linear-gradient(0deg, rgba(226,238,252,.22) 0 1.5px, transparent 1.5px 11px),
+    repeating-linear-gradient(90deg, rgba(226,238,252,.22) 0 1.5px, transparent 1.5px 11px); }
+  .spot { position:absolute; left:24.5%; bottom:27.5%; width:34px; height:7px;
+    background:rgba(233,238,246,.45); border-radius:50%; }
+  .silho { position:absolute; bottom:28%; height:150px; width:110px; z-index:3; mask-size:contain; mask-repeat:no-repeat; mask-position:center bottom;
+    -webkit-mask-size:contain; -webkit-mask-repeat:no-repeat; -webkit-mask-position:center bottom; filter:drop-shadow(0 8px 16px rgba(0,0,0,.5)); }
+  .silho.p { left:13%; }   /* striker — pose masks set by stPose() */
+  .silho.b { right:9%; height:126px; bottom:27.5%; }   /* keeper in the goalmouth — kpPose() */
+  .ball { position:absolute; width:26px; height:26px; border-radius:50%;
+    background:url(soccer-ball.png) center/contain no-repeat;
+    box-shadow:0 0 10px rgba(255,255,255,.55); left:26%; bottom:29%; opacity:0; z-index:5; }
+  .callout { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; }
+  .callout span { font-family:'Oswald',sans-serif; font-weight:700; font-size:56px; letter-spacing:2px; text-transform:uppercase;
+    opacity:0; text-shadow:0 6px 24px rgba(0,0,0,.6); text-align:center; }
+  .pitch-info { position:absolute; left:0; right:0; top:14px; text-align:center; font-family:'Oswald',sans-serif;
+    letter-spacing:2px; font-size:13px; color:#cbd6e6; opacity:0; text-transform:uppercase; }
+  .pitch-seq { display:flex; justify-content:center; align-items:center; gap:10px;
+    margin-top:10px; opacity:0; min-height:52px; flex-wrap:wrap; }
+  .pitch-dot { display:flex; flex-direction:column; align-items:center; gap:3px; flex:0 0 auto; }
+  .pitch-dot .pd-num { width:30px; height:30px; border-radius:50%; border:2px solid rgba(255,255,255,.18);
+    background:rgba(4,7,13,.8); display:flex; align-items:center; justify-content:center;
+    font-family:'Oswald',sans-serif; font-size:11px; font-weight:700; color:var(--dim); }
+  .pitch-dot .pd-call { font-family:'Oswald',sans-serif; font-size:8.5px; letter-spacing:.5px;
+    text-transform:uppercase; text-align:center; white-space:nowrap; color:var(--dim); opacity:0; line-height:1.2; max-width:48px; overflow:hidden; text-overflow:ellipsis; }
+  .pitch-dot.strike .pd-num, .pitch-dot.k .pd-num { border-color:var(--pitch); color:var(--pitch); background:rgba(255,122,24,.18); }
+  .pitch-dot.strike .pd-call, .pitch-dot.k .pd-call { color:var(--pitch); }
+  .pitch-dot.ball .pd-num { border-color:var(--gold); color:var(--gold); background:rgba(255,206,58,.15); }
+  .pitch-dot.ball .pd-call { color:var(--gold); }
+  .pitch-dot.hit .pd-num { border-color:var(--bat); color:var(--bat); background:rgba(25,198,255,.15); }
+  .pitch-dot.hit .pd-call { color:var(--bat); }
+  .pitch-dot.inplay .pd-num { border-color:var(--accent2); color:var(--accent2); background:rgba(25,198,255,.15); }
+  .pitch-dot.inplay .pd-call { color:var(--accent2); }
+  .pitch-dot.active.strike .pd-num, .pitch-dot.active.k .pd-num { box-shadow:0 0 14px rgba(255,122,24,.65); }
+  .pitch-dot.active.ball .pd-num { box-shadow:0 0 14px rgba(255,206,58,.65); }
+  .pitch-dot.active.hit .pd-num, .pitch-dot.active.inplay .pd-num { box-shadow:0 0 14px rgba(25,198,255,.65); }
   /* waiting-for-opponent overlay (shown on the arena before the at-bat) */
   .wait-arena { position:absolute; left:0; right:0; bottom:18px; display:none; flex-direction:column; align-items:center; gap:9px; z-index:6; }
   .wait-arena.show { display:flex; }
@@ -410,6 +403,28 @@
   .wait-arena .wa-bar { width:min(70%,300px); height:8px; border-radius:6px; background:rgba(255,255,255,.12); overflow:hidden; }
   .wait-arena .wa-fill { height:100%; width:0%; border-radius:6px; background:linear-gradient(90deg,var(--accent),var(--accent2)); transition:width .35s ease; }
   .wait-arena .wa-count { font-family:'Oswald',sans-serif; font-size:12px; letter-spacing:1px; color:var(--muted); }
+  .silho.dim { opacity:.18; filter:grayscale(1); }
+  /* name tags under the two figures — separate siblings (NOT nested in the masked/mirrored
+     silhouettes), anchored to each figure's fixed spot so they never mirror with silhoB */
+  .silho-name { position:absolute; bottom:calc(28% - 27px); width:110px; display:flex;
+    justify-content:center; pointer-events:none; z-index:4; }
+  .silho-name.p { left:13%; } .silho-name.b { right:9%; }
+  .silho-name span { font-family:'Oswald',sans-serif; font-size:10px; font-weight:600;
+    letter-spacing:1.2px; text-transform:uppercase; color:#eaf1fa; background:rgba(8,14,24,.78);
+    border:1px solid rgba(255,255,255,.22); border-radius:999px; padding:2px 9px;
+    white-space:nowrap; max-width:150px; overflow:hidden; text-overflow:ellipsis; }
+  /* live balls–strikes count (ticks as each pitch resolves at the plate) */
+  .ab-count { position:absolute; top:10px; left:12px; z-index:5; display:none;
+    flex-direction:column; align-items:center; gap:0; padding:5px 12px 6px; border-radius:10px;
+    background:rgba(8,14,24,.78); border:1px solid rgba(255,255,255,.18); }
+  .ab-count.show { display:flex; }
+  .ab-count span { font-family:'Oswald',sans-serif; font-size:8.5px; letter-spacing:2px;
+    text-transform:uppercase; color:var(--muted); }
+  .ab-count b { font-family:'Oswald',sans-serif; font-size:22px; line-height:1.1; color:#eaf1fa; }
+  .ab-count b i { font-style:normal; }
+  .ab-count b i:first-child { color:var(--pitch); }     /* goals (striker) */
+  .ab-count b i:last-child { color:var(--bat); }        /* stops (keeper) */
+  #abSkipBtn { margin-top:12px; }
   .matchup { width:100%; max-width:680px; display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
   .matchup .side { display:flex; flex-direction:column; align-items:center; gap:2px; }
   .matchup .side .who { font-family:'Oswald',sans-serif; font-size:13px; letter-spacing:1px; text-transform:uppercase; }
@@ -460,7 +475,12 @@
     .node .val { font-size:18px; }
     .node .who { display:none; }
     .node .preview { font-size:17px; }
-    .hv-pop { font-size:26px; }
+    .diamond { height:300px; }
+    .silho { height:115px; }
+    .pitch-seq { left:8px; right:8px; bottom:8px; gap:7px; }
+    .pitch-dot .pd-num { width:26px; height:26px; font-size:10px; }
+    .pitch-dot .pd-call { font-size:7.5px; max-width:38px; }
+    .callout span { font-size:40px; }
     /* build header: let it wrap and shrink so the clock/OVR/opponent pill always fit */
     .build-top { flex-wrap:wrap; gap:8px 12px; justify-content:space-between; }
     .clock { font-size:24px; }
@@ -495,7 +515,7 @@
 <div class="bg"><div class="glow g1"></div><div class="glow g2"></div></div>
 
 <header>
-  <div class="brand">🏀 Hoops <i>Face Off</i></div>
+  <div class="brand">⚔️ Face <i>Off</i></div>
   <a class="back" href="/">‹ Home</a>
 </header>
 
@@ -504,12 +524,13 @@
   <!-- 1. Matchmaking -->
   <div class="screen on" id="mmScreen">
     <div class="hero">
-      <div class="kick">🏀 Hoops · Live 1v1</div>
-      <h1>Hoops <i>Face Off</i></h1>
-      <p>Match up with a real player online. Build your hooper fast - highest Overall wins the 1-on-1.</p>
+      <div class="kick">Live 1v1</div>
+      <h1>Face <i>Off</i></h1>
+      <p>Match up with a real player. One of you strikes, one keeps goal. Build fast - highest Overall wins the penalty shootout.</p>
     </div>
     <div class="live-ticker" id="liveTicker" style="display:none"><span class="lt-dot"></span><span id="ltText">…</span></div>
     <div class="vs-card">
+      <div class="season-bar" data-season-bar style="display:none"></div>
       <div id="ratingChip" class="rating-chip"></div>
       <button class="btn" id="findBtn">⚔️ Find Match</button>
       <div style="display:flex;align-items:center;gap:10px;margin:18px 0 14px;">
@@ -553,8 +574,8 @@
         </button>
         <button class="lmode" data-mode="legends">
           <div class="lm-icon">🟣</div>
-          <div class="lm-name">Legends</div>
-          <div class="lm-desc">Purple legends only</div>
+          <div class="lm-name">Icons</div>
+          <div class="lm-desc">Purple icons only</div>
         </button>
         <button class="lmode" data-mode="hard">
           <div class="lm-icon">🔒</div>
@@ -583,17 +604,23 @@
     <div class="hero" style="margin:22px 0 14px"><h1 style="font-size:clamp(30px,7vw,48px)">My <i>Stats</i></h1></div>
     <div class="vs-card" style="max-width:520px; text-align:left">
       <div class="stats-tabs" id="statsSportToggle" style="margin-bottom:9px">
-        <button class="stab active" data-sport="hoops">🏀 Hoops</button>
+        <button class="stab active" data-sport="soccer">⚽ Soccer</button>
         <button class="stab" data-sport="baseball">⚾ Baseball</button>
+        <button class="stab" data-sport="hoops">🏀 Hoops</button>
       </div>
       <div class="stats-tabs">
         <button class="stab active" id="tabStats">My Stats</button>
+        <button class="stab" id="tabSeasons">Seasons</button>
         <button class="stab" id="tabHistory">History</button>
       </div>
       <div data-xp-bar style="margin:10px 0"></div>
       <div id="statsPanel">
+        <div class="season-bar" data-season-bar style="display:none"></div>
         <div id="statsPersonal"></div>
         <div id="statsBoard"></div>
+      </div>
+      <div id="seasonsPanel" style="display:none">
+        <div id="seasonsBody"><div class="prompt">Loading…</div></div>
       </div>
       <div id="historyPanel" style="display:none">
         <div id="statsHistory"></div>
@@ -654,34 +681,29 @@
     <div class="slots" id="slots"></div>
   </div>
 
-  <!-- 4. The game (first to 11) -->
+  <!-- 4. At-bat -->
   <div class="screen" id="atbatScreen">
     <div class="matchup" id="matchup"></div>
-    <div class="hv-sb" id="hvSb" style="display:none">
-      <b id="hvSA">0</b>
-      <span class="hv-tag">First to 11<i id="hvPoss">·</i></span>
-      <b id="hvSB">0</b>
-    </div>
-    <div class="hv-court" id="hvCourt">
-      <div class="hv-baseline"></div><div class="hv-mid"></div><div class="hv-circle"></div>
-      <div class="hv-arc3 l"></div><div class="hv-arc3 r"></div>
-      <div class="hv-key l"></div><div class="hv-key r"></div>
-      <img class="hv-hoop l" src="hoops-anim/hoop.png" alt="">
-      <img class="hv-hoop r" src="hoops-anim/hoop.png" alt="">
-      <div class="hv-figwrap" id="hvOffW"><div class="hv-fig" id="hvOff"></div><div class="hv-name" id="hvOffName"></div></div>
-      <div class="hv-figwrap" id="hvDefW"><div class="hv-fig" id="hvDef"></div><div class="hv-name" id="hvDefName"></div></div>
-      <div id="hvBall"><i id="hvSeam"></i></div>
-      <div id="hvNetFlash"></div>
-      <div class="hv-pop" id="hvPop"></div>
-      <div class="hv-call" id="hvCall"></div>
+    <div class="diamond" id="diamond">
+      <div class="crowd"></div>
+      <div class="pitch-info" id="pitchInfo"></div>
+      <div class="goal"><div class="goal-net" id="goalNet"></div></div><div class="spot"></div>
+      <div class="silho p" id="silhoP"></div>
+      <div class="silho b" id="silhoB"></div>
+      <div class="silho-name p" id="abNameP"><span></span></div>
+      <div class="silho-name b" id="abNameB"><span></span></div>
+      <div class="ab-count" id="abCount"><span>⚽ – 🧤</span><b><i id="cntB">0</i>–<i id="cntS">0</i></b></div>
+      <div class="ball" id="ball"></div>
+      <div class="callout"><span id="callout"></span></div>
       <div class="wait-arena" id="waitArena">
         <div class="wa-spin"></div>
-        <div class="wa-title" id="waTitle">Waiting for your opponent…</div>
+        <div class="wa-title" id="waTitle">Waiting for the Striker…</div>
         <div class="wa-bar"><div class="wa-fill" id="waFill"></div></div>
         <div class="wa-count" id="waCount">building…</div>
       </div>
     </div>
-    <button class="btn ghost" id="hvSkipBtn" style="display:none" onclick="hvSkipSim()">⏩ Skip to result</button>
+    <div class="pitch-seq" id="pitchSeq"></div>
+    <button class="btn ghost" id="abSkipBtn" style="display:none" onclick="abSkipSim()">⏩ Skip to result</button>
   </div>
 
   <!-- Challenge screen (opened via a shared challenge link) -->
@@ -744,24 +766,30 @@ function escapeHTML(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;',
 function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
 
 /* ---------- shared data: slots / weights / OVR per role ---------- */
-const TEAM_COLORS = {
-  ATL:'#E03A3E', BOS:'#007A33', BKN:'#1D1D1D', CHA:'#00788C', CHI:'#CE1141',
-  CLE:'#860038', DAL:'#00538C', DEN:'#0E2240', DET:'#C8102E', GSW:'#1D428A',
-  HOU:'#CE1141', IND:'#002D62', LAC:'#C8102E', LAL:'#552583', MEM:'#5D76A9',
-  MIA:'#98002E', MIL:'#00471B', MIN:'#0C2340', NOP:'#0C2340', NYK:'#006BB6',
-  OKC:'#007AC1', ORL:'#0077C0', PHI:'#006BB6', PHX:'#1D1160', POR:'#E03A3E',
-  SAC:'#5A2D81', SAS:'#767A7F', TOR:'#CE1141', UTA:'#002B5C', WAS:'#002B5C', FA:'#5b636e',
+// Jersey tints come from the landed players' CLUBS (~300 real clubs): the famous ones are
+// hardcoded, everything else gets a stable palette color hashed from the club name. Icons purple.
+const POOL_CLUB_COLORS = {
+  'Real Madrid':'#d9d5c4','FC Barcelona':'#a50044','Atlético de Madrid':'#cb3524',
+  'Manchester City':'#6cabdd','Man Utd':'#da291c','Liverpool':'#c8102e','Arsenal':'#ef0107',
+  'Chelsea':'#034694','Spurs':'#1b2b57','Newcastle Utd':'#35363c','Aston Villa':'#670e36','West Ham':'#7a263a',
+  'Juventus':'#2f3238','Lombardia FC':'#0068a8','Milano FC':'#fb090b','SSC Napoli':'#12a0d7','AS Roma':'#8e1f2f',
+  'FC Bayern München':'#dc052d','Borussia Dortmund':'#fde100','Leverkusen':'#e32221','RB Leipzig':'#dd0741',
+  'Paris SG':'#004170','AS Monaco':'#e63312',
+  'SL Benfica':'#d81e2c','FC Porto':'#1a4f8f','Sporting CP':'#067c50',
+  'Celtic':'#018749','Rangers':'#1b458f','Galatasaray':'#e30a17','Fenerbahçe':'#ffed00',
+  'Inter Miami CF':'#f5b6cd','Al Nassr':'#f6c500','Al Hilal':'#1a63b7','Al Ittihad':'#f0c645',
+  'River Plate':'#d94a4a','Boca Juniors':'#103f7b','Icons':'#a366ff',
 };
-const TEAM_NAMES = {
-  ATL:'Hawks', BOS:'Celtics', BKN:'Nets', CHA:'Hornets', CHI:'Bulls', CLE:'Cavaliers',
-  DAL:'Mavericks', DEN:'Nuggets', DET:'Pistons', GSW:'Warriors', HOU:'Rockets', IND:'Pacers',
-  LAC:'Clippers', LAL:'Lakers', MEM:'Grizzlies', MIA:'Heat', MIL:'Bucks', MIN:'Timberwolves',
-  NOP:'Pelicans', NYK:'Knicks', OKC:'Thunder', ORL:'Magic', PHI:'76ers', PHX:'Suns',
-  POR:'Trail Blazers', SAC:'Kings', SAS:'Spurs', TOR:'Raptors', UTA:'Jazz', WAS:'Wizards',
-};
+const HASH_PALETTE = ['#c0392b','#2980b9','#27ae60','#8e44ad','#d35400','#16a085','#7f8c8d','#2c3e50',
+  '#a04000','#1f618d','#117a65','#6c3483','#b7950b','#4a6741','#884ea0','#5d6d7e'];
 const IDLE_JERSEY = '#aeb6c2';
-function teamColor(t){ return TEAM_COLORS[t] || IDLE_JERSEY; }
-function brightTeam(t){ // lighten dark team colors so the silhouette reads on the dark field
+function teamColor(t){
+  if(!t) return IDLE_JERSEY;
+  if(POOL_CLUB_COLORS[t]) return POOL_CLUB_COLORS[t];
+  let h=0; for(let i=0;i<t.length;i++) h=(h*31+t.charCodeAt(i))>>>0;
+  return HASH_PALETTE[h%HASH_PALETTE.length];
+}
+function brightTeam(t){ // lighten dark club colors so the silhouette reads on the dark field
   const hex = teamColor(t); const n = parseInt(hex.slice(1),16);
   let r=n>>16, g=(n>>8)&255, b=n&255; const luma=0.299*r+0.587*g+0.114*b;
   if (luma>=90) return hex; const k=(90-luma)/(255-luma+1);
@@ -771,7 +799,7 @@ function brightTeam(t){ // lighten dark team colors so the silhouette reads on t
 const SILHOUETTE = 'data:image/svg+xml;utf8,' + encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="%2311161d"/><circle cx="50" cy="38" r="20" fill="%23394150"/><path d="M50 62c-20 0-34 14-34 34h68c0-20-14-34-34-34z" fill="%23394150"/></svg>'
 );
-function headshot(p){ return p.img || (p.nbaId ? `https://cdn.nba.com/headshots/nba/latest/260x190/${p.nbaId}.png` : SILHOUETTE); }
+function headshot(p){ return p.img || (p.eaId ? `https://ratings-images-prod.pulse.ea.com/FC25/full/player-portraits/p${p.eaId}.png?width=220` : SILHOUETTE); }
 function tier(ovr){ return ovr>=85?'diamond':ovr>=80?'gold':ovr>=75?'silver':ovr>=65?'bronze':'grey'; }
 function borderTier(p){ return p.legend?'legend':tier(p.ovr); }
 
@@ -807,25 +835,86 @@ function tierBadgeHTML(elo, rank, size=20){
   return `<span class="tier-badge">${batSVG(t.color, t.glow, size)}<span class="tier-name" style="color:${t.color};font-size:${fs}px;letter-spacing:1.5px">${t.name}</span></span>`;
 }
 
-// Both players build the same 9-slot hooper. The two ROLE keys (pitcher/batter) are kept only as
-// vestigial A/B side labels so the matchmaking/figure code needs no changes — both point at hoopers.
-const HOOPER_SLOTS = [
-  { key:'threept',    label:'3-Pointer',  part:'Shooting Hand', mask:'hoop-seg-threept.png',    ax:16, ay:50, lx:7,  ly:56 },
-  { key:'finishing',  label:'Finishing',  part:'Thighs',        mask:'hoop-seg-finishing.png',  ax:40, ay:61, lx:11, ly:74 },
-  { key:'dribble',    label:'Dribble',    part:'Forearms',      mask:'hoop-seg-dribble.png',    ax:27, ay:40, lx:8,  ly:38 },
-  { key:'playmaking', label:'Playmaking', part:'Off Hand',      mask:'hoop-seg-playmaking.png', ax:85, ay:55, lx:93, ly:60 },
-  { key:'defense',    label:'Defense',    part:'Shoulders',     mask:'hoop-seg-defense.png',    ax:70, ay:25, lx:92, ly:22 },
-  { key:'rebounding', label:'Rebounding', part:'Core',          mask:'hoop-seg-rebounding.png', ax:53, ay:46, lx:9,  ly:20 },
-  { key:'speed',      label:'Speed',      part:'Legs',          mask:'hoop-seg-speed.png',      ax:80, ay:76, lx:90, ly:82 },
-  { key:'clutch',     label:'Clutch',     part:'Head',          mask:'hoop-seg-clutch.png',     ax:58, ay:12, lx:86, ly:8 },
-  { key:'frame',      label:'Frame',      part:'Height',        mask:'hoop-seg-frame.png',      ax:54, ay:30, lx:93, ly:40, type:'height' },
-];
-const WEIGHTS_HOOP = { threept:1.2, finishing:1.2, playmaking:1.2, dribble:1.1, defense:1.1, rebounding:1.1, clutch:1.1, speed:0.9, frame:1.0 };
-function heightToRatingHoop(inches){ return inches ? clamp(Math.round(50+(inches-70)*3.6),1,125) : 60; }
+/* ---------- monthly seasons (MUST mirror api/account.js) ---------- */
+const SEASON1_START_MS = Date.UTC(2026, 6, 15);   // 2026-07-15 UTC — keep in sync with the server
+const N_PLACEMENT = 5;
+function addUTCMonths(ms, k){ const d = new Date(ms); d.setUTCMonth(d.getUTCMonth() + k); return d.getTime(); }
+// dev override: /versus?season=<epochMs> pretends "now" is that instant so the season UI can be
+// previewed as if kickoff already passed. Server stays real, so placement data still needs a real season.
+let _seasonNowOverride = 0;
+(function(){ const q = new URLSearchParams(location.search).get('season'); const v = q ? Number(q) : 0; if (v > 0) _seasonNowOverride = v; })();
+function seasonNow(){ return _seasonNowOverride || Date.now(); }
+function seasonInfo(nowMs){
+  nowMs = nowMs || seasonNow();
+  if (nowMs < SEASON1_START_MS) return { number:0, startMs:null, endMs:SEASON1_START_MS };
+  const a = new Date(SEASON1_START_MS), n = new Date(nowMs);
+  let m = (n.getUTCFullYear() - a.getUTCFullYear()) * 12 + (n.getUTCMonth() - a.getUTCMonth());
+  if (nowMs < addUTCMonths(SEASON1_START_MS, m)) m -= 1;
+  return { number:m+1, startMs:addUTCMonths(SEASON1_START_MS, m), endMs:addUTCMonths(SEASON1_START_MS, m+1) };
+}
+function fmtCountdown(ms){
+  if (ms <= 0) return 'soon';
+  const d = Math.floor(ms/86400000), h = Math.floor(ms%86400000/3600000), mn = Math.floor(ms%3600000/60000);
+  if (d > 0) return `${d}d ${h}h`;
+  if (h > 0) return `${h}h ${mn}m`;
+  return `${mn}m`;
+}
+// Combine the season calendar with the player's stored state (myStats.season/placementGames) into a
+// display phase. Before kickoff → 'preseason'; rolled-in + 5 games → 'placed'; else 'placement'.
+function seasonDisplay(){
+  const info = seasonInfo();
+  if (info.number < 1) return { number:0, active:false, endMs:info.endMs, phase:'preseason', placementGames:0 };
+  if (!myStats) return { number:info.number, active:true, endMs:info.endMs, phase:'placed', placementGames:0 };
+  const rolled = (myStats.season || 0) === info.number;
+  const pg = rolled ? (myStats.placementGames || 0) : 0;
+  const phase = (rolled && pg >= N_PLACEMENT) ? 'placed' : 'placement';
+  return { number:info.number, active:true, endMs:info.endMs, phase, placementGames:pg };
+}
+let seasonBarTimer = null;
+function renderSeasonBar(){ return;   // soccer: no seasons yet
+  // eslint-disable-next-line no-unreachable
+  const d = seasonDisplay();
+  let html;
+  if (!d.active) html = `🏆 <b>Season 1</b> begins in <b>${fmtCountdown(d.endMs - seasonNow())}</b> · your current rating carries into placements`;
+  else if (d.phase === 'placement') html = `🏆 <b>Season ${d.number}</b> · Placement <b>${d.placementGames}/5</b> · win 5 to lock your rank · ends in ${fmtCountdown(d.endMs - seasonNow())}`;
+  else html = `🏆 <b>Season ${d.number}</b> · ends in <b>${fmtCountdown(d.endMs - seasonNow())}</b>`;
+  document.querySelectorAll('[data-season-bar]').forEach(el => { el.innerHTML = html; el.style.display = ''; });
+}
+function startSeasonBar(){ /* soccer 1v1 has no Elo seasons (yet) — all-time rating only */ }
 
-const HOOP_CFG = () => ({ data:'ballers.json', figure:'baller-figure.png', slots:HOOPER_SLOTS,
-  h2r:heightToRatingHoop, slotWeight:(k,v)=>WEIGHTS_HOOP[k]||1 });
-const ROLE = { pitcher: HOOP_CFG(), batter: HOOP_CFG() };
+const STRIKER_SLOTS = [
+  { key:'finishing', label:'Finishing', part:'Striking Boot', mask:'soc-seg-finishing.png', ax:80, ay:88, lx:89, ly:70 },
+  { key:'pace', label:'Pace', part:'Legs', mask:'soc-seg-pace.png', ax:24, ay:67, lx:9, ly:82 },
+  { key:'power', label:'Shot Power', part:'Thigh', mask:'soc-seg-power.png', ax:63, ay:61, lx:90, ly:58 },
+  { key:'dribbling', label:'Dribbling', part:'Close Control', mask:'soc-seg-dribbling.png', ax:69, ay:46, lx:92, ly:40 },
+  { key:'passing', label:'Passing', part:'Vision Arm', mask:'soc-seg-passing.png', ax:16, ay:24, lx:7, ly:36 },
+  { key:'heading', label:'Heading', part:'Head', mask:'soc-seg-heading.png', ax:53, ay:9, lx:84, ly:6 },
+  { key:'physical', label:'Physical', part:'Engine', mask:'soc-seg-physical.png', ax:52, ay:42, lx:92, ly:22 },
+  { key:'clutch', label:'Clutch', part:'Heart', mask:'soc-seg-clutch.png', ax:52, ay:29, lx:12, ly:8 },
+  { key:'frame', label:'Frame', part:'Height', mask:'soc-seg-frame.png', ax:51, ay:55, lx:9, ly:52, type:'height' },
+];
+const KEEPER_SLOTS = [
+  { key:'diving', label:'Diving', part:'Arms', mask:'kp-seg-diving.png', ax:21, ay:36, lx:8, ly:26 },
+  { key:'reflexes', label:'Reflexes', part:'Left Glove', mask:'kp-seg-reflexes.png', ax:9, ay:44, lx:8, ly:62 },
+  { key:'handling', label:'Handling', part:'Right Glove', mask:'kp-seg-handling.png', ax:91, ay:43, lx:92, ly:62 },
+  { key:'distribution', label:'Distribution', part:'Boots', mask:'kp-seg-distribution.png', ax:78, ay:88, lx:50, ly:90 },
+  { key:'positioning', label:'Positioning', part:'Head', mask:'kp-seg-positioning.png', ax:52, ay:9, lx:86, ly:6 },
+  { key:'agility', label:'Agility', part:'Legs', mask:'kp-seg-agility.png', ax:28, ay:74, lx:10, ly:80 },
+  { key:'command', label:'Command', part:'The Box', mask:'kp-seg-command.png', ax:52, ay:38, lx:92, ly:26 },
+  { key:'clutch', label:'Clutch', part:'Heart', mask:'kp-seg-clutch.png', ax:52, ay:25, lx:14, ly:7 },
+  { key:'frame', label:'Frame', part:'Height', mask:'kp-seg-frame.png', ax:51, ay:54, lx:50, ly:72, type:'height' },
+];
+const WEIGHTS_S = { finishing:1.2, pace:1.2, dribbling:1.1, power:1.1, passing:1.1, clutch:1.1, heading:1.0, physical:1.0, frame:0.9 };
+const WEIGHTS_K = { reflexes:1.2, diving:1.2, positioning:1.1, handling:1.1, clutch:1.1, frame:1.1, command:1.0, distribution:1.0, agility:1.0 };
+function heightToRatingS(inches){ return inches ? clamp(Math.round(48+(inches-64)*3.4),1,125) : 65; }
+function heightToRatingK(inches){ return inches ? clamp(Math.round(38+(inches-64)*4.2),1,125) : 70; }
+
+const ROLE = {
+  striker: { data:'strikers.json', figure:'striker-figure.png', slots:STRIKER_SLOTS,
+    h2r:heightToRatingS, slotWeight:(k,v)=>WEIGHTS_S[k]||1 },
+  keeper: { data:'keepers.json', figure:'keeper-figure.png', slots:KEEPER_SLOTS,
+    h2r:heightToRatingK, slotWeight:(k,v)=>WEIGHTS_K[k]||1 },
+};
 function slotNumeric(role,p,s){
   if(s.type==='height') return ROLE[role].h2r(p.heightIn);
   return p[s.key]||0;
@@ -855,7 +944,7 @@ const Sound = (() => {
     tick(sp=0.5){ const f=210+Math.min(1,sp)*280; note(f,0,0.05,{type:'square',vol:0.05,glide:f*0.55}); },
     click(){ note(620,0,0.06,{type:'square',vol:0.12,glide:470}); },
     assign(){ note(520,0,0.06,{type:'square',vol:0.14}); note(780,0.05,0.1,{vol:0.16}); },
-    // landing chimes - same as the Build a Pitcher game, scaled by tier
+    // landing chimes - same as the Build a Striker game, scaled by tier
     land(){ note(440,0,0.1,{vol:0.12}); note(660,0.04,0.12,{vol:0.1}); },
     gold(){ arp([660,880],0.09,{vol:0.2,dur:0.18}); },
     diamond(){ arp([660,990,1320],0.08,{vol:0.2,dur:0.2}); note(1980,0.24,0.25,{type:'sine',vol:0.12}); },
@@ -879,8 +968,8 @@ let friendlyMode=false;
 let gameMode='classic'; // 'classic' | 'legends' | 'hard'
 let lobbyWaiting=false;
 let _incomingChalMode='classic';
-const MODE_LABEL={ classic:'⚔️ Classic', legends:'🟣 Legends Only', hard:'🔒 Hard Mode' };
-const MODE_DESC={ classic:'Standard draft · all tiers', legends:'Legends only · purple tier cards', hard:'Standard draft · ratings hidden' };
+const MODE_LABEL={ classic:'⚔️ Classic', legends:'🟣 Icons Only', hard:'🔒 Hard Mode' };
+const MODE_DESC={ classic:'Standard draft · all tiers', legends:'Icons only · purple tier cards', hard:'Standard draft · ratings hidden' };
 let challengeInboxCh=null, _incomingChalId=null, _incomingChalName=null;
 let pendingChallenge=null; // {replyId, replyClientId, name} - incoming challenge waiting on the notif
 let chalWaitTimeout=null;
@@ -947,8 +1036,8 @@ async function onGoogleCredential(resp){
 async function refreshStats(){
   try {
     const r = await fetch('/api/account', { method:'POST', headers:{'content-type':'application/json'},
-      body: JSON.stringify(Object.assign({ action:'pvpStats', sport:'hoops' }, principal())) }).then(x=>x.json());
-    if (r.ok) myStats = { elo:r.elo, wins:r.wins, losses:r.losses, streak:r.streak||0 };
+      body: JSON.stringify(Object.assign({ action:'pvpStats', sport:'soccer' }, principal())) }).then(x=>x.json());
+    if (r.ok) myStats = { elo:r.elo, wins:r.wins, losses:r.losses, streak:r.streak||0, season:r.season||0, placementGames:r.placementGames||0 };
     else if (account && r.error === 'Not signed in'){ account=null; try{ localStorage.removeItem('pl_account'); }catch(e){} return refreshStats(); }
   } catch(e){}
 }
@@ -963,7 +1052,10 @@ function updateRatingChip(){
   el.appendChild(row);
   const tierRow = document.createElement('div');
   tierRow.style.cssText = 'display:flex;align-items:center;justify-content:center;margin:4px 0 2px';
-  tierRow.innerHTML = tierBadgeHTML(elo, null, 22);
+  const sd = seasonDisplay();
+  tierRow.innerHTML = (sd.active && sd.phase === 'placement')
+    ? `<span class="tier-badge" style="color:#ffce3a;font-family:'Oswald',sans-serif;letter-spacing:1.5px;font-size:14px">🧭 Placement ${sd.placementGames}/5</span>`
+    : tierBadgeHTML(elo, null, 22);
   el.appendChild(tierRow);
   if (account){
     const note = document.createElement('div'); note.className='guest'; note.textContent='✓ Signed in · rating saved to your account';
@@ -983,12 +1075,13 @@ async function applyResult(){
   const pr = pendingResult; pendingResult=null;
   try {
     const r = await fetch('/api/account', { method:'POST', headers:{'content-type':'application/json'},
-      body: JSON.stringify(Object.assign({ action:'pvpResult', sport:'hoops', matchId: pr.matchId, won: pr.won, oppElo: pr.oppElo,
+      body: JSON.stringify(Object.assign({ action:'pvpResult', sport:'soccer', matchId: pr.matchId, won: pr.won, oppElo: pr.oppElo,
         role: pr.role, ovr: pr.ovr, oppOvr: pr.oppOvr, oppName: pr.oppName || '', oppKey: pr.oppKey || '', decided: pr.decided !== false }, principal())) }).then(x=>x.json());
     if (r.ok){
       myStats = { elo:r.elo, wins:r.wins, losses:r.losses, streak:r.streak||0 };
-      // Server is authoritative: reconcile the headline to the recorded outcome so a rare
-      // forfeit / both-claim-win race never shows "YOU WIN" above a rating drop.
+      // The server is authoritative on the outcome. If the opponent settled this match the other
+      // way first (a rare forfeit / both-claim-win race), the locally-shown headline can contradict
+      // the Elo change — reconcile it so "YOU WIN" never sits above a rating drop.
       if (typeof r.won === 'boolean' && r.won !== pr.won) reconcileResultDisplay(r.won, pr.oppName);
       renderRatingResult(r);
     }
@@ -1002,8 +1095,49 @@ function reconcileResultDisplay(won, oppName){
     ? `You beat ${nm}. Run it back?`
     : `${nm} settled this one first. Rating adjusted to match.`;
 }
+function addGuestSavePrompt(el){
+  if (!isGuest()) return;
+  const p = document.createElement('div'); p.className='prompt'; p.style.marginTop='4px';
+  p.textContent='Sign in to save it & play on other devices →';
+  const wrap = document.createElement('div'); wrap.id='gsiResult';
+  el.appendChild(p); el.appendChild(wrap);
+  if (gsiReady){ try { google.accounts.id.renderButton(wrap, { theme:'filled_black', size:'large', shape:'pill', text:'signin_with' }); } catch(e){} }
+}
 function renderRatingResult(r){
   const el = $('ratingResult'); if (!el) return;
+  if (window.Ach){   // elo milestones can be reached during placements too
+    if (r.elo >= 1200) Ach.unlock('elo1');
+    if (r.elo >= 1400) Ach.unlock('elo2');
+    if (r.elo >= 1600) Ach.unlock('elo3');
+  }
+  // ---- placement games: hide the raw Elo, show progress / the "placed" reveal ----
+  if (r.inPlacement){
+    const band = getEloTier(r.elo, null);
+    const segs = Array.from({ length: N_PLACEMENT }, (_, i) =>
+      `<span style="flex:1;height:8px;border-radius:4px;background:${i < r.placementGames ? band.color : 'rgba(120,150,190,.2)'}"></span>`).join('');
+    if (r.placed){   // the 5th placement game just locked their band
+      el.innerHTML = `<div class="delta" style="color:${band.color}">✓ PLACEMENTS COMPLETE</div>`
+        + `<div style="font-family:'Oswald',sans-serif;font-size:15px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin:8px 0 2px">Placed into</div>`
+        + `<div class="tier-result" style="display:flex;align-items:center;justify-content:center;margin:2px 0 8px">${tierBadgeHTML(r.elo, null, 30)}</div>`
+        + `<div style="display:flex;gap:5px;margin:6px 0">${segs}</div>`
+        + `<div class="prompt">Season ${r.season} · ${r.wins}W · ${r.losses}L</div>`;
+      const badgeEl = el.querySelector('.tier-badge');
+      if (badgeEl && window.gsap){
+        gsap.fromTo(badgeEl, { scale:0.5, opacity:0 }, { scale:1, opacity:1, duration:0.7, delay:0.3, ease:'back.out(2.4)' });
+        const card = $('resultCard');
+        gsap.fromTo(card, { filter:'brightness(1)' }, { filter:'brightness(1.35)', duration:0.2, delay:0.35, yoyo:true, repeat:3, ease:'power2.inOut', onComplete(){ card.style.filter=''; } });
+      }
+      try { Sound.win(); } catch(e){}
+    } else {
+      const left = N_PLACEMENT - r.placementGames;
+      el.innerHTML = `<div class="delta ${r.won?'up':'down'}">Placement ${r.placementGames}/5 · ${r.won?'WIN':'LOSS'}</div>`
+        + `<div style="display:flex;gap:5px;margin:11px 0">${segs}</div>`
+        + `<div class="prompt">${left} more to lock your Season ${r.season} rank</div>`;
+      if (window.gsap) gsap.fromTo(el.querySelector('.delta'), { y:8, opacity:0 }, { y:0, opacity:1, duration:.5, ease:'power2.out' });
+    }
+    addGuestSavePrompt(el);
+    return;
+  }
   const prev = r.elo - r.delta;
   const dir = r.delta >= 0 ? 'up' : 'down';
   const sign = r.delta >= 0 ? '+' : '';
@@ -1100,7 +1234,7 @@ function connectAbly(){
 // The old ticker used Ably presence; fanning presence out to every idle viewer was ~90% of the Ably
 // bill. Now each viewer heartbeats /api/live every ~45s (only while the tab is visible) and the same
 // response returns the live counts. Linear cost, plain DB queries, zero Ably.
-const LIVE_GAME = 'hoops';
+const LIVE_GAME = 'versus-soccer';
 let myOnlineStatus = 'idle', liveId = null, liveTimer = null;
 async function goOnline(){
   // Start the live heartbeat; connect Ably + wire the friend-challenge inbox (unrelated to the ticker).
@@ -1141,7 +1275,7 @@ function renderTicker(d){
 function subscribeChallengeInbox(){
   if (challengeInboxCh) return;
   try {
-    challengeInboxCh = ably.channels.get('hoops:challenge:' + personId());
+    challengeInboxCh = ably.channels.get('soccer:challenge:' + personId());
     challengeInboxCh.subscribe('m', msg => handleChallengeMsg(msg));
   } catch(e){}
 }
@@ -1175,7 +1309,7 @@ function checkChallengeURL(){
   if (!ch) return;
   _incomingChalId = ch;
   _incomingChalName = cn ? decodeURIComponent(cn) : 'Challenger';
-  try { gtag('event', 'challenge_opened', { game: 'versus_hoops' }); } catch(e){}
+  try { gtag('event', 'challenge_opened', { game: 'versus-soccer' }); } catch(e){}
   _incomingChalMode = (md && MODE_LABEL[md]) ? md : 'classic';
   $('chalChallengerName').textContent = _incomingChalName;
   const tag = $('chalModeTag'), tagInner = $('chalModeTagInner');
@@ -1192,7 +1326,7 @@ function checkChallengeURL(){
 
 async function sendChallengeRequest(){
   if (!_incomingChalId) return;
-  try { gtag('event', 'challenge_accepted', { game: 'versus_hoops' }); } catch(e){}
+  try { gtag('event', 'challenge_accepted', { game: 'versus-soccer' }); } catch(e){}
   $('chalAcceptBtn').disabled = true;
   $('chalStatus').textContent = 'Connecting…';
   try { await connectAbly(); } catch(e){
@@ -1214,7 +1348,7 @@ async function sendChallengeRequest(){
     tries++;
     setChalStatus(tries === 1 ? 'Contacting challenger…' : `Pinging… (attempt ${tries}/${MAX_TRIES})`);
     try {
-      const ch = ably.channels.get('hoops:challenge:' + _incomingChalId);
+      const ch = ably.channels.get('soccer:challenge:' + _incomingChalId);
       await ch.publish('m', { type:'request', replyId: personId(), clientId, name: displayName() });
     } catch(e){}
     if (chalGaveUp) return;
@@ -1237,11 +1371,11 @@ async function acceptChallengeNotif(){
   hideChallengeNotif();
   const pr = pendingChallenge; pendingChallenge = null;
   const newId = rid(), newSeed = (Math.random() * 0xFFFFFFFF)|0;
-  const myNewRole = Math.random() < 0.5 ? 'pitcher' : 'batter';
-  const theirRole = myNewRole === 'pitcher' ? 'batter' : 'pitcher';
+  const myNewRole = Math.random() < 0.5 ? 'striker' : 'keeper';
+  const theirRole = myNewRole === 'striker' ? 'keeper' : 'striker';
   // Retry the accept publish up to 3 times - if this fails silently, the acceptor
   // never gets the green light and times out even though the challenger is ready.
-  const ch = ably.channels.get('hoops:challenge:' + pr.replyId);
+  const ch = ably.channels.get('soccer:challenge:' + pr.replyId);
   const payload = { type:'accept', matchId:newId, seed:newSeed, yourRole:theirRole, chalClientId:clientId, mode:gameMode };
   for (let i = 0; i < 3; i++){
     try { await ch.publish('m', payload); break; } catch(e){ if (i < 2) await new Promise(r => setTimeout(r, 800)); }
@@ -1253,7 +1387,7 @@ function declineChallengeNotif(){
   const pr = pendingChallenge; pendingChallenge = null;
   hideChallengeNotif();
   if (pr && ably) {
-    try { ably.channels.get('hoops:challenge:' + pr.replyId).publish('m', { type:'decline' }); } catch(e){}
+    try { ably.channels.get('soccer:challenge:' + pr.replyId).publish('m', { type:'decline' }); } catch(e){}
   }
 }
 
@@ -1269,14 +1403,14 @@ function hideChallengeNotif(){
 }
 
 function copyChallengeLinkFn(){
-  const link = location.origin + '/versus-hoops?ch=' + encodeURIComponent(personId()) + '&cn=' + encodeURIComponent(displayName()) + '&mode=' + gameMode;
-  try { gtag('event', 'challenge_sent', { game: 'versus_hoops', source: 'stats' }); } catch(e){}
+  const link = location.origin + '/versus-soccer?ch=' + encodeURIComponent(personId()) + '&cn=' + encodeURIComponent(displayName()) + '&mode=' + gameMode;
+  try { gtag('event', 'challenge_sent', { game: 'versus-soccer', source: 'stats' }); } catch(e){}
   const done = () => { const c=$('chalCopied'); if(c){ c.style.display=''; setTimeout(()=>{ if(c) c.style.display='none'; },3000); } };
   if (navigator.clipboard) { navigator.clipboard.writeText(link).then(done).catch(()=>{ prompt('Copy this link:', link); }); }
   else { try { prompt('Copy this link:', link); done(); } catch(e){} }
 }
 function challengeLink(){
-  return location.origin + '/versus-hoops?ch=' + encodeURIComponent(personId()) + '&cn=' + encodeURIComponent(displayName()) + '&mode=' + gameMode;
+  return location.origin + '/versus-soccer?ch=' + encodeURIComponent(personId()) + '&cn=' + encodeURIComponent(displayName()) + '&mode=' + gameMode;
 }
 function updateLobbyLink(){
   const link = challengeLink();
@@ -1314,14 +1448,14 @@ async function findMatch(){
   } catch(e){ setStatus('Could not connect. Check Ably is configured, then retry.'); failBack(); return; }
   setStatus('Searching for an opponent…');
   setOnlineStatus('searching');
-  try { gtag('event', 'versus_search', { game: 'versus_hoops' }); } catch(e){}
+  try { gtag('event', 'versus_search', { game: 'versus-soccer' }); } catch(e){}
 
   searching = true;
   // after ~20s alone, offer a Ghost match (a real recent build) so an empty lobby isn't a dead end
   if (ghostTimer) clearTimeout(ghostTimer);
   ghostTimer = setTimeout(() => { if (searching) { $('ghostOffer').style.display = 'block'; Sound.whoosh(); } }, 20000);
   // subscribe to my invite channel BEFORE asking the server (so I can't miss a hand-off)
-  inviteCh = ably.channels.get('hoops:invite:' + clientId);
+  inviteCh = ably.channels.get('soccer:invite:' + clientId);
   inviteCh.subscribe('match', msg => {
     const d = msg.data;
     stopSearch();
@@ -1336,16 +1470,16 @@ async function attemptMatch(){
   if (!searching) return;
   let r;
   try {
-    r = await fetch('/api/match-hoops', { method:'POST', headers:{'content-type':'application/json'},
+    r = await fetch('/api/match-soccer', { method:'POST', headers:{'content-type':'application/json'},
       body: JSON.stringify({ action:'find', id: clientId, pid: personId() }) }).then(x=>x.json());
   } catch(e){ if (searching) retryTimer = setTimeout(attemptMatch, 3000); return; }
   if (!searching) return;
 
   if (r && r.matched){
     stopSearch();
-    const theirRole = r.role === 'pitcher' ? 'batter' : 'pitcher';
+    const theirRole = r.role === 'striker' ? 'keeper' : 'striker';
     try {
-      await ably.channels.get('hoops:invite:' + r.oppId).publish('match',
+      await ably.channels.get('soccer:invite:' + r.oppId).publish('match',
         { matchId: r.matchId, role: theirRole, seed: r.seed, oppId: clientId });
     } catch(e){}
     startMatch(r.matchId, r.role, r.seed, r.oppId, true);
@@ -1362,16 +1496,17 @@ function failBack(){ $('findBtn').style.display='inline-block'; $('mmSpin').styl
 async function cancelSearch(){
   stopSearch();
   setOnlineStatus('idle');
-  if (clientId) { try { await fetch('/api/match-hoops',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'leave',id:clientId})}); } catch(e){} }
+  if (clientId) { try { await fetch('/api/match-soccer',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'leave',id:clientId})}); } catch(e){} }
   if (inviteCh) { inviteCh.unsubscribe(); try{ inviteCh.detach(); }catch(e){} inviteCh=null; }
   failBack(); setStatus('');
 }
 
 /* ---------- Ghost match (async vs a real recent build) ---------- */
 const GHOST_NAMES = ['The Phantom', 'Anonymous', 'A Challenger', 'Ghost Runner', 'The Stranger', 'Nobody', 'Mystery Build', 'The Visitor'];
-async function fetchGhostBuild(){
+async function fetchGhostBuild(role){
+  // role is the ghost's role, which doubles as the leaderboard `game` key (striker|keeper)
   try {
-    const r = await fetch(`/api/score?action=ghost&game=baller&min=87&max=95`).then(x=>x.json());
+    const r = await fetch(`/api/score?action=ghost&game=${role}&min=87&max=95`).then(x=>x.json());
     return (r && r.ghost) ? r.ghost : null;
   } catch(e){ return null; }
 }
@@ -1379,18 +1514,21 @@ async function startGhostMatch(){
   resetMatch();                       // clears any prior match/timers (and isGhost)
   gameMode = 'classic';
   isGhost = true; friendlyMode = false;   // a ghost is a real build → Elo counts
-  try { gtag('event', 'versus_ghost_start', { game: 'versus_hoops' }); } catch(e){}
-  if (clientId) { try { fetch('/api/match-hoops',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'leave',id:clientId})}); } catch(e){} }
+  try { gtag('event', 'versus_ghost_start', { game: 'versus-soccer' }); } catch(e){}
+  // leave the live queue so nobody claims us while we play the ghost
+  if (clientId) { try { fetch('/api/match-soccer',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'leave',id:clientId})}); } catch(e){} }
   if (inviteCh) { inviteCh.unsubscribe(); try{ inviteCh.detach(); }catch(e){} inviteCh=null; }
   setOnlineStatus('playing');
-  myRole = Math.random() < 0.5 ? 'pitcher' : 'batter';   // vestigial label; both build hoopers
-  oppRole = myRole === 'pitcher' ? 'batter' : 'pitcher';
+  myRole = Math.random() < 0.5 ? 'striker' : 'keeper';
+  oppRole = myRole === 'striker' ? 'keeper' : 'striker';
   matchId = 'ghost:' + Math.random().toString(16).slice(2, 10);
   seed = (Math.random() * 0xffffffff) >>> 0;
   rng = mulberry32(seed || 1);
   oppId = 'ghost';
-  const g = await fetchGhostBuild();
+  const g = await fetchGhostBuild(oppRole);
   const slots = (g && g.build && Array.isArray(g.build.slots)) ? g.build.slots : [];
+  // no real build in that OVR band yet → synthesize one so a ghost is ALWAYS available.
+  // the at-bat reads .ovr (+ optional slot values with ovr fallbacks), so this is enough.
   const ovr = g ? Math.round(Number(g.ovr) || 90) : (87 + Math.floor(Math.random() * 9));
   const name = g ? String(g.name || 'A Challenger') : GHOST_NAMES[Math.floor(Math.random() * GHOST_NAMES.length)];
   oppBuild = { role: oppRole, ovr, name, team: slots.length ? modalTeam(slots) : '', slots,
@@ -1420,13 +1558,13 @@ function resetMatch(){
 let oppPresent=false;
 async function startMatch(mId, role, sd, opp, claimer, friendly=false){
   friendlyMode = !!friendly;
-  try { gtag('event', 'versus_match_found', { game: 'versus_hoops', friendly: friendlyMode ? 1 : 0 }); } catch(e){}
+  try { gtag('event', 'versus_match_found', { game: 'versus-soccer', friendly: friendlyMode ? 1 : 0 }); } catch(e){}
   setOnlineStatus('playing');
   if (inviteCh){ inviteCh.unsubscribe(); try{ inviteCh.detach(); }catch(e){} inviteCh=null; }
-  matchId=mId; myRole=role; oppRole=role==='pitcher'?'batter':'pitcher'; seed=(sd>>>0); oppId=opp; wasClaimer=!!claimer;
+  matchId=mId; myRole=role; oppRole=role==='striker'?'keeper':'striker'; seed=(sd>>>0); oppId=opp; wasClaimer=!!claimer;
   rng = mulberry32(seed || 1);
 
-  matchCh = ably.channels.get('hoops:match:' + matchId);
+  matchCh = ably.channels.get('soccer:match:' + matchId);
   // ignore our own messages (belt-and-suspenders alongside echoMessages:false)
   matchCh.subscribe('build',    m => { if (m.clientId === clientId) return; oppBuild = m.data; updateOppPill(); if (myBuild && !atBatStarted && !matchResolved){ try{ matchCh.publish('build', myBuild); }catch(e){} } maybeStartAtBat(); });
   matchCh.subscribe('progress', m => { if (m.clientId === clientId) return; updateOppProgress(m.data); });
@@ -1466,9 +1604,9 @@ function beginRoleReveal(){
   showScreen('roleScreen');
   const card = $('roleCard');
   card.className = 'role-card ' + myRole;
-  $('roleLabel').textContent = "You're up! Build your Hooper!";
-  $('roleSub').textContent = myRole === 'pitcher'
-    ? 'Build a pitcher to strike them out. Highest Overall wins.'
+  $('roleLabel').textContent = "You're the " + (myRole === 'striker' ? 'Striker' : 'Keeper');
+  $('roleSub').textContent = myRole === 'striker'
+    ? 'Build a striker to strike them out. Highest Overall wins.'
     : 'Build a hitter to crush it. Highest Overall wins.';
   updateOppChip();
   gsap.set('#oppChip', { opacity:0, y:18 });
@@ -1506,24 +1644,19 @@ function pool(){
 function randPlayer(){
   const p = pool(), legs = DATA[myRole].legends || [];
   if (legs.length && rng() < 0.03){ const a = legs.filter(x=>!buildState.used.has(x.name)); if (a.length) return a[Math.floor(rng()*a.length)]; }
-  // era "Prime" cards - same odds for both players (not in Legends-only mode)
-  const eps = DATA[myRole].eraPrimes || [];
-  if (gameMode !== 'legends' && eps.length && rng() < 0.05){ const a = eps.filter(x=>!buildState.used.has(x.name)); if (a.length) return a[Math.floor(rng()*a.length)]; }
   // best-of-2 lifts the average so builds feel good; symmetric for both players
   let best=null;
   for (let i=0;i<2;i++){ let q,t=0; do{ q=p[Math.floor(rng()*p.length)]; }while(buildState.used.has(q.name)&&++t<40); if(!best||q.ovr>best.ovr)best=q; }
   return best;
 }
 function rcardHTML(p){ const t=borderTier(p);
-  const meta = p.legend ? `<div class="legend-tag">★ LEGEND</div>`
-    : p.prime ? `<div class="prime-tag">🔥 PRIME ${escapeHTML(p.year||'')}</div>`
-    : `<div class="yr">${escapeHTML(p.year||'')}</div>`;
+  const meta = p.legend ? `<div class="legend-tag">★ LEGEND</div>` : `<div class="yr">${escapeHTML(p.year||'')}</div>`;
   return `<div class="rcard t-${t}">
     <img src="${headshot(p)}" loading="lazy" onerror="this.onerror=null;this.src='${SILHOUETTE}'">
     <div class="nm">${escapeHTML(p.name)}</div>
     <div class="ov">${p.ovr}</div>
     ${meta}
-    <div class="pos">${escapeHTML(p.pos||'')} · ${escapeHTML(p.team||'')}</div>
+    <div class="pos">${escapeHTML(p.pos||'')} · ${escapeHTML(p.club||'')}</div>
   </div>`; }
 
 function beginBuild(){
@@ -1681,15 +1814,14 @@ const TIER_COL = { grey:'#9aa6b8', bronze:'#d28b4e', silver:'#cdd6e2', gold:'#ff
 function land(p){
   buildState.landed=p;
   $('landedImg').src=headshot(p); $('landedImg').onerror=function(){this.onerror=null;this.src=SILHOUETTE;};
-  const pn = (p.prime ? `🔥 ${p.year ? p.year + ' ' : ''}` : '') + p.name;
-  $('landedName').textContent = gameMode==='hard' ? pn : `${pn} · ${p.ovr} OVR`;
+  $('landedName').textContent = gameMode==='hard' ? p.name : `${p.name} · ${p.ovr} OVR`;
   $('landedOvr').textContent = gameMode==='hard' ? '?' : p.ovr; $('landedLi').classList.add('show');
   const tcol = TIER_COL[borderTier(p)] || '#c8d0da';
   $('landedOvr').style.color = tcol; $('landedImg').style.boxShadow = `0 0 14px ${tcol}66`;
   $('landedImg').style.border = `2px solid ${tcol}`;
   $('spinBtn').disabled=true;
   // power-ups (one use each per match)
-  const hasPrime = !p.legend && !p.prime && DATA[myRole].prime && !!DATA[myRole].prime[p.name] && !buildState.boostedThisLand;
+  const hasPrime = !p.legend && DATA[myRole].prime && !!DATA[myRole].prime[p.name] && !buildState.boostedThisLand;
   $('powerups').classList.add('show');
   $('respinBtn').disabled = buildState.respinUsed;
   $('boostBtn').disabled = buildState.boostUsed || !hasPrime;
@@ -1699,7 +1831,7 @@ function land(p){
   $('snagRightBtn').disabled = !canSnag || !buildState.strip[buildState.targetIndex+1];
   renderSlots(); renderNodes();
   revealWin(p);
-  // landing sound by rarity - same chimes as the Build a Pitcher game
+  // landing sound by rarity - same chimes as the Build a Striker game
   if (p.legend) Sound.legend();
   else { const tt = tier(p.ovr); if (tt === 'diamond') Sound.diamond(); else if (tt === 'gold') Sound.gold(); else Sound.land(); }
   $('buildHint').textContent='Tap a glowing body part to assign ' + p.name + ' - or use a power-up.';
@@ -1752,7 +1884,7 @@ function assign(key){
   const p=buildState.landed, s=ROLE[myRole].slots.find(x=>x.key===key);
   const originRect = $('landedImg').getBoundingClientRect();
   buildState.filled[key]={ slot:s.label, value:slotNumeric(myRole,p,s), display:String(slotDisplay(myRole,p,s)),
-    player:p.name, team:p.team, legend:!!p.legend, img:headshot(p), ovr:p.ovr };
+    player:p.name, team:p.club, legend:!!p.legend, img:headshot(p), ovr:p.ovr };
   buildState.used.add(p.name); buildState.landed=null; Sound.assign();
   $('landedLi').classList.remove('show'); $('powerups').classList.remove('show'); $('spinBtn').disabled=false;
   renderSlots(); renderNodes(); updateFigure(); updateOvr(); publishProgress();
@@ -1800,7 +1932,7 @@ function autoFill(){
   const empties=openSlots();
   for(const s of empties){ const p=randPlayer(); buildState.used.add(p.name);
     buildState.filled[s.key]={ slot:s.label, value:slotNumeric(myRole,p,s), display:String(slotDisplay(myRole,p,s)),
-      player:p.name, team:p.team, legend:!!p.legend, img:headshot(p), ovr:p.ovr }; }
+      player:p.name, team:p.club, legend:!!p.legend, img:headshot(p), ovr:p.ovr }; }
   buildState.landed=null; renderSlots(); renderNodes(); updateFigure(); updateOvr();
   finishBuild();
 }
@@ -1834,28 +1966,26 @@ function stopWaitClock(){ if(waClockTimer){ clearInterval(waClockTimer); waClock
 function showWaitArena(){
   waitingArena=true;
   showScreen('atbatScreen');
-  const minePitcher = myRole==='pitcher';
-  const meSide  = `<div class="who" style="color:var(--pitch)">🏀 ${escapeHTML(displayName())} (You)</div><div class="o" style="color:var(--pitch)">${myBuild.ovr}</div>`;
-  const oppSide = `<div class="who" style="color:var(--bat)">🏀 Opponent</div><div class="o" style="color:var(--bat)">?</div>`;
-  const pitcherSide = minePitcher ? meSide : oppSide;
-  const batterSide  = minePitcher ? oppSide : meSide;
-  $('matchup').innerHTML = `<div class="side">${pitcherSide}</div><div class="mid">VS</div><div class="side">${batterSide}</div>`;
-  // your fighter ready on your side of the court, opponent's slot greyed out
-  const W = $('hvCourt').getBoundingClientRect().width;
-  hvPose($('hvOff'),'dribble3'); hvPose($('hvDef'),'def2');
-  hvFace($('hvOff'),1); hvFace($('hvDef'),-1);
-  $('hvOff').style.background = brightTeam(minePitcher ? myBuild.team : 'FA');
-  $('hvDef').style.background = brightTeam(!minePitcher ? myBuild.team : 'FA');
-  $('hvOff').classList.toggle('dim', !minePitcher);
-  $('hvDef').classList.toggle('dim', minePitcher);
-  gsap.set('#hvOffW',{ x:W*0.24, y:0 }); gsap.set('#hvDefW',{ x:W*0.62, y:0 });
-  $('hvOffName').textContent = minePitcher ? (displayName()||'You').slice(0,14) : 'Opponent';
-  $('hvDefName').textContent = minePitcher ? 'Opponent' : (displayName()||'You').slice(0,14);
-  $('hvOffName').style.borderColor=''; $('hvDefName').style.borderColor='';
-  gsap.set('#hvBall',{ opacity:0 }); gsap.set('#hvNetFlash',{ opacity:0 });
-  $('hvPop').style.opacity=0; $('hvCall').innerHTML=''; $('hvSb').style.display='none';
-  $('hvSkipBtn').style.display='none';
-  $('waTitle').textContent = 'Waiting for your opponent…';
+  const mineStriker = myRole==='striker';
+  const strikerSide = mineStriker
+    ? `<div class="who" style="color:var(--pitch)">⚽ ${escapeHTML(displayName())} (You)</div><div class="o" style="color:var(--pitch)">${myBuild.ovr}</div>`
+    : `<div class="who" style="color:var(--pitch)">⚽ Striker</div><div class="o" style="color:var(--pitch)">?</div>`;
+  const keeperSide = !mineStriker
+    ? `<div class="who" style="color:var(--bat)">🧤 ${escapeHTML(displayName())} (You)</div><div class="o" style="color:var(--bat)">${myBuild.ovr}</div>`
+    : `<div class="who" style="color:var(--bat)">🧤 Keeper</div><div class="o" style="color:var(--bat)">?</div>`;
+  $('matchup').innerHTML = `<div class="side">${strikerSide}</div><div class="mid">VS</div><div class="side">${keeperSide}</div>`;
+  stPose('run'); kpPose('ready');
+  $('silhoP').style.background = brightTeam(mineStriker ? myBuild.team : 'FA');
+  $('silhoB').style.background = brightTeam(!mineStriker ? myBuild.team : 'FA');
+  $('silhoP').classList.toggle('dim', !mineStriker);
+  $('silhoB').classList.toggle('dim', mineStriker);
+  $('abNameP').firstChild.textContent = mineStriker ? (displayName()||'You').slice(0,14) : 'Opponent';
+  $('abNameB').firstChild.textContent = mineStriker ? 'Opponent' : (displayName()||'You').slice(0,14);
+  $('abNameP').firstChild.style.borderColor=''; $('abNameB').firstChild.style.borderColor='';
+  $('abSkipBtn').style.display='none'; $('abCount').classList.remove('show');
+  gsap.set('#ball', { opacity:0 }); $('callout').textContent=''; $('pitchInfo').style.opacity=0;
+  $('pitchSeq').innerHTML=''; gsap.set('#pitchSeq', { opacity:0 });
+  $('waTitle').textContent = 'Waiting for the ' + (mineStriker ? 'Keeper' : 'Striker') + '…';
   $('waitArena').classList.add('show');
   waClockLeft = Math.max(0, clockLeft);   // shared shot clock was frozen at finish; count it down for display
   stopWaitClock();
@@ -1864,12 +1994,13 @@ function showWaitArena(){
 }
 function updateWaitArena(){
   if (!waitingArena) return;
+  const oppIsStriker = myRole !== 'striker';
   const total = oppProg.total || 9;
   const filled = Math.min(oppProg.filled || 0, total);
   $('waFill').style.width = Math.round(100 * filled / total) + '%';
   const clk = waClockLeft>0 ? ' · ' + fmtClock(waClockLeft) + ' left' : ' · time’s up';
   $('waCount').textContent = oppPresent
-    ? 'Opponent building · ' + filled + '/' + total + ' slots' + clk
+    ? (oppIsStriker ? 'Striker' : 'Keeper') + ' building · ' + filled + '/' + total + ' slots' + clk
     : 'Connecting to opponent…';
 }
 function showNoContest(){
@@ -1984,7 +2115,7 @@ function updateOppPill(){
   updateWaitArena();
 }
 
-/* ---------- at-bat ---------- */
+/* ---------- penalty shootout ---------- */
 function maybeStartAtBat(){
   if(matchResolved || atBatStarted || !myBuild || !oppBuild) return;
   atBatStarted=true;
@@ -1995,331 +2126,206 @@ function playAtBat(){
   if(matchResolved) return;
   showScreen('atbatScreen');
   waitingArena=false; stopWaitClock(); $('waitArena').classList.remove('show');
-  $('hvOff').classList.remove('dim'); $('hvDef').classList.remove('dim');
-  const pitcher = myRole==='pitcher' ? myBuild : oppBuild;   // side A — attacks the RIGHT hoop
-  const batter  = myRole==='pitcher' ? oppBuild : myBuild;   // side B — attacks the LEFT hoop
-  const abRng = atBatRng(pitcher, batter);
+  $('silhoP').classList.remove('dim'); $('silhoB').classList.remove('dim');
+  const shooter = myRole==='striker' ? myBuild : oppBuild;
+  const gk      = myRole==='striker' ? oppBuild : myBuild;
+  const abRng = atBatRng(shooter, gk);
   // winner: higher OVR; tie -> seeded coin (identical on both phones)
   let winnerRole;
-  if(batter.ovr>pitcher.ovr)winnerRole='batter';
-  else if(pitcher.ovr>batter.ovr)winnerRole='pitcher';
-  else winnerRole = abRng()<0.5?'pitcher':'batter';
+  if(gk.ovr>shooter.ovr)winnerRole='keeper';
+  else if(shooter.ovr>gk.ovr)winnerRole='striker';
+  else winnerRole = abRng()<0.5?'striker':'keeper';
   const iWon = winnerRole===myRole;
-  const script = buildGameScript(pitcher, batter, winnerRole, abRng);
+  const script = makeShootout(shooter, gk, winnerRole, abRng);
 
-  // matchup header (with each player's name)
-  const pName = escapeHTML(pitcher.name || 'Player A') + (myRole==='pitcher'?' (You)':(isGhost?' 👻':''));
-  const bName = escapeHTML(batter.name || 'Player B') + (myRole==='batter'?' (You)':(isGhost?' 👻':''));
-  const pc = brightTeam(pitcher.team);
-  const bc = hvDistinct(pc, brightTeam(batter.team));   // same/similar team colors → shift side B's hue
+  const sName = escapeHTML(shooter.name || 'Striker') + (myRole==='striker'?' (You)':(isGhost?' 👻':''));
+  const kName = escapeHTML(gk.name || 'Keeper') + (myRole==='keeper'?' (You)':(isGhost?' 👻':''));
   $('matchup').innerHTML =
-    `<div class="side"><div class="who" style="color:${pc}">🏀 ${pName}</div><div class="o" style="color:${pc}">${pitcher.ovr}</div></div>`+
+    `<div class="side"><div class="who" style="color:var(--pitch)">⚽ ${sName}</div><div class="o" style="color:var(--pitch)">${shooter.ovr}</div></div>`+
     `<div class="mid">VS</div>`+
-    `<div class="side"><div class="who" style="color:${bc}">🏀 ${bName}</div><div class="o" style="color:${bc}">${batter.ovr}</div></div>`;
+    `<div class="side"><div class="who" style="color:var(--bat)">🧤 ${kName}</div><div class="o" style="color:var(--bat)">${gk.ovr}</div></div>`;
+  const sTint = brightTeam(shooter.team);
+  const kTint = distinctTint(sTint, brightTeam(gk.team));   // same/similar club colors → shift the keeper's hue
+  $('silhoP').style.background = sTint;
+  $('silhoB').style.background = kTint;
+  $('abNameP').firstChild.textContent = (shooter.name||'Striker').slice(0,14);
+  $('abNameB').firstChild.textContent = (gk.name||'Keeper').slice(0,14);
+  $('abNameP').firstChild.style.borderColor = sTint;
+  $('abNameB').firstChild.style.borderColor = kTint;
 
-  // live scoreboard (side A left, side B right); long thrillers play a touch faster to stay ≤20s
-  hvGame = { pc, bc, pitcher, batter, scoreA:0, scoreB:0, script, iWon, winnerRole,
-             speed: script.poss.length>9 ? 3.0 : HV_SPEED };
-  $('hvSb').style.display='flex';
-  $('hvSA').textContent='0'; $('hvSB').textContent='0';
-  $('hvSA').style.color=pc; $('hvSB').style.color=bc;
-  gsap.set('#hvBall',{ opacity:0 }); $('hvPop').style.opacity=0; $('hvCall').innerHTML='';
-  $('hvSkipBtn').style.display='inline-block';   // skip is LOCAL-only: your opponent keeps watching
+  const ball=$('ball'), call=$('callout'); call.style.opacity=0; call.textContent='';
+  gsap.set(ball,{ opacity:0, left:'26%', bottom:'29%', scale:1, rotation:0 });
+  gsap.set('#silhoP',{ x:0, y:0, rotation:0 }); gsap.set('#silhoB',{ x:0, y:0, rotation:0 });
+  stPose('run'); kpPose('ready');
+  renderKickSeq(script);
+  gsap.set('#pitchSeq', { opacity:1 });
+  setCount(0,0); $('abCount').classList.add('show');
+  $('abSkipBtn').style.display='inline-block';   // skip is LOCAL-only: your opponent keeps watching
 
-  // play the possessions back to back; the last one is always the winner's game-winner
-  let i=0;
-  const next = ()=>{
-    if(matchResolved) return;                       // a forfeit/disconnect/skip path resolved it mid-game
-    if(i>=script.poss.length){
-      $('hvSkipBtn').style.display='none';
-      hvFlash(`GAME · ${script.winScore}–${script.loseScore}`, winnerRole==='pitcher'?pc:bc);
-      setTimeout(()=>showResult(iWon, pitcher, batter, winnerRole, script), 1500);
-      return;
-    }
-    hvRunPossession(script.poss[i++], next);
-  };
-  setTimeout(next, 500);
+  const tl = gsap.timeline();
+  script.pitches.forEach((kick, idx) => appendKick(tl, kick, idx));
+  tl.add(()=> { $('abSkipBtn').style.display='none';
+    setTimeout(()=>showResult(iWon, shooter, gk, winnerRole, script), 1500); });
+  abGame = { tl, iWon, shooter, gk, winnerRole, script };
 }
-// Both team colors run through brightTeam, but two builds can pick the same (or similar) teams —
-// nudge side B's hue ~150° so the two silhouettes are always tellable apart.
-function hvDistinct(pcHex, bcHex){
+let abGame = null;
+// Both tints run through brightTeam, but two builds can pick the same (or similar) clubs —
+// nudge the keeper's hue ~150° so the two silhouettes are always tellable apart.
+function distinctTint(pHex, bHex){
   const rgb = c => { const m=/^#([0-9a-f]{6})$/i.exec(c||''); if(!m) return null;
     const n=parseInt(m[1],16); return [n>>16&255, n>>8&255, n&255]; };
-  const a=rgb(pcHex), b=rgb(bcHex);
-  if(!a || !b) return bcHex;
-  if(Math.abs(a[0]-b[0])+Math.abs(a[1]-b[1])+Math.abs(a[2]-b[2]) >= 120) return bcHex;
+  const a=rgb(pHex), b=rgb(bHex);
+  if(!a || !b) return bHex;
+  if(Math.abs(a[0]-b[0])+Math.abs(a[1]-b[1])+Math.abs(a[2]-b[2]) >= 120) return bHex;
   const [r,g,bl]=b.map(v=>v/255), mx=Math.max(r,g,bl), mn=Math.min(r,g,bl), d=mx-mn;
   let h=0;
   if(d>0){ h = mx===r ? ((g-bl)/d+(g<bl?6:0)) : mx===g ? (bl-r)/d+2 : (r-g)/d+4; h/=6; }
   return `hsl(${Math.round(((h+0.42)%1)*360)} 75% 60%)`;
 }
-// ⏩ Skip the sim (this side only — the animation is a local playback of the seeded result, so
-// skipping here never affects what the opponent sees). Jump straight to the final score + result.
-function hvSkipSim(){
-  if(!hvGame || !hvGame.script || matchResolved) return;
-  const g = hvGame;
-  if(g.activeTl){ try{ g.activeTl.kill(); }catch(e){} }
-  gsap.killTweensOf('#hvOffW,#hvDefW,#hvBall,#hvSeam,#hvNetFlash,#hvCourt,#hvPop,#hvSA,#hvSB');
-  gsap.set('#hvBall',{ opacity:0 }); gsap.set('#hvNetFlash',{ opacity:0 });
-  gsap.set('#hvOffW',{ y:0, scaleY:1, scale:1, rotation:0 });
-  gsap.set('#hvDefW',{ y:0, scaleY:1, scale:1, rotation:0 });
-  gsap.set('#hvCourt',{ x:0 });
-  $('hvPop').style.opacity=0; $('hvCall').innerHTML='';
-  const aFinal = g.winnerRole==='pitcher' ? g.script.winScore : g.script.loseScore;
-  const bFinal = g.winnerRole==='pitcher' ? g.script.loseScore : g.script.winScore;
-  $('hvSA').textContent=aFinal; $('hvSB').textContent=bFinal;
-  $('hvSkipBtn').style.display='none';
-  showResult(g.iWon, g.pitcher, g.batter, g.winnerRole, g.script);   // sets matchResolved → pending timeouts bail
+// ⏩ Skip the shootout (this side only — a local playback of the seeded result).
+function abSkipSim(){
+  if(!abGame || matchResolved) return;
+  const g = abGame;
+  try{ g.tl.kill(); }catch(e){}
+  gsap.killTweensOf('#ball,#silhoP,#silhoB,#pitchInfo,#callout,#diamond');
+  gsap.set('#ball',{ opacity:0 });
+  gsap.set('#silhoP',{ x:0, y:0, rotation:0 }); gsap.set('#silhoB',{ x:0, y:0, rotation:0 });
+  $('callout').style.opacity=0; $('pitchInfo').style.opacity=0;
+  $('abSkipBtn').style.display='none';
+  showResult(g.iWon, g.shooter, g.gk, g.winnerRole, g.script);
 }
-function atBatRng(pitcher, batter){
-  const n = ((seed || 1) ^ Math.imul(pitcher.ovr || 0, 2654435761) ^ Math.imul(batter.ovr || 0, 1597334677)) >>> 0;
+function atBatRng(a, b){
+  const n = ((seed || 1) ^ Math.imul(a.ovr || 0, 2654435761) ^ Math.imul(b.ovr || 0, 1597334677)) >>> 0;
   return mulberry32(n || 1);
 }
-/* ---------- first-to-11 game engine (seeded — identical on both phones) ---------- */
-if (window.MotionPathPlugin) gsap.registerPlugin(MotionPathPlugin);
-let hvGame = null;
-const HV_SPEED = 2.6;                      // timeScale: whole game fits in ~15-18s
-const HV_DRIVES = ['drive1','drive2','drive3','drive4'];
-const HV_MOVES = [
-  {n:'Crossover',       poses:['cross1','cross2'],        juke:0.045, bite:0.075},
-  {n:'Hesi pull',       poses:['lowdribble1','dribble1'], juke:0.020, bite:0.035},
-  {n:'Behind-the-back', poses:['dribble2','dribble3'],    juke:0.035, bite:0.060},
-  {n:'Spin move',       poses:['lowdribble2','drive4'],   juke:0.040, bite:0.065},
-];
-const HV_FINISHES = {
-  pullup:  {n:'Pull-up jumper',  pose:'shoot2', pts:2, dist:0.20, rise:50},
-  three:   {n:'Step-back THREE', pose:'three1', pts:3, dist:0.26, rise:42},
-  floater: {n:'Silky floater',   pose:'shoot1', pts:2, dist:0.13, rise:58},
-  dunk:    {n:'POSTER dunk',     pose:'dunk1',  pts:2, dist:0.05, rise:104},
-};
-// Native art direction of each pose: +1 the figure faces image-right, -1 image-left.
-// hvPose() combines this with the attack direction so the player ALWAYS faces where the ball goes.
-const HV_FACING = { drive1:1,drive2:1,drive3:1,drive4:1, dribble1:1,dribble2:1,dribble3:1,
-  lowdribble1:1, lowdribble2:-1, cross1:-1, cross2:-1,
-  shoot1:1, shoot2:1, shoot3:1, three1:-1, dunk1:-1, sprint1:-1,
-  def1:1, def2:1, def3:1, idle1:1, pass1:1, pass2:1 };
-function hvApplyFlip(el){ const d=+(el.dataset.dir||1), f=HV_FACING[el.dataset.pose]||1;
-  el.style.transform=`scaleX(${d*f})`; }
-function hvPose(el,name){ el.dataset.pose=name;
-  el.style.webkitMaskImage=`url(hoops-anim/${name}.png)`; el.style.maskImage=`url(hoops-anim/${name}.png)`;
-  hvApplyFlip(el); }
-function hvFace(el,dir){ el.dataset.dir=dir; hvApplyFlip(el); }
+/* ---------- pose-swapped figures (soccer-anim/*.png, baked by make-soccer-anim.py) ---------- */
+function stPose(name){ const el=$('silhoP');
+  el.style.webkitMaskImage=`url(soccer-anim/st-${name}.png)`; el.style.maskImage=`url(soccer-anim/st-${name}.png)`; }
+function kpPose(name){ const el=$('silhoB');
+  el.style.webkitMaskImage=`url(soccer-anim/kp-${name}.png)`; el.style.maskImage=`url(soccer-anim/kp-${name}.png)`; }
+// warm the pose masks so the first kick doesn't flicker
+(function(){ ['st-run','st-sprint','st-shot','st-shothigh','st-volley','st-celebrate','kp-ready','kp-readylow','kp-divehigh','kp-divelow','kp-catchhigh','kp-savelow'].forEach(n=>{ const i=new Image(); i.src='soccer-anim/'+n+'.png'; }); })();
 
-// The box score: winner reaches 11; loser's total shrinks with the OVR gap. We only ANIMATE the
-// makes (+ a miss or two for drama) — skipped empty possessions don't change the score, so the
-// on-screen progression is still the true game. Every random pick uses the seeded rng.
-function buildGameScript(pitcher, batter, winnerRole, rr){
-  const rpick = arr => arr[Math.floor(rr()*arr.length)];
-  const gap = Math.abs((pitcher.ovr||0)-(batter.ovr||0));
-  let loserPts = gap<=1?9 : gap<=3?8 : gap<=6?6 : gap<=9?4 : gap<=14?2 : 0;
-  if(loserPts>0 && rr()<0.35) loserPts = Math.max(0, loserPts-1);
-  const mkPts = target => { const out=[]; let s=0;
-    while(s<target){ const three = (target-s)>=3 && rr()<0.5; const p = three?3:2; out.push(p); s+=p; }
-    return out; };
-  const winPts = mkPts(11), losePts = mkPts(loserPts);
-  const fin2 = () => { const r=rr(); return r<0.34?'dunk':r<0.7?'pullup':'floater'; };
-  const mkPoss = (side, pts) => ({ side, made:true, pts, finKey: pts===3?'three':fin2(),
-    nMoves: rr()<0.35?2:1, mvs:null });
-  const wSide = winnerRole==='pitcher'?'p':'b', lSide = wSide==='p'?'b':'p';
-  const wPoss = winPts.map(p=>mkPoss(wSide,p)), lPoss = losePts.map(p=>mkPoss(lSide,p));
-  // interleave: spread the loser's buckets among the winner's; winner always gets the last one
-  const poss=[]; let wi=0, li=0;
-  while(wi<wPoss.length || li<lPoss.length){
-    const wLeft=wPoss.length-wi, lLeft=lPoss.length-li;
-    if(wi>=wPoss.length){ poss.push(lPoss[li++]); continue; }
-    if(li>=lPoss.length || wLeft<=1 && lLeft>0){          // save the winner's last make for the end
-      if(lLeft>0){ poss.push(lPoss[li++]); continue; }
-    }
-    if(lLeft>0 && rr()<lLeft/(wLeft+lLeft)) poss.push(lPoss[li++]);
-    else poss.push(wPoss[wi++]);
-  }
-  // sprinkle 1-2 misses (not in the final slot) if the reel has room
-  const missBudget = poss.length>=8 ? 1 : 2;
-  for(let m=0;m<missBudget;m++){
-    const at = 1+Math.floor(rr()*Math.max(1,poss.length-2));
-    poss.splice(at,0,{ side: rr()<0.5?'p':'b', made:false, pts:0,
-      finKey: rr()<0.4?'three':'pullup', nMoves:1, missType: rr()<0.5?'rattle':'clank' });
-  }
-  poss.forEach(p=>{ p.mvs = Array.from({length:p.nMoves},()=>rpick(HV_MOVES)); });
-  // the possession list is the source of truth — mkPts can overshoot its target by a bucket,
-  // so the banner/summary must use the REAL sums or they'd disagree with the animated scoreboard
-  const winScore = winPts.reduce((a,b)=>a+b,0), loseScore = losePts.reduce((a,b)=>a+b,0);
-  const winnerName = (winnerRole==='pitcher' ? pitcher.name : batter.name) || 'The winner';
-  const closeness = loseScore>=8 ? ' in a thriller' : loseScore<=2 ? ' in a blowout' : '';
-  return { poss, winScore, loseScore, summary:`${winnerName} takes it ${winScore}–${loseScore}${closeness}` };
+// Pull a named slot rating out of a build (the quick-build slots travel with the match message).
+function slotVal(build, label, fb){
+  const s = build && Array.isArray(build.slots) ? build.slots.find(x=>x && x.slot===label) : null;
+  const v = s ? Number(s.value) : NaN;
+  return Number.isFinite(v) && v>0 ? v : fb;
 }
+// Kick speed anchored to the build's REAL Shot Power rating: 60→71, 90→81, 114→88 mph.
+function kickMph(power){ return Math.round(52 + power*0.32); }
 
-/* ---------- possession choreography (GSAP, runs at HV_SPEED) ---------- */
-function hvCourtPx(){ const c=$('hvCourt').getBoundingClientRect(); return {W:c.width,H:c.height}; }
-function hvRectIn(el){ const c=$('hvCourt').getBoundingClientRect(), r=el.getBoundingClientRect();
-  return {x:r.left-c.left, y:r.top-c.top, w:r.width, h:r.height}; }
-function hvFlash(txt,color){ const p=$('hvPop'); p.textContent=txt; p.style.color=color||'#ffd34d';
-  gsap.fromTo(p,{opacity:0,scale:.45,y:12},{opacity:1,scale:1,y:0,duration:.3,ease:'back.out(2.4)'});
-  gsap.to(p,{opacity:0,y:-8,duration:.35,delay:.7,ease:'power2.in'}); }
-function hvCallout(txt){ const c=$('hvCall'); c.innerHTML=`<span>${txt}</span>`;
-  gsap.fromTo(c.firstChild,{opacity:0,y:6},{opacity:1,y:0,duration:.22,ease:'back.out(2)'}); }
-function hvSpawnTrail(x,y){ const d=document.createElement('div'); d.className='hv-tr';
-  d.style.left=(x+3)+'px'; d.style.top=(y+3)+'px'; $('hvCourt').appendChild(d);
-  gsap.to(d,{opacity:0,scale:.3,duration:.4,ease:'power1.out',onComplete(){ d.remove(); }}); }
-function hvFloorBounce(dir, floorY){
-  const fb=gsap.timeline();
-  fb.to('#hvBall',{y:floorY,duration:.4,ease:'power1.in'})
-    .to('#hvBall',{scaleY:.62,scaleX:1.25,duration:.06,ease:'power1.out'})
-    .to('#hvBall',{scaleY:1,scaleX:1,duration:.08})
-    .to('#hvBall',{y:floorY-46,x:`+=${dir*40}`,duration:.24,ease:'power1.out'},'<')
-    .to('#hvBall',{y:floorY,duration:.24,ease:'power1.in'})
-    .to('#hvBall',{scaleY:.74,scaleX:1.15,duration:.05},'-=.02')
-    .to('#hvBall',{scaleY:1,scaleX:1,duration:.07})
-    .to('#hvBall',{y:floorY-16,x:`+=${dir*26}`,duration:.16,ease:'power1.out'},'<')
-    .to('#hvBall',{y:floorY,duration:.16,ease:'power1.in'})
-    .to('#hvBall',{x:`+=${dir*44}`,duration:.4,ease:'power1.out'})
-    .to('#hvBall',{opacity:0,duration:.25},'-=.25');
-  return fb;
-}
-function hvRunPossession(p, done){
-  gsap.killTweensOf('#hvOffW,#hvDefW,#hvBall,#hvSeam,#hvNetFlash,#hvCourt');
-  const {W,H}=hvCourtPx();
-  const figW=H*0.56*(543/724);
-  const dir = p.side==='p' ? 1 : -1;                 // side A (pitcher slot) attacks right
-  const offCol = p.side==='p' ? hvGame.pc : hvGame.bc;
-  const defCol = p.side==='p' ? hvGame.bc : hvGame.pc;
-  $('hvOff').style.background=offCol; $('hvDef').style.background=defCol;
-  // name tags: whoever has the ball is in the hvOff wrapper this possession
-  const offPl = p.side==='p' ? hvGame.pitcher : hvGame.batter;
-  const defPl = p.side==='p' ? hvGame.batter  : hvGame.pitcher;
-  $('hvOffName').textContent = (offPl.name||'Player').slice(0,14);
-  $('hvDefName').textContent = (defPl.name||'Player').slice(0,14);
-  $('hvOffName').style.borderColor = offCol; $('hvDefName').style.borderColor = defCol;
-  const poss=$('hvPoss'); poss.textContent = dir>0 ? '▶' : '◀'; poss.style.color = offCol;
-  const cToX=c=>c-figW/2;
-  const guardGap=W*0.15;
-  const rimAbsX = dir>0 ? W*0.82 : W*0.18;
-  const fin = HV_FINISHES[p.finKey];
-  const isDunk = p.finKey==='dunk';
-  let shooterC = rimAbsX - dir*W*fin.dist;
-  const lo=figW/2+W*0.03, hi=W-figW/2-W*0.03;
-  shooterC=Math.max(lo,Math.min(hi,shooterC));
-  const startC = Math.max(lo,Math.min(hi, rimAbsX - dir*W*0.45));
-
-  // hard reset (positions + every transform + layering)
-  hvFace($('hvOff'),dir); hvFace($('hvDef'),-dir);
-  hvPose($('hvOff'),'dribble3'); hvPose($('hvDef'),'def2');
-  gsap.set('#hvOffW',{ x:cToX(startC), y:0, scale:1, rotation:0, scaleY:1 });
-  gsap.set('#hvDefW',{ x:cToX(startC+dir*guardGap), y:0, scale:1, rotation:0 });
-  gsap.set('#hvBall',{ opacity:0, scale:1, scaleX:1, scaleY:1, zIndex:20 });
-  gsap.set('#hvSeam',{ rotation:0 });
-  gsap.set('#hvNetFlash',{ opacity:0 });
-
-  const trackDef=()=>gsap.set('#hvDefW',{ x: gsap.getProperty('#hvOffW','x') + dir*guardGap });
-  const tl=gsap.timeline({ onComplete(){ if(done) setTimeout(done,220); }});
-  tl.timeScale((hvGame && hvGame.speed) || HV_SPEED);
-  if(hvGame) hvGame.activeTl = tl;   // so Skip can kill the running possession cleanly
-
-  // check-up beat → drive (steady pose cycle) → moves → blow-by → rise
-  tl.to('#hvOffW',{ y:-5, duration:.16, yoyo:true, repeat:1, ease:'sine.inOut' })
-    .to('#hvDefW',{ y:-4, duration:.16, yoyo:true, repeat:1, ease:'sine.inOut' },'<.05');
-  const driveTo = shooterC - dir*W*0.05;
-  tl.add(()=>hvPose($('hvOff'),'drive1'))
-    .to('#hvOffW',{ x:cToX(driveTo), duration:.95, ease:'power1.inOut',
-      onUpdate(){ hvPose($('hvOff'),HV_DRIVES[Math.floor(this.time()*9)%HV_DRIVES.length]); trackDef(); }})
-    .to('#hvOffW',{ y:-8, duration:.14, yoyo:true, repeat:5, ease:'sine.inOut' },'<')
-    .to('#hvDefW',{ y:-5, duration:.155, yoyo:true, repeat:5, ease:'sine.inOut' },'<');
-  p.mvs.forEach(mv=>{
-    tl.add(()=>{ hvPose($('hvOff'),mv.poses[0]); hvCallout(mv.n); })
-      .to('#hvDefW',{ x:`-=${dir*W*mv.bite}`, rotation:-dir*12, duration:.18, ease:'power3.out' })
-      .to('#hvOffW',{ x:`+=${dir*W*mv.juke}`, y:-4, duration:.16, ease:'power2.out' },'<')
-      .add(()=>hvPose($('hvOff'),mv.poses[1]))
-      .to('#hvOffW',{ y:0, duration:.14, ease:'power2.in' })
-      .to('#hvDefW',{ x:()=>gsap.getProperty('#hvOffW','x')+dir*guardGap, rotation:0, duration:.26, ease:'power2.inOut' },'<');
+// Best-of-5 with a built-in cliffhanger: kicks 1-4 are ALWAYS 2 goals + 2 stops (seeded order),
+// so the 5th kick decides it — buried = striker wins, stopped = keeper wins.
+function makeShootout(shooter, gk, winnerRole, rr){
+  const strikerWins = winnerRole==='striker';
+  const order=[true,true,false,false];
+  for(let i=3;i>0;i--){ const j=Math.floor(rr()*(i+1)); const t=order[i]; order[i]=order[j]; order[j]=t; }
+  order.push(strikerWins);
+  const power = slotVal(shooter,'Shot Power', 40 + (shooter.ovr||75)*0.45);
+  let g=0, s=0; const kicks=[];
+  order.forEach((goal,i)=>{
+    const high = rr()<0.45;
+    let result;
+    if(goal) result='goal';
+    else result = (i<4 && !high && rr()<0.28) ? 'post' : 'save';   // the decider is always a clean SAVE
+    if(goal) g++; else s++;
+    kicks.push({ n:i+1, high, result, pose: high ? 'shothigh' : (rr()<0.5 ? 'shot' : 'volley'),
+      mph: kickMph(power) + Math.round(rr()*4-2),
+      final:i===4, count:{g,s},
+      call: result==='goal'?'Goal':result==='post'?'Post':'Saved',
+      klass: result==='goal'?'hit':result==='post'?'ball':'k' });
   });
-  tl.add(()=>hvPose($('hvOff'),'drive3'))
-    .to('#hvOffW',{ x:cToX(shooterC), duration:.3, ease:'power2.in' })
-    .to('#hvDefW',{ x:()=>gsap.getProperty('#hvOffW','x')-dir*W*0.085, rotation:dir*8, duration:.32, ease:'power2.out' },'<');
-  tl.add(()=>{ hvPose($('hvOff'),fin.pose); hvCallout(fin.n); })
-    .to('#hvOffW',{ scaleY:.94, y:2, duration:.11, ease:'power2.out' })
-    .to('#hvOffW',{ scaleY:1.02, y:-fin.rise, duration:.3, ease:'power2.out' })
-    .to('#hvOffW',{ scaleY:1, y:-fin.rise-6, duration:.16, ease:'sine.out' })
-    .to('#hvDefW',{ y:-fin.rise*0.55, rotation:0, duration:.28, ease:'power2.out' },'<.05')
-    .add(()=>{ isDunk ? hvDunk(p,dir,tl) : hvShot(p,dir,fin,tl); });
+  return strikerWins
+    ? { outcome:'goal', summary:`Striker buries ${g} of 5 — the decider hits the net`, finalCall:'GOAL!', pitches:kicks }
+    : { outcome:'save', summary:'Keeper stands tall — the decisive penalty is SAVED', finalCall:'SAVED!', pitches:kicks };
+}
+function renderKickSeq(script){
+  $('pitchSeq').innerHTML = script.pitches.map((p,i) =>
+    `<div class="pitch-dot" id="pitchPill${i}"><div class="pd-num">${i+1}</div><div class="pd-call">-</div></div>`
+  ).join('');
+}
+function activatePitch(idx){
+  const pill = $('pitchPill' + idx);
+  if(!pill) return;
+  document.querySelectorAll('.pitch-dot.active').forEach(d => {
+    d.classList.remove('active');
+    gsap.to(d.querySelector('.pd-num'), { scale:1, duration:.2, ease:'power2.out' });
+  });
+  pill.classList.add('active');
+  const num = pill.querySelector('.pd-num');
+  gsap.fromTo(num, { scale:1 }, { scale:1.25, duration:.22, ease:'back.out(2.5)' });
+  gsap.to(num, { scale:1.05, duration:.2, delay:.22, ease:'power2.inOut' });
+}
+function resolvePitch(idx, kick){
+  const pill = $('pitchPill' + idx);
+  if(!pill) return;
+  pill.className = 'pitch-dot active ' + kick.klass;
+  const call = pill.querySelector('.pd-call');
+  call.textContent = kick.call;
+  gsap.fromTo(call, { opacity:0, y:4 }, { opacity:1, y:0, duration:.22, ease:'power2.out' });
+  if(kick.count && !kick.final) setCount(kick.count.g, kick.count.s);
+}
+function setCount(g, s){
+  $('cntB').textContent=g; $('cntS').textContent=s;
+  gsap.fromTo('#abCount',{ scale:1.16 },{ scale:1, duration:.3, ease:'back.out(2)' });
+}
+function appendKick(tl, kick, idx){
+  const ball = $('ball');
+  const targetY = kick.high ? '55%' : '30%';
+  const targetX = kick.result==='post' ? '89%' : '83%';
+  tl.add(() => {
+      activatePitch(idx);
+      $('pitchInfo').style.opacity=0;
+      stPose('run'); kpPose(kick.high?'ready':'readylow');
+      gsap.set('#silhoP',{ x:-52, y:0, rotation:0 });
+      gsap.set('#silhoB',{ x:0, y:0, rotation:0 });
+      $('callout').textContent=''; $('callout').style.opacity=0;
+    }, idx ? '+=.6' : 0)
+    .set(ball,{ opacity:1, left:'26%', bottom:'29%', scale:1, rotation:0 })
+    .add(()=>stPose('sprint'))
+    .to('#silhoP',{ x:0, duration:.36, ease:'power2.in' })          // the run-up
+    .add(()=>{ stPose(kick.pose||'shot'); Sound.crack();
+      $('pitchInfo').textContent = `PENALTY ${kick.n} · ${kick.mph} MPH · ${kick.high?'TOP BIN':'LOW'}`;
+      gsap.to('#pitchInfo',{ opacity:1, duration:.15 });
+    })
+    .to(ball,{ left:targetX, bottom:targetY, rotation:660, duration:.32, ease:'power1.in' },'<.04');
 
-  const hoopEl = dir>0 ? document.querySelector('.hv-hoop.r') : document.querySelector('.hv-hoop.l');
-  function rimPoint(){ const tr=hvRectIn(hoopEl);
-    return { x:tr.x+tr.w*(dir>0?0.30:0.70), y:tr.y+tr.h*0.30, net:tr.h*0.17 }; }
-  function landPlayers(sub, at){
-    sub.to('#hvOffW',{ y:0, scaleY:1, scale:1, duration:.32, ease:'power2.inOut' }, at || '+=.35')
-       .to('#hvOffW',{ scaleY:.965, duration:.07, yoyo:true, repeat:1 },'>-.08')
-       .to('#hvDefW',{ y:0, rotation:0, duration:.32, ease:'power2.inOut' },'<')
-       .add(()=>hvPose($('hvOff'),'idle1'));
-  }
-  function scoreIt(){
-    if(p.side==='p'){ hvGame.scoreA+=fin.pts; $('hvSA').textContent=hvGame.scoreA; gsap.fromTo('#hvSA',{scale:1.7},{scale:1,duration:.5,ease:'back.out(2.2)'}); }
-    else            { hvGame.scoreB+=fin.pts; $('hvSB').textContent=hvGame.scoreB; gsap.fromTo('#hvSB',{scale:1.7},{scale:1,duration:.5,ease:'back.out(2.2)'}); }
-    hvFlash(fin.pts===3?'SPLASH · 3':(isDunk?'POSTER!':'BUCKET · '+fin.pts), offCol);
-    Sound.crack();
-  }
-  function netSplash(r){
-    gsap.set('#hvNetFlash',{ left:(r.x-20+11)+'px', top:(r.y-20+11)+'px' });
-    gsap.fromTo('#hvNetFlash',{opacity:.95,scale:.3},{opacity:0,scale:1.5,duration:.5,ease:'power2.out'});
-  }
-  function hvShot(p,dir,fin,tl){
-    const o=hvRectIn($('hvOffW')), r=rimPoint(), H2=hvCourtPx().H;
-    const relX=o.x+o.w*(dir>0?0.64:0.36), relY=o.y+o.h*0.10;
-    const apexX=(relX+r.x)/2, apexY=Math.min(relY,r.y)-Math.abs(r.x-relX)*0.30-40;
-    const floorY=H2*0.87-11;
-    hvPose($('hvOff'),'def1');                       // follow-through (ball-less pose)
-    gsap.set('#hvBall',{opacity:1,x:relX,y:relY,zIndex:20});
-    gsap.to('#hvSeam',{ rotation:dir*720, duration:.6, ease:'none' });
-    const flight=.62 + fin.dist*.5;
-    const shot=gsap.timeline();
-    shot.to('#hvBall',{duration:flight, ease:'none',
-      motionPath:{ path:[{x:relX,y:relY},{x:apexX,y:apexY},{x:r.x,y:r.y-6}], curviness:1.35 },
-      onUpdate: fin.pts===3 ? function(){ if((this.progress()*100|0)%7===0) hvSpawnTrail(gsap.getProperty('#hvBall','x'), gsap.getProperty('#hvBall','y')); } : null });
-    if(p.made){
-      shot.set('#hvBall',{zIndex:11})
-          .to('#hvBall',{y:r.y+r.net*0.9, x:r.x+dir*3, scale:.86, duration:.18, ease:'power2.in'})
-          .add(()=>{ netSplash(r); scoreIt(); },'-=.12')
-          .to('#hvBall',{y:r.y+r.net*1.35, opacity:0, duration:.2, ease:'power1.in'});
-      landPlayers(shot);
-    } else if(p.missType==='rattle'){
-      shot.set('#hvBall',{zIndex:11})
-          .to('#hvBall',{y:r.y+r.net*0.45, x:r.x-dir*4, scale:.86, duration:.13, ease:'power2.in'})
-          .to('#hvBall',{x:r.x+dir*7, duration:.09, ease:'power1.inOut'})
-          .to('#hvBall',{x:r.x-dir*5, duration:.08, ease:'power1.inOut'})
-          .set('#hvBall',{zIndex:20})
-          .to('#hvBall',{y:r.y-30, x:r.x-dir*26, scale:1, duration:.24, ease:'power2.out'})
-          .add(()=>{ hvFlash('IN AND OUT!','#c9d3e0'); Sound.catch(); },'-=.1')
-          .add(hvFloorBounce(-dir, floorY));
-      landPlayers(shot, '<.2');
-    } else {
-      shot.to('#hvBall',{x:r.x-dir*30, y:r.y-36, duration:.16, ease:'power2.out'})
-          .add(()=>{ hvFlash('CLANK','#c9d3e0'); Sound.catch();
-            gsap.fromTo(hoopEl,{x:0},{x:dir*4,duration:.06,yoyo:true,repeat:3,ease:'none',onComplete(){gsap.set(hoopEl,{x:0});}}); },'-=.12')
-          .add(hvFloorBounce(-dir, floorY));
-      landPlayers(shot, '<.2');
-    }
-    tl.add(shot);
-  }
-  function hvDunk(p,dir,tl){
-    const r=rimPoint();
-    const dunkX=cToX(r.x - dir*figW*0.18);
-    const slam=gsap.timeline();
-    slam.to('#hvOffW',{ x:dunkX, duration:.26, ease:'power1.inOut' })
-        .add(()=>{ gsap.set('#hvBall',{opacity:1,x:r.x,y:r.y-12,scale:.9,zIndex:11}); })
-        .to('#hvBall',{ y:r.y+r.net*1.6, duration:.13, ease:'power3.in' })
-        .add(()=>{
-          netSplash(r); scoreIt();
-          gsap.fromTo(hoopEl,{y:0},{y:5,duration:.07,yoyo:true,repeat:5,ease:'none',onComplete(){gsap.set(hoopEl,{y:0});}});
-          gsap.fromTo('#hvCourt',{x:0},{x:-5,duration:.05,yoyo:true,repeat:5,ease:'none',onComplete(){gsap.set('#hvCourt',{x:0});}});
-        })
-        .to('#hvBall',{ y:r.y+r.net*2.2, opacity:0, duration:.2, ease:'power1.in' });
-    landPlayers(slam);
-    tl.add(slam);
+  if(kick.result === 'save'){
+    tl.add(()=>{ kpPose(kick.high?'catchhigh':'savelow'); }, '<.12')
+      .to('#silhoB',{ x:12, y:kick.high?-30:24, rotation:kick.high?-12:6, duration:.24, ease:'power2.out' },'<')
+      .add(()=>{ Sound.catch(); resolvePitch(idx, kick); gsap.set(ball,{ opacity:0 });   // in the gloves
+        showCall('SAVED!','var(--bat)'); })
+      .to('#silhoB',{ x:0, y:0, rotation:0, duration:.4, ease:'power2.inOut' }, '+=.55')
+      .add(()=>kpPose('ready'));
+  } else if(kick.result === 'post'){
+    tl.add(()=>{ kpPose(kick.high?'divehigh':'divelow'); }, '<.12')
+      .to('#silhoB',{ x:kick.high?-22:18, y:kick.high?-32:18, rotation:kick.high?-18:8, duration:.26, ease:'power2.out' },'<')
+      .add(()=>{ Sound.catch(); resolvePitch(idx, kick); showCall('OFF THE POST!','var(--gold)'); })
+      .to(ball,{ left:'56%', bottom:'42%', rotation:'+=420', scale:.9, duration:.5, ease:'power2.out' })
+      .to(ball,{ opacity:0, duration:.2 },'-=.1')
+      .to('#silhoB',{ x:0, y:0, rotation:0, duration:.4 }, '+=.35')
+      .add(()=>kpPose('ready'));
+  } else {   // GOAL — the keeper guesses wrong
+    tl.add(()=>{ kpPose(kick.high?'divelow':'divehigh'); }, '<.12')
+      .to('#silhoB',{ x:kick.high?16:-22, y:kick.high?22:-28, rotation:kick.high?8:-16, duration:.26, ease:'power2.out' },'<')
+      .add(()=>{ Sound.crack(); resolvePitch(idx, kick);
+        gsap.fromTo('#goalNet',{ scaleX:1 },{ scaleX:1.04, yoyo:true, repeat:1, duration:.12, transformOrigin:'right center' });
+        showCall('GOAL!','var(--pitch)');
+        if(kick.final && kick.result==='goal'){ stPose('celebrate');
+          gsap.fromTo('#silhoP',{ y:0 },{ y:-10, yoyo:true, repeat:3, duration:.15 }); }
+      })
+      .to(ball,{ left:'86.5%', bottom: kick.high?'52%':'30%', scale:.82, duration:.1, ease:'power1.out' })
+      .to(ball,{ opacity:0, duration:.3 }, '+=.3')
+      .to('#silhoB',{ x:0, y:0, rotation:0, duration:.4 }, '+=.3')
+      .add(()=>kpPose('ready'));
   }
 }
-// warm the pose masks so the first possession doesn't flicker on slow connections
-(function(){ ['drive1','drive2','drive3','drive4','dribble1','dribble2','dribble3','lowdribble1',
-  'lowdribble2','cross1','cross2','shoot1','shoot2','three1','dunk1','def1','def2','idle1','hoop']
-  .forEach(n=>{ const i=new Image(); i.src='hoops-anim/'+n+'.png'; }); })();
+function showCall(text, color){
+  const el=$('callout'); el.textContent=text; el.style.color=color;
+  gsap.fromTo(el,{ opacity:0, scale:.5 },{ opacity:1, scale:1, duration:.45, ease:'back.out(2)' });
+  gsap.fromTo('#diamond',{ x:-6 },{ x:0, duration:.5, ease:'elastic.out(1,0.4)' });
+}
 
 /* ---------- rematch ---------- */
 function resetRematchUI(){
@@ -2365,7 +2371,7 @@ async function acceptOppRematch(){
   if (rematchCountdown){ clearInterval(rematchCountdown); rematchCountdown=null; }
   const newId = rid();
   const newSeed = (Math.random() * 0xFFFFFFFF) | 0;
-  const myNewRole  = myRole === 'pitcher' ? 'batter' : 'pitcher';
+  const myNewRole  = myRole === 'striker' ? 'keeper' : 'striker';
   const oppNewRole = myRole; // roles swap
   try { await matchCh.publish('rematch', { type:'start', matchId:newId, seed:newSeed, yourRole:oppNewRole }); } catch(e){}
   doRematch(newId, myNewRole, newSeed);
@@ -2379,18 +2385,18 @@ function doRematch(newMatchId, newRole, newSeed){
 }
 
 /* ---------- result ---------- */
-function showResult(iWon, pitcher, batter, winnerRole, script){
+function showResult(iWon, striker, keeper, winnerRole, script){
   if(matchResolved) return;
   matchResolved=true;
-  try { gtag('event', 'versus_result', { game: 'versus_hoops', won: iWon ? 1 : 0, role: myRole, friendly: friendlyMode ? 1 : 0 }); } catch(e){}
+  try { gtag('event', 'versus_result', { game: 'versus-soccer', won: iWon ? 1 : 0, role: myRole, friendly: friendlyMode ? 1 : 0 }); } catch(e){}
   showScreen('resultScreen');
   setOnlineStatus('idle');
   resetRematchUI();
   const card=$('resultCard'); card.className='result-card '+(iWon?'win':'lose');
   $('resultHead').textContent = iWon ? 'YOU WIN' : 'YOU LOSE';
-  const winName = (winnerRole==='pitcher' ? pitcher.name : batter.name) || 'The higher build';
-  const sequenceLine = script && script.summary ? script.summary : `${winName} wins`;
-  $('resultLine').textContent = `${sequenceLine} · ${pitcher.ovr} OVR vs ${batter.ovr} OVR`;
+  const winSide = winnerRole==='striker'?'Striker':'Keeper';
+  const sequenceLine = script && script.summary ? script.summary : `${winSide} wins`;
+  $('resultLine').textContent = `${sequenceLine} · ${striker.ovr} OVR striker vs ${keeper.ovr} OVR keeper`;
   const oppName = (oppBuild && oppBuild.name) ? oppBuild.name : 'your opponent';
   const oppTag = isGhost ? ' (Ghost)' : '';
   $('resultSub').textContent = iWon ? `You beat ${oppName}${oppTag}. Run it back?` : `${oppName}${oppTag} got you. Build a better one.`;
@@ -2415,7 +2421,7 @@ function showResult(iWon, pitcher, batter, winnerRole, script){
   if (friendlyMode) {
     $('ratingResult').innerHTML = '<div class="prompt" style="color:var(--accent2);font-size:14px;margin-top:4px">⚔️ Friendly Match · No Elo Change</div>';
   } else {
-    pendingResult = { matchId, won: iWon, oppElo, role: 'hooper', ovr: (myBuild ? myBuild.ovr : 0), oppOvr: (oppBuild ? oppBuild.ovr : 0), oppName: oppName, oppKey: (oppBuild && oppBuild.key ? oppBuild.key : ''), decided: true };
+    pendingResult = { matchId, won: iWon, oppElo, role: myRole, ovr: (myBuild ? myBuild.ovr : 0), oppOvr: (oppBuild ? oppBuild.ovr : 0), oppName: oppName, oppKey: (oppBuild && oppBuild.key ? oppBuild.key : ''), decided: true };
     $('ratingResult').innerHTML = '';
     applyResult();
   }
@@ -2423,23 +2429,28 @@ function showResult(iWon, pitcher, batter, winnerRole, script){
 
 /* ---------- stats page ---------- */
 function switchStatsTab(tab){
-  const isStats = tab !== 'history';
-  $('tabStats').classList.toggle('active', isStats);
-  $('tabHistory').classList.toggle('active', !isStats);
-  $('statsPanel').style.display = isStats ? '' : 'none';
-  $('historyPanel').style.display = isStats ? 'none' : '';
-  if ($('challengeLinkWrap')) $('challengeLinkWrap').style.display = isStats ? '' : 'none';
+  const view = tab === 'history' ? 'history' : tab === 'seasons' ? 'seasons' : 'stats';
+  $('tabStats').classList.toggle('active', view === 'stats');
+  $('tabSeasons').classList.toggle('active', view === 'seasons');
+  $('tabHistory').classList.toggle('active', view === 'history');
+  $('statsPanel').style.display = view === 'stats' ? '' : 'none';
+  $('seasonsPanel').style.display = view === 'seasons' ? '' : 'none';
+  $('historyPanel').style.display = view === 'history' ? '' : 'none';
+  if ($('challengeLinkWrap')) $('challengeLinkWrap').style.display = view === 'stats' ? '' : 'none';
 }
 function openStats(tab='stats'){
   showScreen('statsScreen');
   $('statsPersonal').innerHTML = '<div class="prompt">Loading…</div>';
   $('statsHistory').innerHTML = '<div class="prompt">Loading…</div>';
+  $('seasonsBody').innerHTML = '<div class="prompt">Loading…</div>';
   $('statsBoard').innerHTML = '';
   switchStatsTab(tab);
+  startSeasonBar();
   loadStats();
 }
-let statsView = 'hoops';   // which sport's 1v1 board the stats screen is showing (toggle below)
+let statsView = 'soccer';   // which sport's 1v1 board the stats screen is showing (toggle below)
 async function loadStats(){
+  loadSeasons();   // fire the Seasons tab load in parallel (baseball-only, own render target)
   let data, hist;
   try {
     [data, hist] = await Promise.all([
@@ -2455,7 +2466,7 @@ async function loadStats(){
     const rows = histRows.map(r => {
       const delta = (r.elo_after != null && r.elo_before != null) ? (r.elo_after - r.elo_before) : null;
       const sign = delta >= 0 ? '+' : '';
-      const roleIcon = r.my_role === 'pitcher' ? '⚾' : r.my_role === 'batter' ? '🏏' : '🏀';
+      const roleIcon = ({striker:'⚽',keeper:'🧤',pitcher:'⚾',batter:'🏏'})[r.my_role] || '🏀';
       const sub = [r.my_ovr ? `${r.my_ovr} OVR` : null, r.opp_ovr ? `opp ${r.opp_ovr}` : null].filter(Boolean).join(' · ');
       return `<div class="hist-row">
         <div class="hist-wl ${r.won?'w':'l'}">${r.won?'W':'L'}</div>
@@ -2497,10 +2508,42 @@ async function loadStats(){
       const rt = getEloTier(r.elo, i + 1);
       return `<div class="lb-row${mine?' mine':''}"><span class="lr-rank">${i+1}</span><span class="lr-name">${escapeHTML(r.name||'Player')}</span><span class="lr-rec">${r.wins}-${r.losses}</span><span class="lr-elo">${batSVG(rt.color, rt.glow, 14)}<span style="color:${rt.color}">${r.elo}</span></span></div>`;
     }).join('');
-    $('statsBoard').innerHTML = `<div class="lb-head">${statsView==='hoops'?'🏀 Hoops':'⚾ Baseball'} · Top Players</div><div class="lb-rows">${rowsHtml}</div>`;
+    $('statsBoard').innerHTML = `<div class="lb-head">${statsView==='soccer'?'⚽ Soccer':statsView==='hoops'?'🏀 Hoops':'⚾ Baseball'} · Top Players</div><div class="lb-rows">${rowsHtml}</div>`;
   } else {
     $('statsBoard').innerHTML = `<div class="prompt" style="margin-top:16px">No ranked players yet - be the first!</div>`;
   }
+}
+
+// The Seasons tab: the caller's season-by-season band + rank, plus a pre-season teaser/countdown.
+async function loadSeasons(){
+  const body = $('seasonsBody'); if (!body) return;
+  const info = seasonInfo();
+  if (statsView !== 'baseball'){ body.innerHTML = `<div class="prompt">Seasons are coming to Soccer soon — for now Soccer uses an all-time rating.</div>`; return; }
+  let res = null;
+  try { res = await fetch('/api/account', { method:'POST', headers:{'content-type':'application/json'},
+    body: JSON.stringify(Object.assign({ action:'pvpSeasonHistory' }, principal())) }).then(x=>x.json()); } catch(e){}
+  const seasons = (res && res.ok && res.seasons) ? res.seasons : [];
+  let html = `<div class="season-bar" data-season-bar></div>`;
+  if (info.number < 1){
+    html += `<div class="prompt" style="margin:2px 0 12px">When <b>Season 1</b> starts, your first <b>5 games are placement matches</b> — your current rating carries in (regressed toward the middle), and those 5 games lock you into a rank band. Each month resets into new placements.</div>`;
+  }
+  if (seasons.length){
+    html += `<div class="lb-head">Your Seasons</div>`;
+    html += seasons.map(s => {
+      const band = getEloTier(s.elo, s.rank);
+      const rankTxt = s.placed ? (s.rank ? `#${s.rank} <span>worldwide</span>` : '') : 'unranked';
+      return `<div class="seasons-row">
+        <span class="sr-num">Season ${s.season}</span>
+        ${batSVG(band.color, band.glow, 16)}<span style="color:${s.placed?band.color:'var(--muted)'};font-family:'Oswald',sans-serif;letter-spacing:1px">${s.placed ? band.name : 'Unranked'}</span>
+        <span style="color:var(--muted);font-size:12px">${s.wins}-${s.losses}</span>
+        <span class="sr-rank">${rankTxt}</span>
+      </div>`;
+    }).join('');
+  } else if (info.number >= 1){
+    html += `<div class="prompt" style="margin-top:10px">No placement games played yet this season — win 5 to lock your rank.</div>`;
+  }
+  body.innerHTML = html;
+  renderSeasonBar();
 }
 
 /* ---------- wiring ---------- */
@@ -2511,8 +2554,9 @@ $('statsBtn').onclick = () => { Sound.click(); openStats(); };
 $('achBtn').onclick = () => { Sound.click(); window.Ach && Ach.open(); };
 if ($('resultStatsBtn')) { /* result-screen achievements shortcut added below */ }
 $('resultStatsBtn').onclick = () => { Sound.click(); openStats(); };
-$('statsBack').onclick = () => { showScreen('mmScreen'); updateRatingChip(); };
+$('statsBack').onclick = () => { showScreen('mmScreen'); updateRatingChip(); renderSeasonBar(); };
 $('tabStats').onclick = () => switchStatsTab('stats');
+$('tabSeasons').onclick = () => switchStatsTab('seasons');
 $('tabHistory').onclick = () => { switchStatsTab('history'); };
 document.querySelectorAll('#statsSportToggle .stab').forEach(b => {
   b.onclick = () => {
@@ -2527,6 +2571,7 @@ document.querySelectorAll('#statsSportToggle .stab').forEach(b => {
 });
 // deep-link: /versus#stats opens the stats page straight away (from the hamburger menus)
 if (location.hash === '#stats') openStats();
+if (location.hash === '#seasons') openStats('seasons');
 if (location.hash === '#achievements' || location.hash === '#ach') { const o = () => (window.Ach ? Ach.open() : setTimeout(o, 120)); o(); }
 $('newMatchBtn').onclick = () => { Sound.click(); if (isGhost) startGhostMatch(); else findMatch(); };
 $('rematchBtn').onclick = () => {
@@ -2549,7 +2594,7 @@ $('lobbyCancelBtn').onclick = () => { Sound.click(); cancelLobby(); };
 $('lobbyCopyBtn').onclick = () => {
   Sound.click();
   const link = updateLobbyLink();
-  try { gtag('event', 'challenge_sent', { game: 'versus_hoops', source: 'lobby' }); } catch(e){}
+  try { gtag('event', 'challenge_sent', { game: 'versus-soccer', source: 'lobby' }); } catch(e){}
   const done = () => { const c=$('lobbyCopied'); if(c){ c.style.display=''; setTimeout(()=>{ if(c)c.style.display='none'; },3000); } };
   if (navigator.clipboard){ navigator.clipboard.writeText(link).then(done).catch(()=>{ prompt('Copy this link:',link); done(); }); }
   else { try{ prompt('Copy this link:',link); done(); }catch(e){} }
@@ -2562,25 +2607,29 @@ document.querySelectorAll('#lobbyModePicker .lmode').forEach(btn => {
 });
 // sign-in + rating on load
 initGoogle();
-refreshStats().then(updateRatingChip);
+refreshStats().then(() => { updateRatingChip(); renderSeasonBar(); });
+startSeasonBar();   // keep the season countdown live on the matchmaking screen
 checkChallengeURL();  // show challenge screen immediately if URL has ?ch= (no Ably needed for the screen)
 goOnline();  // connect + wire the friend-challenge inbox (global presence is joined lazily on search)
-// dev harness: /versus-hoops.html?animtest=1&seed=5&aovr=95&bovr=88 plays the game animation with
-// fake builds — no Ably, no matchmaking, and friendlyMode means no Elo is reported.
+// dev harness: /versus.html?animtest=1&seed=5&aovr=95&bovr=88&ateam=LAD&bteam=LAD plays the at-bat
+// with fake builds — no Ably, no matchmaking, and friendlyMode means no Elo is reported.
 (function(){
   const q=new URLSearchParams(location.search);
   if(q.get('animtest')!=='1') return;
   friendlyMode = true;
-  myRole='pitcher'; seed=(+q.get('seed'))||12345;
-  myBuild  = { name:'Tester A', ovr:(+q.get('aovr'))||95, team:'LAL', elo:1000 };
-  oppBuild = { name:'Tester B', ovr:(+q.get('bovr'))||88, team:'BOS', elo:1000 };
+  myRole='striker'; seed=(+q.get('seed'))||12345;
+  myBuild  = { name:'Tester A', ovr:(+q.get('aovr'))||95, team:q.get('ateam')||'Real Madrid', elo:1000,
+    slots:[ {slot:'Shot Power',value:(+q.get('apow'))||96}, {slot:'Finishing',value:(+q.get('afin'))||90} ] };
+  oppBuild = { name:'Tester B', ovr:(+q.get('bovr'))||88, team:q.get('bteam')||'FC Barcelona', elo:1000,
+    slots:[ {slot:'Reflexes',value:(+q.get('bref'))||85} ] };
   setTimeout(playAtBat, 400);
 })();
-// dev harness: /versus-hoops.html?ghost=1 runs the REAL ghost flow end-to-end (no 20s wait, no live opp)
+// dev harness: /versus.html?ghost=1 runs the REAL ghost flow (fetch a ghost build, reveal, build,
+// at-bat, result) without waiting 20s or needing a live opponent.
 (function(){ if(new URLSearchParams(location.search).get('ghost')==='1') setTimeout(startGhostMatch, 300); })();
 // leave the queue if the tab closes while waiting
 window.addEventListener('pagehide', () => {
-  if (clientId) { try { navigator.sendBeacon('/api/match-hoops', JSON.stringify({ action:'leave', id: clientId })); } catch(e){} }
+  if (clientId) { try { navigator.sendBeacon('/api/match-soccer', JSON.stringify({ action:'leave', id: clientId })); } catch(e){} }
   if (ably) { try { ably.close(); } catch(e){} }
 });
 </script>

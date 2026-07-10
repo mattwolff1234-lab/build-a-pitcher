@@ -20,7 +20,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="/achievements.js" defer></script>
 <script src="/xp.js" defer></script>
-<script src="/collection.js" defer></script>
+<script src="/switcher.js?v=6" defer></script>
+<script src="/collection.js?v=3" defer></script>
 <script src="/hotboard.js" defer></script>
 <script src="/quests.js" defer></script>
 <script src="/season-track.js" defer></script>
@@ -578,6 +579,13 @@
   .lb-tab.active { color:#1a1004; background:linear-gradient(180deg,#ff9038,#f06a0c); border-color:#ffae6a; }
   .lb-sort-tabs { flex-wrap:wrap; margin-bottom:12px; }
   .lb-sort-tabs .lb-tab { font-size:10.5px; letter-spacing:1px; padding:6px 12px; }
+  .lb-role-tabs:empty { display:none; }
+  .lb-bar { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:12px; }
+  .lb-bar .lb-scope-wrap { margin-bottom:0; justify-content:flex-start; }
+  .lb-sel { font-family:'Oswald',sans-serif; font-size:11.5px; letter-spacing:.8px; text-transform:uppercase;
+    color:var(--ink); background:#121a27; border:1px solid var(--line); border-radius:8px; padding:8px 9px; max-width:46%; }
+  .lb-right { display:flex; gap:6px; align-items:center; min-width:0; }
+  .lb-right .lb-tab { padding:8px 10px; font-size:10.5px; letter-spacing:.6px; white-space:nowrap; }
   .lb-list { display:flex; flex-direction:column; gap:4px; max-height:62vh; overflow-y:auto; padding-right:2px; }
   .lb-pin { position:sticky; top:0; z-index:3; padding-bottom:7px; margin-bottom:3px;
     background:#0b1420; border-bottom:1px dashed rgba(120,160,210,.3); }
@@ -915,19 +923,15 @@
   <div class="overlay-card panel">
     <div class="overlay-head"><span class="overlay-title">Leaderboard</span><button class="overlay-close" data-close="lbModal">✕</button></div>
     <div class="overlay-body">
-      <div class="lb-tabs">
-        <button class="lb-tab lb-game-tab active" data-game="pitcher">Pitchers</button>
-        <button class="lb-tab lb-game-tab" data-game="batter">Batters</button>
-        <button class="lb-tab lb-game-tab" data-game="baller">Hoopers</button>
-        <button class="lb-tab lb-game-tab" data-game="striker">Strikers</button>
-        <button class="lb-tab lb-game-tab" data-game="keeper">Keepers</button>
+      <div class="lb-tabs lb-sport-tabs" id="lbSportTabs"></div>
+      <div class="lb-tabs lb-role-tabs" id="lbRoleTabs"></div>
+      <div class="lb-bar">
+        <div class="lb-tabs lb-scope-wrap">
+          <button class="lb-tab lb-scope-tab active" data-scope="global">All-Time</button>
+          <button class="lb-tab lb-scope-tab" data-scope="daily">Today</button>
+        </div>
+        <div class="lb-right"><button id="lbDirBtn" class="lb-tab" title="Flip best/worst">↓ Best</button><select id="lbSortSel" class="lb-sel" aria-label="Sort by"></select></div>
       </div>
-      <div class="lb-tabs">
-        <button class="lb-tab lb-scope-tab active" data-scope="global">All-Time</button>
-        <button class="lb-tab lb-scope-tab" data-scope="daily">Today</button>
-        <button class="lb-tab lb-scope-tab" data-scope="challenge">🎯 Daily Challenge</button>
-      </div>
-      <div class="lb-tabs lb-sort-tabs" id="lbSortTabs"></div>
       <div id="lbList" class="lb-list"></div>
     </div>
   </div>
@@ -1206,16 +1210,41 @@ const LEADERBOARD_GAME = 'pitcher';
 let lbScope = 'global';
 let lbGame = LEADERBOARD_GAME;
 let lbSort = 'ovr';
+let lbDir = 'desc';
 let lbEntries = new Map();
 const SORT_OPTIONS = {
-  pitcher: [{ key: 'ovr', label: 'OVR' }, { key: 'ovrAsc', label: 'Worst' }, { key: 'k', label: 'Strikeouts' }, { key: 'war', label: 'WAR' }, { key: 'wins', label: 'Wins' }, { key: 'rings', label: 'Rings' }, { key: 'cyYoung', label: 'Cy Youngs' }],
-  batter: [{ key: 'ovr', label: 'OVR' }, { key: 'ovrAsc', label: 'Worst' }, { key: 'hr', label: 'Home Runs' }, { key: 'hits', label: 'Hits' }, { key: 'war', label: 'WAR' }, { key: 'rings', label: 'Rings' }, { key: 'mvp', label: 'MVPs' }],
-  baller: [{ key: 'ovr', label: 'OVR' }, { key: 'ovrAsc', label: 'Worst' }, { key: 'pts', label: 'Points' }, { key: 'reb', label: 'Rebounds' }, { key: 'ast', label: 'Assists' }, { key: 'war', label: 'Win Shares' }, { key: 'rings', label: 'Rings' }, { key: 'mvp', label: 'MVPs' }],
-  striker: [{ key: 'ovr', label: 'OVR' }, { key: 'ovrAsc', label: 'Worst' }, { key: 'goals', label: 'Goals' }, { key: 'assists', label: 'Assists' }, { key: 'war', label: 'Rating' }, { key: 'rings', label: 'UCLs' }, { key: 'mvp', label: "Ballons d'Or" }],
-  keeper: [{ key: 'ovr', label: 'OVR' }, { key: 'ovrAsc', label: 'Worst' }, { key: 'cs', label: 'Clean Sheets' }, { key: 'saves', label: 'Saves' }, { key: 'war', label: 'Rating' }, { key: 'rings', label: 'UCLs' }, { key: 'mvp', label: 'Yashin Trophies' }],
+  pitcher: [{ key: 'ovr', label: 'OVR' }, { key: 'k', label: 'Strikeouts' }, { key: 'war', label: 'WAR' }, { key: 'wins', label: 'Wins' }, { key: 'rings', label: 'Rings' }, { key: 'cyYoung', label: 'Cy Youngs' }],
+  batter: [{ key: 'ovr', label: 'OVR' }, { key: 'hr', label: 'Home Runs' }, { key: 'hits', label: 'Hits' }, { key: 'war', label: 'WAR' }, { key: 'rings', label: 'Rings' }, { key: 'mvp', label: 'MVPs' }],
+  baller: [{ key: 'ovr', label: 'OVR' }, { key: 'pts', label: 'Points' }, { key: 'reb', label: 'Rebounds' }, { key: 'ast', label: 'Assists' }, { key: 'war', label: 'Win Shares' }, { key: 'rings', label: 'Rings' }, { key: 'mvp', label: 'MVPs' }],
+  striker: [{ key: 'ovr', label: 'OVR' }, { key: 'goals', label: 'Goals' }, { key: 'assists', label: 'Assists' }, { key: 'war', label: 'Rating' }, { key: 'rings', label: 'UCLs' }, { key: 'mvp', label: "Ballons d'Or" }],
+  keeper: [{ key: 'ovr', label: 'OVR' }, { key: 'cs', label: 'Clean Sheets' }, { key: 'saves', label: 'Saves' }, { key: 'war', label: 'Rating' }, { key: 'rings', label: 'UCLs' }, { key: 'mvp', label: 'Yashin Trophies' }],
 };
 function sortOptionsFor(game) { return SORT_OPTIONS[game] || SORT_OPTIONS.pitcher; }
 function fmtStat(v) { return lbSort === 'war' ? Number(v).toFixed(1) : Math.round(v); }
+
+// Leaderboard nav = the same two dials as the site: sport chips, then role chips when a sport
+// has two games. Sort collapses into a dropdown so the header stays two tidy rows.
+const LB_SPORTS = [
+  { id: 'baseball', icon: '⚾', label: 'Baseball', games: [['pitcher', 'Pitchers'], ['batter', 'Batters']] },
+  { id: 'hoops',    icon: '🏀', label: 'Hoops',    games: [['baller', 'Hoopers']] },
+  { id: 'soccer',   icon: '⚽', label: 'Soccer',   games: [['striker', 'Strikers'], ['keeper', 'Keepers']] },
+];
+const lbSportOf = g => LB_SPORTS.find(s => s.games.some(x => x[0] === g)) || LB_SPORTS[0];
+function renderLbNav() {
+  const wrap = $('lbSportTabs'); if (!wrap) return;
+  const sport = lbSportOf(lbGame);
+  wrap.innerHTML = LB_SPORTS.map(s =>
+    `<button class="lb-tab${s.id === sport.id ? ' active' : ''}" data-lbsport="${s.id}">${s.icon} ${s.label}</button>`).join('');
+  wrap.querySelectorAll('[data-lbsport]').forEach(b => b.onclick = () => {
+    const s = LB_SPORTS.find(x => x.id === b.dataset.lbsport);
+    if (s.id !== sport.id) loadLeaderboard(lbScope, s.games[0][0]);
+  });
+  const roles = $('lbRoleTabs');
+  roles.innerHTML = sport.games.length > 1
+    ? sport.games.map(([id, label]) => `<button class="lb-tab${id === lbGame ? ' active' : ''}" data-lbgame="${id}">${label}</button>`).join('')
+    : '';
+  roles.querySelectorAll('[data-lbgame]').forEach(b => b.onclick = () => loadLeaderboard(lbScope, b.dataset.lbgame));
+}
 
 // ---------- sound (synthesized via Web Audio - no asset files) ----------
 const Sound = (() => {
@@ -1284,7 +1313,7 @@ async function init() {
   (function regPool() {
     if (!window.Collection) return setTimeout(regPool, 250);
     const names = new Set(), list = [];
-    const add = (p, isLegend) => { if (!p || !p.name || names.has(p.name)) return; names.add(p.name); list.push({ name: p.name, tier: isLegend ? 'legend' : tier(p.ovr) }); };
+    const add = (p, isLegend) => { if (!p || !p.name || names.has(p.name)) return; names.add(p.name); list.push({ name: p.name, tier: isLegend ? 'legend' : tier(p.ovr), img: headshot(p) }); };
     (DATA.pool || []).forEach(p => add(p, false));
     (DATA.legends || []).forEach(p => add(p, true));
     Collection.setPool(LEADERBOARD_GAME, list);
@@ -1322,7 +1351,6 @@ async function init() {
   $('submitBtn').onclick = submitScore;
   $('nameInput').addEventListener('keydown', e => { if (e.key === 'Enter') runCareerPlaythrough(); });
   document.querySelectorAll('.lb-scope-tab').forEach(t => t.onclick = () => loadLeaderboard(t.dataset.scope, lbGame));
-  document.querySelectorAll('.lb-game-tab').forEach(t => t.onclick = () => loadLeaderboard(lbScope, t.dataset.game));
   $('lbList').onclick = e => {
     const row = e.target.closest('.lb-row[data-entry-id]');
     if (row) openBuildDetails(row.dataset.entryId);
@@ -1855,6 +1883,12 @@ async function fetchPlayedToday() {
 }
 function updateDailyBtn() {
   const btn = $('dailyBtn'); if (!btn) return;
+  if (dailyGameFor(todayUTC()) !== LEADERBOARD_GAME) {   // off-day: today's daily lives in the sibling game
+    btn.textContent = '🎯 Daily ↗';
+    btn.classList.remove('pulse'); btn.classList.remove('done');
+    btn.title = "Today's daily is the other game's — tap to jump over";
+    return;
+  }
   const done = getDailyStatus();
   if (done) { btn.textContent = '✅ Done'; btn.classList.add('done'); btn.classList.remove('pulse'); btn.title = `Today: ${done.ovr} OVR · #${done.rank} of ${done.total}`; }
   else {
@@ -2426,7 +2460,7 @@ function assign(slotKey) {
   };
   state.used.add(p.name);
   (state.dealtCards || (state.dealtCards = [])).push(p);   // for the daily "best possible build"
-  if (window.Collection) Collection.record(LEADERBOARD_GAME, { name: p.name, tier: p.legend ? 'legend' : tier(p.ovr), prime: !!p.prime, legend: !!p.legend });
+  if (window.Collection) Collection.record(LEADERBOARD_GAME, { name: p.name, tier: p.legend ? 'legend' : tier(p.ovr), prime: !!p.prime, legend: !!p.legend, img: headshot(p) });
   if (window.Quests) Quests.event('assign', { game: LEADERBOARD_GAME, legend: !!p.legend, prime: !!p.prime, rating: Number(slotNumeric(p, s)) || 0 });
   if (window.Ach) {
     if (state.turnPowers && state.turnPowers.size >= 3) Ach.unlock('triple2');   // all 3 power-ups this turn
@@ -3731,10 +3765,15 @@ function lbRow(rank, entry, cls) {
     <div class="chev">›</div></div>`;
 }
 function renderSortTabs(game) {
-  const tabs = $('lbSortTabs');
-  tabs.innerHTML = sortOptionsFor(game).map(o =>
-    `<button class="lb-tab lb-sort-tab${o.key === lbSort ? ' active' : ''}" data-sort="${o.key}">${o.label}</button>`).join('');
-  tabs.querySelectorAll('.lb-sort-tab').forEach(t => t.onclick = () => loadLeaderboard(lbScope, lbGame, t.dataset.sort));
+  const sel = $('lbSortSel'); if (!sel) return;
+  sel.innerHTML = sortOptionsFor(game).map(o => `<option value="${o.key}"${o.key === lbSort ? ' selected' : ''}>Sort: ${o.label}</option>`).join('');
+  sel.onchange = () => loadLeaderboard(lbScope, lbGame, sel.value);
+  const db = $('lbDirBtn');
+  if (db) {
+    db.textContent = lbDir === 'asc' ? '↑ Worst' : '↓ Best';
+    db.classList.toggle('active', lbDir === 'asc');
+    db.onclick = () => loadLeaderboard(lbScope, lbGame, lbSort, lbDir === 'asc' ? 'desc' : 'asc');
+  }
 }
 function buildSlotsFromEntry(entry) {
   const b = entry && (entry.slots || (entry.build && (entry.build.slots || entry.build)));
@@ -3752,12 +3791,17 @@ function headshotByName(name) {
 }
 const TIER_LABELS = { grey: 'Common', bronze: 'Bronze', silver: 'Silver', gold: 'Gold', diamond: 'Diamond', legend: 'Legend' };
 // Mini team-colored figure for a leaderboard build - per game, keyed by slot label (works for either board).
+// Every game's mini-figure config — leaderboards show all five games' builds on every page.
+const GAME_LABEL = { pitcher: 'Pitcher', batter: 'Batter', baller: 'Hooper', striker: 'Striker', keeper: 'Keeper' };
 const FIG_CONFIG = {
   pitcher: { base: 'pitcher-figure.png', masks: { 'Velocity': 'seg-pitch_velocity.png', 'Break': 'seg-pitch_movement.png', 'Strikeout': 'seg-k_per_bf.png', 'Ground Ball': 'seg-hr_per_bf.png', 'Command': 'seg-pitch_control.png', 'Clutch': 'seg-pitching_clutch.png', 'Defense': 'seg-fielding_ability.png', 'Frame': 'seg-frame.png', 'Stamina': 'seg-stamina.png' } },
   batter: { base: 'batter-figure.png', masks: { 'Vision': 'bat-seg-plate_vision.png', 'Power': 'bat-seg-power.png', 'Contact': 'bat-seg-contact.png', 'Speed': 'bat-seg-speed.png', 'Clutch': 'bat-seg-batting_clutch.png', 'Discipline': 'bat-seg-plate_discipline.png', 'Frame': 'bat-seg-frame.png', 'Defense': 'bat-seg-fielding_ability.svg' } },
+  baller: { base: 'baller-figure.png', masks: { '3-Pointer': 'hoop-seg-threept.png', 'Finishing': 'hoop-seg-finishing.png', 'Dribble': 'hoop-seg-dribble.png', 'Playmaking': 'hoop-seg-playmaking.png', 'Defense': 'hoop-seg-defense.png', 'Rebounding': 'hoop-seg-rebounding.png', 'Speed': 'hoop-seg-speed.png', 'Clutch': 'hoop-seg-clutch.png', 'Frame': 'hoop-seg-frame.png' } },
+  striker: { base: 'striker-figure.png', masks: { 'Finishing': 'soc-seg-finishing.png', 'Pace': 'soc-seg-pace.png', 'Shot Power': 'soc-seg-power.png', 'Dribbling': 'soc-seg-dribbling.png', 'Passing': 'soc-seg-passing.png', 'Heading': 'soc-seg-heading.png', 'Physical': 'soc-seg-physical.png', 'Clutch': 'soc-seg-clutch.png', 'Frame': 'soc-seg-frame.png' } },
+  keeper: { base: 'keeper-figure.png', masks: { 'Diving': 'kp-seg-diving.png', 'Reflexes': 'kp-seg-reflexes.png', 'Handling': 'kp-seg-handling.png', 'Distribution': 'kp-seg-distribution.png', 'Positioning': 'kp-seg-positioning.png', 'Agility': 'kp-seg-agility.png', 'Command': 'kp-seg-command.png', 'Clutch': 'kp-seg-clutch.png', 'Frame': 'kp-seg-frame.png' } },
 };
 function miniFigureHTML(entry, slots) {
-  const cfg = FIG_CONFIG[entry.game === 'batter' ? 'batter' : 'pitcher'];
+  const cfg = FIG_CONFIG[entry.game] || FIG_CONFIG.pitcher;
   const mask = u => `-webkit-mask:url(${u}) center/contain no-repeat;mask:url(${u}) center/contain no-repeat;`;
   let layers = `<div class="lay" style="background:#39414c;${mask(cfg.base)}"></div>`;
   for (const s of slots) {
@@ -3768,7 +3812,7 @@ function miniFigureHTML(entry, slots) {
   return `<div class="bd-fig" style="${dim}" title="Built figure">${layers}</div>`;
 }
 function shareBuild(entry) {
-  const kind = (entry.game === 'batter') ? 'batter' : 'pitcher';
+  const kind = (GAME_LABEL[entry.game] || 'player').toLowerCase();
   const url = 'https://goat-lab.app';
   const txt = `I built a ${entry.ovr} OVR ${kind}${entry.name ? ` - "${entry.name}"` : ''} on GoatLab. Think you can do better?`;
   window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(txt)}&url=${encodeURIComponent(url)}`, '_blank', 'noopener');
@@ -3784,7 +3828,7 @@ function openBuildDetails(entryId) {
     ${miniFigureHTML(entry, slots)}
     <div class="bd-id">
       <div class="bd-name">${escapeHTML(name)}</div>
-      <div class="bd-tier c-${t}">${TIER_LABELS[t] || ''} · ${(entry.game === 'batter') ? 'Batter' : 'Pitcher'}</div>
+      <div class="bd-tier c-${t}">${TIER_LABELS[t] || ''} · ${GAME_LABEL[entry.game] || 'Player'}</div>
     </div>
     <div class="bd-ovr"><span>OVR</span><b class="c-${t}">${entry.ovr}</b></div>`;
   $('buildDetailList').innerHTML = slots.length ? slots.map(s => {
@@ -3819,19 +3863,20 @@ async function loadChallengeBoard() {
     list.innerHTML = html;
   } catch (e) { list.innerHTML = '<div class="lb-empty">Couldn\'t load the daily board.</div>'; }
 }
-async function loadLeaderboard(scope = lbScope, game = lbGame, sort = lbSort) {
+async function loadLeaderboard(scope = lbScope, game = lbGame, sort = lbSort, dir = lbDir) {
   lbScope = (scope === 'daily' || scope === 'challenge') ? scope : 'global';
   lbGame = (game === 'batter' || game === 'baller' || game === 'striker' || game === 'keeper') ? game : 'pitcher';
   lbSort = sortOptionsFor(lbGame).some(o => o.key === sort) ? sort : 'ovr';
+  lbDir = dir === 'asc' ? 'asc' : 'desc';
   document.querySelectorAll('.lb-scope-tab').forEach(t => t.classList.toggle('active', t.dataset.scope === lbScope));
-  document.querySelectorAll('.lb-game-tab').forEach(t => t.classList.toggle('active', t.dataset.game === lbGame));
+  renderLbNav();
   if (lbScope === 'challenge') return loadChallengeBoard();
   renderSortTabs(lbGame);
   const list = $('lbList');
   list.innerHTML = '<div class="lb-empty">Loading…</div>';
   try {
     const meParam = myEntryId ? `&me=${myEntryId}` : '';
-    const res = await fetch(`/api/score?scope=${lbScope}&limit=200&game=${lbGame}&sort=${lbSort}${meParam}`);
+    const res = await fetch(`/api/score?scope=${lbScope}&limit=200&game=${lbGame}&sort=${lbSort === 'ovr' && lbDir === 'asc' ? 'ovrAsc' : lbSort}&dir=${lbDir}${meParam}`);
     const data = await res.json();
     if (!data.ok) throw new Error();
     let html = '';
@@ -3874,6 +3919,10 @@ function initTilt() {
 
 function reset() {
   dailyMode = false; dailyRng = null;   // a fresh game is never a daily until startDailyChallenge says so
+  // Hard Mode is settable from the ☰ menu now — re-read it so a toggle applies to the NEXT build
+  // (never mid-run: the current run keeps the setting it started with).
+  try { hardMode = localStorage.getItem('pl_hardMode') === '1'; } catch (e) {}
+  { const _t = document.querySelector('header .tag'); if (_t && !_t.classList.contains('dc-header-tag')) _t.textContent = hardMode ? 'Hard Mode 🙈' : 'Draft Mode'; }
   const _tag = document.querySelector('header .tag');
   if (_tag && _tag.classList.contains('dc-header-tag')) { _tag.textContent = 'Draft Mode'; _tag.classList.remove('dc-header-tag'); }
   dailyResultsShown = false;
