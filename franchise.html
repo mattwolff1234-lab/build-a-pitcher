@@ -277,7 +277,9 @@ button.btn.danger { color:#ffdede; background:rgba(255,77,94,.14); border:1px so
     <div class="eyebrow">Preseason — build your 14-man roster</div>
     <h1 class="h">The <i>Roster</i></h1>
     <p class="sub">Tap a seat to sign a player — import from your <b>Hall of Fame</b> saves or sign a replacement-level free agent.
-      Signings start at <b>age 23</b>; young players grow toward their <span class="potstars">★ potential</span>, veterans fade.</p>
+      Signings start at <b>age 23</b>; young players grow toward their <span class="potstars">★ potential</span>, veterans fade.
+      Fresh off a build? It's waiting in the seat picker under 🏛️ — or go <a href="/pitching" style="color:var(--accent2)">build a pitcher</a> /
+      <a href="/batting" style="color:var(--accent2)">build a batter</a> right now.</p>
     <div class="rsec">Starting Rotation — 5 pitchers</div>
     <div class="seats" id="rotSeats"></div>
     <div class="rsec">Lineup — 9 hitters</div>
@@ -295,6 +297,7 @@ button.btn.danger { color:#ffdede; background:rgba(255,77,94,.14); border:1px so
     <div class="seasonbar">
       <button class="btn" id="nextGame">⚾ Next Game</button>
       <button class="btn cy" id="autoPlay">▶ Autoplay</button>
+      <button class="btn ghost" id="simSeason" title="Fast-forward the rest of the schedule — trade calls go to voicemail">⏭ Sim to End</button>
       <span class="gprog" id="gProg"></span>
     </div>
     <div class="seagrid">
@@ -369,6 +372,7 @@ button.btn.danger { color:#ffdede; background:rgba(255,77,94,.14); border:1px so
     <div class="bracket" id="bracket" style="display:flex;flex-direction:column;gap:12px;margin-top:14px"></div>
     <div class="seasonbar" style="margin-top:14px">
       <button class="btn" id="nextPGame">⚾ Next Playoff Game</button>
+      <button class="btn ghost" id="simSeries">⏭ Sim Series</button>
       <span class="gprog" id="pProg"></span>
     </div>
     <div class="panel gamefeed" id="pFeed" style="margin-top:14px; max-height:340px"></div>
@@ -380,6 +384,16 @@ button.btn.danger { color:#ffdede; background:rgba(255,77,94,.14); border:1px so
     <h1 class="h">The <i>Offseason</i></h1>
     <p class="sub" id="offSummary"></p>
     <div class="panel awardcard" id="awards"></div>
+    <div class="panel" style="padding:14px;margin-top:14px;border-color:rgba(25,198,255,.35)">
+      <div class="eyebrow">🛠️ Build next season's rookie</div>
+      <div class="sub" style="margin-top:6px">Every offseason is a chance to add a brand-new creation to the club:
+        spin up a player, 💾 <b>save them to your Hall of Fame</b>, then sign them into any roster seat before
+        Opening Day (tap a seat → 🏛️). Your franchise will be right here when you get back.</div>
+      <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
+        <a class="btn cy" href="/pitching" style="text-decoration:none">⚾ Build a Pitcher ↗</a>
+        <a class="btn cy" href="/batting" style="text-decoration:none">💥 Build a Batter ↗</a>
+      </div>
+    </div>
     <div class="rsec">Player development — growth, decline, goodbyes</div>
     <div class="agelist" id="ageList"></div>
     <div class="rosterbar">
@@ -1011,26 +1025,48 @@ function gameCard(g, dayNum, big) {
     <div class="line">${escapeHTML(g.line)}</div>
     ${g.hero ? `<div class="hero">${escapeHTML(g.hero)}</div>` : ''}</div>`;
 }
-function playNextGame() {
-  if (F.phase !== 'season' || F.day >= SEASON_GAMES) return;
-  if (F.pendingOffer) { showOffer(); return; }   // answer the phone first
+// one league day of pure state advance (shared by play-one and sim-to-end)
+function simOneDay() {
   const g = simGame(F, F.day);
   applyGameStats(F, g);
   if (g.win) { F.wins++; F.rivals[g.oppIdx].l++; awardWinXP(); } else { F.losses++; F.rivals[g.oppIdx].w++; }
   simRivalDay(F, F.day).forEach(r => { if (r.aWins) { F.rivals[r.a].w++; F.rivals[r.b].l++; } else { F.rivals[r.b].w++; F.rivals[r.a].l++; } });
   F.day++;
+  // the phones: a rival may call after tonight's game
+  const offer = genTradeOffer(F, F.day);
+  if (offer) { F.pendingOffer = offer; F.tradesIn = (F.tradesIn || 0) + 1; }
+  return g;
+}
+function playNextGame() {
+  if (F.phase !== 'season' || F.day >= SEASON_GAMES) return;
+  if (F.pendingOffer) { showOffer(); return; }   // answer the phone first
+  const g = simOneDay();
   const feed = $('gameFeed');
   feed.insertAdjacentHTML('afterbegin', gameCard(g, F.day, !!g.hero && g.win));
   if (window.gsap) gsap.fromTo(feed.firstElementChild, { x: -16, opacity: 0 }, { x: 0, opacity: 1, duration: .3 });
   if (F.wins === 20) feed.insertAdjacentHTML('afterbegin', `<div class="gcard big"><div class="hero">🏅 20 wins! ${escapeHTML(F.name)} are the talk of the league.</div></div>`);
-  // the phones: a rival may call after tonight's game
-  const offer = genTradeOffer(F, F.day);
-  if (offer) { F.pendingOffer = offer; F.tradesIn = (F.tradesIn || 0) + 1; }
   bump(); save();
   renderSeason(); renderHead();
   if (F.pendingOffer) { stopAuto(); showOffer(); }
   if (F.day >= SEASON_GAMES) endRegularSeason();
 }
+// "retire the season": fast-forward every remaining game. Deterministically identical
+// to playing them out and hanging up on every trade call.
+$('simSeason').onclick = () => {
+  if (F.phase !== 'season' || F.day >= SEASON_GAMES) return;
+  stopAuto();
+  closeOv('offerOv');
+  const startDay = F.day, startW = F.wins, startL = F.losses;
+  F.pendingOffer = null;
+  while (F.day < SEASON_GAMES) {
+    simOneDay();
+    F.pendingOffer = null;   // every call goes to voicemail
+  }
+  bump(); save();
+  $('gameFeed').insertAdjacentHTML('afterbegin', `<div class="gcard big"><div class="hero">⏭ Simmed the final ${SEASON_GAMES - startDay} games: went ${F.wins - startW}–${F.losses - startL}. Trade calls went to voicemail.</div></div>`);
+  renderSeason(); renderHead();
+  endRegularSeason();
+};
 function endRegularSeason() {
   stopAuto();
   F.pendingOffer = null;
@@ -1353,7 +1389,15 @@ function renderPlayoffs() {
   $('pProg').textContent = `Best of 5 · Game ${Math.min(P.gameNo + 1, 5)}`;
   $('nextPGame').disabled = P.myW === 3 || P.oppW === 3;
 }
-$('nextPGame').onclick = () => {
+$('nextPGame').onclick = () => playPlayoffGame();
+// sim the CURRENT series to its end (the final still waits for another click)
+$('simSeries').onclick = () => {
+  let guard = 0;
+  const round = F.playoffs && F.playoffs.round;
+  while (F.phase === 'playoffs' && F.playoffs && F.playoffs.round === round
+    && F.playoffs.myW < 3 && F.playoffs.oppW < 3 && guard++ < 6) playPlayoffGame();
+};
+function playPlayoffGame() {
   const P = F.playoffs;
   if (!P || P.myW === 3 || P.oppW === 3) return;
   const g = simPlayoffGame(F, P.round === 'semi' ? 'po-semi' : 'po-final', P.myOppIdx, P.gameNo);
