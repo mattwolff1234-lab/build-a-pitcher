@@ -604,6 +604,16 @@
   .install-steps .step p { margin:2px 0 0; font-size:12px; color:var(--muted); line-height:1.45; }
   .how-body { text-align:left; color:var(--muted); font-size:13.5px; line-height:1.6; }
   .how-body p { margin:0 0 12px; }
+  .how-acc { margin:4px 0 10px; border:1px solid rgba(120,160,210,.2); border-radius:10px; background:rgba(20,32,48,.4); }
+  .how-acc summary { cursor:pointer; list-style:none; display:flex; align-items:center; gap:8px; padding:10px 12px;
+    font-family:'Oswald',sans-serif; font-size:13px; letter-spacing:1.2px; text-transform:uppercase; color:var(--ink,#eaf2fb); }
+  .how-acc summary::-webkit-details-marker { display:none; }
+  .how-acc summary::after { content:'▾'; margin-left:auto; color:var(--muted); transition:transform .2s; }
+  .how-acc[open] summary::after { transform:rotate(180deg); }
+  .how-acc .acc-body { padding:0 12px 11px; }
+  .how-acc table { width:100%; border-collapse:collapse; font-size:12.5px; }
+  .how-acc td { padding:5px 4px; border-top:1px solid rgba(120,160,210,.12); vertical-align:top; }
+  .how-acc td.w { font-family:'Oswald',sans-serif; color:#ffd23f; white-space:nowrap; font-weight:600; }
   .how-body ol, .how-body ul { margin:0 0 14px; padding-left:20px; }
   .how-body li { margin-bottom:7px; }
   .how-body b { color:var(--ink); }
@@ -971,6 +981,18 @@
         <li><b>Snag:</b> grab the hitter one spot to the left or right of where you landed.</li>
       </ul>
       <p>Tip: your strongest hitters do the most good on Contact, Power, and Discipline.</p>
+      <details class="how-acc">
+        <summary>📊 What matters most</summary>
+        <div class="acc-body">
+          <p style="margin:6px 0 8px">Your Overall is a <b>weighted</b> average — these slots count extra, best first:</p>
+          <table>
+            <tr><td class="w">1.2×</td><td><b>Contact, Power</b> — the heart of the card. Your two best hitters go here.</td></tr>
+            <tr><td class="w">1.1×</td><td><b>Discipline, Vision, Clutch</b> — strong seconds.</td></tr>
+            <tr><td class="w">1.0×</td><td><b>Speed, Defense, Frame</b> — count normally. Frame is mostly neutral (an average-height hitter sits ~82), so it's a safe dump slot.</td></tr>
+          </table>
+          <p style="margin:8px 0 0">Frame also drives career length in the sim — durable sluggers compile the biggest counting stats.</p>
+        </div>
+      </details>
     </div>
   </div>
 </div>
