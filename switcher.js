@@ -22,10 +22,12 @@
   };
   const ORDER = ['pitcher', 'batter', 'baller', 'striker', 'keeper'];
   const VERSUS = { baseball: LOCAL ? '/versus.html' : '/versus', hoops: LOCAL ? '/versus-hoops.html' : '/versus-hoops', soccer: LOCAL ? '/versus-soccer.html' : '/versus-soccer' };
+  const FRANCHISE = { baseball: LOCAL ? '/franchise.html' : '/franchise', hoops: LOCAL ? '/franchise-hoops.html' : '/franchise-hoops', soccer: LOCAL ? '/franchise-soccer.html' : '/franchise-soccer' };
 
   function pageGame() {
     try { if (typeof LEADERBOARD_GAME === 'string' && GAMES[LEADERBOARD_GAME]) return LEADERBOARD_GAME; } catch (e) {}
     const p = location.pathname.toLowerCase();
+    if (p.indexOf('franchise') >= 0) return null;   // /franchise-hoops contains 'hoops' — not a game page
     if (p.indexOf('batter') >= 0 || p.indexOf('batting') >= 0) return 'batter';
     if (p.indexOf('baller') >= 0 || p.indexOf('hoops') >= 0) return 'baller';
     if (p.indexOf('striker') >= 0) return 'striker';
@@ -247,6 +249,14 @@
 
     const onGame = pageGame();
     if (onGame) setActiveGame(onGame);          // arriving at a game makes it the active one
+    // a franchise page pins the active game to its sport, so Build/Daily/1v1 route right
+    const fpath = location.pathname.toLowerCase();
+    const onFranchise = fpath.indexOf('franchise') >= 0;
+    if (onFranchise) {
+      if (fpath.indexOf('hoops') >= 0) setActiveGame('baller');
+      else if (fpath.indexOf('soccer') >= 0) { if (GAMES[activeGame()].sport !== 'soccer') setActiveGame('striker'); }
+      else if (GAMES[activeGame()].sport !== 'baseball') setActiveGame('pitcher');
+    }
     const act = activeGame();
     const A = GAMES[act];
 
@@ -281,9 +291,10 @@
       ${vsPath
         ? `<a class="gnav-tab gnav-vs${onVersus ? ' on' : ''}" href="${vsPath}"><i>⚔️</i>1v1</a>`
         : `<button class="gnav-tab gnav-vs" data-nav="vs-pick"><i>⚔️</i>1v1</button>`}
+      <a class="gnav-tab${onFranchise ? ' on' : ''}" href="${FRANCHISE[A.sport] || FRANCHISE.baseball}"><i>🏟️</i>Frnch</a>
       <a class="gnav-tab${onRanks ? ' on' : ''}" data-nav="ranks" href="${A.path}#leaderboard"><i>🏆</i>Ranks</a>
       <button class="gnav-tab" data-nav="profile"><i>👤</i>Profile<span data-social-badge></span></button>
-      <button class="gnav-tab" data-nav="more"><i>☰</i>More</button>
+      ${document.getElementById('menuBtn') ? `<button class="gnav-tab" data-nav="more"><i>☰</i>More</button>` : ''}
     </nav>`;
     document.body.appendChild(nav);
 
@@ -300,7 +311,8 @@
     });
     const vsPick = nav.querySelector('[data-nav="vs-pick"]');
     if (vsPick) vsPick.addEventListener('click', () => openSheet(onGame));   // soccer: choose a 1v1 sport in the sheet
-    nav.querySelector('[data-nav="more"]').addEventListener('click', () => {
+    const moreTab = nav.querySelector('[data-nav="more"]');
+    if (moreTab) moreTab.addEventListener('click', () => {
       const m = document.getElementById('menuBtn');
       if (m) m.click();
     });
