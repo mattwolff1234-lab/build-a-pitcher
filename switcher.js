@@ -218,21 +218,35 @@
   // Playwire's bottom adhesion ad is a fixed bar at the viewport bottom. Measure it whenever it
   // exists so the nav bar lifts above it and page padding grows to fit both (any ad size, and
   // it settles back down if the ad collapses/closes).
+  // iOS gotcha: Safari's collapsing URL bar and home-screen (PWA standalone) mode change the
+  // viewport AFTER the ad script positions the unit via a computed `top`, so the "bottom" anchor
+  // detaches and floats mid-screen, eating the page. The watchdog below re-pins any detached
+  // bottom anchor to the true bottom (and never touches top-anchored units or big interstitials).
   function watchAdhesion() {
     const measure = () => {
       let h = 0;
+      const vvGap = window.visualViewport ? Math.max(0, window.innerHeight - window.visualViewport.height) : 0;
       document.querySelectorAll('[class*="bottom_rail"],[id*="bottom_rail"],[class*="adhesion"],[id*="adhesion"],[id*="pw-oop"],[class*="pw-oop"]').forEach(el => {
         try {
           const cs = getComputedStyle(el);
           if (cs.position !== 'fixed' || cs.display === 'none' || cs.visibility === 'hidden') return;
           const r = el.getBoundingClientRect();
-          if (r.height > h && Math.abs(window.innerHeight - r.bottom) < 40) h = Math.round(r.height);
+          // detached anchor: short unit, clearly above the real bottom, not a top rail → re-pin
+          if (r.height > 0 && r.height <= 220 && r.top > 120 && (window.innerHeight - r.bottom) > 40 + vvGap) {
+            el.style.setProperty('top', 'auto', 'important');
+            el.style.setProperty('bottom', '0px', 'important');
+          }
+          const r2 = el.getBoundingClientRect();
+          if (r2.height > h && Math.abs(window.innerHeight - r2.bottom) < 40 + vvGap) h = Math.round(r2.height);
         } catch (e) {}
       });
       document.documentElement.style.setProperty('--pl-adh', h + 'px');
     };
     measure();
     setInterval(measure, 1500);
+    // the URL bar collapsing / keyboard / PWA chrome all resize the visual viewport — re-check fast
+    if (window.visualViewport) window.visualViewport.addEventListener('resize', () => setTimeout(measure, 60));
+    window.addEventListener('orientationchange', () => setTimeout(measure, 250));
   }
 
   function build() {
