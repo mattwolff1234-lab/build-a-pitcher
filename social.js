@@ -723,16 +723,23 @@
       <div style="display:flex;justify-content:space-between;align-items:center">
         <button class="soc-btn dim" id="socProfBack">← Friends</button>
         <button class="soc-btn danger" id="socProfRemove">Remove friend</button>
-      </div>` : `<button class="soc-btn dim" id="socProfBack" style="align-self:flex-start">← Friends</button>`}`;
+      </div>` : `<button class="soc-btn warm" id="socProfFind" style="padding:11px">🔎 Find &amp; add friends</button>
+      <button class="soc-btn dim" id="socProfBack" style="align-self:flex-start">← Friends</button>`}`;
   }
 
   function profFriends(p) {
     if (p.limited) return '<div class="soc-empty">🔒 Friends lists are visible to friends only.<br>Add them from the Overview tab first.</div>';
     const list = p.friends || [];
+    // your own profile: friends on top, the search-and-add flow right UNDER them (same
+    // ids the Friends panel uses — only one overlay body exists at a time, no collision)
+    const searchUi = p.self ? `<div class="soc-sec">🔎 Find friends</div>
+      <input class="soc-input" id="socSearch" maxlength="20" placeholder="Search handles…" autocomplete="off" style="text-transform:none">
+      <div id="socResults" style="display:flex;flex-direction:column;gap:8px"></div>
+      <div class="soc-err" id="socAddMsg"></div>` : '';
     if (!list.length) return `<div class="soc-empty">${p.self
-      ? 'No friends yet — find some in the 🔎 Find tab.'
-      : 'No friends to show yet.'}</div>`;
-    return list.map(f => {
+      ? 'No friends yet — search a handle below to add your first one.'
+      : 'No friends to show yet.'}</div>` + searchUi;
+    return (p.self && list.length ? '<div class="soc-sec">Your friends</div>' : '') + list.map(f => {
       const prof = f.rel === 'you' ? '' : '<button class="soc-btn" data-pf="profile">Profile</button>';
       const btn = f.rel === 'you' ? '<button class="soc-btn dim" disabled>You</button>'
         : f.rel === 'friends' ? ''
@@ -744,7 +751,7 @@
         <div class="soc-who"><div class="nm">${esc(f.name)}</div>
         <div class="sub">Lv ${levelOf(f.xp)} · ${f.elo} Elo${f.online ? ' · <span style="color:#39d98a">online</span>' : ''}</div></div>
         <div class="soc-acts">${prof}${btn}</div></div>`;
-    }).join('');
+    }).join('') + searchUi;
   }
 
   function profStats(p) {
@@ -846,6 +853,14 @@
   function wireProfileBody(p) {
     const back = overlay.querySelector('#socProfBack');
     if (back) back.onclick = () => { if (data) renderFriends(); else open(); };   // profile can open before the first poll
+    // own profile: the Friends tab embeds the handle search (find + add without leaving)
+    const profSearch = overlay.querySelector('#socSearch');
+    if (profSearch) {
+      profSearch.addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(doSearch, 400); });
+      profSearch.addEventListener('keydown', e => { if (e.key === 'Enter') { clearTimeout(searchTimer); doSearch(); } });
+    }
+    const find = overlay.querySelector('#socProfFind');
+    if (find) find.onclick = () => { profTab = 'friends'; renderProfile(); const i = overlay.querySelector('#socSearch'); if (i) i.focus(); };
     const chal = overlay.querySelector('#socProfChal');
     if (chal) chal.onclick = () => { tab = 'friends'; renderFriends(); pickSport(p.key, p.name); };
     // limited (stranger) profile: the big Add / Accept CTA
