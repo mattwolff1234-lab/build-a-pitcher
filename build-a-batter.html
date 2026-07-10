@@ -21,7 +21,7 @@
 <script src="/achievements.js" defer></script>
 <script src="/xp.js" defer></script>
 <script src="/social.js" defer></script>
-<script src="/switcher.js?v=13" defer></script>
+<script src="/switcher.js?v=14" defer></script>
 <script src="/collection.js?v=3" defer></script>
 <script src="/hotboard.js" defer></script>
 <script src="/quests.js" defer></script>
@@ -986,13 +986,13 @@
       <details class="how-acc">
         <summary>📊 What matters most</summary>
         <div class="acc-body">
-          <p style="margin:6px 0 8px">Your Overall is a <b>weighted</b> average — these slots count extra, best first:</p>
+          <p style="margin:6px 0 8px">Your Overall is a <b>weighted</b> average · these slots count extra, best first:</p>
           <table>
-            <tr><td class="w">1.2×</td><td><b>Contact, Power</b> — the heart of the card. Your two best hitters go here.</td></tr>
-            <tr><td class="w">1.1×</td><td><b>Discipline, Vision, Clutch</b> — strong seconds.</td></tr>
-            <tr><td class="w">1.0×</td><td><b>Speed, Defense, Frame</b> — count normally. Frame is mostly neutral (an average-height hitter sits ~82), so it's a safe dump slot.</td></tr>
+            <tr><td class="w">1.2×</td><td><b>Contact, Power</b> · the heart of the card. Your two best hitters go here.</td></tr>
+            <tr><td class="w">1.1×</td><td><b>Discipline, Vision, Clutch</b> · strong seconds.</td></tr>
+            <tr><td class="w">1.0×</td><td><b>Speed, Defense, Frame</b> · count normally. Frame is mostly neutral (an average-height hitter sits ~82), so it's a safe dump slot.</td></tr>
           </table>
-          <p style="margin:8px 0 0">Frame also drives career length in the sim — durable sluggers compile the biggest counting stats.</p>
+          <p style="margin:8px 0 0">Frame also drives career length in the sim · durable sluggers compile the biggest counting stats.</p>
         </div>
       </details>
     </div>
@@ -1329,7 +1329,7 @@ async function init() {
     (DATA.legends || []).forEach(p => add(p, true));
     Collection.setPool(LEADERBOARD_GAME, list);
   })();
-  // 🔥 pull today's hot studs from hotboard.js (deferred module — retry until it's up)
+  // 🔥 pull today's hot studs from hotboard.js (deferred module · retry until it's up)
   (function hookHot() {
     if (!window.Hot) return setTimeout(hookHot, 250);
     Hot.ready.then(() => {
@@ -1385,7 +1385,7 @@ async function init() {
     $('installNowBtn').style.display = 'none';
   };
   document.querySelectorAll('.overlay-close').forEach(b => b.onclick = () => closeOverlay(b.dataset.close));
-  // .locked overlays (mid-career decisions) can't be dismissed — the player must choose
+  // .locked overlays (mid-career decisions) can't be dismissed · the player must choose
   document.querySelectorAll('.overlay').forEach(o => o.addEventListener('click', e => { if (e.target === o && !o.classList.contains('locked')) closeOverlay(o.id); }));
   document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.overlay.show:not(.locked)').forEach(o => closeOverlay(o.id)); });
   renderAcct();
@@ -1417,7 +1417,7 @@ async function init() {
   else if (h === 'leaderboard' || h === 'lb') setTimeout(() => openLeaderboard('global'), 250);
   else if (h === 'hof') setTimeout(openHof, 250);
 
-  // ?b=<scoreId> — a shared build link: show that career + the "Beat this career" challenge
+  // ?b=<scoreId> · a shared build link: show that career + the "Beat this career" challenge
   const sharedId = new URLSearchParams(location.search).get('b');
   if (sharedId) loadSharedBuild(sharedId);
 }
@@ -1613,7 +1613,7 @@ const LEGEND_ODDS = 0.04;
 const PRIME_ODDS = 0.05;   // real special-edition "Prime" cards as a rare spin, like the hoops era Primes
 /* ===== 🔥 Last Night's Studs (hotboard.js + /api/hot) =====
    Real MLB studs from yesterday's box scores run hot for the day: +5..+10 to every rating
-   attribute (never height/Frame) and a direct-landing roll in the reel. FREE PLAY ONLY —
+   attribute (never height/Frame) and a direct-landing roll in the reel. FREE PLAY ONLY -
    the Daily Challenge is seeded same-for-everyone, so hot logic must never touch it. */
 const HOT_ODDS = 0.10;
 const HOT = new Map();   // mlbamId -> { boost, line, ... }
@@ -1768,7 +1768,7 @@ let reelTween = null;
 function stopSpin() {
   if (!state.spinning || !reelTween) return;
   Sound.click();
-  if (reelTween.progress) reelTween.progress(1);   // jump to the end — fires the tween's onComplete
+  if (reelTween.progress) reelTween.progress(1);   // jump to the end · fires the tween's onComplete
 }
 
 function centerOffset(index, frameW) { return index * CARD_W - (frameW / 2) + 75 + 14; }
@@ -1901,7 +1901,7 @@ function updateProgress(n) {
 }
 
 // 🔭 Scout (Season Track consumable): peek the card the NEXT spin will land on.
-// Solo builds only — Daily (same-day fairness) and Hard Mode keep everyone blind.
+// Solo builds only · Daily (same-day fairness) and Hard Mode keep everyone blind.
 function scout() {
   if (state.spinning || dailyMode || hardMode || state.scoutTarget) return;
   if (!(window.SeasonTrack && SeasonTrack.useItem('scout'))) { updateScoutUI(); return; }
@@ -1924,7 +1924,7 @@ function updateScoutUI() {
 }
 
 // 🔁 Re-sim (Season Track consumable): re-roll a finished career on a fresh seed.
-// The build/OVR are untouched, so leaderboard ranking can't move — it's a new story.
+// The build/OVR are untouched, so leaderboard ranking can't move · it's a new story.
 function updateResimBtn() {
   const b = $('resimBtn');
   if (!b) return;
@@ -1973,7 +1973,7 @@ function boost() {
     }
   }
   // Boosting a hot stud stacks on his hot card (the per-stat max above already keeps the hot
-  // values) — carry the 🔥 flags and never let the shown OVR drop below the hot OVR.
+  // values) · carry the 🔥 flags and never let the shown OVR drop below the hot OVR.
   if (state.landed.hot) Object.assign(merged, { hot: true, hotBoost: state.landed.hotBoost, hotLine: state.landed.hotLine, ovr: Math.max(Number(merged.ovr) || 0, state.landed.ovr) });
   land(merged);
 }
@@ -2377,7 +2377,7 @@ function dayToast(msg) {
   clearTimeout(t._tmr); t._tmr = setTimeout(() => gsap.to(t, { opacity: 0, y: -10, duration: .4, onComplete: () => { t.style.display = 'none'; } }), 4800);
 }
 
-// personal best is split per game (the two OVR scales differ — batters can top 99).
+// personal best is split per game (the two OVR scales differ · batters can top 99).
 function dailyBest() { try { return Number(localStorage.getItem('pl_dc_best_batter') || '0') || 0; } catch (e) { return 0; } }
 function setDailyBest(v) { try { localStorage.setItem('pl_dc_best_batter', String(v)); } catch (e) {} }
 
@@ -2402,7 +2402,7 @@ function updateDailyBtn() {
   if (dailyGameFor(todayUTC()) !== LEADERBOARD_GAME) {   // off-day: today's daily lives in the sibling game
     btn.textContent = '🎯 Daily ↗';
     btn.classList.remove('pulse'); btn.classList.remove('done');
-    btn.title = "Today's daily is the other game's — tap to jump over";
+    btn.title = "Today's daily is the other game's · tap to jump over";
     return;
   }
   const done = getDailyStatus();
@@ -2424,7 +2424,7 @@ function showDailyInfo() {
 }
 function hideDailyInfo() { const el = $('dailyInfo'); if (el) el.style.display = 'none'; }
 async function startDailyChallenge() {
-  // Off-day: today's daily is the other game — hand off to it.
+  // Off-day: today's daily is the other game · hand off to it.
   if (dailyGameFor(todayUTC()) !== LEADERBOARD_GAME) { location.href = (LEADERBOARD_GAME === 'batter' ? '/pitching' : '/batting') + '#daily'; return; }
   closeOverlay('menu');
   const serverToday = await syncAccountDates();
@@ -2611,7 +2611,7 @@ function bumpDailyAch() {
 }
 
 /* ===== Achievements (shared board across both games) =====
-   Only the achievements that map to the batter game are wired here — the pitcher-specific ones
+   Only the achievements that map to the batter game are wired here · the pitcher-specific ones
    (career strikeouts / wins, the K+stamina "Glass Cannon") simply never fire, which is correct. */
 function parseHeightIn(s) {
   const m = String(s || '').match(/(\d+)\s*'\s*(\d+)/);
@@ -2741,7 +2741,7 @@ function simulateCareer(filled, finalOvr, draftTeamAb, choices, salt) {
   const vals = {};
   for (const s of SLOTS) vals[s.key] = filled[s.key].value;
   const seed = SLOTS.map(s => `${s.key}:${vals[s.key]}:${filled[s.key].player || filled[s.key].name}`).join('|');
-  // salt = Re-sim token re-rolls ('' for a normal run — byte-identical to the original sim)
+  // salt = Re-sim token re-rolls ('' for a normal run · byte-identical to the original sim)
   const rng = seededRandom(seed + '|bat-career-v1' + (salt || ''));
   const role = batterRole(vals);
   const seasons = [];
@@ -2874,7 +2874,7 @@ function simulateCareer(filled, finalOvr, draftTeamAb, choices, salt) {
     const ab = Math.max(1, pa - bb);
     const avg = clamp(0.214 + contact * 0.0009 + (vision - 50) * 0.0003 + bell(rng, 0.013), 0.195, 0.350);
     const h = Math.round(ab * avg);
-    // beyond seasonal power 99 the HR rate gains slope AND variance — that's where 60/70-HR
+    // beyond seasonal power 99 the HR rate gains slope AND variance · that's where 60/70-HR
     // record chases live. ≤99 builds: superPow = 0, formula identical to the old one bar the cap.
     const superPow = Math.max(0, power - 99);
     const hrRate = clamp((power - 32) * 0.00072 + superPow * 0.0004 + bell(rng, 0.0035 + superPow * 0.002), 0.004, 0.115);
@@ -2944,7 +2944,7 @@ function simulateCareer(filled, finalOvr, draftTeamAb, choices, salt) {
         if (pick == null) { ask('twilight', age); break; }
         applyChoice('twilight', pick, age);
         if (pick !== 'walk') { endAge = age + 1; continue; }   // one more summer
-        // walked away: end here WITHOUT stamping exit on the just-shown season —
+        // walked away: end here WITHOUT stamping exit on the just-shown season -
         // rewriting an already-rendered row would break replay identity
         break;
       }
@@ -2952,7 +2952,7 @@ function simulateCareer(filled, finalOvr, draftTeamAb, choices, salt) {
     }
   }
 
-  // sim halted at an unanswered decision: hand back what's played so far — the
+  // sim halted at an unanswered decision: hand back what's played so far · the
   // playback shows it, asks the player, and re-runs with the pick appended
   if (pendingDecision) {
     return { version: 1, seed, role, draftTeam: draftTeamAb || (seasons[0] && seasons[0].team), seasons, decisions, pendingDecision };
@@ -3220,7 +3220,7 @@ function runCareerPlaythrough() {
 
 function careerEventsOn() { try { return localStorage.getItem('pl_careerEvents') !== '0'; } catch (e) { return true; } }
 
-// Mid-career decision prompt: a locked overlay (no backdrop/Escape dismissal —
+// Mid-career decision prompt: a locked overlay (no backdrop/Escape dismissal -
 // the career is paused until the player commits to a path).
 function showDecisionModal(pd, onPick) {
   $('decAge').textContent = pd.age;
@@ -3237,7 +3237,7 @@ function showDecisionModal(pd, onPick) {
     b.onclick = () => { Sound.click(); closeOverlay('decisionModal'); onPick(o.key); };
     wrap.appendChild(b);
   });
-  Sound.whoosh();   // soft cue, not a celebratory chime — this is a quiet fork in the road
+  Sound.whoosh();   // soft cue, not a celebratory chime · this is a quiet fork in the road
   openOverlay('decisionModal');
   gsap.fromTo(wrap.children, { y: 12, opacity: 0 }, { y: 0, opacity: 1, duration: .34, stagger: .09, delay: .12, ease: 'power2.out' });
 }
@@ -3319,7 +3319,7 @@ function _doCareerSim() {
     let milestone = false;
     for (const m of hMiles) if (beforeH < m && runH >= m) { heads.push({ text: `${P} collects his <b>${m.toLocaleString()}th career hit</b>.`, big: true }); flashTk('tkK'); milestone = true; }
     for (const m of hrMiles) if (beforeHR < m && runHR >= m) { heads.push({ text: `${P} launches career home run <b>#${m}</b>.`, big: true }); flashTk('tkW'); milestone = true; }
-    if (beforeHR < 763 && runHR >= 763) { heads.push({ text: `🚨 ${P} hits career home run <b>#763 — passing Barry Bonds as the all-time home run king!</b>`, big: true }); flashTk('tkW'); milestone = true; }
+    if (beforeHR < 763 && runHR >= 763) { heads.push({ text: `🚨 ${P} hits career home run <b>#763 · passing Barry Bonds as the all-time home run king!</b>`, big: true }); flashTk('tkW'); milestone = true; }
     heads.forEach(h => addNews(news, h));
 
     if (!careerSkip) {   // skipping: no per-season chatter, the verdict fanfare still plays
@@ -3396,7 +3396,7 @@ function finishPlaythrough(career) {
   }
 
   buildCard(career, verdict, voteLine);
-  // "Beat this career" — shared-link challenge verdict (higher OVR wins, WAR breaks ties)
+  // "Beat this career" · shared-link challenge verdict (higher OVR wins, WAR breaks ties)
   if (beatTarget) {
     const b = beatTarget; beatTarget = null;
     const win = state.finalOvr > b.ovr || (state.finalOvr === b.ovr && (Number(t.war) || 0) >= (Number(b.war) || 0));
@@ -3441,7 +3441,7 @@ function trophyParts(t) {
   return trophies;
 }
 
-// Pure career-card markup — used for YOUR card and for cards arriving via /p/<id> share links.
+// Pure career-card markup · used for YOUR card and for cards arriving via /p/<id> share links.
 // d = { career, verdict, voteLine, name, ovr, teamAb }
 function careerCardHTML(d) {
   const career = d.career, t = career.totals;
@@ -3530,7 +3530,7 @@ async function shareCareerCard() {
   try { gtag('event', 'share_card', { game: LEADERBOARD_GAME, ovr: state.finalOvr, mode: res.mode }); } catch (e) {}
 }
 
-// ?b=<scoreId> — someone opened a shared build link: show their career card + "Beat this career".
+// ?b=<scoreId> · someone opened a shared build link: show their career card + "Beat this career".
 let beatTarget = null;
 async function loadSharedBuild(id) {
   try {
@@ -3538,7 +3538,7 @@ async function loadSharedBuild(id) {
     const data = await res.json();
     if (!data.ok || !data.entry) return;
     const entry = data.entry;
-    if (entry.game && entry.game !== LEADERBOARD_GAME) {   // wrong game page for this build — hop over
+    if (entry.game && entry.game !== LEADERBOARD_GAME) {   // wrong game page for this build · hop over
       const path = entry.game === 'batter' ? '/batting' : entry.game === 'baller' ? '/hoops' : entry.game === 'striker' ? '/striker' : entry.game === 'keeper' ? '/keeper' : '/pitching';
       location.replace(`${path}?b=${entry.id}`);
       return;
@@ -3671,7 +3671,7 @@ function headshotByName(name) {
 }
 const TIER_LABELS = { grey: 'Common', bronze: 'Bronze', silver: 'Silver', gold: 'Gold', diamond: 'Diamond', legend: 'Legend' };
 // Mini team-colored figure for a leaderboard build - per game, keyed by slot label (works for either board).
-// Every game's mini-figure config — leaderboards show all five games' builds on every page.
+// Every game's mini-figure config · leaderboards show all five games' builds on every page.
 const GAME_LABEL = { pitcher: 'Pitcher', batter: 'Batter', baller: 'Hooper', striker: 'Striker', keeper: 'Keeper' };
 const FIG_CONFIG = {
   pitcher: { base: 'pitcher-figure.png', masks: { 'Velocity': 'seg-pitch_velocity.png', 'Break': 'seg-pitch_movement.png', 'Strikeout': 'seg-k_per_bf.png', 'Ground Ball': 'seg-hr_per_bf.png', 'Command': 'seg-pitch_control.png', 'Clutch': 'seg-pitching_clutch.png', 'Defense': 'seg-fielding_ability.png', 'Frame': 'seg-frame.png', 'Stamina': 'seg-stamina.png' } },
@@ -3787,7 +3787,7 @@ function initTilt() {
 
 function reset() {
   dailyMode = false; dailyRng = null;   // a fresh game is never a daily until startDailyChallenge says so
-  // Hard Mode is settable from the ☰ menu now — re-read it so a toggle applies to the NEXT build
+  // Hard Mode is settable from the ☰ menu now · re-read it so a toggle applies to the NEXT build
   // (never mid-run: the current run keeps the setting it started with).
   try { hardMode = localStorage.getItem('pl_hardMode') === '1'; } catch (e) {}
   { const _t = document.querySelector('header .tag'); if (_t && !_t.classList.contains('dc-header-tag')) _t.textContent = hardMode ? 'Hard Mode 🙈' : 'Draft Mode'; }

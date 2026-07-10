@@ -1,5 +1,5 @@
 /* ============================================================================
-   Pitching Lab — 🔥 "Last Night's Studs" bulletin board.
+   Pitching Lab · 🔥 "Last Night's Studs" bulletin board.
    Included (defer) by the landing page + both baseball games. Exposes window.Hot.
    Follows the achievements.js / xp.js drop-in pattern: self-contained, injects
    its own CSS, fails silent (no list -> the games behave exactly as before).
@@ -128,33 +128,21 @@
       <div class="hotb-head">
         <div class="hotb-eyebrow">📌 Clubhouse Board</div>
         <div class="hotb-title">🔥 Last Night's Studs${data.gameDate ? ` <span class="hotb-date">· ${niceDate(data.gameDate)}</span>` : ''}</div>
-        <div class="hotb-sub">Straight from last night's real MLB box scores — refreshed every morning.</div>
+        <div class="hotb-sub">Straight from last night's real MLB box scores · refreshed every morning.</div>
       </div>
       ${data.players.length
         ? `<div class="hotb-rows">${rows}</div>
            <div class="hotb-foot">These players are running hot <b>today only</b>: better spin odds and a
            <b>+5 to +10 rating boost</b> on their card in the reel. Catch them before midnight.</div>`
-        : `<div class="hotb-empty">No studs posted yet — check back after tonight's games wrap up. ⚾</div>`}
+        : `<div class="hotb-empty">No studs posted yet · check back after tonight's games wrap up. ⚾</div>`}
     </div>`;
     overlay.querySelector('.hotb-x').onclick = close;
   }
   function open() { ready.then(() => { build(); overlay.classList.add('show'); }); }
   function close() { if (overlay) overlay.classList.remove('show'); }
 
-  // ---- once-a-day auto-open -------------------------------------------------
-  function localToday() {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  }
-  ready.then(players => {
-    if (!players.length) return;
-    if (location.hash) return;             // deep links (#daily, #hof, #leaderboard) win
-    let seen = null;
-    try { seen = localStorage.getItem('pl_hot_seen'); } catch (e) {}
-    if (seen === localToday()) return;
-    try { localStorage.setItem('pl_hot_seen', localToday()); } catch (e) {}
-    setTimeout(open, 1100);                // let the page land first
-  });
+  // No auto-open: the board lives behind the ☰ "🔥 Last Night's Studs" item only.
+  // (The old once-a-day popup ate the mobile first-screen · Matt killed it 2026-07-11.)
 
   window.Hot = {
     ready,

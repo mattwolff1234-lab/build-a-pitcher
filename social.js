@@ -1,5 +1,5 @@
 /* ============================================================================
-   GoatLab — 👥 Friends (social layer).
+   GoatLab · 👥 Friends (social layer).
    Included (defer) by the hub, all 5 game pages, and all 3 versus pages.
    Follows the xp.js / hotboard.js drop-in pattern: self-contained, injects its
    own CSS, exposes window.Social, fails silent when the API is unreachable.
@@ -268,7 +268,7 @@
     return (data.requestsIn || []).length + (data.challenges || []).filter(c => c.incoming).length;
   }
   function paintBadge() {
-    injectCss();   // badge styles live in the injected sheet — make sure it's in before painting
+    injectCss();   // badge styles live in the injected sheet · make sure it's in before painting
     const n = pendingCount();
     document.querySelectorAll('[data-social-badge]').forEach(el => {
       el.textContent = n;
@@ -292,7 +292,7 @@
     const newChal = (data.challenges || []).filter(c => c.incoming && !(s.chal || []).includes(c.id))[0];
     if (newChal) {
       const sp = sport(newChal.sport);
-      return showToast('⚔️ Challenge!', `<b>${esc(newChal.fromName)}</b> challenged you to ${sp.icon} ${sp.label} — friendly 1v1, no Elo.`, [
+      return showToast('⚔️ Challenge!', `<b>${esc(newChal.fromName)}</b> challenged you to ${sp.icon} ${sp.label} · friendly 1v1, no Elo.`, [
         { label: 'Accept', warm: true, fn: () => acceptChallenge(newChal.id) },
         { label: 'View', fn: () => { hideToast(); open(); } },
       ]);
@@ -335,7 +335,7 @@
       if (r && r.ok) {
         data = r;
         try { localStorage.setItem('pl_avatar', r.myAvatar || ''); } catch (e) {}   // server is source of truth
-        // handle IS the username — keep the local display name (versus, ratings) in lockstep
+        // handle IS the username · keep the local display name (versus, ratings) in lockstep
         if (r.myHandle) { try { localStorage.setItem('pl_guestName', r.myHandle); } catch (e) {} }
         paintBadge(); maybeToast(); decorateAcct();
       }
@@ -388,7 +388,7 @@
   }
   function renderFriends() {
     if (!overlay) return;
-    if (!data) { renderLoading('Could not reach the clubhouse — check your connection and try again.'); return; }
+    if (!data) { renderLoading('Could not reach the clubhouse · check your connection and try again.'); return; }
     const nIn = (data.requestsIn || []).length;
     const inChals = (data.challenges || []).filter(c => c.incoming);
     const outChals = (data.challenges || []).filter(c => !c.incoming);
@@ -429,7 +429,7 @@
         + ((data.requestsOut || []).length ? `<div class="soc-sec">Sent</div>` : '')
         + (data.requestsOut || []).map(r => `<div class="soc-row" data-key="${esc(r.key)}">
           ${avatarHtml(r)}
-          <div class="soc-who"><div class="nm">${esc(r.name)}</div><div class="sub">request sent — waiting</div></div>
+          <div class="soc-who"><div class="nm">${esc(r.name)}</div><div class="sub">request sent · waiting</div></div>
           <div class="soc-acts"><button class="soc-btn dim" data-act="req-cancel">Cancel</button></div></div>`).join('')
       : `<div class="soc-empty">No pending requests.</div>`;
 
@@ -441,9 +441,9 @@
       <input class="soc-input" id="socSearch" maxlength="20" placeholder="Search handles…" autocomplete="off" style="text-transform:none">
       <div id="socResults" style="display:flex;flex-direction:column;gap:8px"></div>
       <div class="soc-err" id="socAddMsg"></div>
-      <div class="soc-note">Friends can see your <b>profile</b> — 1v1 records and your Hall of Fame builds — and
+      <div class="soc-note">Friends can see your <b>profile</b> · 1v1 records and your Hall of Fame builds · and
       challenge you to friendly 1v1s in any sport. Only players who've <b>claimed a handle</b> show up in
-      search${acct() ? '' : ' — sign in with Google (☰ menu) to claim yours and let friends find you'}.</div>`;
+      search${acct() ? '' : ' · sign in with Google (☰ menu) to claim yours and let friends find you'}.</div>`;
 
     const bodies = {
       friends: (chalRows ? `<div class="soc-sec">Challenges</div>${chalRows}<div class="soc-sec">Friends</div>` : '') + friendRows,
@@ -452,7 +452,7 @@
     };
 
     const claimUi = `<div class="soc-code" style="flex-direction:column;align-items:stretch">
-          <span class="hint">Claim your unique handle — first come, first served. Friends find you by it.</span>
+          <span class="hint">Claim your unique handle · first come, first served. Friends find you by it.</span>
           <div style="display:flex;gap:8px"><input class="soc-input" id="socClaim" maxlength="20" placeholder="YourHandle" style="text-transform:none;flex:1">
           <button class="soc-btn warm" id="socClaimBtn">Claim</button>${renaming ? '<button class="soc-btn dim" id="socClaimCancel">✕</button>' : ''}</div>
           <div class="soc-err" id="socClaimMsg"></div></div>`;
@@ -460,7 +460,7 @@
       ? `<div class="soc-code"><span class="cd" id="socMe" style="cursor:pointer" title="View my profile">@${esc(data.myHandle)}</span>
           <button class="cp" id="socRename">Change</button>
           <button class="cp" id="socMeBtn">My profile</button>
-          <span class="hint">Your handle — friends find you by searching it.</span></div>`
+          <span class="hint">Your handle · friends find you by searching it.</span></div>`
       : data.guest
         ? `<div class="soc-code"><button class="cp" id="socMeBtn">👤 My profile</button>
           <span class="hint">Sign in with Google (☰ menu) to claim a unique handle so friends can find <i>you</i>. You can still search and add friends below.</span></div>`
@@ -536,7 +536,7 @@
           if (after) { await after(); }
           else { await refresh(); renderFriends(); }
         } else { msg.className = 'soc-err'; msg.textContent = (r && r.error) || 'Could not claim that handle.'; }
-      } catch (e) { msg.textContent = 'Network error — try again.'; }
+      } catch (e) { msg.textContent = 'Network error · try again.'; }
       claimBusy = false;
       const b2 = overlay.querySelector('#socClaimBtn'); if (b2) b2.disabled = false;
     };
@@ -553,8 +553,8 @@
     out.innerHTML = '<div class="soc-empty" style="padding:10px">Searching…</div>';
     let r = null;
     try { r = await api('friendSearch', { q }); } catch (e) {}
-    if (!input.isConnected || input.value.trim() !== q) return;   // stale response — a newer search took over
-    if (!r || !r.ok) { out.innerHTML = '<div class="soc-empty" style="padding:10px">Search failed — try again.</div>'; return; }
+    if (!input.isConnected || input.value.trim() !== q) return;   // stale response · a newer search took over
+    if (!r || !r.ok) { out.innerHTML = '<div class="soc-empty" style="padding:10px">Search failed · try again.</div>'; return; }
     if (!r.results.length) { out.innerHTML = `<div class="soc-empty" style="padding:10px">Nobody's claimed a handle starting with "${esc(q)}" yet.</div>`; return; }
     out.innerHTML = r.results.map(u => {
       const btn = u.rel === 'friends' ? '<button class="soc-btn dim" disabled>Friends ✓</button>'
@@ -590,7 +590,7 @@
         ga('friend_request', { result: accepted ? 'accepted' : 'pending' });
         refresh();
       } else if (msg) { msg.className = 'soc-err'; msg.textContent = (r && r.error) || 'Something went wrong.'; }
-    } catch (e) { if (msg) { msg.className = 'soc-err'; msg.textContent = 'Network error — try again.'; } }
+    } catch (e) { if (msg) { msg.className = 'soc-err'; msg.textContent = 'Network error · try again.'; } }
     searchBusy = false;
   }
 
@@ -619,7 +619,7 @@
   function pickSport(key, name) {
     const body = overlay.querySelector('.soc-body');
     body.innerHTML = `<div class="soc-note" style="text-align:center">Challenge <b>${esc(name || 'your friend')}</b> to a
-      friendly 1v1 — build head-to-head, no Elo on the line. Pick the sport:</div>
+      friendly 1v1 · build head-to-head, no Elo on the line. Pick the sport:</div>
       <div class="soc-sports">${SPORTS.map(s => `<button class="soc-sport" data-sport="${s.id}"><span class="si">${s.icon}</span>${s.label}</button>`).join('')}</div>
       <div class="soc-err" id="socChalMsg"></div>
       <button class="soc-btn dim" id="socChalBack" style="align-self:center">← Back</button>`;
@@ -636,11 +636,11 @@
             <b>${esc(name || 'Your friend')}</b> will see it wherever they are on GoatLab.
             Head to the ${sp.icon} arena so you're ready the moment they accept.</div>
             <button class="soc-btn warm" id="socGoArena" style="padding:11px">⚔️ Wait in the ${sp.label} arena</button>
-            <button class="soc-btn dim" id="socStay" style="align-self:center">Stay here — I'll go later</button>`;
+            <button class="soc-btn dim" id="socStay" style="align-self:center">Stay here · I'll go later</button>`;
           body.querySelector('#socGoArena').onclick = () => { location.href = sp.route + '?lobby=1'; };
           body.querySelector('#socStay').onclick = () => { refresh().then(renderFriends); };
         } else msg.textContent = (r && r.error) || 'Could not send the challenge.';
-      } catch (e) { msg.textContent = 'Network error — try again.'; }
+      } catch (e) { msg.textContent = 'Network error · try again.'; }
     });
   }
   async function acceptChallenge(id) {
@@ -701,7 +701,7 @@
       const cta = p.rel === 'incoming'
         ? '<button class="soc-btn warm" id="socProfAdd" data-mode="accept" style="padding:11px">✓ Accept friend request</button>'
         : p.rel === 'pending'
-          ? '<button class="soc-btn dim" disabled style="padding:11px">Request sent — waiting</button>'
+          ? '<button class="soc-btn dim" disabled style="padding:11px">Request sent · waiting</button>'
           : '<button class="soc-btn warm" id="socProfAdd" data-mode="add" style="padding:11px">＋ Add Friend</button>';
       return `<div class="soc-stats">${statCells}</div>
         ${cta}
@@ -714,7 +714,7 @@
       ? `<div class="soc-sec">Top builds</div>${topSorted.map(buildRow).join('')}
          <div class="soc-sec">Recent builds</div>${(p.recentBuilds || []).map(buildRow).join('')}`
       : `<div class="soc-empty">${p.guest
-          ? 'Guest account — builds only save to a Hall of Fame after signing in with Google.'
+          ? 'Guest account · builds only save to a Hall of Fame after signing in with Google.'
           : 'No Hall of Fame builds saved yet.'}</div>`;
     return `<div class="soc-stats">${statCells}</div>
       ${h2h}
@@ -731,13 +731,13 @@
     if (p.limited) return '<div class="soc-empty">🔒 Friends lists are visible to friends only.<br>Add them from the Overview tab first.</div>';
     const list = p.friends || [];
     // your own profile: friends on top, the search-and-add flow right UNDER them (same
-    // ids the Friends panel uses — only one overlay body exists at a time, no collision)
+    // ids the Friends panel uses · only one overlay body exists at a time, no collision)
     const searchUi = p.self ? `<div class="soc-sec">🔎 Find friends</div>
       <input class="soc-input" id="socSearch" maxlength="20" placeholder="Search handles…" autocomplete="off" style="text-transform:none">
       <div id="socResults" style="display:flex;flex-direction:column;gap:8px"></div>
       <div class="soc-err" id="socAddMsg"></div>` : '';
     if (!list.length) return `<div class="soc-empty">${p.self
-      ? 'No friends yet — search a handle below to add your first one.'
+      ? 'No friends yet · search a handle below to add your first one.'
       : 'No friends to show yet.'}</div>` + searchUi;
     return (p.self && list.length ? '<div class="soc-sec">Your friends</div>' : '') + list.map(f => {
       const prof = f.rel === 'you' ? '' : '<button class="soc-btn" data-pf="profile">Profile</button>';
@@ -771,7 +771,7 @@
           const g = GAME_META[b.game] || { icon: '🏗️', label: b.game };
           return `<div class="soc-kv"><span>${g.icon} ${g.label}s</span><span><b>${b.count}</b> saved · best <b>${b.best}</b> OVR</span></div>`;
         }).join('')
-      : `<div class="soc-empty" style="padding:12px">${p.guest ? 'Guest account — no Hall of Fame saves.' : 'No builds saved yet.'}</div>`;
+      : `<div class="soc-empty" style="padding:12px">${p.guest ? 'Guest account · no Hall of Fame saves.' : 'No builds saved yet.'}</div>`;
     return `<div class="soc-sec">1v1 record${totalGames ? ` · ${totalGames} matches` : ''}</div>
       ${sportRow('⚾', 'Baseball', p.baseball)}
       ${sportRow('🏀', 'Hoops', p.hoops)}
@@ -793,11 +793,11 @@
         <div class="soc-note">Sign in with Google (☰ menu) to claim a unique <b>@handle</b>, keep your friends
         list across devices, and save builds to your Hall of Fame.</div>`;
     }
-    return `<div class="soc-note">Your unique handle — friends find you by searching it. Changing it frees the old one for someone else.</div>
+    return `<div class="soc-note">Your unique handle · friends find you by searching it. Changing it frees the old one for someone else.</div>
       <div style="display:flex;gap:8px"><input class="soc-input" id="socClaim" maxlength="20" placeholder="YourHandle" style="text-transform:none;flex:1" value="${esc(p.handle || '')}">
       <button class="soc-btn warm" id="socClaimBtn">${p.handle ? 'Change' : 'Claim'}</button></div>
       <div class="soc-err" id="socClaimMsg"></div>
-      <div class="soc-note">Handles are 3–20 letters, numbers, or underscores — unique across GoatLab, first come, first served.</div>`;
+      <div class="soc-note">Handles are 3–20 letters, numbers, or underscores · unique across GoatLab, first come, first served.</div>`;
   }
 
   function profStyle(p) {
@@ -811,7 +811,7 @@
         <span class="nm">${esc(a.name)}</span>
         ${un ? '' : '<span class="lk">🔒</span>'}</div>`;
     }).join('');
-    return `<div class="soc-note">Pick your avatar — friends see it everywhere your name shows up.
+    return `<div class="soc-note">Pick your avatar · friends see it everywhere your name shows up.
       🔒 ones are <b>Season Track rewards</b>: earn XP while a season is live and they unlock forever.</div>
       <div class="soc-avgrid">
         <div class="soc-avcell${!cur ? ' sel' : ''}" data-av="" title="Default">
@@ -882,7 +882,7 @@
           addBtn.disabled = false;
           if (msg) msg.textContent = (r && r.error) || 'Something went wrong.';
         }
-      } catch (e) { addBtn.disabled = false; if (msg) msg.textContent = 'Network error — try again.'; }
+      } catch (e) { addBtn.disabled = false; if (msg) msg.textContent = 'Network error · try again.'; }
     };
     const rm = overlay.querySelector('#socProfRemove');
     if (rm) rm.onclick = async () => {
@@ -914,7 +914,7 @@
       if (id && !avatarUnlocked(id)) {
         const a = AVATARS[id];
         const msg = overlay.querySelector('#socAvMsg');
-        if (msg) msg.textContent = `🔒 ${a.name} is a ${a.track === 's1' ? 'Season 1' : 'future season'} Track reward — earn XP while the season is live to unlock it.`;
+        if (msg) msg.textContent = `🔒 ${a.name} is a ${a.track === 's1' ? 'Season 1' : 'future season'} Track reward · earn XP while the season is live to unlock it.`;
         return;
       }
       await setAvatar(id || null);
@@ -934,7 +934,7 @@
       if (!v) { if (msg) msg.textContent = 'Enter a name.'; return; }
       try { localStorage.setItem('pl_guestName', v); } catch (e) {}
       api('friendList');   // any authenticated call pushes the new name to the server
-      if (msg) { msg.className = 'soc-err soc-ok'; msg.textContent = 'Saved — friends will see this name.'; }
+      if (msg) { msg.className = 'soc-err soc-ok'; msg.textContent = 'Saved · friends will see this name.'; }
     };
   }
 
@@ -942,7 +942,7 @@
   function decorateAcct() {
     const row = document.querySelector('#acctSlot .acct');
     if (!row) return;
-    injectCss();   // the face uses .soc-av styles — make sure they exist before first paint
+    injectCss();   // the face uses .soc-av styles · make sure they exist before first paint
     if (!row.__socWired) {
       row.__socWired = true;
       row.style.cursor = 'pointer';
@@ -976,7 +976,7 @@
     const slot = document.getElementById('acctSlot');
     if (!slot) return;
     decorateAcct();
-    // renderAcct() rebuilds the row on sign-in/out — re-decorate whenever it does
+    // renderAcct() rebuilds the row on sign-in/out · re-decorate whenever it does
     new MutationObserver(decorateAcct).observe(slot, { childList: true, subtree: true });
   }
 

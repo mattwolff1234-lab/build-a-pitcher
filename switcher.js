@@ -1,16 +1,16 @@
-/* GoatLab navigation — self-contained drop-in (like xp.js). Two dials, one piece of state:
+/* GoatLab navigation · self-contained drop-in (like xp.js). Two dials, one piece of state:
    - WHAT you're playing = the active game (pl_activeGame: pitcher|batter|baller|striker|keeper).
      Game pages stamp it on load; the landing's sport switcher writes it; the header game chip
      ("⚽ Striker ▾") opens a switch sheet from anywhere, including mid-build.
    - HOW you're playing = the persistent bottom nav (Home · Daily · Build · 1v1 · More) on every
      page. Daily/Build/1v1 route from pl_activeGame, so "Build" always means the right game.
    Include on every page with:  <script src="/switcher.js" defer></script>
-   The old single cross-link (#buildTab) is hidden — the chip replaces it — but left in the DOM so
+   The old single cross-link (#buildTab) is hidden · the chip replaces it · but left in the DOM so
    each game's init() handlers keep working. Landing pages (no `header .brand`) get only the bar. */
 (function () {
   'use strict';
 
-  // Pretty routes are Vercel rewrites — a bare local server (python -m http.server) 404s on them,
+  // Pretty routes are Vercel rewrites · a bare local server (python -m http.server) 404s on them,
   // so local previews link straight to the files.
   const LOCAL = location.protocol === 'file:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
   const GAMES = {
@@ -27,7 +27,7 @@
   function pageGame() {
     try { if (typeof LEADERBOARD_GAME === 'string' && GAMES[LEADERBOARD_GAME]) return LEADERBOARD_GAME; } catch (e) {}
     const p = location.pathname.toLowerCase();
-    if (p.indexOf('franchise') >= 0) return null;   // /franchise-hoops contains 'hoops' — not a game page
+    if (p.indexOf('franchise') >= 0) return null;   // /franchise-hoops contains 'hoops' · not a game page
     if (p.indexOf('batter') >= 0 || p.indexOf('batting') >= 0) return 'batter';
     if (p.indexOf('baller') >= 0 || p.indexOf('hoops') >= 0) return 'baller';
     if (p.indexOf('striker') >= 0) return 'striker';
@@ -55,7 +55,7 @@
 
   const CSS = `
   #buildTab { display:none !important; }
-  /* the bottom bar + 🎮 chip cover these — hide the menu duplicates */
+  /* the bottom bar + 🎮 chip cover these · hide the menu duplicates */
   #menu a.menu-item[href="/"] { display:none !important; }
   #menu a.menu-item[href^="/versus"]:not([href*="#stats"]) { display:none !important; }
   #menu a.menu-item[href$="#daily"] { display:none !important; }
@@ -87,17 +87,17 @@
     font-family:'Oswald',sans-serif; font-size:9.5px; font-weight:600; letter-spacing:.8px; text-transform:uppercase;
     color:#7e8da3; text-decoration:none; background:none; border:none; cursor:pointer; line-height:1; min-width:0; }
   .gnav-tab i { font-style:normal; font-size:17px; line-height:1; }
-  /* pending friend requests/challenges count — painted by social.js into any [data-social-badge] */
+  /* pending friend requests/challenges count · painted by social.js into any [data-social-badge] */
   .gnav-tab [data-social-badge] { position:absolute; top:3px; left:calc(50% + 5px); min-width:15px; padding:1px 4px;
     border-radius:9px; background:#ff4d5e; color:#fff; font-size:9.5px; font-weight:700; text-align:center; line-height:1.3; }
-  /* the ☰ menu scrolls under the bottom nav + anchor ad — give its scroller enough bottom
+  /* the ☰ menu scrolls under the bottom nav + anchor ad · give its scroller enough bottom
      room that the last items clear both (adapts live via the measured --pl-adh) */
   #menu .overlay-body, #menu .menu-body {
     padding-bottom: calc(var(--gnav-h, 0px) + max(var(--pl-adh, 0px), var(--pl-adh-min, 0px)) + 24px) !important; }
   .gnav-tab.on { color:#eaf2fb; }
   .gnav-tab.on i { filter:drop-shadow(0 0 8px rgba(255,122,24,.8)); }
   .gnav-tab:hover { color:#eaf2fb; }
-  /* ⚔️ 1v1 tab: soft HUD glow pulse (filter only — zero layout shift) */
+  /* ⚔️ 1v1 tab: soft HUD glow pulse (filter only · zero layout shift) */
   @media (prefers-reduced-motion: no-preference) {
     .gnav-tab.gnav-vs i { animation: gnavVsPulse 2s ease-in-out infinite; }
   }
@@ -140,7 +140,7 @@
   .gs-vs .gs-row { flex:1; justify-content:center; margin-bottom:0; font-size:12.5px; }
   `;
 
-  // daily "done today" per game — same lock keys each game's dcKey() uses (baseball pair shares
+  // daily "done today" per game · same lock keys each game's dcKey() uses (baseball pair shares
   // the legacy key, the soccer pair shares one soccer key, hoops has its own)
   function playedFor(g) {
     const sport = GAMES[g].sport;
@@ -190,7 +190,7 @@
   }
   function closeSheet() { if (sheet) sheet.classList.remove('show'); }
 
-  // Hard Mode lives in the ☰ menu on every page. It only ever applies from the NEXT build —
+  // Hard Mode lives in the ☰ menu on every page. It only ever applies from the NEXT build -
   // each game re-reads it at reset(), so mid-run flips can't reveal a hard run or fake one.
   function injectHardMode() {
     const menuBody = document.querySelector('#menu .overlay-body, #menu .menu-body');
@@ -208,7 +208,7 @@
       const on = !read();
       try { localStorage.setItem('pl_hardMode', on ? '1' : '0'); } catch (e) {}
       paint();
-      try { if (typeof toast === 'function') toast(on ? '🙈 Hard Mode ON — applies from your next build' : 'Hard Mode off — applies from your next build'); } catch (e) {}
+      try { if (typeof toast === 'function') toast(on ? '🙈 Hard Mode ON · applies from your next build' : 'Hard Mode off · applies from your next build'); } catch (e) {}
     };
     sw.addEventListener('click', flip);
     sw.addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); flip(); } });
@@ -244,7 +244,7 @@
     };
     measure();
     setInterval(measure, 1500);
-    // the URL bar collapsing / keyboard / PWA chrome all resize the visual viewport — re-check fast
+    // the URL bar collapsing / keyboard / PWA chrome all resize the visual viewport · re-check fast
     if (window.visualViewport) window.visualViewport.addEventListener('resize', () => setTimeout(measure, 60));
     window.addEventListener('orientationchange', () => setTimeout(measure, 250));
   }
@@ -256,7 +256,7 @@
     document.head.appendChild(style);
     watchAdhesion();
 
-    // versus pages: ad-safe padding only — no nav bar (a mid-match mis-tap would forfeit the game)
+    // versus pages: ad-safe padding only · no nav bar (a mid-match mis-tap would forfeit the game)
     if (location.pathname.toLowerCase().indexOf('versus') >= 0) return;
     document.documentElement.style.setProperty('--gnav-h', '66px');
     injectHardMode();
@@ -274,7 +274,7 @@
     const act = activeGame();
     const A = GAMES[act];
 
-    // header game chip (game pages only — the landing has the full sport switcher on-page)
+    // header game chip (game pages only · the landing has the full sport switcher on-page)
     const brand = document.querySelector('header .brand');
     if (brand && onGame) {
       const g = GAMES[onGame];

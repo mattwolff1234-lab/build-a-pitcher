@@ -20,7 +20,7 @@ const CONN = findConn();
 const sql = CONN ? neon(CONN) : null;
 const gameOf = g => (g === 'batter' || g === 'baller' || g === 'striker' || g === 'keeper') ? g : 'pitcher';
 // Per-player key for daily dedup: signed-in account, else device guest id. Trust-the-client, same
-// posture as the rest of the leaderboard — the UNIQUE constraint is what enforces one attempt/day.
+// posture as the rest of the leaderboard · the UNIQUE constraint is what enforces one attempt/day.
 const playerKey = b => (b && b.sub ? 'acct:' + String(b.sub).slice(0, 80) : (b && b.guestId ? 'guest:' + String(b.guestId).slice(0, 80) : null));
 // The daily resets at each player's LOCAL midnight, so the browser sends its own date (YYYY-MM-DD).
 // We validate it and fall back to the server's CURRENT_DATE (UTC) when absent/malformed.
@@ -30,12 +30,12 @@ const dailyDate = v => (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) ?
 // Each slot's cap is the TRUE max for that stat across the game's real cards (+ a few points of
 // buffer); a value above it can't come from a legit card. Frame is heightToRating-bounded, so it's
 // low. Note most batter slots (Vision/Power/Contact/Clutch/Discipline) and some pitcher slots
-// (Velocity/Strikeout/Clutch/Stamina) legitimately reach ~125 — only the low-max slots below catch
+// (Velocity/Strikeout/Clutch/Stamina) legitimately reach ~125 · only the low-max slots below catch
 // a uniform "all-125/all-200" cheat.
 // Headroom on top of the raw card maxima, because power-ups stack on legit builds:
 //  - baseball (pitcher/batter): 🔥 hot-player boost adds up to +10 to EVERY rated stat
 //    (intentionally uncapped), and the Boost power-up then guarantees ≥ +5 over the landed
-//    card — so a legit slot can sit ~15 above the best raw card (99 Break → 114 hot+boosted).
+//    card · so a legit slot can sit ~15 above the best raw card (99 Break → 114 hot+boosted).
 //  - all games: Boost's +5-over-landed guarantee alone. Frame is real height (never
 //    hot-boosted or Boost-raised), so Frame caps stay at heightToRating bounds.
 // Caps stay tight enough to catch "all-150" edited builds without rejecting real ones.
@@ -47,7 +47,7 @@ const SLOT_MAX = {
   striker: { _default: 125, Finishing: 123, Pace: 125, 'Shot Power': 119, Dribbling: 122, Passing: 122, Heading: 120, Physical: 119, Clutch: 119, Frame: 102 },
   keeper:  { _default: 122, Diving: 122, Reflexes: 122, Handling: 116, Distribution: 116, Positioning: 119, Agility: 113, Command: 119, Clutch: 119, Frame: 112 },
 };
-// Plain weighted-avg OVR — matches batter/baller's client computeOvr exactly, so we can reject an
+// Plain weighted-avg OVR · matches batter/baller's client computeOvr exactly, so we can reject an
 // inflated OVR claim. Pitcher uses a value-scaled formula, so we don't recompute it (its slot caps
 // still block impossible ratings).
 const OVR_W = {
@@ -138,7 +138,7 @@ module.exports = async (req, res) => {
   try {
     await ensure();
 
-    // GET ?action=build&id=<scoreId> — one submitted build, career included (powers /p/<id> share links).
+    // GET ?action=build&id=<scoreId> · one submitted build, career included (powers /p/<id> share links).
     if (req.method !== 'POST' && (req.query && req.query.action) === 'build') {
       const id = parseInt(req.query && req.query.id, 10);
       if (!id || id < 1) return res.status(400).json({ ok: false, error: 'Bad id' });
@@ -148,7 +148,7 @@ module.exports = async (req, res) => {
       return res.status(200).json({ ok: true, entry: { ...row, id: Number(row.id) } });
     }
 
-    // GET ?action=ghost&game=&min=&max= — a random recent build in an OVR band, slots only (no
+    // GET ?action=ghost&game=&min=&max= · a random recent build in an OVR band, slots only (no
     // career), for the 1v1 "Ghost" opponent when a lobby is empty. Public read like action=build.
     if (req.method !== 'POST' && (req.query && req.query.action) === 'ghost') {
       const game = gameOf(req.query && req.query.game);
@@ -165,7 +165,7 @@ module.exports = async (req, res) => {
       return res.status(200).json({ ok: true, ghost: { ...g, id: Number(g.id) } });
     }
 
-    // GET ?action=names&game=&min=&max=&limit= — a random sample of real submitted builds
+    // GET ?action=names&game=&min=&max=&limit= · a random sample of real submitted builds
     // (name + ovr only) inside an OVR band. Powers franchise mode's free agents, draft
     // prospects, and rival rosters, so the whole league is actual made guys. Public read;
     // the CDN caches one sample briefly (clients pick from it with their own seeds).
@@ -185,7 +185,7 @@ module.exports = async (req, res) => {
       return res.status(200).json({ ok: true, rows: rows.map(r => ({ name: r.name, ovr: Number(r.ovr) })) });
     }
 
-    // GET ?action=stats[&game=pitcher|batter|all] — total builds, GOAT (99 OVR) count, + live play counter.
+    // GET ?action=stats[&game=pitcher|batter|all] · total builds, GOAT (99 OVR) count, + live play counter.
     if (req.method !== 'POST' && (req.query && req.query.action) === 'stats') {
       const g = req.query && req.query.game;
       const [{ total, goat }] = (g === 'all')
@@ -196,7 +196,7 @@ module.exports = async (req, res) => {
       return res.status(200).json({ ok: true, total: t, goat: gt, pct: t > 0 ? (gt / t) * 100 : 0, plays: Number(plays) });
     }
 
-    // GET ?action=challengeLeaderboard — today's daily board + how many have played today.
+    // GET ?action=challengeLeaderboard · today's daily board + how many have played today.
     if (req.method !== 'POST' && (req.query && req.query.action) === 'challengeLeaderboard') {
       const game = gameOf(req.query && req.query.game);
       const limit = Math.max(1, Math.min(200, parseInt(req.query && req.query.limit, 10) || 50));
@@ -207,7 +207,7 @@ module.exports = async (req, res) => {
       return res.status(200).json({ ok: true, rows, total: Number(total) });
     }
 
-    // GET ?action=dailyDates&sub=<sub>|&guestId=<id> — the player's daily-play dates (streak calendar)
+    // GET ?action=dailyDates&sub=<sub>|&guestId=<id> · the player's daily-play dates (streak calendar)
     // plus today's result (so the one-per-day gate is enforced per ACCOUNT, across devices).
     if (req.method !== 'POST' && (req.query && req.query.action) === 'dailyDates') {
       const key = playerKey(req.query);
@@ -236,19 +236,19 @@ module.exports = async (req, res) => {
         return res.status(200).json({ ok: true, plays: Number(n) });
       }
 
-      // Daily Challenge submission — one row per player per day; returns today's rank + field size.
+      // Daily Challenge submission · one row per player per day; returns today's rank + field size.
       if (body.action === 'challengeSubmit') {
         const key = playerKey(body);
         if (!key) return res.status(400).json({ ok: false, error: 'No player key' });
         const game = gameOf(body.game);
         // Rotation guard: pitcher/batter and striker/keeper each alternate ONE daily per date
         // (same parity formula as the clients); hoops runs daily. The clients redirect on
-        // off-days, so only stale pages and direct POSTs land here — reject them.
+        // off-days, so only stale pages and direct POSTs land here · reject them.
         const rd = dailyDate(body.date);
         if (rd && (game === 'pitcher' || game === 'batter' || game === 'striker' || game === 'keeper')) {
           const odd = Math.floor(Date.parse(rd + 'T00:00:00Z') / 86400000) % 2 === 1;
           const host = (game === 'pitcher' || game === 'batter') ? (odd ? 'pitcher' : 'batter') : (odd ? 'striker' : 'keeper');
-          if (game !== host) return res.status(400).json({ ok: false, error: `Today's daily is ${host} — this one runs tomorrow` });
+          if (game !== host) return res.status(400).json({ ok: false, error: `Today's daily is ${host} · this one runs tomorrow` });
         }
         const chk = checkBuild(game, body.ovr, body.build);
         if (!chk.ok) return res.status(400).json({ ok: false, error: 'Invalid build' });

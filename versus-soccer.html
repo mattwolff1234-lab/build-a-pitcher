@@ -6,7 +6,7 @@
 <title>Soccer Face Off · GoatLab 1v1 Penalty Shootout</title>
 <meta name="theme-color" content="#0a1320">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-<script src="/switcher.js?v=13" defer></script>
+<script src="/switcher.js?v=14" defer></script>
 <script src="/achievements.js" defer></script>
 <script src="/xp.js" defer></script>
 <script src="/social.js" defer></script>
@@ -368,8 +368,8 @@
     background:rgba(233,238,246,.45); border-radius:50%; }
   .silho { position:absolute; bottom:28%; height:150px; width:110px; z-index:3; mask-size:contain; mask-repeat:no-repeat; mask-position:center bottom;
     -webkit-mask-size:contain; -webkit-mask-repeat:no-repeat; -webkit-mask-position:center bottom; filter:drop-shadow(0 8px 16px rgba(0,0,0,.5)); }
-  .silho.p { left:13%; }   /* striker — pose masks set by stPose() */
-  .silho.b { right:9%; height:126px; bottom:27.5%; }   /* keeper in the goalmouth — kpPose() */
+  .silho.p { left:13%; }   /* striker · pose masks set by stPose() */
+  .silho.b { right:9%; height:126px; bottom:27.5%; }   /* keeper in the goalmouth · kpPose() */
   .ball { position:absolute; width:26px; height:26px; border-radius:50%;
     background:url(soccer-ball.png) center/contain no-repeat;
     box-shadow:0 0 10px rgba(255,255,255,.55); left:26%; bottom:29%; opacity:0; z-index:5; }
@@ -406,7 +406,7 @@
   .wait-arena .wa-fill { height:100%; width:0%; border-radius:6px; background:linear-gradient(90deg,var(--accent),var(--accent2)); transition:width .35s ease; }
   .wait-arena .wa-count { font-family:'Oswald',sans-serif; font-size:12px; letter-spacing:1px; color:var(--muted); }
   .silho.dim { opacity:.18; filter:grayscale(1); }
-  /* name tags under the two figures — separate siblings (NOT nested in the masked/mirrored
+  /* name tags under the two figures · separate siblings (NOT nested in the masked/mirrored
      silhouettes), anchored to each figure's fixed spot so they never mirror with silhoB */
   .silho-name { position:absolute; bottom:calc(28% - 27px); width:110px; display:flex;
     justify-content:center; pointer-events:none; z-index:4; }
@@ -839,7 +839,7 @@ function tierBadgeHTML(elo, rank, size=20){
 }
 
 /* ---------- monthly seasons (MUST mirror api/account.js) ---------- */
-const SEASON1_START_MS = Date.UTC(2026, 6, 15);   // 2026-07-15 UTC — keep in sync with the server
+const SEASON1_START_MS = Date.UTC(2026, 6, 15);   // 2026-07-15 UTC · keep in sync with the server
 const N_PLACEMENT = 5;
 function addUTCMonths(ms, k){ const d = new Date(ms); d.setUTCMonth(d.getUTCMonth() + k); return d.getTime(); }
 // dev override: /versus?season=<epochMs> pretends "now" is that instant so the season UI can be
@@ -883,7 +883,7 @@ function renderSeasonBar(){ return;   // soccer: no seasons yet
   else html = `🏆 <b>Season ${d.number}</b> · ends in <b>${fmtCountdown(d.endMs - seasonNow())}</b>`;
   document.querySelectorAll('[data-season-bar]').forEach(el => { el.innerHTML = html; el.style.display = ''; });
 }
-function startSeasonBar(){ /* soccer 1v1 has no Elo seasons (yet) — all-time rating only */ }
+function startSeasonBar(){ /* soccer 1v1 has no Elo seasons (yet) · all-time rating only */ }
 
 const STRIKER_SLOTS = [
   { key:'finishing', label:'Finishing', part:'Striking Boot', mask:'soc-seg-finishing.png', ax:80, ay:88, lx:89, ly:70 },
@@ -1100,7 +1100,7 @@ async function applyResult(){
       myStats = { elo:r.elo, wins:r.wins, losses:r.losses, streak:r.streak||0 };
       // The server is authoritative on the outcome. If the opponent settled this match the other
       // way first (a rare forfeit / both-claim-win race), the locally-shown headline can contradict
-      // the Elo change — reconcile it so "YOU WIN" never sits above a rating drop.
+      // the Elo change · reconcile it so "YOU WIN" never sits above a rating drop.
       if (typeof r.won === 'boolean' && r.won !== pr.won) reconcileResultDisplay(r.won, pr.oppName);
       renderRatingResult(r);
     }
@@ -1249,7 +1249,7 @@ function connectAbly(){
   return ablyPromise;
 }
 
-/* ---------- live "who's online" ticker (cheap DB heartbeat — NOT Ably) ---------- */
+/* ---------- live "who's online" ticker (cheap DB heartbeat · NOT Ably) ---------- */
 // The old ticker used Ably presence; fanning presence out to every idle viewer was ~90% of the Ably
 // bill. Now each viewer heartbeats /api/live every ~45s (only while the tab is visible) and the same
 // response returns the live counts. Linear cost, plain DB queries, zero Ably.
@@ -1457,7 +1457,7 @@ function setOnlineStatus(s){
 let searching=false, retryTimer=null;
 async function findMatch(){
   resetMatch();
-  gameMode = 'classic';   // ranked is always Classic — clear any leftover friendly (Legends/Hard) mode
+  gameMode = 'classic';   // ranked is always Classic · clear any leftover friendly (Legends/Hard) mode
   showScreen('mmScreen');
   updateRatingChip();
   $('findBtn').style.display='none'; $('mmSpin').style.display='block'; $('cancelWrap').style.display='block'; $('statsWrap').style.display='none';
@@ -1973,7 +1973,7 @@ function finishBuild(){
   // Safety net: if the opponent never delivers a build (left/closed), don't hang forever.
   // Both shot clocks froze together, so their build-or-autofill MUST arrive within the time
   // they have left (+slack). Silence past that means they're gone → forfeit WIN, never
-  // "No Contest" — quitting must always count as a loss for the quitter.
+  // "No Contest" · quitting must always count as a loss for the quitter.
   if (waitTimeout) clearTimeout(waitTimeout);
   waitTimeout = setTimeout(() => {
     if (!oppBuild && !atBatStarted && !matchResolved) claimQuitWin();
@@ -2068,7 +2068,7 @@ function onOppLeave(){
     oppQuitTimer=null;
     if(matchResolved || atBatStarted || oppBuild) return;
     claimQuitWin();
-  }, 15000);   // grace for flaky connections — an Ably re-enter cancels this
+  }, 15000);   // grace for flaky connections · an Ably re-enter cancels this
 }
 function claimQuitWin(){
   if(matchCh){ try{ matchCh.publish('quitwin', { role:myRole }); }catch(e){} }   // if they're secretly alive, they take the loss
@@ -2108,7 +2108,7 @@ function showForfeitResult(iWon, filled, data={}){
   const oppElo = typeof data.elo === 'number' ? data.elo : ((oppBuild && typeof oppBuild.elo === 'number') ? oppBuild.elo : 1000);
   const oppForfeitName = data.name || (oppBuild && oppBuild.name ? oppBuild.name : '');
   if (friendlyMode) {
-    // friends head-to-head: fire-and-forget — the server only counts the winner's report,
+    // friends head-to-head: fire-and-forget · the server only counts the winner's report,
     // once per match, and only if the two players are accepted friends (social layer).
     if (!isGhost && oppBuild && oppBuild.key) {
       try { fetch('/api/account', { method:'POST', headers:{'content-type':'application/json'},
@@ -2218,7 +2218,7 @@ function playAtBat(){
   abGame = { tl, iWon, shooter, gk, winnerRole, script };
 }
 let abGame = null;
-// Both tints run through brightTeam, but two builds can pick the same (or similar) clubs —
+// Both tints run through brightTeam, but two builds can pick the same (or similar) clubs -
 // nudge the keeper's hue ~150° so the two silhouettes are always tellable apart.
 function distinctTint(pHex, bHex){
   const rgb = c => { const m=/^#([0-9a-f]{6})$/i.exec(c||''); if(!m) return null;
@@ -2231,7 +2231,7 @@ function distinctTint(pHex, bHex){
   if(d>0){ h = mx===r ? ((g-bl)/d+(g<bl?6:0)) : mx===g ? (bl-r)/d+2 : (r-g)/d+4; h/=6; }
   return `hsl(${Math.round(((h+0.42)%1)*360)} 75% 60%)`;
 }
-// ⏩ Skip the shootout (this side only — a local playback of the seeded result).
+// ⏩ Skip the shootout (this side only · a local playback of the seeded result).
 function abSkipSim(){
   if(!abGame || matchResolved) return;
   const g = abGame;
@@ -2265,7 +2265,7 @@ function slotVal(build, label, fb){
 function kickMph(power){ return Math.round(52 + power*0.32); }
 
 // Best-of-5 with a built-in cliffhanger: kicks 1-4 are ALWAYS 2 goals + 2 stops (seeded order),
-// so the 5th kick decides it — buried = striker wins, stopped = keeper wins.
+// so the 5th kick decides it · buried = striker wins, stopped = keeper wins.
 function makeShootout(shooter, gk, winnerRole, rr){
   const strikerWins = winnerRole==='striker';
   const order=[true,true,false,false];
@@ -2286,8 +2286,8 @@ function makeShootout(shooter, gk, winnerRole, rr){
       klass: result==='goal'?'hit':result==='post'?'ball':'k' });
   });
   return strikerWins
-    ? { outcome:'goal', summary:`Striker buries ${g} of 5 — the decider hits the net`, finalCall:'GOAL!', pitches:kicks }
-    : { outcome:'save', summary:'Keeper stands tall — the decisive penalty is SAVED', finalCall:'SAVED!', pitches:kicks };
+    ? { outcome:'goal', summary:`Striker buries ${g} of 5 · the decider hits the net`, finalCall:'GOAL!', pitches:kicks }
+    : { outcome:'save', summary:'Keeper stands tall · the decisive penalty is SAVED', finalCall:'SAVED!', pitches:kicks };
 }
 function renderKickSeq(script){
   $('pitchSeq').innerHTML = script.pitches.map((p,i) =>
@@ -2355,7 +2355,7 @@ function appendKick(tl, kick, idx){
       .to(ball,{ opacity:0, duration:.2 },'-=.1')
       .to('#silhoB',{ x:0, y:0, rotation:0, duration:.4 }, '+=.35')
       .add(()=>kpPose('ready'));
-  } else {   // GOAL — the keeper guesses wrong
+  } else {   // GOAL · the keeper guesses wrong
     tl.add(()=>{ kpPose(kick.high?'divelow':'divehigh'); }, '<.12')
       .to('#silhoB',{ x:kick.high?16:-22, y:kick.high?22:-28, rotation:kick.high?8:-16, duration:.26, ease:'power2.out' },'<')
       .add(()=>{ Sound.crack(); resolvePitch(idx, kick);
@@ -2469,7 +2469,7 @@ function showResult(iWon, striker, keeper, winnerRole, script){
 
   const oppElo = (oppBuild && typeof oppBuild.elo === 'number') ? oppBuild.elo : 1000;
   if (friendlyMode) {
-    // friends head-to-head: fire-and-forget — the server only counts the winner's report,
+    // friends head-to-head: fire-and-forget · the server only counts the winner's report,
     // once per match, and only if the two players are accepted friends (social layer).
     if (!isGhost && oppBuild && oppBuild.key) {
       try { fetch('/api/account', { method:'POST', headers:{'content-type':'application/json'},
@@ -2574,14 +2574,14 @@ async function loadStats(){
 async function loadSeasons(){
   const body = $('seasonsBody'); if (!body) return;
   const info = seasonInfo();
-  if (statsView !== 'baseball'){ body.innerHTML = `<div class="prompt">Seasons are coming to Soccer soon — for now Soccer uses an all-time rating.</div>`; return; }
+  if (statsView !== 'baseball'){ body.innerHTML = `<div class="prompt">Seasons are coming to Soccer soon · for now Soccer uses an all-time rating.</div>`; return; }
   let res = null;
   try { res = await fetch('/api/account', { method:'POST', headers:{'content-type':'application/json'},
     body: JSON.stringify(Object.assign({ action:'pvpSeasonHistory' }, principal())) }).then(x=>x.json()); } catch(e){}
   const seasons = (res && res.ok && res.seasons) ? res.seasons : [];
   let html = `<div class="season-bar" data-season-bar></div>`;
   if (info.number < 1){
-    html += `<div class="prompt" style="margin:2px 0 12px">When <b>Season 1</b> starts, your first <b>5 games are placement matches</b> — your current rating carries in (regressed toward the middle), and those 5 games lock you into a rank band. Each month resets into new placements.</div>`;
+    html += `<div class="prompt" style="margin:2px 0 12px">When <b>Season 1</b> starts, your first <b>5 games are placement matches</b> · your current rating carries in (regressed toward the middle), and those 5 games lock you into a rank band. Each month resets into new placements.</div>`;
   }
   if (seasons.length){
     html += `<div class="lb-head">Your Seasons</div>`;
@@ -2596,7 +2596,7 @@ async function loadSeasons(){
       </div>`;
     }).join('');
   } else if (info.number >= 1){
-    html += `<div class="prompt" style="margin-top:10px">No placement games played yet this season — win 5 to lock your rank.</div>`;
+    html += `<div class="prompt" style="margin-top:10px">No placement games played yet this season · win 5 to lock your rank.</div>`;
   }
   body.innerHTML = html;
   renderSeasonBar();
@@ -2667,11 +2667,11 @@ refreshStats().then(() => { updateRatingChip(); renderSeasonBar(); });
 startSeasonBar();   // keep the season countdown live on the matchmaking screen
 checkChallengeURL();  // show challenge screen immediately if URL has ?ch= (no Ably needed for the screen)
 // A friends-panel challenge (social.js) sends the CHALLENGER here with ?lobby=1: wait in the
-// challenge lobby — an incoming ping auto-accepts (lobbyWaiting) and the match starts.
+// challenge lobby · an incoming ping auto-accepts (lobbyWaiting) and the match starts.
 if (new URLSearchParams(location.search).get('lobby')) setTimeout(openLobby, 400);
 goOnline();  // connect + wire the friend-challenge inbox (global presence is joined lazily on search)
 // dev harness: /versus.html?animtest=1&seed=5&aovr=95&bovr=88&ateam=LAD&bteam=LAD plays the at-bat
-// with fake builds — no Ably, no matchmaking, and friendlyMode means no Elo is reported.
+// with fake builds · no Ably, no matchmaking, and friendlyMode means no Elo is reported.
 (function(){
   const q=new URLSearchParams(location.search);
   if(q.get('animtest')!=='1') return;

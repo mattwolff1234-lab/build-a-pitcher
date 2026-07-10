@@ -1,11 +1,11 @@
 /* ============================================================================
-   GoatLab — 🔥 streak-pop.js: the post-daily streak celebration.
+   GoatLab · 🔥 streak-pop.js: the post-daily streak celebration.
    Drop-in (xp.js pattern): self-contained, injects its own CSS, exposes
    window.StreakPop. Loaded (defer) by the 5 game pages after season-track.js.
 
    Each game calls StreakPop.show({ count, frozeUsed }) right where the daily
    streak actually increments (finishDailyChallenge → mp.firstToday). Display
-   only — it never touches the daily lock keys, the determinism, or the
+   only · it never touches the daily lock keys, the determinism, or the
    server's updateStreak; the one side effect is a small once-per-day XP bonus
    (10 + 2×streak, capped 50) via XP.award. Skips gracefully without GSAP/XP.
    ========================================================================== */
@@ -69,7 +69,7 @@
     const count = Math.max(1, Number(opts && opts.count) || 1);
     const frozeUsed = !!(opts && opts.frozeUsed);
     // once per local day, across all five games (pl_streak is shared, so this only
-    // fires on the day's FIRST daily anyway — this is a belt-and-suspenders guard)
+    // fires on the day's FIRST daily anyway · this is a belt-and-suspenders guard)
     try {
       if (localStorage.getItem('pl_spop_day') === today()) return;
       localStorage.setItem('pl_spop_day', today());
@@ -88,7 +88,7 @@
       <div class="spop-flame">🔥</div>
       <div class="spop-n"><span class="num">${count > 1 ? count - 1 : 0}</span><small>DAY${count === 1 ? '' : 'S'}</small></div>
       <div class="spop-label">Streak ${count === 1 ? 'started' : 'extended'}</div>
-      ${frozeUsed ? '<div class="spop-froze">🧊 Streak Freeze used — your streak survived the missed day!</div>' : ''}
+      ${frozeUsed ? '<div class="spop-froze">🧊 Streak Freeze used · your streak survived the missed day!</div>' : ''}
       <div class="spop-mile">${milestoneLine(count)}</div>
       ${window.XP ? `<div class="spop-xp">+${xpAmt} XP · daily streak</div>` : ''}
       <div class="spop-tap">tap to continue</div>
@@ -138,7 +138,7 @@
             { x: Math.cos(a) * 90, y: Math.sin(a) * 70, opacity: 0, scale: 1.15, duration: .8, ease: 'power2.out', onComplete: () => sp.remove() });
         }
         if (xpChip) gsap.to(xpChip, { opacity: 1, y: -4, duration: .45, ease: 'back.out(1.6)' });
-        award();   // XP bar (xp.js HUD) rolls in under the overlay — that's the reward shot
+        award();   // XP bar (xp.js HUD) rolls in under the overlay · that's the reward shot
       },
     });
     setTimeout(close, 4600);

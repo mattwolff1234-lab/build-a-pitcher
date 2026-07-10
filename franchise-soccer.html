@@ -20,7 +20,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="/xp.js" defer></script>
 <script src="/social.js" defer></script>
-<script src="/switcher.js?v=13" defer></script>
+<script src="/switcher.js?v=14" defer></script>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-TVL2XEQ2Q7"></script>
 <script>
@@ -267,15 +267,15 @@ button.btn.danger { color:#ffdede; background:rgba(255,77,94,.14); border:1px so
     <div class="lgrid" style="margin-top:16px;grid-template-columns:repeat(auto-fill,minmax(280px,1fr))">
       <div class="panel lteam" id="modeSP" style="padding:20px">
         <div class="tn" style="font-size:19px">🎮 Single Player</div>
-        <div class="tm" style="margin-top:6px">Your league, your pace. Build a dynasty across seasons —
+        <div class="tm" style="margin-top:6px">Your league, your pace. Build a dynasty across seasons -
           trades, development, drafts, titles.</div>
         <div class="tv" id="modeSPsub" style="margin-top:10px">3 save slots</div>
       </div>
       <div class="panel lteam" id="modeMP" style="padding:20px">
-        <div class="tn" style="font-size:19px">👥 Multiplayer — Clubs</div>
-        <div class="tm" style="margin-top:6px">8 real GMs per club. Drops open <b>twice a day</b> —
+        <div class="tn" style="font-size:19px">👥 Multiplayer · Clubs</div>
+        <div class="tm" style="margin-top:6px">8 real GMs per club. Drops open <b>twice a day</b> -
           grab a seat, bring your squad, one game sims per real day.</div>
-        <div class="tv" style="margin-top:10px;color:var(--dim)">🔜 Baseball clubs first — soccer next</div>
+        <div class="tv" style="margin-top:10px;color:var(--dim)">🔜 Baseball clubs first · soccer next</div>
       </div>
     </div>
   </section>
@@ -294,13 +294,13 @@ button.btn.danger { color:#ffdede; background:rgba(255,77,94,.14); border:1px so
     <div class="eyebrow">Welcome to the front office</div>
     <h1 class="h">Start your <i>Franchise</i></h1>
     <p class="sub" style="max-width:640px">Stop throwing your builds away. Sign your created strikers and keepers, run a club in an
-      8-team league where <b>every roster is real</b> — work the trade lines, develop prospects toward their potential,
+      8-team league where <b>every roster is real</b> · work the trade lines, develop prospects toward their potential,
       chase titles, and survive the aging curve. Your franchise follows your Google account when you're signed in.</p>
     <div class="panel" style="padding:18px; margin-top:16px; max-width:460px">
       <div class="eyebrow" style="margin-bottom:8px">Name your club</div>
       <input id="newName" maxlength="24" placeholder="e.g. Goat City Legends" style="width:100%;box-sizing:border-box;font-family:'Oswald',sans-serif;font-size:17px;letter-spacing:1px;color:var(--ink);background:rgba(8,14,24,.8);border:1px solid var(--line);border-radius:9px;padding:11px 12px;outline:none">
       <div class="eyebrow" style="margin:16px 0 6px">How many players will YOU create?</div>
-      <div class="sub" style="margin-bottom:8px">Build/import this many of the 11 — the front office signs free agents for the rest.</div>
+      <div class="sub" style="margin-bottom:8px">Build/import this many of the 11 · the front office signs free agents for the rest.</div>
       <div id="newCreateRow" style="display:flex;gap:6px;flex-wrap:wrap"></div>
       <div class="eyebrow" style="margin:16px 0 6px">Season length</div>
       <div id="newGamesRow" style="display:flex;gap:6px;flex-wrap:wrap"></div>
@@ -310,16 +310,16 @@ button.btn.danger { color:#ffdede; background:rgba(255,77,94,.14); border:1px so
 
   <!-- ============ 1. Roster (preseason) ============ -->
   <section class="screen" id="scrRoster">
-    <div class="eyebrow">Preseason — build your 14-man roster</div>
+    <div class="eyebrow">Preseason · build your 14-man roster</div>
     <h1 class="h">The <i>Roster</i></h1>
-    <p class="sub">Tap a seat to sign a player — import from your <b>Hall of Fame</b> saves or sign a replacement-level free agent.
+    <p class="sub">Tap a seat to sign a player · import from your <b>Hall of Fame</b> saves or sign a replacement-level free agent.
       Signings start at <b>age 23</b>; young players grow toward their <span class="potstars">★ potential</span>, veterans fade.
       Want a brand-new creation? <a href="/striker?franchise=1" style="color:var(--accent2)">Build a striker</a> /
-      <a href="/keeper?franchise=1" style="color:var(--accent2)">build a keeper</a> — your club signs them on the spot.</p>
+      <a href="/keeper?franchise=1" style="color:var(--accent2)">build a keeper</a> · your club signs them on the spot.</p>
     <div id="rookieBanner" style="display:none"></div>
-    <div class="rsec">Goalkeepers — 2 keepers</div>
+    <div class="rsec">Goalkeepers · 2 keepers</div>
     <div class="seats" id="rotSeats"></div>
-    <div class="rsec">The Attack — 9 strikers</div>
+    <div class="rsec">The Attack · 9 strikers</div>
     <div class="seats" id="lineSeats"></div>
     <div class="rosterbar">
       <button class="btn ghost" id="autoFill">⚡ Auto-fill empty seats</button>
@@ -335,7 +335,7 @@ button.btn.danger { color:#ffdede; background:rgba(255,77,94,.14); border:1px so
     <div class="seasonbar">
       <button class="btn" id="nextGame">⚾ Next Game</button>
       <button class="btn cy" id="autoPlay">▶ Autoplay</button>
-      <button class="btn ghost" id="simSeason" title="Fast-forward the rest of the schedule — trade calls go to voicemail">⏭ Sim to End</button>
+      <button class="btn ghost" id="simSeason" title="Fast-forward the rest of the schedule · trade calls go to voicemail">⏭ Sim to End</button>
       <span class="gprog" id="gProg"></span>
     </div>
     <div class="seagrid">
@@ -353,7 +353,7 @@ button.btn.danger { color:#ffdede; background:rgba(255,77,94,.14); border:1px so
   <section class="screen" id="scrMyTeam">
     <div class="eyebrow">Clubhouse</div>
     <h1 class="h">My <i>Team</i></h1>
-    <p class="sub">Season stat lines so far — tap a player for the full card.</p>
+    <p class="sub">Season stat lines so far · tap a player for the full card.</p>
     <div class="rsec">Goalkeepers</div>
     <div id="mtRot"></div>
     <div class="rsec">The Attack</div>
@@ -382,16 +382,16 @@ button.btn.danger { color:#ffdede; background:rgba(255,77,94,.14); border:1px so
     <div class="panel tsummary" id="thSummary" style="display:none"></div>
   </section>
 
-  <!-- ============ 2e. Clubs (skeleton — daily league sim ships next) ============ -->
+  <!-- ============ 2e. Clubs (skeleton · daily league sim ships next) ============ -->
   <section class="screen" id="scrClubs">
     <div class="eyebrow">Play the humans</div>
     <h1 class="h">Club <i>Leagues</i></h1>
     <p class="sub" style="max-width:640px">A club is <b>8 real GMs</b>. Everyone brings their franchise squad, and the league plays
-      <b>one game per real day</b> — results sim automatically from the rosters, so nobody has to be online at the same time.
+      <b>one game per real day</b> · results sim automatically from the rosters, so nobody has to be online at the same time.
       Check in each morning like a daily challenge, talk trash, win the club title.</p>
     <div class="panel" style="padding:12px 14px;margin:12px 0;border-color:rgba(255,210,63,.4)">
       <span style="font-family:'Oswald',sans-serif;font-size:11px;letter-spacing:2px;color:var(--gold);text-transform:uppercase">🚧 Early access</span>
-      <span class="sub" style="display:block;margin-top:4px">Clubs can <b>form now</b> — grab your crew and claim a name. When seasons flip on,
+      <span class="sub" style="display:block;margin-top:4px">Clubs can <b>form now</b> · grab your crew and claim a name. When seasons flip on,
       club <b>drops open twice a day</b> (morning &amp; evening): 8 GMs lock in, then one game sims per real day. Full clubs are first in line.
       <span id="clubDropEta" style="color:var(--accent2)"></span></span>
     </div>
@@ -428,14 +428,14 @@ button.btn.danger { color:#ffdede; background:rgba(255,77,94,.14); border:1px so
     <div class="panel" style="padding:14px;margin-top:14px;border-color:rgba(25,198,255,.35)">
       <div class="eyebrow">🛠️ Build next season's rookie</div>
       <div class="sub" style="margin-top:6px">Every offseason is a chance to add a brand-new creation to the club:
-        spin up a player and <b>your franchise drafts them on the spot</b> — full ceremony, then they're waiting
+        spin up a player and <b>your franchise drafts them on the spot</b> · full ceremony, then they're waiting
         in your clubhouse for a roster seat before Opening Day.</div>
       <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
         <a class="btn cy" href="/striker?franchise=1" style="text-decoration:none">⚽ Build a Striker ↗</a>
         <a class="btn cy" href="/keeper?franchise=1" style="text-decoration:none">🧤 Build a Keeper ↗</a>
       </div>
     </div>
-    <div class="rsec">Player development — growth, decline, goodbyes</div>
+    <div class="rsec">Player development · growth, decline, goodbyes</div>
     <div class="agelist" id="ageList"></div>
     <div class="rosterbar">
       <button class="btn" id="toDraft">📋 Continue to the Draft</button>
@@ -517,8 +517,8 @@ button.btn.danger { color:#ffdede; background:rgba(255,77,94,.14); border:1px so
     <button class="btn" id="setSave" style="width:100%;margin-top:16px">Save settings</button>
     <button class="btn ghost" id="setClose" style="width:100%;margin-top:8px">Cancel</button>
     <div class="pcard-sec">Danger zone</div>
-    <button class="btn danger" id="setReset" style="width:100%">🔄 Reset franchise — back to founding day</button>
-    <div class="hint">Wipes the roster, league, and history but keeps this save slot — you're straight back at the name-your-club options.</div>
+    <button class="btn danger" id="setReset" style="width:100%">🔄 Reset franchise · back to founding day</button>
+    <div class="hint">Wipes the roster, league, and history but keeps this save slot · you're straight back at the name-your-club options.</div>
   </div>
 </div>
 
@@ -609,7 +609,7 @@ const FA_FIRST = ['Denny', 'Hal', 'Rusty', 'Vern', 'Chip', 'Gus', 'Lefty', 'Moos
 const FA_LAST = ['Hobbs', 'Malone', 'Vukovich', 'Trellis', 'Okafor', 'Barnes', 'Castillo', 'Nagy', 'Pruitt', 'Delgado', 'Whitfield', 'Kowalski', 'Sato', 'Reyes', 'McGraw', 'Boone', 'Ferreira', 'Lindqvist', 'Okada', 'Bell', 'Crowe', 'Vance', 'Iron', 'Marsh'];
 
 function mkName(rng) { return `${FA_FIRST[Math.floor(rng() * FA_FIRST.length)]} ${FA_LAST[Math.floor(rng() * FA_LAST.length)]}`; }
-// Every player: ovr + pot (potential ceiling — what growth can reach), age, per-season stats
+// Every player: ovr + pot (potential ceiling · what growth can reach), age, per-season stats
 // (s) and career totals (c). potOf gives the young real headroom, vets almost none.
 function potOf(rng, ovr, age) {
   const headroom = age <= 22 ? 6 + rng() * 10 : age <= 25 ? 3 + rng() * 8 : age <= 28 ? rng() * 4 : 0;
@@ -752,7 +752,7 @@ function simGame(F, day) {
   const heroRng = rng();
   if (sb.goals >= 3) hero = `👑 HAT-TRICK! ${sb.n} bags three.`;
   else if (sb.goals === 2) hero = `🔥 ${sb.n} strikes twice.`;
-  else if (win && runsAgainst === 0 && heroRng < 0.6) hero = `🧱 ${gk.name} is a wall — ${saves} saves, clean sheet.`;
+  else if (win && runsAgainst === 0 && heroRng < 0.6) hero = `🧱 ${gk.name} is a wall · ${saves} saves, clean sheet.`;
   else if (win && runsFor - runsAgainst === 1 && heroRng < 0.5) hero = `🦸 ${sb.n} wins it late!`;
   else if (heroRng < 0.14) hero = win ? `⭐ ${sb.n} runs the show.` : `😤 ${gk.name} deserved better protection.`;
   return {
@@ -831,7 +831,7 @@ function tradeValue(p) {
 }
 // Deterministic per (state, day): most days nobody calls; sometimes a rival covets one of
 // your six most valuable players and offers a same-position 1-for-1. Some offers are
-// genuinely good, some are robbery — value band 0.85×–1.2× — the GM (you) decides.
+// genuinely good, some are robbery · value band 0.85×–1.2× · the GM (you) decides.
 function genTradeOffer(F, day) {
   if (day >= deadlineOf(F) || (F.tradesIn || 0) >= MAX_OFFERS_IN) return null;
   const rng = seededRandom(`${F.id}|s${F.season}|offer${day}`);
@@ -967,7 +967,7 @@ function load() {
   if (!W.saves) W = { v: 1, active: null, prog: 0, saves: { 0: null, 1: null, 2: null } };
   // first visit after the slots update: the old single save becomes slot 1
   if (W.active == null && !W.saves[0] && !W.saves[1] && !W.saves[2] && mirror && mirror.id) W = wrapLegacy(mirror);
-  // the builder pages write into the mirror (pendingRookie + prog bump) — adopt if fresher
+  // the builder pages write into the mirror (pendingRookie + prog bump) · adopt if fresher
   if (mirror && mirror.id && W.active != null && W.saves[W.active] && mirror.id === W.saves[W.active].id
       && (Number(mirror.prog) || 0) > (Number(W.saves[W.active].prog) || 0)) {
     W.saves[W.active] = mirror;
@@ -1015,7 +1015,7 @@ async function loadPool() {
   } catch (e) {}
   return POOL;
 }
-loadPool();   // warm it early — founding/autofill/draft all want it
+loadPool();   // warm it early · founding/autofill/draft all want it
 // every name already in this save's league (no duplicate signings anywhere)
 function usedNames() {
   const s = new Set();
@@ -1128,7 +1128,7 @@ function renderRoster() {
   if (rk) {
     rb.style.display = '';
     rb.innerHTML = `<div class="panel" style="padding:12px 14px;margin-top:10px;border-color:rgba(67,233,123,.5);cursor:pointer" id="rookieBannerGo">
-      🎓 <b>${escapeHTML(rk.name)}</b> (${rk.ovr} OVR ${rk.game === 'keeper' ? 'GK' : 'striker'}) went <b>#1 in your Franchise Draft</b> —
+      🎓 <b>${escapeHTML(rk.name)}</b> (${rk.ovr} OVR ${rk.game === 'keeper' ? 'GK' : 'striker'}) went <b>#1 in your Franchise Draft</b> -
       <span style="color:var(--accent2)">tap here to give him a spot</span>.</div>`;
     const go = $('rookieBannerGo');
     if (go) go.onclick = openAssign;
@@ -1143,8 +1143,8 @@ function renderRoster() {
   $('startSeason').disabled = false;
   $('startSeason').textContent = created < target ? `▶ Start Season ${F.season} (${created}/${target} built)` : `▶ Start Season ${F.season}`;
   $('rosterHint').innerHTML = created < target
-    ? `Your plan: <b>${target}</b> creation${target === 1 ? '' : 's'} · ${created} so far — tap an empty seat to 🛠️ build one, lower the plan in ⚙️, or just start anyway`
-    : (target ? `Creations used: ${created}/${target} — empty seats auto-fill at first pitch. Play ball!`
+    ? `Your plan: <b>${target}</b> creation${target === 1 ? '' : 's'} · ${created} so far · tap an empty seat to 🛠️ build one, lower the plan in ⚙️, or just start anyway`
+    : (target ? `Creations used: ${created}/${target} · empty seats auto-fill at first pitch. Play ball!`
               : 'Empty seats auto-fill with free agents at first pitch. Play ball!');
   // occupied seat -> the player's card (stats + Replace); empty seat -> straight to the picker
   document.querySelectorAll('#rotSeats .seat, #lineSeats .seat').forEach(el => el.onclick = () => {
@@ -1157,7 +1157,7 @@ function renderRoster() {
 async function openPicker(where, idx) {
   pickSeat = { where, idx };
   const game = where === 'rot' ? 'keeper' : 'striker';
-  $('pickTitle').textContent = where === 'rot' ? `Sign a keeper — GK${idx + 1}` : `Sign a striker — ST${idx + 1}`;
+  $('pickTitle').textContent = where === 'rot' ? `Sign a keeper · GK${idx + 1}` : `Sign a striker · ST${idx + 1}`;
   const list = $('pickList');
   const cur = (where === 'rot' ? F.rotation : F.lineup)[idx];
   const left = createSlotsLeft(cur);
@@ -1165,10 +1165,10 @@ async function openPicker(where, idx) {
   const buildRow = left > 0
     ? `<div class="pickrow" data-build="1" style="border-color:rgba(25,198,255,.5)">
         <span class="nm">🛠️ Build a brand-new ${game === 'keeper' ? 'keeper' : 'striker'}</span>
-        <span class="meta">opens the builder — your club drafts them (${createdCount()}/${createLimit()} plan used)</span></div>`
+        <span class="meta">opens the builder · your club drafts them (${createdCount()}/${createLimit()} plan used)</span></div>`
     : `<div class="pickrow" style="opacity:.45;cursor:default">
         <span class="nm">🛠️ Build a new player</span>
-        <span class="meta">creation plan full (${createdCount()}/${createLimit()}) — raise it in ⚙️ Settings</span></div>`;
+        <span class="meta">creation plan full (${createdCount()}/${createLimit()}) · raise it in ⚙️ Settings</span></div>`;
   list.innerHTML = `${rk ? `<div class="pickrow" data-rookie="1" style="border-color:rgba(67,233,123,.5)">
       <span class="nm">🎓 Sign rookie ${escapeHTML(rk.name)}</span><span class="meta">age 22 · your build</span>
       <span class="ov ${tierCls(rk.ovr)}">${rk.ovr}</span></div>` : ''}
@@ -1178,7 +1178,7 @@ async function openPicker(where, idx) {
     <div class="hint" id="hofHint">Loading your Hall of Fame…</div>`;
   $('pickOv').classList.add('show');
   wirePickRows();
-  if (left <= 0) { $('hofHint').textContent = `Hall of Fame imports count toward your creation plan — it's full (${createdCount()}/${createLimit()}). Raise it in ⚙️ Settings, or replace one of your created players.`; return; }
+  if (left <= 0) { $('hofHint').textContent = `Hall of Fame imports count toward your creation plan · it's full (${createdCount()}/${createLimit()}). Raise it in ⚙️ Settings, or replace one of your created players.`; return; }
   const a = acct();
   if (!a || !a.sub || !a.sessionToken) { $('hofHint').textContent = 'Sign in with Google (in any game\'s ☰ menu) to import your Hall of Fame builds here.'; return; }
   try {
@@ -1186,7 +1186,7 @@ async function openPicker(where, idx) {
     const j = await r.json();
     if (!pickSeat || pickSeat.where !== where || pickSeat.idx !== idx) return;
     const hint = $('hofHint');
-    if (!j.ok || !j.rows || !j.rows.length) { if (hint) hint.textContent = 'No saved builds for this position yet — finish a build and 💾 save it to your Hall of Fame.'; return; }
+    if (!j.ok || !j.rows || !j.rows.length) { if (hint) hint.textContent = 'No saved builds for this position yet · finish a build and 💾 save it to your Hall of Fame.'; return; }
     const names = new Set([...F.rotation, ...F.lineup].filter(Boolean).map(p => p.name));
     if (hint) hint.remove();
     const rows = j.rows.slice(0, 30).map((s, i) => {
@@ -1204,16 +1204,16 @@ async function openPicker(where, idx) {
       p.name = String(s.name).slice(0, 26);   // your build keeps its name
       placePlayer(p);
     });
-  } catch (e) { const hint = $('hofHint'); if (hint) hint.textContent = 'Could not reach your Hall of Fame — try again.'; }
+  } catch (e) { const hint = $('hofHint'); if (hint) hint.textContent = 'Could not reach your Hall of Fame · try again.'; }
 }
-// turn the pendingRookie into a real player and put him in a seat (any phase — if the
+// turn the pendingRookie into a real player and put him in a seat (any phase · if the
 // season's running he just gets a fresh stat line, like a trade arrival)
 function signRookieTo(where, idx) {
   const rk = F.pendingRookie;
   if (!rk) return;
   const occupant = (where === 'rot' ? F.rotation : F.lineup)[idx];
   if (createSlotsLeft(occupant) <= 0) {
-    toast(`Creation plan full (${createdCount()}/${createLimit()}) — replace one of your own creations, or raise the plan in ⚙️ Settings.`);
+    toast(`Creation plan full (${createdCount()}/${createLimit()}) · replace one of your own creations, or raise the plan in ⚙️ Settings.`);
     return;
   }
   const rng = seededRandom(`${F.id}|rookie|${rk.name}|${F.prog || 0}`);
@@ -1224,9 +1224,9 @@ function signRookieTo(where, idx) {
   const out = arr[idx];
   arr[idx] = p;
   F.pendingRookie = null;
-  (F.gameLog = F.gameLog || []).push({ t: '🎓', note: `🎓 ${p.name} signs with ${F.name}${out ? ` — ${out.name} is released` : ''}. The Franchise Draft pick is official.` });
+  (F.gameLog = F.gameLog || []).push({ t: '🎓', note: `🎓 ${p.name} signs with ${F.name}${out ? ` · ${out.name} is released` : ''}. The Franchise Draft pick is official.` });
   bump(); save();
-  toast(`${p.name} signed${out ? ` — ${out.name} released` : ''}.`);
+  toast(`${p.name} signed${out ? ` · ${out.name} released` : ''}.`);
   render();
 }
 // ceremony: fires once per visit when a fresh build arrives from the builder pages
@@ -1243,7 +1243,7 @@ function maybeRookieCeremony() {
   if (window.gsap) gsap.fromTo($('rookieOv').querySelector('.fr-card'), { y: 24, scale: .92, opacity: 0 }, { y: 0, scale: 1, opacity: 1, duration: .5, ease: 'back.out(1.5)' });
 }
 $('rookieAssign').onclick = () => { closeOv('rookieOv'); openAssign(); };
-$('rookieLater').onclick = () => { closeOv('rookieOv'); toast('He\'ll wait — assign him from the roster banner anytime.'); };
+$('rookieLater').onclick = () => { closeOv('rookieOv'); toast('He\'ll wait · assign him from the roster banner anytime.'); };
 function openAssign() {
   const rk = F.pendingRookie;
   if (!rk) return;
@@ -1251,10 +1251,10 @@ function openAssign() {
   const arr = where === 'rot' ? F.rotation : F.lineup;
   $('assignTitle').textContent = `Where does ${rk.name} play?`;
   $('assignSub').textContent = rk.game === 'keeper'
-    ? 'Pick his goalkeeper spot — whoever holds it is released.'
-    : 'Pick his attacking spot — whoever holds it is released.';
+    ? 'Pick his goalkeeper spot · whoever holds it is released.'
+    : 'Pick his attacking spot · whoever holds it is released.';
   const anyRoom = arr.some(p => createSlotsLeft(p) > 0);
-  if (!anyRoom) $('assignSub').textContent = `Creation plan full (${createdCount()}/${createLimit()}) — he can only replace one of your own creations, or raise the plan in ⚙️ Settings.`;
+  if (!anyRoom) $('assignSub').textContent = `Creation plan full (${createdCount()}/${createLimit()}) · he can only replace one of your own creations, or raise the plan in ⚙️ Settings.`;
   $('assignList').innerHTML = arr.map((p, i) => {
     const ok = createSlotsLeft(p) > 0;
     return `<div class="pickrow" ${ok ? `data-assign="${i}"` : 'style="opacity:.4;cursor:default"'}>
@@ -1291,7 +1291,7 @@ function setSeat(p) {
   closeOv('pickOv');
   renderRoster();
 }
-function placePlayer(p) { setSeat(p); toast(`${p.name} signed ${p.src === 'hof' ? 'from your Hall of Fame' : p.src === 'rookie' ? '— your Franchise Draft pick is official' : 'as a free agent'}.`); }
+function placePlayer(p) { setSeat(p); toast(`${p.name} signed ${p.src === 'hof' ? 'from your Hall of Fame' : p.src === 'rookie' ? '- your Franchise Draft pick is official' : 'as a free agent'}.`); }
 $('pickClose').onclick = () => closeOv('pickOv');
 $('autoFill').onclick = () => {
   let n = 0;
@@ -1326,7 +1326,7 @@ $('startSeason').onclick = () => {
   resetSeasonStats(F);
   tab = 'season';
   bump(); save(); render();
-  toast(`Season ${F.season} begins — ${gamesOf(F)} matches, top 4 make the playoffs. Draws go to extra time. ⚽`);
+  toast(`Season ${F.season} begins · ${gamesOf(F)} matches, top 4 make the playoffs. Draws go to extra time. ⚽`);
 };
 
 /* ---------- season screen ---------- */
@@ -1338,7 +1338,7 @@ function renderStandings() {
     const gb = ((lead.w - r.w) + (r.l - lead.l)) / 2;
     return `<tr class="${r.me ? 'me' : ''} ${F.day >= gamesOf(F) && i < 4 ? 'pl' : ''}" data-team="${r.idx}">
     <td>${escapeHTML(r.name)}</td><td>${r.w}</td><td>${r.l}</td>
-    <td style="color:var(--dim)">${gb === 0 ? '—' : gb}</td>
+    <td style="color:var(--dim)">${gb === 0 ? '-' : gb}</td>
     <td style="text-align:right;color:var(--dim)">${r.ovr}</td></tr>`;
   }).join('');
   document.querySelectorAll('#standBody tr').forEach(tr => tr.onclick = () => openTeam(Number(tr.dataset.team)));
@@ -1355,7 +1355,7 @@ function logCard(e, idx) {
 }
 function renderFeed(el, log) {
   el.innerHTML = (log || []).map((e, i) => logCard(e, i)).reverse().join('')
-    || '<div class="hint">First pitch is yours — play a game.</div>';
+    || '<div class="hint">First pitch is yours · play a game.</div>';
   el.querySelectorAll('[data-log]').forEach(c => c.onclick = () => openBox(log[Number(c.dataset.log)]));
 }
 function openBox(e) {
@@ -1368,7 +1368,7 @@ function openBox(e) {
     <span class="ov" style="font-size:13px;width:64px">${b.assists ? b.assists + ' asst' : ''}</span></div>`).join('');
   $('boxBody').innerHTML = `<div class="pcard-sec">Between the posts</div>
     <div class="sub">${escapeHTML(e.line)}</div>
-    ${rows ? `<div class="pcard-sec">On the scoresheet</div>${rows}` : '<div class="hint">Nobody found the net' + ((e.box || []).length ? '.' : ' — no sheet for playoff games (yet).') + '</div>'}
+    ${rows ? `<div class="pcard-sec">On the scoresheet</div>${rows}` : '<div class="hint">Nobody found the net' + ((e.box || []).length ? '.' : ' · no sheet for playoff games (yet).') + '</div>'}
     ${e.hero ? `<div class="pcard-sec">Moment of the match</div><div class="sub">${escapeHTML(e.hero)}</div>` : ''}`;
   $('boxOv').classList.add('show');
 }
@@ -1461,9 +1461,9 @@ function endRegularSeason() {
       otherPair: otherPair.map(i => seeds[i].idx),
     };
     F.phase = 'playoffs';
-    toast(`You finish #${myRank} — playoff baseball at ${F.name}!`);
+    toast(`You finish #${myRank} · playoff baseball at ${F.name}!`);
   } else {
-    finishSeason('missed', `Finished #${myRank} of 8 — outside the playoff line.`);
+    finishSeason('missed', `Finished #${myRank} of 8 · outside the playoff line.`);
   }
   bump(); save(); render();
 }
@@ -1504,7 +1504,7 @@ $('offerAccept').onclick = () => {
   const done = applyTrade(F, F.pendingOffer);
   F.pendingOffer = null;
   (F.tradeLog = F.tradeLog || []).push({ day: F.day, got: done.got.name, sent: done.sent.name, team: done.team });
-  (F.gameLog = F.gameLog || []).push({ t: '🔁', note: `🔁 TRADE: ${done.got.name} joins ${F.name} — ${done.sent.name} heads to the ${done.team}.` });
+  (F.gameLog = F.gameLog || []).push({ t: '🔁', note: `🔁 TRADE: ${done.got.name} joins ${F.name} · ${done.sent.name} heads to the ${done.team}.` });
   bump(); save();
   closeOv('offerOv');
   toast(`Deal! ${done.got.name} is on the roster.`);
@@ -1528,9 +1528,9 @@ function prowHtml(p, pos, statLine, key) {
 }
 function renderMyTeam() {
   $('mtRot').innerHTML = F.rotation.map((p, i) => p ? prowHtml(p, `GK${i + 1}`,
-    p.s ? `${p.s.cs} CS · ${p.s.saves} saves · ${p.s.ga} GA` : '—', `rot${i}`) : '').join('');
+    p.s ? `${p.s.cs} CS · ${p.s.saves} saves · ${p.s.ga} GA` : '-', `rot${i}`) : '').join('');
   $('mtLine').innerHTML = F.lineup.map((p, i) => p ? prowHtml(p, `ST${i + 1}`,
-    p.s ? `${p.s.goals} G · ${p.s.assists} A in ${p.s.g}` : '—', `line${i}`) : '').join('');
+    p.s ? `${p.s.goals} G · ${p.s.assists} A in ${p.s.g}` : '-', `line${i}`) : '').join('');
   document.querySelectorAll('#mtRot .prow, #mtLine .prow').forEach(el => el.onclick = () => {
     const k = el.dataset.pkey;
     const p = k.startsWith('rot') ? F.rotation[Number(k.slice(3))] : F.lineup[Number(k.slice(4))];
@@ -1541,7 +1541,7 @@ function openPlayerCard(p, opts) {
   const isP = p.game === 'keeper';
   const s = p.s, c = p.c;
   const cells = (st) => isP
-    ? [[st.cs, 'Clean sheets'], [st.saves, 'Saves'], [st.ga, 'Conceded'], [st.g, 'Matches'], [st.g > 0 ? (st.saves / st.g).toFixed(1) : '—', 'Saves/gm'], [st.g > 0 ? (st.ga / st.g).toFixed(2) : '—', 'GA/gm']]
+    ? [[st.cs, 'Clean sheets'], [st.saves, 'Saves'], [st.ga, 'Conceded'], [st.g, 'Matches'], [st.g > 0 ? (st.saves / st.g).toFixed(1) : '-', 'Saves/gm'], [st.g > 0 ? (st.ga / st.g).toFixed(2) : '-', 'GA/gm']]
     : [[st.goals, 'Goals'], [st.assists, 'Assists'], [st.g, 'Matches'], [gpg(st), 'Goals/gm'], [st.goals + st.assists, 'G+A'], [st.g, 'Games']];
   const grid = st => `<div class="pcard-stats">${cells(st).map(([v, l]) => `<div class="pstat"><div class="v">${v}</div><div class="l">${l}</div></div>`).join('')}</div>`;
   $('playerOvCard').innerHTML = `
@@ -1591,8 +1591,8 @@ let th = { mine: null, team: null };
 function renderTrades() {
   const dealsLeft = MAX_TRADES_USER - (F.tradesUser || 0);
   $('tradeSub').innerHTML = F.day >= deadlineOf(F)
-    ? 'The trade deadline has passed — the phones are quiet until next season.'
-    : `Shop anyone on your roster for a same-position player. Rivals only say yes when they <b>win the deal</b> —
+    ? 'The trade deadline has passed · the phones are quiet until next season.'
+    : `Shop anyone on your roster for a same-position player. Rivals only say yes when they <b>win the deal</b> -
        value is rating + youth + potential. <b>${dealsLeft}</b> deal${dealsLeft === 1 ? '' : 's'} left this season.`;
   const dead = F.day >= deadlineOf(F) || dealsLeft <= 0;
   $('thMine').innerHTML = dead ? '' : F.rotation.map((p, i) => p ? thRow(p, `GK${i + 1}`, `rot|${i}`, th.mine === `rot|${i}`) : '').join('')
@@ -1635,7 +1635,7 @@ function proposeTrade(theirIdx) {
     const done = applyTrade(F, offer);
     F.tradesUser = (F.tradesUser || 0) + 1;
     (F.tradeLog = F.tradeLog || []).push({ day: F.day, got: done.got.name, sent: done.sent.name, team: done.team });
-    (F.gameLog = F.gameLog || []).push({ t: '🔁', note: `🔁 TRADE: ${done.got.name} joins ${F.name} — ${done.sent.name} heads to the ${done.team}.` });
+    (F.gameLog = F.gameLog || []).push({ t: '🔁', note: `🔁 TRADE: ${done.got.name} joins ${F.name} · ${done.sent.name} heads to the ${done.team}.` });
     th = { mine: null, team: null };
     bump(); save();
     sum.innerHTML = `<span style="color:var(--green);font-weight:700">✅ DEAL!</span> <b>${escapeHTML(done.got.name)}</b> (${done.got.ovr})
@@ -1644,7 +1644,7 @@ function proposeTrade(theirIdx) {
     renderTrades(); renderHead();
   } else {
     sum.innerHTML = `<span style="color:var(--red);font-weight:700">❌ REJECTED.</span> The ${escapeHTML(R.name)} say
-      <b>${escapeHTML(theirs.name)}</b> for <b>${escapeHTML(mine.name)}</b> doesn't move the needle for them. Sweeten it — offer someone younger or better.`;
+      <b>${escapeHTML(theirs.name)}</b> for <b>${escapeHTML(mine.name)}</b> doesn't move the needle for them. Sweeten it · offer someone younger or better.`;
   }
 }
 
@@ -1662,8 +1662,8 @@ function clubPrincipal() {
   if (a && a.sub && a.sessionToken) return { sub: a.sub, sessionToken: a.sessionToken, playerName: nm };
   return { guestId: guestId(), name: nm, playerName: nm };
 }
-// slim snapshot of the current squad — what your club rivals will face daily.
-// No single-player save yet? Fine — join empty-handed and bring a squad later.
+// slim snapshot of the current squad · what your club rivals will face daily.
+// No single-player save yet? Fine · join empty-handed and bring a squad later.
 function rosterSnapshot() {
   const src = F || (W.active != null && W.saves[W.active]) || W.saves[0] || null;
   if (!src) return [];
@@ -1681,17 +1681,17 @@ async function renderClubs() {
   let r = null;
   try { r = await clubApi('clubGet'); } catch (e) {}
   if (tab !== 'clubs' && uiView !== 'clubs') return;   // user moved on while we fetched
-  if (!r || !r.ok) { body.innerHTML = '<div class="hint">Could not reach the club office — check your connection and try again.</div>'; return; }
+  if (!r || !r.ok) { body.innerHTML = '<div class="hint">Could not reach the club office · check your connection and try again.</div>'; return; }
   if (!r.club) {
     body.innerHTML = `
       <div class="tstep">Start a club</div>
       <div class="panel" style="padding:14px;max-width:460px">
-        <input id="clubName" maxlength="24" placeholder="Club name — e.g. The Basement League" style="width:100%;box-sizing:border-box;font-family:'Oswald',sans-serif;font-size:15px;color:var(--ink);background:rgba(8,14,24,.8);border:1px solid var(--line);border-radius:9px;padding:10px 12px;outline:none">
-        <button class="btn" id="clubCreate" style="margin-top:10px;width:100%">🏛️ Create club — get an invite code</button>
+        <input id="clubName" maxlength="24" placeholder="Club name · e.g. The Basement League" style="width:100%;box-sizing:border-box;font-family:'Oswald',sans-serif;font-size:15px;color:var(--ink);background:rgba(8,14,24,.8);border:1px solid var(--line);border-radius:9px;padding:10px 12px;outline:none">
+        <button class="btn" id="clubCreate" style="margin-top:10px;width:100%">🏛️ Create club · get an invite code</button>
       </div>
       <div class="tstep">Or join your friends</div>
       <div class="panel" style="padding:14px;max-width:460px">
-        <input id="clubCode" maxlength="12" placeholder="Invite code — e.g. 7F2A9C" style="width:100%;box-sizing:border-box;font-family:'Oswald',sans-serif;font-size:15px;letter-spacing:3px;text-transform:uppercase;color:var(--ink);background:rgba(8,14,24,.8);border:1px solid var(--line);border-radius:9px;padding:10px 12px;outline:none">
+        <input id="clubCode" maxlength="12" placeholder="Invite code · e.g. 7F2A9C" style="width:100%;box-sizing:border-box;font-family:'Oswald',sans-serif;font-size:15px;letter-spacing:3px;text-transform:uppercase;color:var(--ink);background:rgba(8,14,24,.8);border:1px solid var(--line);border-radius:9px;padding:10px 12px;outline:none">
         <button class="btn cy" id="clubJoin" style="margin-top:10px;width:100%">🎟️ Join with code</button>
       </div>
       <div class="hint">Your current 14-man squad rides along as your club roster snapshot.</div>`;
@@ -1699,7 +1699,7 @@ async function renderClubs() {
       if (clubBusy) return; clubBusy = true;
       const j = await clubApi('clubCreate', { name: $('clubName').value, roster: rosterSnapshot() }).catch(() => null);
       clubBusy = false;
-      if (j && j.ok) { toast(`${j.club.name} founded — invite code ${j.club.code}`); renderClubs(); }
+      if (j && j.ok) { toast(`${j.club.name} founded · invite code ${j.club.code}`); renderClubs(); }
       else toast((j && j.error) || 'Could not create the club.');
     };
     $('clubJoin').onclick = async () => {
@@ -1717,22 +1717,22 @@ async function renderClubs() {
       <span class="nm">${m.you ? '⭐ ' : ''}${escapeHTML(m.name)}</span>
       <span class="age">${m.teamOvr ? m.teamOvr + ' OVR' : 'no squad yet'}</span></div>`).join('')
     + Array.from({ length: Math.max(0, 8 - C.members.length) }, () =>
-      `<div class="prow" style="cursor:default;opacity:.45;border-style:dashed"><span class="pos">GM</span><span class="nm">Open seat — share the code</span></div>`).join('');
+      `<div class="prow" style="cursor:default;opacity:.45;border-style:dashed"><span class="pos">GM</span><span class="nm">Open seat · share the code</span></div>`).join('');
   body.innerHTML = `
     <div class="panel" style="padding:16px">
       <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
         <span style="font-family:'Oswald',sans-serif;font-size:20px;font-weight:700;letter-spacing:1px;text-transform:uppercase">${escapeHTML(C.name)}</span>
         <span class="frseason">${C.members.length}/8 GMs</span>
-        <span class="frseason" style="cursor:pointer" id="clubCopy" title="Copy invite code">🎟️ ${escapeHTML(C.code)} — copy</span>
+        <span class="frseason" style="cursor:pointer" id="clubCopy" title="Copy invite code">🎟️ ${escapeHTML(C.code)} · copy</span>
       </div>
       <div class="sub" style="margin-top:8px">${C.members.length >= 8
-        ? '🔥 Club is FULL — you\'re first in line when daily seasons flip on.'
-        : 'Share the invite code. When daily seasons launch, one game sims per real day — no scheduling, no waiting on anyone.'}</div>
+        ? '🔥 Club is FULL · you\'re first in line when daily seasons flip on.'
+        : 'Share the invite code. When daily seasons launch, one game sims per real day · no scheduling, no waiting on anyone.'}</div>
       <div style="margin-top:12px">${seats}</div>
       <button class="btn danger" id="clubLeave" style="margin-top:12px">Leave club</button>
     </div>`;
   $('clubCopy').onclick = () => {
-    try { navigator.clipboard.writeText(C.code); toast('Invite code copied — send it to your crew.'); }
+    try { navigator.clipboard.writeText(C.code); toast('Invite code copied · send it to your crew.'); }
     catch (e) { toast('Code: ' + C.code); }
   };
   $('clubLeave').onclick = async () => {
@@ -1764,7 +1764,7 @@ function renderHistory() {
 }
 // back to founding day: same slot, blank slate, the preseason options screen
 function resetFranchise() {
-  if (!confirm(`Reset ${F.name} back to founding day? Roster, league, and history are wiped — the save slot stays yours.`)) return;
+  if (!confirm(`Reset ${F.name} back to founding day? Roster, league, and history are wiped · the save slot stays yours.`)) return;
   const oldName = F.name;
   closeOv('settingsOv');
   if (W.active != null) W.saves[W.active] = null;
@@ -1774,7 +1774,7 @@ function resetFranchise() {
   persist(); render();
   const inp = $('newName');
   if (inp) inp.value = oldName;
-  toast('Fresh slate — set your options and refound the club.');
+  toast('Fresh slate · set your options and refound the club.');
 }
 /* ---------- ending it all: the legacy card, then the void ---------- */
 function showLegacy() {
@@ -1785,7 +1785,7 @@ function showLegacy() {
   const mvps = [...new Set(hist.filter(h => h.mvp).map(h => h.mvp.name))];
   $('legacyName').textContent = F.name;
   $('legacyMeta').innerHTML = `${hist.length} completed season${hist.length === 1 ? '' : 's'} · all-time <b>${allW}–${allL}</b><br>
-    ${titles ? `🏆 ${titles} title${titles === 1 ? '' : 's'}` : 'No titles — the almosts hurt the most'}
+    ${titles ? `🏆 ${titles} title${titles === 1 ? '' : 's'}` : 'No titles · the almosts hurt the most'}
     ${mvps.length ? `<br>MVPs: ${mvps.slice(0, 4).map(escapeHTML).join(', ')}${mvps.length > 4 ? '…' : ''}` : ''}`;
   $('legacyOv').classList.add('show');
 }
@@ -1855,7 +1855,7 @@ function playPlayoffGame() {
     }
   } else if (P.oppW === 3) {
     finishSeason(P.round === 'semi' ? 'lost-semis' : 'lost-final',
-      P.round === 'semi' ? `Swept out in the semis by the ${rivalName(P.myOppIdx)}.` : `So close — the ${rivalName(P.myOppIdx)} take the Final.`);
+      P.round === 'semi' ? `Swept out in the semis by the ${rivalName(P.myOppIdx)}.` : `So close · the ${rivalName(P.myOppIdx)} take the Final.`);
     render();
   }
 };
@@ -1909,7 +1909,7 @@ function renderOffseason() {
     : '<div class="hint">No award winners this year.</div>';
   $('ageList').innerHTML = (F.offReport || []).map(r => {
     const d = r.to - r.from;
-    const chg = d < 0 ? `<span class="chg down">${d} → ${r.to}</span>` : d > 0 ? `<span class="chg up">+${d} → ${r.to}</span>` : `<span class="chg flat">— ${r.to}</span>`;
+    const chg = d < 0 ? `<span class="chg down">${d} → ${r.to}</span>` : d > 0 ? `<span class="chg up">+${d} → ${r.to}</span>` : `<span class="chg flat">- ${r.to}</span>`;
     return `<div class="agerow ${r.retired ? 'retired' : ''} ${r.note === 'breakout' ? 'breakout' : ''}">
       <span class="nm">${escapeHTML(r.name)}</span><span style="color:var(--muted);font-size:11px">age ${r.age}</span>
       ${chg}${r.note === 'breakout' ? '<span class="brk">💥 BREAKOUT</span>' : ''}${r.retired ? '<span class="ret">RETIRED 👋</span>' : ''}</div>`;
@@ -1928,8 +1928,8 @@ function vacancies() {
 function renderDraft() {
   const v = vacancies();
   $('draftSub').textContent = v.length
-    ? `${v.length} roster spot${v.length === 1 ? '' : 's'} to fill. Spin the reel — the pointer picks your prospect (watch the ★ potential). Every pick is final.`
-    : 'No vacancies — the whole squad is back. Straight to the clubhouse.';
+    ? `${v.length} roster spot${v.length === 1 ? '' : 's'} to fill. Spin the reel · the pointer picks your prospect (watch the ★ potential). Every pick is final.`
+    : 'No vacancies · the whole squad is back. Straight to the clubhouse.';
   $('spinDraft').style.display = v.length ? '' : 'none';
   $('reelWrap').style.display = 'none';
   $('draftDone').style.display = v.length ? 'none' : '';
@@ -1972,7 +1972,7 @@ function renderDraftAfterPick() {
   const v = vacancies();
   if (v.length) { renderDraft(); $('reelWrap').style.display = ''; }
   else {
-    $('draftSub').textContent = 'Draft complete — the future is here. To the clubhouse!';
+    $('draftSub').textContent = 'Draft complete · the future is here. To the clubhouse!';
     $('spinDraft').style.display = 'none';
     $('draftDone').style.display = '';
   }
@@ -1982,7 +1982,7 @@ $('draftDone').onclick = () => {
   F.phase = 'roster';
   F.offReport = null; F.offSummary = '';
   bump(); save(); render();
-  toast(`Welcome to Season ${F.season} — set your roster and go again.`);
+  toast(`Welcome to Season ${F.season} · set your roster and go again.`);
 };
 
 /* ---------- mode select + save slots ---------- */
@@ -1996,7 +1996,7 @@ function renderSlots() {
   $('slotList').innerHTML = [0, 1, 2].map(i => {
     const s = W.saves[i];
     if (!s) return `<div class="panel lteam" data-slot-new="${i}" style="padding:16px;border-style:dashed">
-      <div class="tn" style="color:var(--accent2)">＋ New Franchise</div><div class="tm">Slot ${i + 1} — empty</div></div>`;
+      <div class="tn" style="color:var(--accent2)">＋ New Franchise</div><div class="tm">Slot ${i + 1} · empty</div></div>`;
     const titles = (s.history || []).filter(h => h.result === 'CHAMPIONS').length;
     return `<div class="panel lteam" data-slot-card="${i}" style="padding:16px;cursor:default;${W.active === i ? 'border-color:rgba(255,210,63,.5)' : ''}">
       <div class="tn">${W.active === i ? '⭐ ' : ''}${escapeHTML(s.name)}</div>
@@ -2021,18 +2021,18 @@ function openSlot(i) {
 }
 function newInSlot(i) {
   W.active = i; F = null; uiView = 'game';
-  persist(false); render();   // scrNew — founding writes into this slot
+  persist(false); render();   // scrNew · founding writes into this slot
 }
 function deleteSlot(i) {
   if (!W.saves[i]) return;
-  if (!confirm(`Delete ${W.saves[i].name}? The whole timeline — seasons, banners, players — is gone forever.`)) return;
+  if (!confirm(`Delete ${W.saves[i].name}? The whole timeline · seasons, banners, players · is gone forever.`)) return;
   W.saves[i] = null;
   if (W.active === i) { W.active = null; F = null; }
   W.prog = (Number(W.prog) || 0) + 1;
   persist(); renderSlots(); renderMode();
 }
 $('modeSP').onclick = () => { uiView = 'slots'; render(); };
-$('modeMP').onclick = () => toast('👥 Clubs launch on baseball first — soccer clubs follow right after.');
+$('modeMP').onclick = () => toast('👥 Clubs launch on baseball first · soccer clubs follow right after.');
 $('slotsBack').onclick = () => { uiView = 'mode'; render(); };
 $('clubsBack').onclick = () => { uiView = 'mode'; render(); };
 $('frSaves').onclick = () => { uiView = 'slots'; render(); };
@@ -2055,7 +2055,7 @@ function optBtn(v, cur, label) {
 function renderFoundingOpts() {
   const cr = $('newCreateRow'), gr = $('newGamesRow');
   if (!cr || !gr) return;
-  cr.innerHTML = CREATE_OPTS.map(v => optBtn(v, newCreate, v === 0 ? 'None — front office' : v === 11 ? 'All 11' : String(v))).join('');
+  cr.innerHTML = CREATE_OPTS.map(v => optBtn(v, newCreate, v === 0 ? 'None · front office' : v === 11 ? 'All 11' : String(v))).join('');
   gr.innerHTML = GAME_OPTS.map(v => optBtn(v, newGames, v + ' games')).join('');
   cr.querySelectorAll('[data-opt]').forEach(b => b.onclick = () => { newCreate = Number(b.dataset.opt); renderFoundingOpts(); });
   gr.querySelectorAll('[data-opt]').forEach(b => b.onclick = () => { newGames = Number(b.dataset.opt); renderFoundingOpts(); });
@@ -2073,7 +2073,7 @@ $('newGo').onclick = () => {
     tradesIn: 0, tradesUser: 0, tradeLog: [],
     history: [], titles: 0,
   };
-  F.rivals = mkRivals(F.id, 1, POOL);   // the league exists from day one — go scout it
+  F.rivals = mkRivals(F.id, 1, POOL);   // the league exists from day one · go scout it
   save(); render();
   toast(`${name} founded. Now build that roster.`);
 };
@@ -2111,7 +2111,7 @@ function render() {
   if (uiView === 'mode') { show('scrMode'); renderMode(); return; }
   if (uiView === 'slots') { show('scrSlots'); renderSlots(); return; }
   if (uiView === 'clubs') { show('scrClubs'); $('clubsBack').style.display = ''; renderClubs(); return; }
-  if (!F) { show('scrNew'); renderFoundingOpts(); return; }   // an empty slot was picked — found the franchise
+  if (!F) { show('scrNew'); renderFoundingOpts(); return; }   // an empty slot was picked · found the franchise
   $('clubsBack').style.display = 'none';
   maybeRookieCeremony();   // a fresh build just arrived from the builder pages
   // league-wide tabs work during roster + season + playoffs

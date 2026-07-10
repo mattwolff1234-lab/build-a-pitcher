@@ -12,7 +12,7 @@ function rep(src, oldS, newS, tag) {
   if (n !== 1) { console.log(`FAIL [${tag}] x${n}: ${JSON.stringify(String(oldS).slice(0, 90))}`); failures++; return src; }
   return src.replace(oldS, newS);
 }
-// swap the region [startMark, endMark) — endMark is kept
+// swap the region [startMark, endMark) · endMark is kept
 function swap(src, startMark, endMark, replacement, tag) {
   const a = src.indexOf(startMark);
   const b = src.indexOf(endMark, a < 0 ? 0 : a);
@@ -49,21 +49,21 @@ const LS_SLOTS = 'pl_fr_slots_hoops';`, 'h-ls');
   s = rep(s, `if (window.XP) XP.award(150, 'franchise title');`, `if (window.XP) XP.award(150, 'hoops franchise title');`, 'h-xpt');
   // ---- mode select: clubs deferred on this sport ----
   s = rep(s, `$('modeMP').onclick = () => { uiView = 'clubs'; render(); };`,
-    `$('modeMP').onclick = () => toast('👥 Clubs launch on baseball first — hoops clubs follow right after.');`, 'h-mp');
-  s = rep(s, `<div class="tv" style="margin-top:10px;color:var(--gold)">🚧 Early access — clubs forming now</div>`,
-    `<div class="tv" style="margin-top:10px;color:var(--dim)">🔜 Baseball clubs first — hoops next</div>`, 'h-mp2');
+    `$('modeMP').onclick = () => toast('👥 Clubs launch on baseball first · hoops clubs follow right after.');`, 'h-mp');
+  s = rep(s, `<div class="tv" style="margin-top:10px;color:var(--gold)">🚧 Early access · clubs forming now</div>`,
+    `<div class="tv" style="margin-top:10px;color:var(--dim)">🔜 Baseball clubs first · hoops next</div>`, 'h-mp2');
   s = rep(s, `<button class="frtab" data-tab="clubs">👥 Clubs</button>`, ``, 'h-clubtab');
   // ---- founding copy + roster shape (5 starters + 3 bench = 8 ballers) ----
   s = rep(s, `Stop throwing your builds away. Sign your created pitchers and hitters, run a club in an
       8-team league where <b>every roster is real</b>`,
     `Stop throwing your builds away. Sign your created ballers, run a club in an
       8-team league where <b>every roster is real</b>`, 'h-hero');
-  s = rep(s, `<div class="sub" style="margin-bottom:8px">Build/import this many of the 14 — the front office signs free agents for the rest.</div>`,
-    `<div class="sub" style="margin-bottom:8px">Build/import this many of the 8 — the front office signs free agents for the rest.</div>`, 'h-found1');
+  s = rep(s, `<div class="sub" style="margin-bottom:8px">Build/import this many of the 14 · the front office signs free agents for the rest.</div>`,
+    `<div class="sub" style="margin-bottom:8px">Build/import this many of the 8 · the front office signs free agents for the rest.</div>`, 'h-found1');
   s = rep(s, `const CREATE_OPTS = [0, 1, 3, 5, 9, 14], GAME_OPTS = [16, 32, 48];`,
     `const CREATE_OPTS = [0, 1, 2, 3, 5, 8], GAME_OPTS = [16, 32, 48];`, 'h-opts');
-  s = rep(s, `cr.innerHTML = CREATE_OPTS.map(v => optBtn(v, newCreate, v === 0 ? 'None — front office' : v === 14 ? 'All 14' : String(v))).join('');`,
-    `cr.innerHTML = CREATE_OPTS.map(v => optBtn(v, newCreate, v === 0 ? 'None — front office' : v === 8 ? 'All 8' : String(v))).join('');`, 'h-found2');
+  s = rep(s, `cr.innerHTML = CREATE_OPTS.map(v => optBtn(v, newCreate, v === 0 ? 'None · front office' : v === 14 ? 'All 14' : String(v))).join('');`,
+    `cr.innerHTML = CREATE_OPTS.map(v => optBtn(v, newCreate, v === 0 ? 'None · front office' : v === 8 ? 'All 8' : String(v))).join('');`, 'h-found2');
   s = rep(s, `    rotation: [null, null, null, null, null],
     lineup: [null, null, null, null, null, null, null, null, null],`,
     `    rotation: [null, null, null, null, null],
@@ -71,11 +71,11 @@ const LS_SLOTS = 'pl_fr_slots_hoops';`, 'h-ls');
   s = rep(s, `function createLimit() { return Math.min(14, Math.max(0, settingsOf(F).create)); }`,
     `function createLimit() { return Math.min(8, Math.max(0, settingsOf(F).create)); }`, 'h-cap');
   s = rep(s, `<div class="sub">How many of the 14 must be YOUR creations`, `<div class="sub">How many of the 8 must be YOUR creations`, 'h-set');
-  s = rep(s, `<div class="rsec">Starting Rotation — 5 pitchers</div>`, `<div class="rsec">Starting Five — 5 ballers</div>`, 'h-rsec1');
-  s = rep(s, `<div class="rsec">Lineup — 9 hitters</div>`, `<div class="rsec">Bench — 3 ballers</div>`, 'h-rsec2');
+  s = rep(s, `<div class="rsec">Starting Rotation · 5 pitchers</div>`, `<div class="rsec">Starting Five · 5 ballers</div>`, 'h-rsec1');
+  s = rep(s, `<div class="rsec">Lineup · 9 hitters</div>`, `<div class="rsec">Bench · 3 ballers</div>`, 'h-rsec2');
   s = rep(s, `Want a brand-new creation? <a href="/pitching?franchise=1" style="color:var(--accent2)">Build a pitcher</a> /
-      <a href="/batting?franchise=1" style="color:var(--accent2)">build a batter</a> — your club drafts them on the spot.</p>`,
-    `Want a brand-new creation? <a href="/hoops?franchise=1" style="color:var(--accent2)">Build a baller</a> — your club drafts them on the spot.</p>`, 'h-blinks');
+      <a href="/batting?franchise=1" style="color:var(--accent2)">build a batter</a> · your club drafts them on the spot.</p>`,
+    `Want a brand-new creation? <a href="/hoops?franchise=1" style="color:var(--accent2)">Build a baller</a> · your club drafts them on the spot.</p>`, 'h-blinks');
   s = rep(s, `        <a class="btn cy" href="/pitching?franchise=1" style="text-decoration:none">⚾ Build a Pitcher ↗</a>
         <a class="btn cy" href="/batting?franchise=1" style="text-decoration:none">💥 Build a Batter ↗</a>`,
     `        <a class="btn cy" href="/hoops?franchise=1" style="text-decoration:none">🏀 Build a Baller ↗</a>`, 'h-blinks2');
@@ -153,7 +153,7 @@ const apg = s => s.g > 0 ? (s.ast / s.g).toFixed(1) : '0.0';
   let hero = null;
   const heroRng = rng();
   if (win && runsFor - runsAgainst <= 2 && heroRng < 0.55) hero = \`🦸 \${sb.n} hits the dagger at the buzzer!\`;
-  else if (sb.pts >= 40) hero = \`🔥 \${sb.n} drops a 40-piece — \${sb.pts} points.\`;
+  else if (sb.pts >= 40) hero = \`🔥 \${sb.n} drops a 40-piece · \${sb.pts} points.\`;
   else if (sb.pts >= 10 && sb.reb >= 10 && sb.ast >= 10) hero = \`👑 \${sb.n} posts a TRIPLE-DOUBLE: \${sb.pts}/\${sb.reb}/\${sb.ast}.\`;
   else if (win && star >= 5 && heroRng < 0.6) hero = \`⚡ Bench spark: \${sb.n} pours in \${sb.pts} off the pine.\`;
   else if (heroRng < 0.14) hero = win ? \`⭐ \${sb.n} controls the fourth quarter.\` : \`😤 \${sb.n}'s \${sb.pts} weren't enough tonight.\`;
@@ -203,7 +203,7 @@ const apg = s => s.g > 0 ? (s.ast / s.g).toFixed(1) : '0.0';
     line: Array.from({ length: 3 }, () => mk('baller')),
   };`, 'h-rivshape');
   // ---- box-score log entry: names already ride in the box ----
-  s = rep(s, `    box: g.box.map((x, i) => ({ n: F.lineup[i] ? F.lineup[i].name : '—', ab: x.ab, h: x.h, hr: x.hr, rbi: x.rbi })),`,
+  s = rep(s, `    box: g.box.map((x, i) => ({ n: F.lineup[i] ? F.lineup[i].name : '-', ab: x.ab, h: x.h, hr: x.hr, rbi: x.rbi })),`,
     `    box: g.box,`, 'h-logbox');
   // ---- box overlay ----
   s = rep(s, `  const rows = (e.box || []).map(b => \`<div class="prow" style="cursor:default">
@@ -235,16 +235,16 @@ const apg = s => s.g > 0 ? (s.ast / s.g).toFixed(1) : '0.0';
     : \`\${avg(p.s)} · \${p.s.hr} HR · \${p.s.rbi} RBI\`}</span>\` : '';`,
     `  const stat = withStats && p.s ? \`<span class="stat">\${ppg(p.s)} PPG · \${rpg(p.s)} RPG · \${apg(p.s)} APG</span>\` : '';`, 'h-seatstat');
   s = rep(s, `  $('mtRot').innerHTML = F.rotation.map((p, i) => p ? prowHtml(p, \`SP\${i + 1}\`,
-    p.s ? \`\${p.s.w}-\${p.s.l} · \${era(p.s)} · \${p.s.k} K\` : '—', \`rot\${i}\`) : '').join('');
+    p.s ? \`\${p.s.w}-\${p.s.l} · \${era(p.s)} · \${p.s.k} K\` : '-', \`rot\${i}\`) : '').join('');
   $('mtLine').innerHTML = F.lineup.map((p, i) => p ? prowHtml(p, \`B\${i + 1}\`,
-    p.s ? \`\${avg(p.s)} · \${p.s.hr} HR · \${p.s.rbi} RBI\` : '—', \`line\${i}\`) : '').join('');`,
+    p.s ? \`\${avg(p.s)} · \${p.s.hr} HR · \${p.s.rbi} RBI\` : '-', \`line\${i}\`) : '').join('');`,
     `  $('mtRot').innerHTML = F.rotation.map((p, i) => p ? prowHtml(p, \`S\${i + 1}\`,
-    p.s ? \`\${ppg(p.s)} PPG · \${rpg(p.s)} RPG · \${apg(p.s)} APG\` : '—', \`rot\${i}\`) : '').join('');
+    p.s ? \`\${ppg(p.s)} PPG · \${rpg(p.s)} RPG · \${apg(p.s)} APG\` : '-', \`rot\${i}\`) : '').join('');
   $('mtLine').innerHTML = F.lineup.map((p, i) => p ? prowHtml(p, \`B\${i + 1}\`,
-    p.s ? \`\${ppg(p.s)} PPG · \${rpg(p.s)} RPG · \${apg(p.s)} APG\` : '—', \`line\${i}\`) : '').join('');`, 'h-mt');
+    p.s ? \`\${ppg(p.s)} PPG · \${rpg(p.s)} RPG · \${apg(p.s)} APG\` : '-', \`line\${i}\`) : '').join('');`, 'h-mt');
   s = rep(s, `  const cells = (st) => isP
-    ? [[\`\${st.w}-\${st.l}\`, 'Record'], [st.ip > 0 ? era(st) : '—', 'ERA'], [st.k, 'K'], [st.gs, 'Starts'], [st.ip ? st.ip.toFixed(1) : 0, 'IP'], [st.ip > 0 ? (st.k * 9 / st.ip).toFixed(1) : '—', 'K/9']]
-    : [[st.ab > 0 ? avg(st) : '—', 'AVG'], [st.hr, 'HR'], [st.rbi, 'RBI'], [st.h, 'Hits'], [st.g, 'Games'], [st.ab, 'AB']];`,
+    ? [[\`\${st.w}-\${st.l}\`, 'Record'], [st.ip > 0 ? era(st) : '-', 'ERA'], [st.k, 'K'], [st.gs, 'Starts'], [st.ip ? st.ip.toFixed(1) : 0, 'IP'], [st.ip > 0 ? (st.k * 9 / st.ip).toFixed(1) : '-', 'K/9']]
+    : [[st.ab > 0 ? avg(st) : '-', 'AVG'], [st.hr, 'HR'], [st.rbi, 'RBI'], [st.h, 'Hits'], [st.g, 'Games'], [st.ab, 'AB']];`,
     `  const cells = (st) => [[ppg(st), 'PPG'], [rpg(st), 'RPG'], [apg(st), 'APG'], [st.pts, 'Points'], [st.reb, 'Boards'], [st.g, 'Games']];`, 'h-cells');
   s = rep(s, `      <div class="pcard-sub">\${isP ? 'Starting Pitcher' : 'Batter'} · age \${p.age}`,
     `      <div class="pcard-sub">\${isP ? 'Starter' : 'Bench'} · age \${p.age}`, 'h-cardsub');
@@ -253,9 +253,9 @@ const apg = s => s.g > 0 ? (s.ast / s.g).toFixed(1) : '0.0';
   const s = p.s, c = p.c;`, 'h-isp');
   // ---- picker / FA / draft game mapping (everything is a baller) ----
   s = rep(s, `  const game = where === 'rot' ? 'pitcher' : 'batter';
-  $('pickTitle').textContent = where === 'rot' ? \`Sign a pitcher — SP\${idx + 1}\` : \`Sign a hitter — spot \${idx + 1}\`;`,
+  $('pickTitle').textContent = where === 'rot' ? \`Sign a pitcher · SP\${idx + 1}\` : \`Sign a hitter · spot \${idx + 1}\`;`,
     `  const game = 'baller';
-  $('pickTitle').textContent = where === 'rot' ? \`Sign a baller — Starter \${idx + 1}\` : \`Sign a baller — Bench \${idx + 1}\`;`, 'h-picker');
+  $('pickTitle').textContent = where === 'rot' ? \`Sign a baller · Starter \${idx + 1}\` : \`Sign a baller · Bench \${idx + 1}\`;`, 'h-picker');
   s = rep(s, `        <span class="nm">🛠️ Build a brand-new \${game === 'pitcher' ? 'pitcher' : 'hitter'}</span>`,
     `        <span class="nm">🛠️ Build a brand-new baller</span>`, 'h-buildrow');
   s = rep(s, `    location.href = pickSeat.where === 'rot' ? '/pitching?franchise=1' : '/batting?franchise=1';`,
@@ -278,12 +278,12 @@ const apg = s => s.g > 0 ? (s.ast / s.g).toFixed(1) : '0.0';
   // ---- rookie flow: a baller can take ANY seat (both groups listed) ----
   s = rep(s, `  const where = rk.game === 'pitcher' ? 'rot' : 'line';
   const arr = where === 'rot' ? F.rotation : F.lineup;`,
-    `  const where = 'rot';   // hoops: one position — the picker below lists starters AND bench
+    `  const where = 'rot';   // hoops: one position · the picker below lists starters AND bench
   const arr = F.rotation.concat(F.lineup);`, 'h-assignarr');
   s = rep(s, `  $('assignSub').textContent = rk.game === 'pitcher'
-    ? 'Pick his rotation spot — whoever holds it is released.'
-    : 'Pick his lineup spot — whoever holds it is released.';`,
-    `  $('assignSub').textContent = 'Pick his spot — starters first, bench after. Whoever holds it is released.';`, 'h-assignsub');
+    ? 'Pick his rotation spot · whoever holds it is released.'
+    : 'Pick his lineup spot · whoever holds it is released.';`,
+    `  $('assignSub').textContent = 'Pick his spot · starters first, bench after. Whoever holds it is released.';`, 'h-assignsub');
   s = rep(s, `    <span class="pos" style="font-family:'Oswald',sans-serif;font-size:10px;letter-spacing:1.5px;color:var(--dim);width:34px">\${where === 'rot' ? 'SP' + (i + 1) : 'B' + (i + 1)}</span>`,
     `    <span class="pos" style="font-family:'Oswald',sans-serif;font-size:10px;letter-spacing:1.5px;color:var(--dim);width:34px">\${i < 5 ? 'S' + (i + 1) : 'B' + (i - 4)}</span>`, 'h-assignpos');
   s = rep(s, `  document.querySelectorAll('[data-assign]').forEach(el => el.onclick = () => {
@@ -317,8 +317,8 @@ const apg = s => s.g > 0 ? (s.ast / s.g).toFixed(1) : '0.0';
   s = rep(s, `      \${h.ace ? \`<span style="color:var(--muted);font-size:11px">Ace \${escapeHTML(h.ace.name)}</span>\` : ''}`,
     `      \${h.ace ? \`<span style="color:var(--muted);font-size:11px">6th Man \${escapeHTML(h.ace.name)}</span>\` : ''}`, 'h-aw2');
   // ---- season toast ----
-  s = rep(s, 'toast(`Season ${F.season} begins — ${gamesOf(F)} games, top 4 make the playoffs.`);',
-    'toast(`Season ${F.season} begins — ${gamesOf(F)} games, top 4 make the playoffs. 🏀`);', 'h-toast');
+  s = rep(s, 'toast(`Season ${F.season} begins · ${gamesOf(F)} games, top 4 make the playoffs.`);',
+    'toast(`Season ${F.season} begins · ${gamesOf(F)} games, top 4 make the playoffs. 🏀`);', 'h-toast');
   return s;
 }
 
@@ -349,20 +349,20 @@ const LS_SLOTS = 'pl_fr_slots_soccer';`, 's-ls');
   s = rep(s, `if (window.XP) XP.award(8, 'franchise win');`, `if (window.XP) XP.award(8, 'soccer franchise win');`, 's-xpw');
   s = rep(s, `if (window.XP) XP.award(150, 'franchise title');`, `if (window.XP) XP.award(150, 'soccer franchise title');`, 's-xpt');
   s = rep(s, `$('modeMP').onclick = () => { uiView = 'clubs'; render(); };`,
-    `$('modeMP').onclick = () => toast('👥 Clubs launch on baseball first — soccer clubs follow right after.');`, 's-mp');
-  s = rep(s, `<div class="tv" style="margin-top:10px;color:var(--gold)">🚧 Early access — clubs forming now</div>`,
-    `<div class="tv" style="margin-top:10px;color:var(--dim)">🔜 Baseball clubs first — soccer next</div>`, 's-mp2');
+    `$('modeMP').onclick = () => toast('👥 Clubs launch on baseball first · soccer clubs follow right after.');`, 's-mp');
+  s = rep(s, `<div class="tv" style="margin-top:10px;color:var(--gold)">🚧 Early access · clubs forming now</div>`,
+    `<div class="tv" style="margin-top:10px;color:var(--dim)">🔜 Baseball clubs first · soccer next</div>`, 's-mp2');
   s = rep(s, `<button class="frtab" data-tab="clubs">👥 Clubs</button>`, ``, 's-clubtab');
   s = rep(s, `Stop throwing your builds away. Sign your created pitchers and hitters, run a club in an
       8-team league where <b>every roster is real</b>`,
     `Stop throwing your builds away. Sign your created strikers and keepers, run a club in an
       8-team league where <b>every roster is real</b>`, 's-hero');
-  s = rep(s, `<div class="sub" style="margin-bottom:8px">Build/import this many of the 14 — the front office signs free agents for the rest.</div>`,
-    `<div class="sub" style="margin-bottom:8px">Build/import this many of the 11 — the front office signs free agents for the rest.</div>`, 's-found1');
+  s = rep(s, `<div class="sub" style="margin-bottom:8px">Build/import this many of the 14 · the front office signs free agents for the rest.</div>`,
+    `<div class="sub" style="margin-bottom:8px">Build/import this many of the 11 · the front office signs free agents for the rest.</div>`, 's-found1');
   s = rep(s, `const CREATE_OPTS = [0, 1, 3, 5, 9, 14], GAME_OPTS = [16, 32, 48];`,
     `const CREATE_OPTS = [0, 1, 3, 5, 8, 11], GAME_OPTS = [16, 32, 48];`, 's-opts');
-  s = rep(s, `cr.innerHTML = CREATE_OPTS.map(v => optBtn(v, newCreate, v === 0 ? 'None — front office' : v === 14 ? 'All 14' : String(v))).join('');`,
-    `cr.innerHTML = CREATE_OPTS.map(v => optBtn(v, newCreate, v === 0 ? 'None — front office' : v === 11 ? 'All 11' : String(v))).join('');`, 's-found2');
+  s = rep(s, `cr.innerHTML = CREATE_OPTS.map(v => optBtn(v, newCreate, v === 0 ? 'None · front office' : v === 14 ? 'All 14' : String(v))).join('');`,
+    `cr.innerHTML = CREATE_OPTS.map(v => optBtn(v, newCreate, v === 0 ? 'None · front office' : v === 11 ? 'All 11' : String(v))).join('');`, 's-found2');
   s = rep(s, `    rotation: [null, null, null, null, null],
     lineup: [null, null, null, null, null, null, null, null, null],`,
     `    rotation: [null, null],
@@ -370,12 +370,12 @@ const LS_SLOTS = 'pl_fr_slots_soccer';`, 's-ls');
   s = rep(s, `function createLimit() { return Math.min(14, Math.max(0, settingsOf(F).create)); }`,
     `function createLimit() { return Math.min(11, Math.max(0, settingsOf(F).create)); }`, 's-cap');
   s = rep(s, `<div class="sub">How many of the 14 must be YOUR creations`, `<div class="sub">How many of the 11 must be YOUR creations`, 's-set');
-  s = rep(s, `<div class="rsec">Starting Rotation — 5 pitchers</div>`, `<div class="rsec">Goalkeepers — 2 keepers</div>`, 's-rsec1');
-  s = rep(s, `<div class="rsec">Lineup — 9 hitters</div>`, `<div class="rsec">The Attack — 9 strikers</div>`, 's-rsec2');
+  s = rep(s, `<div class="rsec">Starting Rotation · 5 pitchers</div>`, `<div class="rsec">Goalkeepers · 2 keepers</div>`, 's-rsec1');
+  s = rep(s, `<div class="rsec">Lineup · 9 hitters</div>`, `<div class="rsec">The Attack · 9 strikers</div>`, 's-rsec2');
   s = rep(s, `Want a brand-new creation? <a href="/pitching?franchise=1" style="color:var(--accent2)">Build a pitcher</a> /
-      <a href="/batting?franchise=1" style="color:var(--accent2)">build a batter</a> — your club drafts them on the spot.</p>`,
+      <a href="/batting?franchise=1" style="color:var(--accent2)">build a batter</a> · your club drafts them on the spot.</p>`,
     `Want a brand-new creation? <a href="/striker?franchise=1" style="color:var(--accent2)">Build a striker</a> /
-      <a href="/keeper?franchise=1" style="color:var(--accent2)">build a keeper</a> — your club signs them on the spot.</p>`, 's-blinks');
+      <a href="/keeper?franchise=1" style="color:var(--accent2)">build a keeper</a> · your club signs them on the spot.</p>`, 's-blinks');
   s = rep(s, `        <a class="btn cy" href="/pitching?franchise=1" style="text-decoration:none">⚾ Build a Pitcher ↗</a>
         <a class="btn cy" href="/batting?franchise=1" style="text-decoration:none">💥 Build a Batter ↗</a>`,
     `        <a class="btn cy" href="/striker?franchise=1" style="text-decoration:none">⚽ Build a Striker ↗</a>
@@ -449,7 +449,7 @@ const gpg = s => s.g > 0 ? (s.goals / s.g).toFixed(2) : '0.00';
   const heroRng = rng();
   if (sb.goals >= 3) hero = \`👑 HAT-TRICK! \${sb.n} bags three.\`;
   else if (sb.goals === 2) hero = \`🔥 \${sb.n} strikes twice.\`;
-  else if (win && runsAgainst === 0 && heroRng < 0.6) hero = \`🧱 \${gk.name} is a wall — \${saves} saves, clean sheet.\`;
+  else if (win && runsAgainst === 0 && heroRng < 0.6) hero = \`🧱 \${gk.name} is a wall · \${saves} saves, clean sheet.\`;
   else if (win && runsFor - runsAgainst === 1 && heroRng < 0.5) hero = \`🦸 \${sb.n} wins it late!\`;
   else if (heroRng < 0.14) hero = win ? \`⭐ \${sb.n} runs the show.\` : \`😤 \${gk.name} deserved better protection.\`;
   return {
@@ -501,7 +501,7 @@ const gpg = s => s.g > 0 ? (s.goals / s.g).toFixed(2) : '0.00';
     rot: Array.from({ length: 2 }, () => mk('keeper')),
     line: Array.from({ length: 9 }, () => mk('striker')),
   };`, 's-rivshape');
-  s = rep(s, `    box: g.box.map((x, i) => ({ n: F.lineup[i] ? F.lineup[i].name : '—', ab: x.ab, h: x.h, hr: x.hr, rbi: x.rbi })),`,
+  s = rep(s, `    box: g.box.map((x, i) => ({ n: F.lineup[i] ? F.lineup[i].name : '-', ab: x.ab, h: x.h, hr: x.hr, rbi: x.rbi })),`,
     `    box: g.box,`, 's-logbox');
   s = rep(s, `  const rows = (e.box || []).map(b => \`<div class="prow" style="cursor:default">
     <span class="nm">\${escapeHTML(b.n)}</span>
@@ -518,11 +518,11 @@ const gpg = s => s.g > 0 ? (s.goals / s.g).toFixed(2) : '0.00';
     <span class="ov" style="font-size:13px;width:64px">\${b.assists ? b.assists + ' asst' : ''}</span></div>\`).join('');
   $('boxBody').innerHTML = \`<div class="pcard-sec">Between the posts</div>
     <div class="sub">\${escapeHTML(e.line)}</div>
-    \${rows ? \`<div class="pcard-sec">On the scoresheet</div>\${rows}\` : '<div class="hint">Nobody found the net' + ((e.box || []).length ? '.' : ' — no sheet for playoff games (yet).') + '</div>'}
+    \${rows ? \`<div class="pcard-sec">On the scoresheet</div>\${rows}\` : '<div class="hint">Nobody found the net' + ((e.box || []).length ? '.' : ' · no sheet for playoff games (yet).') + '</div>'}
     \${e.hero ? \`<div class="pcard-sec">Moment of the match</div><div class="sub">\${escapeHTML(e.hero)}</div>\` : ''}\`;`, 's-boxov');
   s = rep(s, `· <span>P: <b>\${escapeHTML(ours ? ours.name : '?')}</b> (\${ours ? ours.ovr : '?'}) vs <b>\${escapeHTML(theirs.name)}</b> (\${theirs.ovr})</span>\`;`,
     `· <span>In goal: <b>\${escapeHTML(ours ? ours.name : '?')}</b> (\${ours ? ours.ovr : '?'}) vs <b>\${escapeHTML(theirs.name)}</b> (\${theirs.ovr})</span>\`;`, 's-nextup');
-  // next-up probable: rotation[day % 5] would overflow 2 keepers — fix the index
+  // next-up probable: rotation[day % 5] would overflow 2 keepers · fix the index
   s = rep(s, `    const ours = F.rotation[F.day % 5], theirs = rival.rot[F.day % 5];`,
     `    const gkIdx = (F.day % 4 === 3) ? 1 : 0;
     const ours = F.rotation[gkIdx], theirs = rival.rot[gkIdx];`, 's-nextgk');
@@ -535,18 +535,18 @@ const gpg = s => s.g > 0 ? (s.goals / s.g).toFixed(2) : '0.00';
     ? \`\${p.s.cs} CS · \${p.s.saves} saves\`
     : \`\${p.s.goals} G · \${p.s.assists} A\`}</span>\` : '';`, 's-seatstat');
   s = rep(s, `  $('mtRot').innerHTML = F.rotation.map((p, i) => p ? prowHtml(p, \`SP\${i + 1}\`,
-    p.s ? \`\${p.s.w}-\${p.s.l} · \${era(p.s)} · \${p.s.k} K\` : '—', \`rot\${i}\`) : '').join('');
+    p.s ? \`\${p.s.w}-\${p.s.l} · \${era(p.s)} · \${p.s.k} K\` : '-', \`rot\${i}\`) : '').join('');
   $('mtLine').innerHTML = F.lineup.map((p, i) => p ? prowHtml(p, \`B\${i + 1}\`,
-    p.s ? \`\${avg(p.s)} · \${p.s.hr} HR · \${p.s.rbi} RBI\` : '—', \`line\${i}\`) : '').join('');`,
+    p.s ? \`\${avg(p.s)} · \${p.s.hr} HR · \${p.s.rbi} RBI\` : '-', \`line\${i}\`) : '').join('');`,
     `  $('mtRot').innerHTML = F.rotation.map((p, i) => p ? prowHtml(p, \`GK\${i + 1}\`,
-    p.s ? \`\${p.s.cs} CS · \${p.s.saves} saves · \${p.s.ga} GA\` : '—', \`rot\${i}\`) : '').join('');
+    p.s ? \`\${p.s.cs} CS · \${p.s.saves} saves · \${p.s.ga} GA\` : '-', \`rot\${i}\`) : '').join('');
   $('mtLine').innerHTML = F.lineup.map((p, i) => p ? prowHtml(p, \`ST\${i + 1}\`,
-    p.s ? \`\${p.s.goals} G · \${p.s.assists} A in \${p.s.g}\` : '—', \`line\${i}\`) : '').join('');`, 's-mt');
+    p.s ? \`\${p.s.goals} G · \${p.s.assists} A in \${p.s.g}\` : '-', \`line\${i}\`) : '').join('');`, 's-mt');
   s = rep(s, `  const cells = (st) => isP
-    ? [[\`\${st.w}-\${st.l}\`, 'Record'], [st.ip > 0 ? era(st) : '—', 'ERA'], [st.k, 'K'], [st.gs, 'Starts'], [st.ip ? st.ip.toFixed(1) : 0, 'IP'], [st.ip > 0 ? (st.k * 9 / st.ip).toFixed(1) : '—', 'K/9']]
-    : [[st.ab > 0 ? avg(st) : '—', 'AVG'], [st.hr, 'HR'], [st.rbi, 'RBI'], [st.h, 'Hits'], [st.g, 'Games'], [st.ab, 'AB']];`,
+    ? [[\`\${st.w}-\${st.l}\`, 'Record'], [st.ip > 0 ? era(st) : '-', 'ERA'], [st.k, 'K'], [st.gs, 'Starts'], [st.ip ? st.ip.toFixed(1) : 0, 'IP'], [st.ip > 0 ? (st.k * 9 / st.ip).toFixed(1) : '-', 'K/9']]
+    : [[st.ab > 0 ? avg(st) : '-', 'AVG'], [st.hr, 'HR'], [st.rbi, 'RBI'], [st.h, 'Hits'], [st.g, 'Games'], [st.ab, 'AB']];`,
     `  const cells = (st) => isP
-    ? [[st.cs, 'Clean sheets'], [st.saves, 'Saves'], [st.ga, 'Conceded'], [st.g, 'Matches'], [st.g > 0 ? (st.saves / st.g).toFixed(1) : '—', 'Saves/gm'], [st.g > 0 ? (st.ga / st.g).toFixed(2) : '—', 'GA/gm']]
+    ? [[st.cs, 'Clean sheets'], [st.saves, 'Saves'], [st.ga, 'Conceded'], [st.g, 'Matches'], [st.g > 0 ? (st.saves / st.g).toFixed(1) : '-', 'Saves/gm'], [st.g > 0 ? (st.ga / st.g).toFixed(2) : '-', 'GA/gm']]
     : [[st.goals, 'Goals'], [st.assists, 'Assists'], [st.g, 'Matches'], [gpg(st), 'Goals/gm'], [st.goals + st.assists, 'G+A'], [st.g, 'Games']];`, 's-cells');
   s = rep(s, `      <div class="pcard-sub">\${isP ? 'Starting Pitcher' : 'Batter'} · age \${p.age}`,
     `      <div class="pcard-sub">\${isP ? 'Goalkeeper' : 'Striker'} · age \${p.age}`, 's-cardsub');
@@ -554,9 +554,9 @@ const gpg = s => s.g > 0 ? (s.goals / s.g).toFixed(2) : '0.00';
   const s = p.s, c = p.c;`, `  const isP = p.game === 'keeper';
   const s = p.s, c = p.c;`, 's-isp');
   s = rep(s, `  const game = where === 'rot' ? 'pitcher' : 'batter';
-  $('pickTitle').textContent = where === 'rot' ? \`Sign a pitcher — SP\${idx + 1}\` : \`Sign a hitter — spot \${idx + 1}\`;`,
+  $('pickTitle').textContent = where === 'rot' ? \`Sign a pitcher · SP\${idx + 1}\` : \`Sign a hitter · spot \${idx + 1}\`;`,
     `  const game = where === 'rot' ? 'keeper' : 'striker';
-  $('pickTitle').textContent = where === 'rot' ? \`Sign a keeper — GK\${idx + 1}\` : \`Sign a striker — ST\${idx + 1}\`;`, 's-picker');
+  $('pickTitle').textContent = where === 'rot' ? \`Sign a keeper · GK\${idx + 1}\` : \`Sign a striker · ST\${idx + 1}\`;`, 's-picker');
   s = rep(s, `        <span class="nm">🛠️ Build a brand-new \${game === 'pitcher' ? 'pitcher' : 'hitter'}</span>`,
     `        <span class="nm">🛠️ Build a brand-new \${game === 'keeper' ? 'keeper' : 'striker'}</span>`, 's-buildrow');
   s = rep(s, `    location.href = pickSeat.where === 'rot' ? '/pitching?franchise=1' : '/batting?franchise=1';`,
@@ -579,11 +579,11 @@ const gpg = s => s.g > 0 ? (s.goals / s.g).toFixed(2) : '0.00';
   s = rep(s, `  const where = rk.game === 'pitcher' ? 'rot' : 'line';`,
     `  const where = rk.game === 'keeper' ? 'rot' : 'line';`, 's-assignarr');
   s = rep(s, `  $('assignSub').textContent = rk.game === 'pitcher'
-    ? 'Pick his rotation spot — whoever holds it is released.'
-    : 'Pick his lineup spot — whoever holds it is released.';`,
+    ? 'Pick his rotation spot · whoever holds it is released.'
+    : 'Pick his lineup spot · whoever holds it is released.';`,
     `  $('assignSub').textContent = rk.game === 'keeper'
-    ? 'Pick his goalkeeper spot — whoever holds it is released.'
-    : 'Pick his attacking spot — whoever holds it is released.';`, 's-assignsub');
+    ? 'Pick his goalkeeper spot · whoever holds it is released.'
+    : 'Pick his attacking spot · whoever holds it is released.';`, 's-assignsub');
   s = rep(s, `    <span class="pos" style="font-family:'Oswald',sans-serif;font-size:10px;letter-spacing:1.5px;color:var(--dim);width:34px">\${where === 'rot' ? 'SP' + (i + 1) : 'B' + (i + 1)}</span>`,
     `    <span class="pos" style="font-family:'Oswald',sans-serif;font-size:10px;letter-spacing:1.5px;color:var(--dim);width:34px">\${where === 'rot' ? 'GK' + (i + 1) : 'ST' + (i + 1)}</span>`, 's-assignpos');
   s = rep(s, `  $('rookieMeta').textContent = \`\${rk.ovr} OVR · \${rk.game === 'pitcher' ? 'Starting Pitcher' : 'Batter'} · age 22\`;`,
@@ -606,14 +606,14 @@ const gpg = s => s.g > 0 ? (s.goals / s.g).toFixed(2) : '0.00';
     `      \${h.mvp ? \`<span style="color:var(--muted);font-size:11px">Boot \${escapeHTML(h.mvp.name)}</span>\` : ''}`, 's-aw3');
   s = rep(s, `      \${h.ace ? \`<span style="color:var(--muted);font-size:11px">Ace \${escapeHTML(h.ace.name)}</span>\` : ''}`,
     `      \${h.ace ? \`<span style="color:var(--muted);font-size:11px">Glove \${escapeHTML(h.ace.name)}</span>\` : ''}`, 's-aw4');
-  s = rep(s, 'toast(`Season ${F.season} begins — ${gamesOf(F)} games, top 4 make the playoffs.`);',
-    'toast(`Season ${F.season} begins — ${gamesOf(F)} matches, top 4 make the playoffs. Draws go to extra time. ⚽`);', 's-toast');
+  s = rep(s, 'toast(`Season ${F.season} begins · ${gamesOf(F)} games, top 4 make the playoffs.`);',
+    'toast(`Season ${F.season} begins · ${gamesOf(F)} matches, top 4 make the playoffs. Draws go to extra time. ⚽`);', 's-toast');
   return s;
 }
 
 const hoops = genHoops();
 const soccer = genSoccer();
-if (failures) { console.log(`\n${failures} anchor failures — nothing written.`); process.exit(1); }
+if (failures) { console.log(`\n${failures} anchor failures · nothing written.`); process.exit(1); }
 fs.writeFileSync(ROOT + 'franchise-hoops.html', hoops);
 fs.writeFileSync(ROOT + 'franchise-soccer.html', soccer);
 console.log('franchise-hoops.html + franchise-soccer.html written');

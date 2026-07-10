@@ -143,7 +143,7 @@ function ensure() {
       await sql`CREATE INDEX IF NOT EXISTS idx_pvp_history_player ON pvp_history (player_key, created_at DESC)`;
       await sql`CREATE INDEX IF NOT EXISTS idx_pvp_history_opp_key ON pvp_history (opp_key) WHERE opp_key IS NOT NULL`;
       // ---- Social: friends + friendly 1v1 challenges. Player keys are the users-table keys
-      // (raw google sub for accounts, 'guest:<id>' for guests) — same keys pvpKey() returns. ----
+      // (raw google sub for accounts, 'guest:<id>' for guests) · same keys pvpKey() returns. ----
       // handle = the CLAIMED unique username (signed-in accounts only; case-insensitively unique,
       // first come first served). Once claimed it becomes the display name and nothing may
       // overwrite it (login + pvpKey name updates are guarded). Friends find each other by it.
@@ -227,7 +227,7 @@ const STREAK_BONUS = 2, STREAK_CAP = 5;
 
 // ---- Monthly Elo seasons ----------------------------------------------------
 // Season 1 kickoff (one editable constant; MUST match SEASON1_START_MS in versus.html). Everything
-// season-related is DORMANT until this instant — before it, seasonInfo().number is 0 and pvpResult
+// season-related is DORMANT until this instant · before it, seasonInfo().number is 0 and pvpResult
 // touches no season columns, so live behavior is unchanged.
 const SEASON1_START_MS = Date.UTC(2026, 6, 15);   // 2026-07-15 00:00 UTC (July = month 6)
 const N_PLACEMENT = 5;          // placement games at the start of each season
@@ -289,7 +289,7 @@ async function upsertSeason(season, key, name, r) {
   } catch (e) {}
 }
 
-// Walk a list of played dates ('YYYY-MM-DD') and return { current, best } daily streaks —
+// Walk a list of played dates ('YYYY-MM-DD') and return { current, best } daily streaks -
 // current is the consecutive run ending today (or yesterday, when today isn't played yet).
 // Mirrors the client's streaksFromDates so both sides agree with the visible calendar.
 function streaksFromDates(dates, today) {
@@ -342,7 +342,7 @@ async function hoopsResult(body, key, res) {
   const dedup = 'h:' + matchId;
   const ins = await sql`INSERT INTO pvp_results (match_id, google_sub) VALUES (${dedup}, ${key}) ON CONFLICT DO NOTHING RETURNING match_id`;
   if (!ins.length) {
-    // Already settled — usually the winner reported first and we applied this player's loss
+    // Already settled · usually the winner reported first and we applied this player's loss
     // server-side. Pull the real delta from the recorded history row so the loser's screen
     // shows "-13" instead of "+0".
     let delta = 0, elo = u.elo, recWon = won, hRow = null;
@@ -393,7 +393,7 @@ async function hoopsResult(body, key, res) {
   const wins = u.wins + (won ? 1 : 0), losses = u.losses + (won ? 0 : 1);
   await sql`UPDATE users SET pvp_elo_hoops = ${elo}, pvp_wins_hoops = ${wins}, pvp_losses_hoops = ${losses}, pvp_streak_hoops = ${streak} WHERE google_sub = ${key}`;
   // Prefer the recorded opponent; else the client-reported oppKey. Normalize acct:<sub> to the
-  // raw sub stored in users — hoops previously kept the prefix, so the loss-apply silently
+  // raw sub stored in users · hoops previously kept the prefix, so the loss-apply silently
   // no-op'd against every signed-in opponent (only guests ever got charged).
   const oppKeyVal = body.oppKey ? String(body.oppKey).slice(0, 80) : null;
   const clientOpp = oppKeyVal && /^(acct:|guest:)/.test(oppKeyVal) ? normKey(oppKeyVal) : null;
@@ -444,7 +444,7 @@ async function hoopsLeaderboard(body, res) {
 // ---- Soccer 1v1 (striker vs keeper) rating: a fully separate Elo board in *_soccer columns,
 // cloned from the hoops block above. Runs ONLY when the client sends sport:'soccer'. Roles are
 // real here, so results also feed the anonymous pvp_matches balance log (striker vs keeper win
-// rates, read via pvpMatchStats — same as baseball's pitcher/batter tuning loop). ----
+// rates, read via pvpMatchStats · same as baseball's pitcher/batter tuning loop). ----
 async function soccerStats(key, res) {
   const [u] = await sql`SELECT pvp_elo_soccer AS elo, pvp_wins_soccer AS wins, pvp_losses_soccer AS losses, pvp_streak_soccer AS streak FROM users WHERE google_sub = ${key}`;
   if (!u) return res.status(401).json({ ok: false, error: 'Not signed in' });
@@ -470,7 +470,7 @@ async function soccerResult(body, key, res) {
       recordedOpp = (key === a) ? b : a;
     }
   } catch (e) {}
-  // anonymous balance log (one row per match+role; idempotent) — the striker-vs-keeper tuning loop
+  // anonymous balance log (one row per match+role; idempotent) · the striker-vs-keeper tuning loop
   if (myRole) {
     try {
       await sql`INSERT INTO pvp_matches (match_id, role, won, ovr, opp_ovr)
@@ -583,7 +583,7 @@ async function authed(sub, sessionToken) {
 }
 
 // Resolve who a PvP request is "as": a signed-in Google user, or an anonymous device guest
-// (no password — the random guestId is the bearer). Returns the users-table key, or null.
+// (no password · the random guestId is the bearer). Returns the users-table key, or null.
 // Guests are stored in `users` with a "guest:" key and no session token (so they can't touch
 // account-only actions like save/list). Auto-creates the row so a fresh guest starts at 1000.
 async function pvpKey(body) {
@@ -595,7 +595,7 @@ async function pvpKey(body) {
     return key;
   }
   if (await authed(body.sub, body.sessionToken)) {
-    // let the player set a public 1v1 display name instead of their Google name — but a
+    // let the player set a public 1v1 display name instead of their Google name · but a
     // CLAIMED handle is permanent and nothing may overwrite it
     const nm = String(body.name || '').trim().slice(0, 40);
     if (nm) await sql`UPDATE users SET name = ${nm} WHERE google_sub = ${body.sub} AND handle IS NULL`;
@@ -607,7 +607,7 @@ async function pvpKey(body) {
 // ---- Social helpers ---------------------------------------------------------
 // Friend pairs are stored once, keys in sorted order.
 const pairOf = (k1, k2) => (k1 < k2 ? [k1, k2] : [k2, k1]);
-// The client-side personId() form of a stored key ('acct:' + sub for accounts) — this is what
+// The client-side personId() form of a stored key ('acct:' + sub for accounts) · this is what
 // the ?ch= challenge links and the Ably challenge-inbox channels are named with.
 const personIdOf = key => key.indexOf('guest:') === 0 ? key : ('acct:' + key);
 // Normalize a client-sent key (either form) back to the users-table key.
@@ -638,8 +638,8 @@ async function autoClaimHandle(sub, baseName) {
         WHERE google_sub = ${sub} AND handle IS NULL RETURNING handle`;
       if (rows.length) return rows[0].handle;
       const [u] = await sql`SELECT handle FROM users WHERE google_sub = ${sub}`;
-      return (u && u.handle) || null;   // another tab won the race — keep theirs
-    } catch (e) { /* unique-index collision — try the next number */ }
+      return (u && u.handle) || null;   // another tab won the race · keep theirs
+    } catch (e) { /* unique-index collision · try the next number */ }
   }
   return null;
 }
@@ -656,7 +656,7 @@ module.exports = async (req, res) => {
     await ensure();
 
     // The token-gated admin backfills are also reachable via GET (handy where only fetches are
-    // possible): ?action=achBackfill|xpBackfill&token=...&apply=1 — apply=1 ⇒ dryRun:false.
+    // possible): ?action=achBackfill|xpBackfill&token=...&apply=1 · apply=1 ⇒ dryRun:false.
     const qAction = req.query && req.query.action;
     if (req.method === 'GET' && (qAction === 'achBackfill' || qAction === 'xpBackfill' || qAction === 'handleBackfill')) {
       req.method = 'POST';
@@ -671,7 +671,7 @@ module.exports = async (req, res) => {
         const profile = await verifyGoogle(body.idToken);
         if (!profile) return res.status(401).json({ ok: false, error: 'Google sign-in failed' });
         const newToken = crypto.randomBytes(24).toString('hex');
-        // KEEP an existing session token instead of rotating it on every login — otherwise the
+        // KEEP an existing session token instead of rotating it on every login · otherwise the
         // Google One Tap auto-sign-in that fires on each page load would invalidate the token
         // other tabs/pages are holding (which made you "get signed out" moving between pages).
         // name: a claimed @handle wins; else keep the name they play under (their rating
@@ -688,7 +688,7 @@ module.exports = async (req, res) => {
         // Adopt this device's guest daily-challenge history into the account, so days played
         // before signing in keep counting toward the streak/calendar. Days the account already
         // has stay put; then the streak counters are recomputed from the merged calendar (they
-        // only ever go UP here — a break is applied by updateStreak on actual play, not login).
+        // only ever go UP here · a break is applied by updateStreak on actual play, not login).
         if (body.guestId) {
           try {
             const gKey = 'guest:' + String(body.guestId).slice(0, 80);
@@ -760,14 +760,14 @@ module.exports = async (req, res) => {
         let streak = last === today ? ((u && u.current_streak) || 0)
           : (last === yd ? (((u && u.current_streak) || 0) + 1) : 1);
         // Also derive from the daily-challenge calendar itself (covers guest days merged in at
-        // login and plays recorded on other devices) — take whichever run is longer.
+        // login and plays recorded on other devices) · take whichever run is longer.
         try {
           const played = await sql`SELECT DISTINCT challenge_date::text AS d FROM daily_scores WHERE player_key = ${'acct:' + body.sub}`;
           if (played.length) streak = Math.max(streak, streaksFromDates(played.map(r => r.d), today).current);
         } catch (e) {}
         // The client's counter can legitimately be AHEAD of ours: it counts days played signed-out
         // before this sign-in and Streak Freeze tokens (a freeze bridges one missed day; the server
-        // doesn't track them). Never lower it — same trust-the-client model as the leaderboard.
+        // doesn't track them). Never lower it · same trust-the-client model as the leaderboard.
         const clientCount = Math.max(0, Math.min(100000, Math.round(Number(body.count) || 0)));
         streak = Math.max(streak, clientCount);
         const best = Math.max((u && u.best_streak) || 0, streak);
@@ -782,8 +782,8 @@ module.exports = async (req, res) => {
       if (action === 'achSync') {
         if (!(await authed(body.sub, body.sessionToken))) return res.status(401).json({ ok: false, error: 'Not signed in' });
         const incoming = (body.achievements && typeof body.achievements === 'object') ? body.achievements : {};
-        // ALWAYS merge (union, earliest unlock time wins). body.reset — the old launch-time
-        // "version wipe" — is deliberately ignored: cached clients set it from any FRESH browser
+        // ALWAYS merge (union, earliest unlock time wins). body.reset · the old launch-time
+        // "version wipe" · is deliberately ignored: cached clients set it from any FRESH browser
         // profile too, which replaced the account's board with an empty one (the "signed in on a
         // new device and lost everything" bug). Likewise the old claim gate (adopt guest unlocks
         // only into an empty account) silently discarded a signed-out session's progress; unlocks
@@ -801,7 +801,7 @@ module.exports = async (req, res) => {
         return res.status(200).json({ ok: true, achievements: merged });
       }
 
-      // Sync cross-game player XP. XP is monotonic on the account — it follows the email across
+      // Sync cross-game player XP. XP is monotonic on the account · it follows the email across
       // devices and can never drop. Signed-out (guest) XP is ADDED on first sync after sign-in.
       if (action === 'xpSync') {
         if (!(await authed(body.sub, body.sessionToken))) return res.status(401).json({ ok: false, error: 'Not signed in' });
@@ -812,7 +812,7 @@ module.exports = async (req, res) => {
         // after sign-in. XP stays monotonic on the account.
         // claim=true = XP earned on this device while signed out (the local copy is zeroed on
         // sign-out, so it's all new): ADD it to the account instead of throwing it away.
-        // Otherwise the local copy mirrors this account — keep the max.
+        // Otherwise the local copy mirrors this account · keep the max.
         const merged = body.claim === true
           ? Math.min(1e12, stored + incoming)
           : Math.max(stored, incoming);
@@ -822,7 +822,7 @@ module.exports = async (req, res) => {
 
       // Merge the caller's card collection with the account's (union per game+player: max use
       // count, earliest first-collected time, best rarity tier, sticky prime/legend flags).
-      // Same always-merge posture as achSync — a fresh device can never wipe the account's binder.
+      // Same always-merge posture as achSync · a fresh device can never wipe the account's binder.
       if (action === 'collectionSync') {
         if (!(await authed(body.sub, body.sessionToken))) return res.status(401).json({ ok: false, error: 'Not signed in' });
         const GAMES = ['pitcher', 'batter', 'baller'];
@@ -857,7 +857,7 @@ module.exports = async (req, res) => {
       }
 
       // Season Track cosmetics: per-season SXP keeps the max, unlocked is a union (permanent
-      // inventory — same always-merge posture as collectionSync), equipped = incoming wins
+      // inventory · same always-merge posture as collectionSync), equipped = incoming wins
       // (it's a preference; explicit null = unequipped). Trust-the-client like XP.
       if (action === 'trackSync') {
         if (!(await authed(body.sub, body.sessionToken))) return res.status(401).json({ ok: false, error: 'Not signed in' });
@@ -888,7 +888,7 @@ module.exports = async (req, res) => {
             merged.equipped[slot] = okId(v) ? v : null;
           }
         }
-        // Consumable counts: incoming wins (the client is the spender of record — same
+        // Consumable counts: incoming wins (the client is the spender of record · same
         // trust-the-client posture as everything else here).
         if (body.items && typeof body.items === 'object') {
           for (const k of ['scout', 'resim']) {
@@ -904,7 +904,7 @@ module.exports = async (req, res) => {
       // stored together as { baseball: wrapper, hoops: wrapper, soccer: wrapper }. Each
       // sport's copy is either a legacy single save ({id:'fr_…'}) or the 3-slot wrapper
       // ({active, prog, saves:{0,1,2}}). Whichever copy has made more progress wins (the
-      // client bumps a monotonic `prog` on every step) — same incoming-wins posture as
+      // client bumps a monotonic `prog` on every step) · same incoming-wins posture as
       // trackSync. Always answers with that sport's winning copy. A legacy top-level
       // blob (pre-sports) is treated as the baseball save.
       if (action === 'franchiseSync') {
@@ -949,7 +949,7 @@ module.exports = async (req, res) => {
         const key = await pvpKey(body);
         if (!key) return res.status(401).json({ ok: false, error: 'Not signed in' });
         const [existing] = await sql`SELECT club_id FROM club_members WHERE player_key = ${key}`;
-        if (existing) return res.status(400).json({ ok: false, error: 'Already in a club — leave it first' });
+        if (existing) return res.status(400).json({ ok: false, error: 'Already in a club · leave it first' });
         const name = String(body.name || '').trim().slice(0, 24) || 'The Club';
         const id = 'club_' + crypto.randomBytes(6).toString('hex');
         const code = crypto.randomBytes(3).toString('hex').toUpperCase();
@@ -963,7 +963,7 @@ module.exports = async (req, res) => {
         const key = await pvpKey(body);
         if (!key) return res.status(401).json({ ok: false, error: 'Not signed in' });
         const [existing] = await sql`SELECT club_id FROM club_members WHERE player_key = ${key}`;
-        if (existing) return res.status(400).json({ ok: false, error: 'Already in a club — leave it first' });
+        if (existing) return res.status(400).json({ ok: false, error: 'Already in a club · leave it first' });
         const code = String(body.code || '').trim().toUpperCase().slice(0, 12);
         const [club] = await sql`SELECT id, name, code, status FROM clubs WHERE code = ${code}`;
         if (!club) return res.status(404).json({ ok: false, error: 'No club with that invite code' });
@@ -1007,7 +1007,7 @@ module.exports = async (req, res) => {
 
       // ===================================================================
       // Social: friends, profiles, and friendly 1v1 challenges. Every action
-      // resolves the caller via pvpKey() (signed-in user OR device guest) —
+      // resolves the caller via pvpKey() (signed-in user OR device guest) -
       // the same trust model as the 1v1 Elo actions.
       // ===================================================================
 
@@ -1071,7 +1071,7 @@ module.exports = async (req, res) => {
         return res.status(200).json({ ok: true, avatar: av || null });
       }
 
-      // Claim (or change) your unique handle — signed-in accounts only, so a handle can never
+      // Claim (or change) your unique handle · signed-in accounts only, so a handle can never
       // be stranded in an abandoned browser profile. Changing frees the old one automatically.
       if (action === 'handleClaim') {
         if (!(await authed(body.sub, body.sessionToken))) return res.status(401).json({ ok: false, error: 'Sign in with Google to claim a handle' });
@@ -1085,7 +1085,7 @@ module.exports = async (req, res) => {
         return res.status(200).json({ ok: true, handle: h });
       }
 
-      // Live availability check while typing (no auth — it only says taken/free).
+      // Live availability check while typing (no auth · it only says taken/free).
       if (action === 'handleCheck') {
         const h = String(body.handle || '').trim();
         if (!HANDLE_RE.test(h)) return res.status(200).json({ ok: true, valid: false, available: false });
@@ -1101,7 +1101,7 @@ module.exports = async (req, res) => {
         if (!key) return res.status(401).json({ ok: false, error: 'Not signed in' });
         const q = String(body.q || '').trim();
         if (!/^[A-Za-z0-9_]{2,20}$/.test(q)) return res.status(200).json({ ok: true, results: [] });
-        const like = q.toLowerCase().replace(/_/g, '\\_') + '%';   // _ is a LIKE wildcard — escape it
+        const like = q.toLowerCase().replace(/_/g, '\\_') + '%';   // _ is a LIKE wildcard · escape it
         const rows = await sql`SELECT google_sub, handle, picture, avatar, xp, pvp_elo FROM users
           WHERE handle IS NOT NULL AND lower(handle) LIKE ${like} AND google_sub <> ${key}
           ORDER BY (lower(handle) = ${q.toLowerCase()}) DESC, lower(handle) LIMIT 6`;
@@ -1175,7 +1175,7 @@ module.exports = async (req, res) => {
       // game, recent Hall of Fame saves, builds summary, THEIR friends list (with each friend's
       // relationship to the CALLER, so the UI can offer Add/Accept), progress numbers, and
       // head-to-head. Non-friends get a LIMITED public card (identity + records + rel,
-      // limited:true) instead of a 403 — builds/friends/h2h/stats stay friends-only.
+      // limited:true) instead of a 403 · builds/friends/h2h/stats stay friends-only.
       if (action === 'profile') {
         const key = await pvpKey(body);
         if (!key) return res.status(401).json({ ok: false, error: 'Not signed in' });
@@ -1207,7 +1207,7 @@ module.exports = async (req, res) => {
           } catch (e) {}
         }
         // The subject's friends, each tagged with how they relate to the CALLER
-        // (you / friends / pending / incoming / none) — lets you add friends-of-friends.
+        // (you / friends / pending / incoming / none) · lets you add friends-of-friends.
         let friendsOut = [];
         if (full) try {
           const frRows = await sql`SELECT u.google_sub AS fkey, u.name, u.picture, u.avatar, u.xp, u.pvp_elo, u.last_seen
@@ -1292,7 +1292,7 @@ module.exports = async (req, res) => {
 
       // A finished FRIENDLY 1v1 (no Elo). Only the winner's report counts, deduped per match
       // in the shared pvp_results table ('f:' namespace), and only moves head-to-head between
-      // accepted friends — random challenge-link matches are ignored.
+      // accepted friends · random challenge-link matches are ignored.
       if (action === 'friendlyResult') {
         const key = await pvpKey(body);
         if (!key) return res.status(401).json({ ok: false, error: 'Not signed in' });
@@ -1312,7 +1312,7 @@ module.exports = async (req, res) => {
       }
 
       // One-time migration: seed a unique @handle for every existing signed-in account from
-      // its current public name — most-active first, so the real "Chu" beats a dead account
+      // its current public name · most-active first, so the real "Chu" beats a dead account
       // with the same name. Token-gated like achBackfill; dryRun by default; run repeatedly
       // (each apply pass shrinks the handle-less pool) until claimed comes back 0.
       if (action === 'handleBackfill') {
@@ -1397,7 +1397,7 @@ module.exports = async (req, res) => {
         const ins = await sql`INSERT INTO pvp_results (match_id, google_sub) VALUES (${matchId}, ${key})
           ON CONFLICT DO NOTHING RETURNING match_id`;
         if (!ins.length) {
-          // Already settled — usually the winner reported first and we applied this player's loss
+          // Already settled · usually the winner reported first and we applied this player's loss
           // server-side. Pull the real delta from the recorded history row so the loser's screen
           // shows "-13" instead of "+0".
           let delta = 0, elo = u.elo, recWon = won, hRow = null;
@@ -1409,10 +1409,10 @@ module.exports = async (req, res) => {
           } catch (e) {}
 
           // Conflict fix: a *completed at-bat* win from this player overrides a forfeit/quit claim
-          // that wrongly settled them as a loss (asymmetric build delivery — the opponent never saw
+          // that wrongly settled them as a loss (asymmetric build delivery · the opponent never saw
           // our build, claimed a quit-win, while we actually finished the at-bat and won). Reverse
-          // both players. Gated tightly so two real (decided) results — which always agree on the
-          // higher-OVR winner — can never trigger it: requires the opponent's settling row to be a
+          // both players. Gated tightly so two real (decided) results · which always agree on the
+          // higher-OVR winner · can never trigger it: requires the opponent's settling row to be a
           // NON-decided (forfeit) win and our OVR to be at least theirs.
           if (decided && won && hRow && hRow.won === false && myOvr && oppOvr && myOvr >= oppOvr) {
             const oppKeyVal = body.oppKey ? String(body.oppKey).slice(0, 80) : null;
@@ -1461,7 +1461,7 @@ module.exports = async (req, res) => {
           await sql`UPDATE users SET pvp_elo = ${elo}, pvp_wins = ${wins}, pvp_losses = ${losses}, pvp_streak = ${streak} WHERE google_sub = ${key}`;
         }
         // Prefer the recorded opponent; else the client-reported oppKey (normalized so account keys,
-        // sent as `acct:<sub>`, match the raw `<sub>` stored in users — a bug that previously made
+        // sent as `acct:<sub>`, match the raw `<sub>` stored in users · a bug that previously made
         // the loss-apply silently no-op for signed-in opponents).
         const oppKeyVal = body.oppKey ? String(body.oppKey).slice(0, 80) : null;
         const clientOpp = oppKeyVal && /^(acct:|guest:)/.test(oppKeyVal) ? normKey(oppKeyVal) : null;
@@ -1521,7 +1521,7 @@ module.exports = async (req, res) => {
       // into the account even if the account has already played (the old "only onto a never-played
       // account" gate silently threw away everything earned while signed out): W/L are added, the
       // rating moves by the guest's net delta from the 1000 start (a fresh account lands exactly on
-      // the guest rating), and the guest streak — their most recent games — carries over. The guest
+      // the guest rating), and the guest streak · their most recent games · carries over. The guest
       // row is consumed atomically (DELETE .. RETURNING) so a repeated/concurrent claim is a no-op,
       // and claimed match history is re-keyed so it follows the account.
       if (action === 'pvpClaim') {
@@ -1545,7 +1545,7 @@ module.exports = async (req, res) => {
               await sql`UPDATE users SET pvp_elo = ${elo}, pvp_wins = ${acct.wins + g.wins}, pvp_losses = ${acct.losses + g.losses}, pvp_streak = ${g.streak}, pvp_season = ${g.season || 0}, pvp_placement_games = ${g.placement || 0} WHERE google_sub = ${body.sub}`;
               await sql`UPDATE pvp_history SET player_key = ${body.sub} WHERE player_key = ${gid} AND sport IS DISTINCT FROM 'hoops' AND sport IS DISTINCT FROM 'soccer'`;
               // re-key the guest's season standings onto the account (drop any that would collide with
-              // a season the account already has a row for, then re-key the rest — no PK violation)
+              // a season the account already has a row for, then re-key the rest · no PK violation)
               await sql`DELETE FROM pvp_seasons WHERE player_key = ${gid} AND season IN (SELECT season FROM pvp_seasons WHERE player_key = ${body.sub})`;
               await sql`UPDATE pvp_seasons SET player_key = ${body.sub} WHERE player_key = ${gid}`;
               claimedBase = true;
@@ -1657,7 +1657,7 @@ module.exports = async (req, res) => {
           batter_win_pct: br == null ? null : Number(br.toFixed(1)) });
       }
 
-      // admin: dump a single player's full 1v1 match history (token-gated) — for investigating
+      // admin: dump a single player's full 1v1 match history (token-gated) · for investigating
       // implausible records. Target by email (exact) or google_sub key.
       if (action === 'pvpPlayerHistory') {
         if (body.token !== STATS_TOKEN) return res.status(403).json({ ok: false, error: 'forbidden' });
@@ -1771,7 +1771,7 @@ module.exports = async (req, res) => {
       // admin: backfill losses for players who dodged by refreshing before the result fired.
       // Finds wins with no corresponding loss in pvp_history, matches the loser by name,
       // and applies the loss if exactly one candidate exists (ambiguous names are skipped).
-      // Defaults to dryRun:true — pass dryRun:false to actually commit changes.
+      // Defaults to dryRun:true · pass dryRun:false to actually commit changes.
       if (action === 'pvpBackfillLosses') {
         if (body.token !== STATS_TOKEN) return res.status(403).json({ ok: false, error: 'forbidden' });
         const dryRun = body.dryRun !== false;
@@ -1861,8 +1861,8 @@ module.exports = async (req, res) => {
       }
 
       // One-time, token-gated: rebuild achievements from server evidence (pvp_history, daily_scores,
-      // Hall of Fame saves) for signed-in accounts. Additive only — never removes or overwrites an
-      // existing unlock — so it safely restores boards lost to the old sign-in flow that discarded
+      // Hall of Fame saves) for signed-in accounts. Additive only · never removes or overwrites an
+      // existing unlock · so it safely restores boards lost to the old sign-in flow that discarded
       // guest progress. Defaults to dryRun:true; pass dryRun:false to commit.
       if (action === 'achBackfill') {
         if (body.token !== STATS_TOKEN) return res.status(403).json({ ok: false, error: 'forbidden' });
@@ -1932,7 +1932,7 @@ module.exports = async (req, res) => {
         }
 
         // Hall of Fame saves. Older saves store the FULL career (huge), so pulling raw build jsonb
-        // blows Neon's 64MB response cap — extract just the per-save facts in SQL instead.
+        // blows Neon's 64MB response cap · extract just the per-save facts in SQL instead.
         const saves = await sql`SELECT google_sub, game, ovr,
             (build->'career'->'totals') IS NOT NULL AS simmed,
             COALESCE((build->'career'->'totals'->>'rings')::numeric, 0)::int AS rings,
@@ -1984,7 +1984,7 @@ module.exports = async (req, res) => {
           }
         }
 
-        // merge into users.achievements — only fills gaps, never touches existing unlocks
+        // merge into users.achievements · only fills gaps, never touches existing unlocks
         const nowIso = new Date().toISOString();
         const byAch = {};
         let updated = 0, grants = 0;
@@ -2009,9 +2009,9 @@ module.exports = async (req, res) => {
 
       // One-time, token-gated: restore account XP from server evidence, for accounts zeroed by
       // the old fresh-profile reset bug. Computes a conservative FLOOR of what the account must
-      // have earned — achievement unlocks (40 XP each, 120 for challenge tiles), daily-challenge
+      // have earned · achievement unlocks (40 XP each, 120 for challenge tiles), daily-challenge
       // submissions (build-finish + career-sim XP per play), and the 1v1 record (55/win, 18/loss)
-      // — and raises users.xp to it where it's lower. Never lowers anyone (XP stays monotonic).
+      // · and raises users.xp to it where it's lower. Never lowers anyone (XP stays monotonic).
       // Run achBackfill FIRST so restored unlocks count. Defaults to dryRun:true.
       if (action === 'xpBackfill') {
         if (body.token !== STATS_TOKEN) return res.status(403).json({ ok: false, error: 'forbidden' });
@@ -2055,7 +2055,7 @@ module.exports = async (req, res) => {
       return res.status(400).json({ ok: false, error: 'Unknown action' });
     }
 
-    // GET ?action=pvpAuditPlayer&token=...&name=... — shows times beaten vs losses reported for a player
+    // GET ?action=pvpAuditPlayer&token=...&name=... · shows times beaten vs losses reported for a player
     if ((req.query && req.query.action) === 'pvpAuditPlayer') {
       if (req.query.token !== STATS_TOKEN) {
         return res.status(403).send('<h2 style="font-family:sans-serif;color:red">Forbidden</h2>');
@@ -2068,7 +2068,7 @@ module.exports = async (req, res) => {
       const users = await sql`SELECT google_sub, name, pvp_elo, pvp_wins, pvp_losses, pvp_streak FROM users WHERE lower(name) = lower(${name})`;
       const userKeys = users.map(u => u.google_sub);
 
-      // Every pvp_history row where someone reported beating this player —
+      // Every pvp_history row where someone reported beating this player -
       // match by opp_key (stable identity, name-change-proof) OR opp_name (legacy rows)
       const timesBeaten = await sql`
         SELECT h.match_id, h.player_key AS winner_key, h.opp_key, h.created_at,
@@ -2131,13 +2131,13 @@ module.exports = async (req, res) => {
 </table>
 <h2>Match log (times beaten)</h2>
 <table><tr><th>Date</th><th>Winner key</th><th>Match by</th><th style="text-align:center">Loss filed?</th></tr>
-  ${beatRows || '<tr><td colspan="3" style="color:#888">No recorded losses found — name may have changed</td></tr>'}
+  ${beatRows || '<tr><td colspan="3" style="color:#888">No recorded losses found · name may have changed</td></tr>'}
 </table>
 </body></html>`;
       return res.status(200).setHeader('content-type', 'text/html').send(html);
     }
 
-    // GET ?action=pvpBackfillPreview&token=... — browser-friendly admin page for the loss backfill
+    // GET ?action=pvpBackfillPreview&token=... · browser-friendly admin page for the loss backfill
     if ((req.query && req.query.action) === 'pvpBackfillPreview') {
       if (req.query.token !== STATS_TOKEN) {
         return res.status(403).send('<h2 style="font-family:sans-serif;color:red">Forbidden</h2>');
@@ -2217,7 +2217,7 @@ module.exports = async (req, res) => {
   .done{background:#2a2;color:#fff;padding:14px;border-radius:8px;font-weight:700;text-align:center;font-size:16px}
   .skipped{color:#888;font-size:12px;margin-top:12px}
 </style></head><body>
-<h1>Loss Backfill ${applying ? '— Applied ✓' : '— Preview'}</h1>
+<h1>Loss Backfill ${applying ? '- Applied ✓' : '- Preview'}</h1>
 <div class="sub">${orphanedWins.length} orphaned wins found · ${total} losses to assign · gentle K=${backfillK}</div>
 ${applying
   ? `<div class="done">✓ Applied ${applied} loss${applied !== 1 ? 'es' : ''} to ${ranked.length} player${ranked.length !== 1 ? 's' : ''}</div>`

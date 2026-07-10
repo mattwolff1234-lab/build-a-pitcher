@@ -6,7 +6,7 @@
 <title>Hoops Face Off · GoatLab 1v1</title>
 <meta name="theme-color" content="#0a1320">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-<script src="/switcher.js?v=13" defer></script>
+<script src="/switcher.js?v=14" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/MotionPathPlugin.min.js"></script>
 <script src="/achievements.js" defer></script>
 <script src="/xp.js" defer></script>
@@ -810,7 +810,7 @@ function tierBadgeHTML(elo, rank, size=20){
 }
 
 // Both players build the same 9-slot hooper. The two ROLE keys (pitcher/batter) are kept only as
-// vestigial A/B side labels so the matchmaking/figure code needs no changes — both point at hoopers.
+// vestigial A/B side labels so the matchmaking/figure code needs no changes · both point at hoopers.
 const HOOPER_SLOTS = [
   { key:'threept',    label:'3-Pointer',  part:'Shooting Hand', mask:'hoop-seg-threept.png',    ax:16, ay:50, lx:7,  ly:56 },
   { key:'finishing',  label:'Finishing',  part:'Thighs',        mask:'hoop-seg-finishing.png',  ax:40, ay:61, lx:11, ly:74 },
@@ -1114,7 +1114,7 @@ function connectAbly(){
   return ablyPromise;
 }
 
-/* ---------- live "who's online" ticker (cheap DB heartbeat — NOT Ably) ---------- */
+/* ---------- live "who's online" ticker (cheap DB heartbeat · NOT Ably) ---------- */
 // The old ticker used Ably presence; fanning presence out to every idle viewer was ~90% of the Ably
 // bill. Now each viewer heartbeats /api/live every ~45s (only while the tab is visible) and the same
 // response returns the live counts. Linear cost, plain DB queries, zero Ably.
@@ -1322,7 +1322,7 @@ function setOnlineStatus(s){
 let searching=false, retryTimer=null;
 async function findMatch(){
   resetMatch();
-  gameMode = 'classic';   // ranked is always Classic — clear any leftover friendly (Legends/Hard) mode
+  gameMode = 'classic';   // ranked is always Classic · clear any leftover friendly (Legends/Hard) mode
   showScreen('mmScreen');
   updateRatingChip();
   $('findBtn').style.display='none'; $('mmSpin').style.display='block'; $('cancelWrap').style.display='block'; $('statsWrap').style.display='none';
@@ -1840,7 +1840,7 @@ function finishBuild(){
   // Safety net: if the opponent never delivers a build (left/closed), don't hang forever.
   // Both shot clocks froze together, so their build-or-autofill MUST arrive within the time
   // they have left (+slack). Silence past that means they're gone → forfeit WIN, never
-  // "No Contest" — quitting must always count as a loss for the quitter.
+  // "No Contest" · quitting must always count as a loss for the quitter.
   if (waitTimeout) clearTimeout(waitTimeout);
   waitTimeout = setTimeout(() => {
     if (!oppBuild && !atBatStarted && !matchResolved) claimQuitWin();
@@ -1936,7 +1936,7 @@ function onOppLeave(){
     oppQuitTimer=null;
     if(matchResolved || atBatStarted || oppBuild) return;
     claimQuitWin();
-  }, 15000);   // grace for flaky connections — an Ably re-enter cancels this
+  }, 15000);   // grace for flaky connections · an Ably re-enter cancels this
 }
 function claimQuitWin(){
   if(matchCh){ try{ matchCh.publish('quitwin', { role:myRole }); }catch(e){} }   // if they're secretly alive, they take the loss
@@ -1976,7 +1976,7 @@ function showForfeitResult(iWon, filled, data={}){
   const oppElo = typeof data.elo === 'number' ? data.elo : ((oppBuild && typeof oppBuild.elo === 'number') ? oppBuild.elo : 1000);
   const oppForfeitName = data.name || (oppBuild && oppBuild.name ? oppBuild.name : '');
   if (friendlyMode) {
-    // friends head-to-head: fire-and-forget — the server only counts the winner's report,
+    // friends head-to-head: fire-and-forget · the server only counts the winner's report,
     // once per match, and only if the two players are accepted friends (social layer).
     if (!isGhost && oppBuild && oppBuild.key) {
       try { fetch('/api/account', { method:'POST', headers:{'content-type':'application/json'},
@@ -2044,8 +2044,8 @@ function playAtBat(){
   showScreen('atbatScreen');
   waitingArena=false; stopWaitClock(); $('waitArena').classList.remove('show');
   $('hvOff').classList.remove('dim'); $('hvDef').classList.remove('dim');
-  const pitcher = myRole==='pitcher' ? myBuild : oppBuild;   // side A — attacks the RIGHT hoop
-  const batter  = myRole==='pitcher' ? oppBuild : myBuild;   // side B — attacks the LEFT hoop
+  const pitcher = myRole==='pitcher' ? myBuild : oppBuild;   // side A · attacks the RIGHT hoop
+  const batter  = myRole==='pitcher' ? oppBuild : myBuild;   // side B · attacks the LEFT hoop
   const abRng = atBatRng(pitcher, batter);
   // winner: higher OVR; tie -> seeded coin (identical on both phones)
   let winnerRole;
@@ -2088,7 +2088,7 @@ function playAtBat(){
   };
   setTimeout(next, 500);
 }
-// Both team colors run through brightTeam, but two builds can pick the same (or similar) teams —
+// Both team colors run through brightTeam, but two builds can pick the same (or similar) teams -
 // nudge side B's hue ~150° so the two silhouettes are always tellable apart.
 function hvDistinct(pcHex, bcHex){
   const rgb = c => { const m=/^#([0-9a-f]{6})$/i.exec(c||''); if(!m) return null;
@@ -2101,7 +2101,7 @@ function hvDistinct(pcHex, bcHex){
   if(d>0){ h = mx===r ? ((g-bl)/d+(g<bl?6:0)) : mx===g ? (bl-r)/d+2 : (r-g)/d+4; h/=6; }
   return `hsl(${Math.round(((h+0.42)%1)*360)} 75% 60%)`;
 }
-// ⏩ Skip the sim (this side only — the animation is a local playback of the seeded result, so
+// ⏩ Skip the sim (this side only · the animation is a local playback of the seeded result, so
 // skipping here never affects what the opponent sees). Jump straight to the final score + result.
 function hvSkipSim(){
   if(!hvGame || !hvGame.script || matchResolved) return;
@@ -2123,7 +2123,7 @@ function atBatRng(pitcher, batter){
   const n = ((seed || 1) ^ Math.imul(pitcher.ovr || 0, 2654435761) ^ Math.imul(batter.ovr || 0, 1597334677)) >>> 0;
   return mulberry32(n || 1);
 }
-/* ---------- first-to-11 game engine (seeded — identical on both phones) ---------- */
+/* ---------- first-to-11 game engine (seeded · identical on both phones) ---------- */
 if (window.MotionPathPlugin) gsap.registerPlugin(MotionPathPlugin);
 let hvGame = null;
 const HV_SPEED = 2.6;                      // timeScale: whole game fits in ~15-18s
@@ -2154,7 +2154,7 @@ function hvPose(el,name){ el.dataset.pose=name;
 function hvFace(el,dir){ el.dataset.dir=dir; hvApplyFlip(el); }
 
 // The box score: winner reaches 11; loser's total shrinks with the OVR gap. We only ANIMATE the
-// makes (+ a miss or two for drama) — skipped empty possessions don't change the score, so the
+// makes (+ a miss or two for drama) · skipped empty possessions don't change the score, so the
 // on-screen progression is still the true game. Every random pick uses the seeded rng.
 function buildGameScript(pitcher, batter, winnerRole, rr){
   const rpick = arr => arr[Math.floor(rr()*arr.length)];
@@ -2189,7 +2189,7 @@ function buildGameScript(pitcher, batter, winnerRole, rr){
       finKey: rr()<0.4?'three':'pullup', nMoves:1, missType: rr()<0.5?'rattle':'clank' });
   }
   poss.forEach(p=>{ p.mvs = Array.from({length:p.nMoves},()=>rpick(HV_MOVES)); });
-  // the possession list is the source of truth — mkPts can overshoot its target by a bucket,
+  // the possession list is the source of truth · mkPts can overshoot its target by a bucket,
   // so the banner/summary must use the REAL sums or they'd disagree with the animated scoreboard
   const winScore = winPts.reduce((a,b)=>a+b,0), loseScore = losePts.reduce((a,b)=>a+b,0);
   const winnerName = (winnerRole==='pitcher' ? pitcher.name : batter.name) || 'The winner';
@@ -2462,7 +2462,7 @@ function showResult(iWon, pitcher, batter, winnerRole, script){
 
   const oppElo = (oppBuild && typeof oppBuild.elo === 'number') ? oppBuild.elo : 1000;
   if (friendlyMode) {
-    // friends head-to-head: fire-and-forget — the server only counts the winner's report,
+    // friends head-to-head: fire-and-forget · the server only counts the winner's report,
     // once per match, and only if the two players are accepted friends (social layer).
     if (!isGhost && oppBuild && oppBuild.key) {
       try { fetch('/api/account', { method:'POST', headers:{'content-type':'application/json'},
@@ -2620,11 +2620,11 @@ initGoogle();
 refreshStats().then(updateRatingChip);
 checkChallengeURL();  // show challenge screen immediately if URL has ?ch= (no Ably needed for the screen)
 // A friends-panel challenge (social.js) sends the CHALLENGER here with ?lobby=1: wait in the
-// challenge lobby — an incoming ping auto-accepts (lobbyWaiting) and the match starts.
+// challenge lobby · an incoming ping auto-accepts (lobbyWaiting) and the match starts.
 if (new URLSearchParams(location.search).get('lobby')) setTimeout(openLobby, 400);
 goOnline();  // connect + wire the friend-challenge inbox (global presence is joined lazily on search)
 // dev harness: /versus-hoops.html?animtest=1&seed=5&aovr=95&bovr=88 plays the game animation with
-// fake builds — no Ably, no matchmaking, and friendlyMode means no Elo is reported.
+// fake builds · no Ably, no matchmaking, and friendlyMode means no Elo is reported.
 (function(){
   const q=new URLSearchParams(location.search);
   if(q.get('animtest')!=='1') return;

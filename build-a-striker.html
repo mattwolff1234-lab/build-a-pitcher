@@ -21,7 +21,7 @@
 <script src="/achievements.js" defer></script>
 <script src="/xp.js" defer></script>
 <script src="/social.js" defer></script>
-<script src="/switcher.js?v=13" defer></script>
+<script src="/switcher.js?v=14" defer></script>
 <script src="/collection.js?v=3" defer></script>
 <script src="/quests.js" defer></script>
 <script src="/season-track.js" defer></script>
@@ -987,12 +987,12 @@
       <details class="how-acc">
         <summary>📊 What matters most</summary>
         <div class="acc-body">
-          <p style="margin:6px 0 8px">Your Overall is a <b>weighted</b> average — these slots count extra, best first:</p>
+          <p style="margin:6px 0 8px">Your Overall is a <b>weighted</b> average · these slots count extra, best first:</p>
           <table>
-            <tr><td class="w">1.2×</td><td><b>Finishing, Pace</b> — goals win 1v1s. Your two best cards go here.</td></tr>
-            <tr><td class="w">1.1×</td><td><b>Dribbling, Shot Power, Passing, Clutch</b> — strong seconds.</td></tr>
-            <tr><td class="w">1.0×</td><td><b>Heading, Physical</b> — count normally.</td></tr>
-            <tr><td class="w">0.7×</td><td><b>Frame</b> — height is only a nudge for a striker; the ideal dump slot.</td></tr>
+            <tr><td class="w">1.2×</td><td><b>Finishing, Pace</b> · goals win 1v1s. Your two best cards go here.</td></tr>
+            <tr><td class="w">1.1×</td><td><b>Dribbling, Shot Power, Passing, Clutch</b> · strong seconds.</td></tr>
+            <tr><td class="w">1.0×</td><td><b>Heading, Physical</b> · count normally.</td></tr>
+            <tr><td class="w">0.7×</td><td><b>Frame</b> · height is only a nudge for a striker; the ideal dump slot.</td></tr>
           </table>
         </div>
       </details>
@@ -1113,7 +1113,7 @@ const SLOTS = [
   { key: 'frame',     label: 'Frame',      part: 'Height',        mask: 'soc-seg-frame.png',     ax: 51, ay: 55, lx: 9,  ly: 52, type: 'height' },
 ];
 
-// Career clubs (Signing Day, transfers): 30 famous sides. color = kit primary; tid = EA club id —
+// Career clubs (Signing Day, transfers): 30 famous sides. color = kit primary; tid = EA club id -
 // the crest is looked up from DATA.teams at runtime (unlicensed clubs get EA's generic crest).
 const CLUBS = {
   RMA:{name:'Real Madrid',color:'#d9d5c4',tid:243}, BAR:{name:'FC Barcelona',color:'#a50044',tid:241},
@@ -1416,7 +1416,7 @@ async function init() {
     $('installNowBtn').style.display = 'none';
   };
   document.querySelectorAll('.overlay-close').forEach(b => b.onclick = () => closeOverlay(b.dataset.close));
-  // .locked overlays (mid-career decisions) can't be dismissed — the player must choose
+  // .locked overlays (mid-career decisions) can't be dismissed · the player must choose
   document.querySelectorAll('.overlay').forEach(o => o.addEventListener('click', e => { if (e.target === o && !o.classList.contains('locked')) closeOverlay(o.id); }));
   document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.overlay.show:not(.locked)').forEach(o => closeOverlay(o.id)); });
   renderAcct();
@@ -1447,7 +1447,7 @@ async function init() {
   else if (h === 'leaderboard' || h === 'lb') setTimeout(() => openLeaderboard('global'), 250);
   else if (h === 'hof') setTimeout(openHof, 250);
 
-  // ?b=<scoreId> — a shared build link: show that career + the "Beat this career" challenge
+  // ?b=<scoreId> · a shared build link: show that career + the "Beat this career" challenge
   const sharedId = new URLSearchParams(location.search).get('b');
   if (sharedId) loadSharedBuild(sharedId);
 }
@@ -1645,7 +1645,7 @@ function pickWeighted(rng) {
   return DATA.pool[lo];
 }
 const LEGEND_ODDS = 0.04;
-const PRIME_ODDS = 0.05;   // era "Prime" cards ('13 Heat LeBron, '16 Steph...) — own rare roll, like legends
+const PRIME_ODDS = 0.05;   // era "Prime" cards ('13 Heat LeBron, '16 Steph...) · own rare roll, like legends
 function randHitter(rng) {
   const rand = rng || Math.random;
   const legs = DATA.legends || [];
@@ -1764,7 +1764,7 @@ let reelTween = null;
 function stopSpin() {
   if (!state.spinning || !reelTween) return;
   Sound.click();
-  if (reelTween.progress) reelTween.progress(1);   // jump to the end — fires the tween's onComplete
+  if (reelTween.progress) reelTween.progress(1);   // jump to the end · fires the tween's onComplete
 }
 
 function centerOffset(index, frameW) { return index * CARD_W - (frameW / 2) + 75 + 14; }
@@ -1890,7 +1890,7 @@ function updateProgress(n) {
 }
 
 // 🔭 Scout (Season Track consumable): peek the card the NEXT spin will land on.
-// Solo builds only — Daily (same-day fairness) and Hard Mode keep everyone blind.
+// Solo builds only · Daily (same-day fairness) and Hard Mode keep everyone blind.
 function scout() {
   if (state.spinning || dailyMode || hardMode || state.scoutTarget) return;
   if (!(window.SeasonTrack && SeasonTrack.useItem('scout'))) { updateScoutUI(); return; }
@@ -1913,7 +1913,7 @@ function updateScoutUI() {
 }
 
 // 🔁 Re-sim (Season Track consumable): re-roll a finished career on a fresh seed.
-// The build/OVR are untouched, so leaderboard ranking can't move — it's a new story.
+// The build/OVR are untouched, so leaderboard ranking can't move · it's a new story.
 function updateResimBtn() {
   const b = $('resimBtn');
   if (!b) return;
@@ -2181,7 +2181,7 @@ function todayUTC() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
-// Soccer's daily ROTATES striker/keeper on a 2-day cycle (date-seeded, same worldwide) — one
+// Soccer's daily ROTATES striker/keeper on a 2-day cycle (date-seeded, same worldwide) · one
 // shared soccer daily per day, mirroring baseball's pitcher/batter rotation.
 function dailyGameFor(s) { const days = Math.floor(Date.parse(s + 'T00:00:00Z') / 86400000); return (days % 2 === 1) ? 'striker' : 'keeper'; }
 function getOrCreateGuestId() {
@@ -2360,7 +2360,7 @@ function dayToast(msg) {
   clearTimeout(t._tmr); t._tmr = setTimeout(() => gsap.to(t, { opacity: 0, y: -10, duration: .4, onComplete: () => { t.style.display = 'none'; } }), 4800);
 }
 
-// personal best is split per game (the two OVR scales differ — batters can top 99).
+// personal best is split per game (the two OVR scales differ · batters can top 99).
 function dailyBest() { try { return Number(localStorage.getItem('pl_dc_best_striker') || '0') || 0; } catch (e) { return 0; } }
 function setDailyBest(v) { try { localStorage.setItem('pl_dc_best_striker', String(v)); } catch (e) {} }
 
@@ -2385,7 +2385,7 @@ function updateDailyBtn() {
   if (dailyGameFor(todayUTC()) !== LEADERBOARD_GAME) {   // off-day: today's daily lives in the sibling game
     btn.textContent = '🎯 Daily ↗';
     btn.classList.remove('pulse'); btn.classList.remove('done');
-    btn.title = "Today's daily is the other game's — tap to jump over";
+    btn.title = "Today's daily is the other game's · tap to jump over";
     return;
   }
   const done = getDailyStatus();
@@ -2407,7 +2407,7 @@ function showDailyInfo() {
 }
 function hideDailyInfo() { const el = $('dailyInfo'); if (el) el.style.display = 'none'; }
 async function startDailyChallenge() {
-  // Off-day: today's soccer daily is the other game — hand off to it.
+  // Off-day: today's soccer daily is the other game · hand off to it.
   if (dailyGameFor(todayUTC()) !== LEADERBOARD_GAME) {
     const local = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
     location.href = (LEADERBOARD_GAME === 'striker' ? (local ? '/build-a-keeper.html' : '/keeper') : (local ? '/build-a-striker.html' : '/striker')) + '#daily';
@@ -2598,7 +2598,7 @@ function bumpDailyAch() {
 }
 
 /* ===== Achievements (shared board across both games) =====
-   Only the achievements that map to the batter game are wired here — the pitcher-specific ones
+   Only the achievements that map to the batter game are wired here · the pitcher-specific ones
    (career strikeouts / wins, the K+stamina "Glass Cannon") simply never fire, which is correct. */
 function parseHeightIn(s) {
   const m = String(s || '').match(/(\d+)\s*'\s*(\d+)/);
@@ -2743,7 +2743,7 @@ function simulateCareer(filled, finalOvr, draftTeamAb, choices, salt) {
   const vals = {};
   for (const s of SLOTS) vals[s.key] = filled[s.key].value;
   const seed = SLOTS.map(s => `${s.key}:${vals[s.key]}:${filled[s.key].player || filled[s.key].name}`).join('|');
-  // salt = Re-sim token re-rolls ('' for a normal run — byte-identical to the original sim)
+  // salt = Re-sim token re-rolls ('' for a normal run · byte-identical to the original sim)
   const rng = seededRandom(seed + '|striker-career-v1' + (salt || ''));
   const role = strikerRole(vals);
   const nation = buildNation(filled);
@@ -2880,7 +2880,7 @@ function simulateCareer(filled, finalOvr, draftTeamAb, choices, salt) {
     const a90 = clamp((aSkill - 58) * 0.0075 + bell(rng, 0.03), 0.01, 0.6);
     const assists = Math.round(apps * a90);
     const rating = clamp(6.32 + g90 * 1.3 + a90 * 0.75 + (seasonOvr - 78) * 0.012 + bell(rng, 0.12), 5.8, 9.8);
-    const war = round(rating, 2);   // season match rating — the soccer "WAR" column
+    const war = round(rating, 2);   // season match rating · the soccer "WAR" column
 
     // silverware: the league title & Champions League ride on club quality + your season
     const title = rng() < clamp(0.13 + currentTeamQuality * 0.9 + (rating - 7.2) * 0.09, 0.02, 0.62);
@@ -2897,7 +2897,7 @@ function simulateCareer(filled, finalOvr, draftTeamAb, choices, salt) {
     const wcWin = wc && rng() < clamp(0.07 + natQuality + (clutch - 70) * 0.0018 + (rating - 7.3) * 0.03, 0.015, 0.3);
     const wcBoot = wc && wcGoals >= 6 && rng() < 0.5;
 
-    // Ballon d'Or: you must out-shine the whole planet — numbers + trophies + moments
+    // Ballon d'Or: you must out-shine the whole planet · numbers + trophies + moments
     const mvpDom = (goals - 26) * 0.045 + (rating - 7.45) * 1.8 + (ucl ? 0.8 : 0) + (title ? 0.25 : 0)
       + (wcWin ? 1.2 : 0) + Math.min(Math.max(0, finalOvr - 87) * 0.4, 3.2);
     const mvp = rng() < clamp(mvpDom * 0.07, 0, 0.4);
@@ -2940,7 +2940,7 @@ function simulateCareer(filled, finalOvr, draftTeamAb, choices, salt) {
         if (pick == null) { ask('twilight', age); break; }
         applyChoice('twilight', pick, age);
         if (pick !== 'walk') { endAge = age + 1; continue; }   // one more season
-        break;   // walked away — no exit stamp (would rewrite an already-shown row)
+        break;   // walked away · no exit stamp (would rewrite an already-shown row)
       }
       season.exit = 'faded'; break;
     }
@@ -2957,7 +2957,7 @@ function simulateCareer(filled, finalOvr, draftTeamAb, choices, salt) {
     }
   }
 
-  // sim halted at an unanswered decision: hand back what's played so far — the
+  // sim halted at an unanswered decision: hand back what's played so far · the
   // playback shows it, asks the player, and re-runs with the pick appended
   if (pendingDecision) {
     return { version: 1, seed, role, nation, draftTeam: draftTeamAb || (seasons[0] && seasons[0].team), seasons, decisions, pendingDecision };
@@ -3018,7 +3018,7 @@ function ordinal(n) {
 }
 
 function getTransferFee(ovr, rng) {
-  // headline transfer fee in $M — scales hard with the build (200M+ = world-record territory)
+  // headline transfer fee in $M · scales hard with the build (200M+ = world-record territory)
   const base = ovr >= 95 ? 185 + rng() * 65 : ovr >= 90 ? 120 + rng() * 55 : ovr >= 85 ? 70 + rng() * 40
     : ovr >= 80 ? 40 + rng() * 25 : ovr >= 75 ? 18 + rng() * 15 : ovr >= 70 ? 8 + rng() * 8 : 2 + rng() * 5;
   return Math.round(base);
@@ -3058,7 +3058,7 @@ function runDraftAnimation({ feeM, teamAbbr, teamName, tColor, hitter, ovr, role
   const divider = overlay.querySelector('.draft-divider');
   const call = $('draftCall');
   const selecting = $('draftSelecting');
-  // cinematic stage bits — created once, reused every run
+  // cinematic stage bits · created once, reused every run
   let spot = overlay.querySelector('.draft-spot');
   if (!spot) { spot = document.createElement('div'); spot.className = 'draft-spot'; overlay.prepend(spot); }
   let confetti = overlay.querySelector('.draft-confetti');
@@ -3066,7 +3066,7 @@ function runDraftAnimation({ feeM, teamAbbr, teamName, tColor, hitter, ovr, role
   confetti.innerHTML = '';
   const callText = `The fax machine hums... a ${feeM}M bid is accepted...`;
   call.textContent = '';
-  // the reveal wears the club's colors — flipped in like a draft card
+  // the reveal wears the club's colors · flipped in like a draft card
   reveal.style.cssText = `margin-top:22px; padding:20px 18px 22px; border-radius:16px; border:1px solid ${bColor}66;` +
     `background:linear-gradient(165deg, ${bColor}24, rgba(10,16,26,.92) 58%); box-shadow:0 24px 70px rgba(0,0,0,.55), 0 0 46px -12px ${bColor}aa;`;
   gsap.set([league, headline, roundTag, divider, call, selecting, reveal], { opacity: 0, y: 0 });
@@ -3254,7 +3254,7 @@ function runCareerPlaythrough() {
 
 function careerEventsOn() { try { return localStorage.getItem('pl_careerEvents') !== '0'; } catch (e) { return true; } }
 
-// Mid-career decision prompt: a locked overlay (no backdrop/Escape dismissal —
+// Mid-career decision prompt: a locked overlay (no backdrop/Escape dismissal -
 // the career is paused until the player commits to a path).
 function showDecisionModal(pd, onPick) {
   $('decAge').textContent = pd.age;
@@ -3271,7 +3271,7 @@ function showDecisionModal(pd, onPick) {
     b.onclick = () => { Sound.click(); closeOverlay('decisionModal'); onPick(o.key); };
     wrap.appendChild(b);
   });
-  Sound.whoosh();   // soft cue, not a celebratory chime — this is a quiet fork in the road
+  Sound.whoosh();   // soft cue, not a celebratory chime · this is a quiet fork in the road
   openOverlay('decisionModal');
   gsap.fromTo(wrap.children, { y: 12, opacity: 0 }, { y: 0, opacity: 1, duration: .34, stagger: .09, delay: .12, ease: 'power2.out' });
 }
@@ -3426,7 +3426,7 @@ function finishPlaythrough(career) {
   }
 
   buildCard(career, verdict, voteLine);
-  // "Beat this career" — shared-link challenge verdict (higher OVR wins, WS breaks ties)
+  // "Beat this career" · shared-link challenge verdict (higher OVR wins, WS breaks ties)
   if (beatTarget) {
     const b = beatTarget; beatTarget = null;
     const win = state.finalOvr > b.ovr || (state.finalOvr === b.ovr && (Number(t.war) || 0) >= (Number(b.war) || 0));
@@ -3471,7 +3471,7 @@ function trophyParts(t) {
   return trophies;
 }
 
-// Pure career-card markup — used for YOUR card and for cards arriving via /p/<id> share links.
+// Pure career-card markup · used for YOUR card and for cards arriving via /p/<id> share links.
 // d = { career, verdict, voteLine, name, ovr, teamAb }
 function careerCardHTML(d) {
   const career = d.career, t = career.totals;
@@ -3558,7 +3558,7 @@ async function shareCareerCard() {
   try { gtag('event', 'share_card', { game: LEADERBOARD_GAME, ovr: state.finalOvr, mode: res.mode }); } catch (e) {}
 }
 
-// ?b=<scoreId> — someone opened a shared build link: show their career card + "Beat this career".
+// ?b=<scoreId> · someone opened a shared build link: show their career card + "Beat this career".
 let beatTarget = null;
 async function loadSharedBuild(id) {
   try {
@@ -3566,7 +3566,7 @@ async function loadSharedBuild(id) {
     const data = await res.json();
     if (!data.ok || !data.entry) return;
     const entry = data.entry;
-    if (entry.game && entry.game !== LEADERBOARD_GAME) {   // wrong game page for this build — hop over
+    if (entry.game && entry.game !== LEADERBOARD_GAME) {   // wrong game page for this build · hop over
       const path = entry.game === 'batter' ? '/batting' : entry.game === 'baller' ? '/hoops' : entry.game === 'keeper' ? '/keeper' : '/pitching';
       location.replace(`${path}?b=${entry.id}`);
       return;
@@ -3699,7 +3699,7 @@ function headshotByName(name) {
 }
 const TIER_LABELS = { grey: 'Common', bronze: 'Bronze', silver: 'Silver', gold: 'Gold', diamond: 'Diamond', legend: 'Legend' };
 // Mini team-colored figure for a leaderboard build - per game, keyed by slot label (works for either board).
-// Every game's mini-figure config — leaderboards show all five games' builds on every page.
+// Every game's mini-figure config · leaderboards show all five games' builds on every page.
 const GAME_LABEL = { pitcher: 'Pitcher', batter: 'Batter', baller: 'Hooper', striker: 'Striker', keeper: 'Keeper' };
 const FIG_CONFIG = {
   pitcher: { base: 'pitcher-figure.png', masks: { 'Velocity': 'seg-pitch_velocity.png', 'Break': 'seg-pitch_movement.png', 'Strikeout': 'seg-k_per_bf.png', 'Ground Ball': 'seg-hr_per_bf.png', 'Command': 'seg-pitch_control.png', 'Clutch': 'seg-pitching_clutch.png', 'Defense': 'seg-fielding_ability.png', 'Frame': 'seg-frame.png', 'Stamina': 'seg-stamina.png' } },
@@ -3815,7 +3815,7 @@ function initTilt() {
 
 function reset() {
   dailyMode = false; dailyRng = null;   // a fresh game is never a daily until startDailyChallenge says so
-  // Hard Mode is settable from the ☰ menu now — re-read it so a toggle applies to the NEXT build
+  // Hard Mode is settable from the ☰ menu now · re-read it so a toggle applies to the NEXT build
   // (never mid-run: the current run keeps the setting it started with).
   try { hardMode = localStorage.getItem('pl_hardMode') === '1'; } catch (e) {}
   { const _t = document.querySelector('header .tag'); if (_t && !_t.classList.contains('dc-header-tag')) _t.textContent = hardMode ? 'Hard Mode 🙈' : 'Draft Mode'; }
