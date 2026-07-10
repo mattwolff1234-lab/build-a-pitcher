@@ -6,8 +6,8 @@
      - Fetches /api/hot (real MLB box-score studs, computed server-side daily).
      - Hot.ready  -> promise resolving to the list (always resolves, [] on error).
      - Hot.get(mlbamId) / Hot.list() -> used by the games to boost hot cards.
-     - Hot.open() -> the bulletin overlay; auto-opens once per local day
-       (localStorage 'pl_hot_seen'), skipped when a #hash deep-link is present.
+     - Hot.open() -> the bulletin overlay. NO auto-open: it lives only behind the
+       ☰ "🔥 Last Night's Studs" menu item (the daily popup was removed 2026-07-11).
    ========================================================================== */
 (function () {
   'use strict';
