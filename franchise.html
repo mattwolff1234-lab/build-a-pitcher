@@ -254,6 +254,7 @@ button.btn.danger { color:#ffdede; background:rgba(255,77,94,.14); border:1px so
     <button class="frtab" data-tab="myteam">👥 My Team</button>
     <button class="frtab" data-tab="league">🌐 League</button>
     <button class="frtab" data-tab="trades">🔁 Trade Hub<span class="n" id="tradeBadge" style="display:none">!</span></button>
+    <button class="frtab" data-tab="clubs">👥 Clubs</button>
     <button class="frtab" data-tab="history">📜 History</button>
   </div>
 
@@ -340,7 +341,21 @@ button.btn.danger { color:#ffdede; background:rgba(255,77,94,.14); border:1px so
     <div class="panel tsummary" id="thSummary" style="display:none"></div>
   </section>
 
-  <!-- ============ 2e. History ============ -->
+  <!-- ============ 2e. Clubs (skeleton — daily league sim ships next) ============ -->
+  <section class="screen" id="scrClubs">
+    <div class="eyebrow">Play the humans</div>
+    <h1 class="h">Club <i>Leagues</i></h1>
+    <p class="sub" style="max-width:640px">A club is <b>8 real GMs</b>. Everyone brings their franchise squad, and the league plays
+      <b>one game per real day</b> — results sim automatically from the rosters, so nobody has to be online at the same time.
+      Check in each morning like a daily challenge, talk trash, win the club title.</p>
+    <div class="panel" style="padding:12px 14px;margin:12px 0;border-color:rgba(255,210,63,.4)">
+      <span style="font-family:'Oswald',sans-serif;font-size:11px;letter-spacing:2px;color:var(--gold);text-transform:uppercase">🚧 Early access</span>
+      <span class="sub" style="display:block;margin-top:4px">Clubs can <b>form now</b> — grab your crew and claim a name. The daily season itself flips on in an upcoming update, and full clubs are first in line.</span>
+    </div>
+    <div id="clubBody"><div class="hint">Checking your club…</div></div>
+  </section>
+
+  <!-- ============ 2f. History ============ -->
   <section class="screen" id="scrHistory">
     <div class="eyebrow">The record books</div>
     <h1 class="h">Franchise <i>History</i></h1>
@@ -1213,6 +1228,97 @@ function proposeTrade(theirIdx) {
   }
 }
 
+/* ---------- Clubs (skeleton: form real 8-GM clubs now; daily league sim ships next) ---------- */
+function guestId() {
+  let id = null;
+  try { id = localStorage.getItem('pl_guestId'); } catch (e) {}
+  if (!id) { id = 'g_' + Math.random().toString(36).slice(2) + Date.now().toString(36); try { localStorage.setItem('pl_guestId', id); } catch (e) {} }
+  return id;
+}
+function clubPrincipal() {
+  const a = acct();
+  let nm = F ? F.name : 'GM';
+  try { nm = localStorage.getItem('pl_guestName') || nm; } catch (e) {}
+  if (a && a.sub && a.sessionToken) return { sub: a.sub, sessionToken: a.sessionToken, playerName: nm };
+  return { guestId: guestId(), name: nm, playerName: nm };
+}
+// slim snapshot of the current squad — what your club rivals will face daily
+function rosterSnapshot() {
+  return F.rotation.concat(F.lineup).filter(Boolean).map(p => ({ name: p.name, ovr: p.ovr, age: p.age, game: p.game }));
+}
+function clubApi(action, extra) {
+  return fetch('/api/account', { method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(Object.assign({ action }, clubPrincipal(), extra || {})) }).then(r => r.json());
+}
+let clubBusy = false;
+async function renderClubs() {
+  const body = $('clubBody');
+  let r = null;
+  try { r = await clubApi('clubGet'); } catch (e) {}
+  if (tab !== 'clubs') return;   // user moved on while we fetched
+  if (!r || !r.ok) { body.innerHTML = '<div class="hint">Could not reach the club office — check your connection and try again.</div>'; return; }
+  if (!r.club) {
+    body.innerHTML = `
+      <div class="tstep">Start a club</div>
+      <div class="panel" style="padding:14px;max-width:460px">
+        <input id="clubName" maxlength="24" placeholder="Club name — e.g. The Basement League" style="width:100%;box-sizing:border-box;font-family:'Oswald',sans-serif;font-size:15px;color:var(--ink);background:rgba(8,14,24,.8);border:1px solid var(--line);border-radius:9px;padding:10px 12px;outline:none">
+        <button class="btn" id="clubCreate" style="margin-top:10px;width:100%">🏛️ Create club — get an invite code</button>
+      </div>
+      <div class="tstep">Or join your friends</div>
+      <div class="panel" style="padding:14px;max-width:460px">
+        <input id="clubCode" maxlength="12" placeholder="Invite code — e.g. 7F2A9C" style="width:100%;box-sizing:border-box;font-family:'Oswald',sans-serif;font-size:15px;letter-spacing:3px;text-transform:uppercase;color:var(--ink);background:rgba(8,14,24,.8);border:1px solid var(--line);border-radius:9px;padding:10px 12px;outline:none">
+        <button class="btn cy" id="clubJoin" style="margin-top:10px;width:100%">🎟️ Join with code</button>
+      </div>
+      <div class="hint">Your current 14-man squad rides along as your club roster snapshot.</div>`;
+    $('clubCreate').onclick = async () => {
+      if (clubBusy) return; clubBusy = true;
+      const j = await clubApi('clubCreate', { name: $('clubName').value, roster: rosterSnapshot() }).catch(() => null);
+      clubBusy = false;
+      if (j && j.ok) { toast(`${j.club.name} founded — invite code ${j.club.code}`); renderClubs(); }
+      else toast((j && j.error) || 'Could not create the club.');
+    };
+    $('clubJoin').onclick = async () => {
+      if (clubBusy) return; clubBusy = true;
+      const j = await clubApi('clubJoin', { code: $('clubCode').value, roster: rosterSnapshot() }).catch(() => null);
+      clubBusy = false;
+      if (j && j.ok) { toast(`Welcome to ${j.club.name}!`); renderClubs(); }
+      else toast((j && j.error) || 'Could not join.');
+    };
+    return;
+  }
+  const C = r.club;
+  const seats = C.members.map(m => `<div class="prow" style="cursor:default">
+      <span class="pos">GM</span>
+      <span class="nm">${m.you ? '⭐ ' : ''}${escapeHTML(m.name)}</span>
+      <span class="age">${m.teamOvr ? m.teamOvr + ' OVR' : 'no squad yet'}</span></div>`).join('')
+    + Array.from({ length: Math.max(0, 8 - C.members.length) }, () =>
+      `<div class="prow" style="cursor:default;opacity:.45;border-style:dashed"><span class="pos">GM</span><span class="nm">Open seat — share the code</span></div>`).join('');
+  body.innerHTML = `
+    <div class="panel" style="padding:16px">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <span style="font-family:'Oswald',sans-serif;font-size:20px;font-weight:700;letter-spacing:1px;text-transform:uppercase">${escapeHTML(C.name)}</span>
+        <span class="frseason">${C.members.length}/8 GMs</span>
+        <span class="frseason" style="cursor:pointer" id="clubCopy" title="Copy invite code">🎟️ ${escapeHTML(C.code)} — copy</span>
+      </div>
+      <div class="sub" style="margin-top:8px">${C.members.length >= 8
+        ? '🔥 Club is FULL — you\'re first in line when daily seasons flip on.'
+        : 'Share the invite code. When daily seasons launch, one game sims per real day — no scheduling, no waiting on anyone.'}</div>
+      <div style="margin-top:12px">${seats}</div>
+      <button class="btn danger" id="clubLeave" style="margin-top:12px">Leave club</button>
+    </div>`;
+  $('clubCopy').onclick = () => {
+    try { navigator.clipboard.writeText(C.code); toast('Invite code copied — send it to your crew.'); }
+    catch (e) { toast('Code: ' + C.code); }
+  };
+  $('clubLeave').onclick = async () => {
+    if (clubBusy) return; clubBusy = true;
+    await clubApi('clubLeave').catch(() => null);
+    clubBusy = false;
+    toast('You cleared out your office.');
+    renderClubs();
+  };
+}
+
 /* ---------- History ---------- */
 function renderHistory() {
   const hist = (F.history || []).slice().reverse();
@@ -1423,6 +1529,7 @@ function render() {
     if (tab === 'myteam') { show('scrMyTeam'); renderMyTeam(); return; }
     if (tab === 'league') { show('scrLeague'); renderLeague(); return; }
     if (tab === 'trades' && F.phase === 'season' && F.day < TRADE_DEADLINE) { show('scrTrades'); renderTrades(); return; }
+    if (tab === 'clubs') { show('scrClubs'); renderClubs(); return; }
     if (tab === 'history') { show('scrHistory'); renderHistory(); return; }
     tab = 'season';
   }

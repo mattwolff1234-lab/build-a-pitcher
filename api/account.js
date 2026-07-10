@@ -178,6 +178,25 @@ function ensure() {
       await sql`CREATE INDEX IF NOT EXISTS idx_challenges_from ON challenges (from_key, status)`;
       // Franchise mode: one save blob per account (see franchise.html + franchiseSync)
       await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS franchise jsonb`;
+      // Club Leagues (skeleton): 8 real people per club, each with a franchise-roster
+      // snapshot. status 'forming' until the daily-league sim ships and flips it live.
+      await sql`CREATE TABLE IF NOT EXISTS clubs (
+        id text PRIMARY KEY,
+        name text NOT NULL,
+        code text NOT NULL UNIQUE,
+        owner_key text NOT NULL,
+        status text NOT NULL DEFAULT 'forming',
+        created_at timestamptz NOT NULL DEFAULT now()
+      )`;
+      await sql`CREATE TABLE IF NOT EXISTS club_members (
+        club_id text NOT NULL,
+        player_key text NOT NULL,
+        name text,
+        roster jsonb,
+        joined_at timestamptz NOT NULL DEFAULT now(),
+        PRIMARY KEY (club_id, player_key)
+      )`;
+      await sql`CREATE INDEX IF NOT EXISTS idx_club_members_player ON club_members (player_key)`;
     })().catch(e => { ready = null; throw e; });   // don't cache a transient failure forever
   }
   return ready;
@@ -900,6 +919,82 @@ module.exports = async (req, res) => {
           }
         }
         return res.status(200).json({ ok: true, franchise: stored });
+      }
+
+      // ===================================================================
+      // Club Leagues (SKELETON). Real people form 8-member clubs now; the daily
+      // league itself (one deterministic game per real day computed from
+      // clubId + date + roster snapshots, so nobody has to be online together)
+      // ships in a follow-up. One club per player. Guests welcome (pvpKey).
+      // ===================================================================
+      const clubRosterOf = raw => {
+        if (!Array.isArray(raw)) return [];
+        return raw.slice(0, 14).map(p => ({
+          name: String((p && p.name) || 'Player').slice(0, 26),
+          ovr: Math.max(40, Math.min(99, Math.round(Number(p && p.ovr) || 60))),
+          age: Math.max(18, Math.min(45, Math.round(Number(p && p.age) || 23))),
+          game: (p && p.game) === 'pitcher' ? 'pitcher' : 'batter',
+        }));
+      };
+
+      if (action === 'clubCreate') {
+        const key = await pvpKey(body);
+        if (!key) return res.status(401).json({ ok: false, error: 'Not signed in' });
+        const [existing] = await sql`SELECT club_id FROM club_members WHERE player_key = ${key}`;
+        if (existing) return res.status(400).json({ ok: false, error: 'Already in a club — leave it first' });
+        const name = String(body.name || '').trim().slice(0, 24) || 'The Club';
+        const id = 'club_' + crypto.randomBytes(6).toString('hex');
+        const code = crypto.randomBytes(3).toString('hex').toUpperCase();
+        await sql`INSERT INTO clubs (id, name, code, owner_key) VALUES (${id}, ${name}, ${code}, ${key})`;
+        await sql`INSERT INTO club_members (club_id, player_key, name, roster)
+          VALUES (${id}, ${key}, ${String(body.playerName || 'GM').slice(0, 24)}, ${JSON.stringify(clubRosterOf(body.roster))}::jsonb)`;
+        return res.status(200).json({ ok: true, club: { id, name, code, status: 'forming', members: 1 } });
+      }
+
+      if (action === 'clubJoin') {
+        const key = await pvpKey(body);
+        if (!key) return res.status(401).json({ ok: false, error: 'Not signed in' });
+        const [existing] = await sql`SELECT club_id FROM club_members WHERE player_key = ${key}`;
+        if (existing) return res.status(400).json({ ok: false, error: 'Already in a club — leave it first' });
+        const code = String(body.code || '').trim().toUpperCase().slice(0, 12);
+        const [club] = await sql`SELECT id, name, code, status FROM clubs WHERE code = ${code}`;
+        if (!club) return res.status(404).json({ ok: false, error: 'No club with that invite code' });
+        const [{ count: n }] = await sql`SELECT count(*)::int AS count FROM club_members WHERE club_id = ${club.id}`;
+        if (n >= 8) return res.status(400).json({ ok: false, error: 'That club is full (8 GMs)' });
+        await sql`INSERT INTO club_members (club_id, player_key, name, roster)
+          VALUES (${club.id}, ${key}, ${String(body.playerName || 'GM').slice(0, 24)}, ${JSON.stringify(clubRosterOf(body.roster))}::jsonb)
+          ON CONFLICT DO NOTHING`;
+        return res.status(200).json({ ok: true, club: { id: club.id, name: club.name, code: club.code, status: club.status, members: n + 1 } });
+      }
+
+      if (action === 'clubGet') {
+        const key = await pvpKey(body);
+        if (!key) return res.status(401).json({ ok: false, error: 'Not signed in' });
+        const [mem] = await sql`SELECT club_id FROM club_members WHERE player_key = ${key}`;
+        if (!mem) return res.status(200).json({ ok: true, club: null });
+        const [club] = await sql`SELECT id, name, code, status, owner_key, created_at FROM clubs WHERE id = ${mem.club_id}`;
+        if (!club) { await sql`DELETE FROM club_members WHERE player_key = ${key}`; return res.status(200).json({ ok: true, club: null }); }
+        const rows = await sql`SELECT player_key, name, roster, joined_at FROM club_members WHERE club_id = ${club.id} ORDER BY joined_at`;
+        const members = rows.map(r => {
+          const ros = Array.isArray(r.roster) ? r.roster : [];
+          const ovr = ros.length ? Math.round(ros.reduce((s, p) => s + (Number(p.ovr) || 60), 0) / ros.length) : null;
+          return { name: r.name || 'GM', you: r.player_key === key, teamOvr: ovr, joined: r.joined_at };
+        });
+        return res.status(200).json({ ok: true, club: {
+          id: club.id, name: club.name, code: club.code, status: club.status,
+          owner: club.owner_key === key, members,
+        }});
+      }
+
+      if (action === 'clubLeave') {
+        const key = await pvpKey(body);
+        if (!key) return res.status(401).json({ ok: false, error: 'Not signed in' });
+        const [mem] = await sql`SELECT club_id FROM club_members WHERE player_key = ${key}`;
+        if (!mem) return res.status(200).json({ ok: true });
+        await sql`DELETE FROM club_members WHERE club_id = ${mem.club_id} AND player_key = ${key}`;
+        const [{ count: left }] = await sql`SELECT count(*)::int AS count FROM club_members WHERE club_id = ${mem.club_id}`;
+        if (left === 0) await sql`DELETE FROM clubs WHERE id = ${mem.club_id}`;
+        return res.status(200).json({ ok: true });
       }
 
       // ===================================================================
