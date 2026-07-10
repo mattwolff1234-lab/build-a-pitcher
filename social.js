@@ -975,5 +975,10 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => { startPolling(); watchAcct(); });
   else { startPolling(); watchAcct(); }
 
-  window.Social = { open, openProfile, refresh, setAvatar, count: pendingCount };
+  // Registry lookup for other modules (versus match flair): {emoji,bg,src,name} or null.
+  function avatarMeta(id) {
+    const a = id && AVATARS[id];
+    return a ? { emoji: a.emoji, bg: a.bg, src: a.src, name: a.name } : null;
+  }
+  window.Social = { open, openProfile, refresh, setAvatar, avatarMeta, myAvatar, count: pendingCount };
 })();

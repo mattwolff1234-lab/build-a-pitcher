@@ -966,7 +966,23 @@ let ably=null, clientId=null;
 let myRole=null, oppRole=null, matchId=null, seed=0, oppId=null, wasClaimer=false;
 let inviteCh=null, matchCh=null;
 let rematchOffered=false, rematchOppOffer=null, rematchCountdown=null, rematchSec=10;
-let oppPresenceName='', oppPresenceElo=0;
+let oppPresenceName='', oppPresenceElo=0, oppPresenceAvatar=null;
+// ---- avatar flair: `avatar` rides ADDITIVELY on the presence/build/forfeit messages (old
+// clients ignore extra fields). Render via Social.avatarMeta (social.js registry); falls
+// back to an initial-letter circle when there's no avatar or social.js didn't load. ----
+function myAvatarId(){ try{ return localStorage.getItem('pl_avatar') || null; }catch(e){ return null; } }
+function oppAvatarId(){ return oppPresenceAvatar || (oppBuild && oppBuild.avatar) || null; }
+function avatarChipHTML(av, name, size){
+  const s = size || 24;
+  const meta = (window.Social && Social.avatarMeta) ? Social.avatarMeta(av) : null;
+  const st = 'display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;overflow:hidden;position:relative;'+
+    `width:${s}px;height:${s}px;border-radius:50%;vertical-align:${-Math.round(s*.28)}px;border:2px solid rgba(120,170,220,.35);`+
+    `background:${meta?meta.bg:'#182334'};font-family:'Oswald',sans-serif;font-weight:700;color:#3bd1ff;font-size:${Math.round(s*.5)}px;line-height:1;`;
+  const inner = meta
+    ? `<span style="font-size:${Math.round(s*.58)}px;line-height:1">${meta.emoji}</span><img src="${meta.src}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.remove()">`
+    : escapeHTML(String(name||'P').trim().charAt(0).toUpperCase()||'P');
+  return `<span style="${st}">${inner}</span>`;
+}
 let friendlyMode=false;
 let gameMode='classic'; // 'classic' | 'legends' | 'hard'
 let lobbyWaiting=false;
@@ -1547,7 +1563,7 @@ function resetMatch(){
   friendlyMode=false; pendingChallenge=null;
   if ($('challengeNotif')) { gsap.killTweensOf($('challengeNotif')); $('challengeNotif').style.display='none'; }
   myBuild=null; oppBuild=null; atBatStarted=false; matchResolved=false; oppPresent=false; waitingArena=false;
-  oppProg={filled:0,total:9}; oppPresenceName=''; oppPresenceElo=0;
+  oppProg={filled:0,total:9}; oppPresenceName=''; oppPresenceElo=0; oppPresenceAvatar=null;
   if ($('waitArena')) $('waitArena').classList.remove('show');
   stopWaitClock();
   if (clockTimer){ clearInterval(clockTimer); clockTimer=null; }
@@ -1577,7 +1593,7 @@ async function startMatch(mId, role, sd, opp, claimer, friendly=false){
   matchCh.presence.subscribe('enter', m => { if (m.clientId === clientId) return; oppPresent=true; cancelOppQuit(); captureOppPresence(m.data); updateOppPill(); });
   matchCh.presence.subscribe('present', m => { if (m.clientId === clientId) return; oppPresent=true; cancelOppQuit(); captureOppPresence(m.data); updateOppPill(); });
   matchCh.presence.subscribe('leave', m => { if (m.clientId === clientId) return; onOppLeave(); });
-  await matchCh.presence.enter({ role: myRole, name: displayName(), elo: myElo() });
+  await matchCh.presence.enter({ role: myRole, name: displayName(), elo: myElo(), avatar: myAvatarId() });
   try { const members = await matchCh.presence.get(); const opp = members.find(m => m.clientId !== clientId); if (opp){ oppPresent=true; captureOppPresence(opp.data); } } catch(e){}
 
   // Dead-waiter guard: if I claimed someone who never shows up, re-queue.
@@ -1595,11 +1611,15 @@ function captureOppPresence(data){
   if (!data) return;
   if (data.name) oppPresenceName = data.name;
   if (data.elo)  oppPresenceElo  = data.elo;
+  if (data.avatar) oppPresenceAvatar = data.avatar;
   updateOppChip();
 }
 function updateOppChip(){
   const nm = $('oppChipName'); if (!nm) return;
-  nm.textContent = (isGhost ? '👻 ' : '') + (oppPresenceName || 'Opponent');
+  nm.style.display='flex'; nm.style.alignItems='center'; nm.style.justifyContent='center'; nm.style.gap='7px';
+  nm.innerHTML = isGhost
+    ? '👻 ' + escapeHTML(oppPresenceName || 'Opponent')
+    : avatarChipHTML(oppAvatarId(), oppPresenceName, 26) + '<span>' + escapeHTML(oppPresenceName || 'Opponent') + '</span>';
   const el = $('oppChipElo');
   el.textContent = isGhost ? 'Ghost · a real recent build' : (oppPresenceElo ? ('⚡ ' + oppPresenceElo + ' Rating') : '');
 }
@@ -1947,7 +1967,7 @@ function finishBuild(){
   const slots = ROLE[myRole].slots.map(s=>buildState.filled[s.key]);
   const ovr = computeOvr(myRole, buildState.filled);
   const team = modalTeam(slots);
-  myBuild = { role:myRole, ovr, team, slots, elo: myElo(), name: displayName(), key: personId() };
+  myBuild = { role:myRole, ovr, team, slots, elo: myElo(), name: displayName(), key: personId(), avatar: myAvatarId() };
   publishBuild();
   updateOppPill();
   // Safety net: if the opponent never delivers a build (left/closed), don't hang forever.
@@ -1988,7 +2008,8 @@ function showWaitArena(){
   $('abSkipBtn').style.display='none'; $('abCount').classList.remove('show');
   gsap.set('#ball', { opacity:0 }); $('callout').textContent=''; $('pitchInfo').style.opacity=0;
   $('pitchSeq').innerHTML=''; gsap.set('#pitchSeq', { opacity:0 });
-  $('waTitle').textContent = 'Waiting for the ' + (mineStriker ? 'Keeper' : 'Striker') + '…';
+  $('waTitle').innerHTML = avatarChipHTML(oppAvatarId(), oppPresenceName, 22) + ' Waiting for ' +
+    (oppPresenceName ? escapeHTML(String(oppPresenceName).slice(0,16)) : ('the ' + (mineStriker ? 'Keeper' : 'Striker'))) + '…';
   $('waitArena').classList.add('show');
   waClockLeft = Math.max(0, clockLeft);   // shared shot clock was frozen at finish; count it down for display
   stopWaitClock();
@@ -2015,6 +2036,7 @@ function showNoContest(){
   resetRematchUI();
   $('resultCard').className = 'result-card';
   $('resultHead').textContent = 'NO CONTEST';
+  paintResultOpp('');
   $('resultLine').textContent = "Your opponent didn’t finish their build in time.";
   $('resultSub').textContent = 'No rating change - try another match.';
   $('ratingResult').innerHTML = '';
@@ -2070,6 +2092,7 @@ function showForfeitResult(iWon, filled, data={}){
   const card=$('resultCard'); card.className='result-card '+(iWon?'win':'lose');
   $('resultHead').textContent = iWon ? 'YOU WIN' : 'YOU LOSE';
   const oppName = data.name || ((oppBuild && oppBuild.name) ? oppBuild.name : 'your opponent');
+  paintResultOpp(data.name || (oppBuild && oppBuild.name) || oppPresenceName || '', data.avatar || oppAvatarId());
   $('resultLine').textContent = iWon
     ? (data.quit ? `${oppName} left the match.` : `${oppName} forfeited after ${filled} slot${filled===1?'':'s'} filled.`)
     : (data.quit ? 'You disconnected mid-match.' : `You forfeited after ${filled} slot${filled===1?'':'s'} filled.`);
@@ -2113,15 +2136,32 @@ async function publishBuild(){
     try{ matchCh.publish('build', myBuild); }catch(e){}
   }, 5000);
 }
-function publishForfeit(filled){ if(matchCh){ try{ matchCh.publish('forfeit',{ role:myRole, filled, total:ROLE[myRole].slots.length, elo:myElo(), name:displayName() }); }catch(e){} } }
+function publishForfeit(filled){ if(matchCh){ try{ matchCh.publish('forfeit',{ role:myRole, filled, total:ROLE[myRole].slots.length, elo:myElo(), name:displayName(), avatar: myAvatarId() }); }catch(e){} } }
 let oppProg={filled:0,total:9};
 function updateOppProgress(d){ oppProg=d; updateOppPill(); updateWaitArena(); }
 function updateOppPill(){
   const pill=$('oppPill');
-  if(oppBuild){ pill.textContent=(isGhost?'👻 Ghost':'Opponent')+': ready ✓'; pill.style.color='#7CE38B'; }
-  else if(oppPresent){ pill.textContent=`Opponent: building ${oppProg.filled}/${oppProg.total}`; pill.style.color='var(--muted)'; }
+  const oppNm = escapeHTML(String(oppPresenceName || (oppBuild && oppBuild.name) || 'Opponent').slice(0, 14));
+  const chip = avatarChipHTML(oppAvatarId(), oppPresenceName || (oppBuild && oppBuild.name), 16) + ' ';
+  if(oppBuild){ pill.innerHTML = isGhost ? '👻 Ghost: ready ✓' : chip + oppNm + ': ready ✓'; pill.style.color='#7CE38B'; }
+  else if(oppPresent){ pill.innerHTML = chip + oppNm + `: building ${oppProg.filled}/${oppProg.total}`; pill.style.color='var(--muted)'; }
   else { pill.textContent='Opponent: connecting…'; pill.style.color='var(--muted)'; }
   updateWaitArena();
+}
+// "vs 🐐 Name" strip on the result card (works for wins, losses, and forfeits)
+function paintResultOpp(name, av){
+  const rl = $('resultLine'); if (!rl) return;
+  let el = document.getElementById('resultOppRow');
+  if (!name){ if (el) el.style.display='none'; return; }
+  if (!el){
+    el = document.createElement('div'); el.id = 'resultOppRow';
+    el.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:8px;margin:2px 0 8px;'+
+      "font-family:'Oswald',sans-serif;font-size:13px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)";
+    rl.parentNode.insertBefore(el, rl);
+  }
+  el.style.display='flex';
+  el.innerHTML = '<span style="opacity:.7">vs</span> ' + avatarChipHTML(av, name, 24) +
+    ' <span style="color:#eaf2fb">' + escapeHTML(String(name).slice(0, 18)) + '</span>';
 }
 
 /* ---------- penalty shootout ---------- */
@@ -2407,6 +2447,7 @@ function showResult(iWon, striker, keeper, winnerRole, script){
   const sequenceLine = script && script.summary ? script.summary : `${winSide} wins`;
   $('resultLine').textContent = `${sequenceLine} · ${striker.ovr} OVR striker vs ${keeper.ovr} OVR keeper`;
   const oppName = (oppBuild && oppBuild.name) ? oppBuild.name : 'your opponent';
+  paintResultOpp((oppBuild && oppBuild.name) || oppPresenceName || '', oppAvatarId());
   const oppTag = isGhost ? ' (Ghost)' : '';
   $('resultSub').textContent = iWon ? `You beat ${oppName}${oppTag}. Run it back?` : `${oppName}${oppTag} got you. Build a better one.`;
   iWon ? Sound.win() : Sound.lose();
