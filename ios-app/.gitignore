@@ -3,5 +3,7 @@ www/
 ios/App/Pods/
 ios/App/build/
 ios/App/output/
+ios/App/App/public/
+ios/App/App/capacitor.config.json
 ios/DerivedData/
 *.p8

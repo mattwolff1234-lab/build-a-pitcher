@@ -1,9 +1,8 @@
-# GoatLab iOS build - GitHub Actions (macOS runner). MANUAL trigger only.
-# Activate by moving this file to .github/workflows/ios-build.yml AFTER:
-#   1. The Apple Developer account exists (PLAN.md Phase 0)
-#   2. `npx cap add ios` has been run once and the ios/ folder is committed
-#   3. Repo secrets are set: ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8 (base64 of the .p8)
-# Each run builds the web bundle, archives the app, and uploads to TestFlight.
+# GoatLab iOS build -> TestFlight. MANUAL trigger only (Actions tab -> iOS build -> Run).
+# Needs repo secrets (App Store Connect > Users & Access > Integrations > Team Keys):
+#   ASC_KEY_ID     - the key's ID
+#   ASC_ISSUER_ID  - the issuer ID shown above the key list
+#   ASC_KEY_P8     - the downloaded .p8 file, base64-encoded
 name: iOS build (TestFlight)
 on:
   workflow_dispatch: {}
@@ -16,7 +15,7 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
 
-      - name: Install Capacitor + build web bundle
+      - name: Build web bundle + sync native project
         working-directory: ios-app
         run: |
           npm ci
@@ -24,7 +23,6 @@ jobs:
           npx cap sync ios
 
       - name: Import App Store Connect API key
-        working-directory: ios-app
         run: |
           mkdir -p ~/.appstoreconnect/private_keys
           echo "${{ secrets.ASC_KEY_P8 }}" | base64 --decode > ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.ASC_KEY_ID }}.p8
@@ -33,7 +31,9 @@ jobs:
         working-directory: ios-app/ios/App
         run: |
           xcodebuild -workspace App.xcworkspace -scheme App -configuration Release \
+            -destination 'generic/platform=iOS' \
             -archivePath $PWD/build/App.xcarchive \
+            CURRENT_PROJECT_VERSION=${{ github.run_number }} MARKETING_VERSION=1.0.0 \
             -allowProvisioningUpdates \
             -authenticationKeyID ${{ secrets.ASC_KEY_ID }} \
             -authenticationKeyIssuerID ${{ secrets.ASC_ISSUER_ID }} \
