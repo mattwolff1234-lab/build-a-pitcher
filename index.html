@@ -20,7 +20,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="/xp.js" defer></script>
 <script src="/hotboard.js" defer></script>
-<script src="/switcher.js?v=5" defer></script>
+<script src="/switcher.js?v=6" defer></script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-TVL2XEQ2Q7"></script>
@@ -501,7 +501,7 @@ gsap.from('.hero p', { y: 10, opacity: 0, duration: .35, delay: .1, ease: 'power
   const SPORTS = [
     { id: 'baseball', icon: '⚾', name: 'Baseball', roles: ['pitcher', 'batter'], accent: '#ff7a18', vs: LOCAL ? '/versus.html' : '/versus' },
     { id: 'hoops',    icon: '🏀', name: 'Hoops',    roles: ['baller'],            accent: '#ff8a3c', vs: LOCAL ? '/versus-hoops.html' : '/versus-hoops' },
-    { id: 'soccer',   icon: '⚽', name: 'Soccer',   roles: ['striker', 'keeper'], accent: '#4ade80', vs: null, isNew: true },
+    { id: 'soccer',   icon: '⚽', name: 'Soccer',   roles: ['striker', 'keeper'], accent: '#4ade80', vs: LOCAL ? '/versus-soccer.html' : '/versus-soccer', isNew: true },
   ];
   const todayLocal = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
   // Baseball and soccer each rotate ONE shared daily between their two games (date-seeded, same

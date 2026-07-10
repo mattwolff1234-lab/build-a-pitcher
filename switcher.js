@@ -21,7 +21,7 @@
     keeper:  { icon: '⚽', sport: 'soccer',   sportName: 'Soccer',     name: 'Keeper',  path: LOCAL ? '/build-a-keeper.html' : '/keeper' },
   };
   const ORDER = ['pitcher', 'batter', 'baller', 'striker', 'keeper'];
-  const VERSUS = { baseball: LOCAL ? '/versus.html' : '/versus', hoops: LOCAL ? '/versus-hoops.html' : '/versus-hoops' };   // soccer 1v1: not yet
+  const VERSUS = { baseball: LOCAL ? '/versus.html' : '/versus', hoops: LOCAL ? '/versus-hoops.html' : '/versus-hoops', soccer: LOCAL ? '/versus-soccer.html' : '/versus-soccer' };
 
   function pageGame() {
     try { if (typeof LEADERBOARD_GAME === 'string' && GAMES[LEADERBOARD_GAME]) return LEADERBOARD_GAME; } catch (e) {}
@@ -153,7 +153,8 @@
     }
     rows += `<div class="gs-sport">⚔️ 1v1 Live</div><div class="gs-vs">
       <a class="gs-row" href="${VERSUS.baseball}"><span class="gs-ico">⚾</span>Baseball</a>
-      <a class="gs-row" href="${VERSUS.hoops}"><span class="gs-ico">🏀</span>Hoops</a></div>`;
+      <a class="gs-row" href="${VERSUS.hoops}"><span class="gs-ico">🏀</span>Hoops</a>
+      <a class="gs-row" href="${VERSUS.soccer}"><span class="gs-ico">⚽</span>Soccer</a></div>`;
     sheet.innerHTML = `<div class="gs-card">
       <div class="gs-head"><span class="gs-title">🎮 Switch Game</span><button class="gs-x" aria-label="Close">✕</button></div>
       ${rows}</div>`;

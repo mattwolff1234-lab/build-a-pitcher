@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>Face Off · GoatLab 1v1</title>
+<title>Soccer Face Off · GoatLab 1v1 Penalty Shootout</title>
 <meta name="theme-color" content="#0a1320">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="/switcher.js?v=6" defer></script>
@@ -72,7 +72,7 @@
   .bg .g2 { background:radial-gradient(circle,#19c6ff44,transparent 60%); bottom:-18%; right:-12%; animation:drift2 32s ease-in-out infinite; }
   @keyframes drift1 { 0%,100%{ transform:translate(-6%,-4%);} 50%{ transform:translate(8%,6%);} }
   @keyframes drift2 { 0%,100%{ transform:translate(6%,4%);} 50%{ transform:translate(-8%,-6%);} }
-  /* Battery/heat: animating a 90px blur (scale) + the scrolling grid pegs the mobile GPU. Drop the
+  /* Keepery/heat: animating a 90px blur (scale) + the scrolling grid pegs the mobile GPU. Drop the
      scale (above) and go fully static on phones / reduced-motion so backdrop-filters composite once. */
   @media (prefers-reduced-motion: reduce){ .bg .glow, .bg .grid{ animation:none!important; } }
   @media (max-width:820px){ .bg .glow, .bg .grid{ animation:none; } .bg .glow{ filter:none; } }
@@ -203,10 +203,10 @@
     50%     { filter:drop-shadow(0 0 26px var(--rc)) drop-shadow(0 0 46px var(--rc)); }
   }
   .role-card .rl { font-family:'Oswald',sans-serif; font-size:30px; font-weight:700; letter-spacing:2.5px; text-transform:uppercase; color:var(--rc); line-height:1.05; }
-  .role-card.pitcher { --rc:var(--pitch); border-color:var(--pitch); }
-  .role-card.pitcher .role-fig { -webkit-mask-image:url(pitcher-figure.png); mask-image:url(pitcher-figure.png); }
-  .role-card.batter { --rc:var(--bat); border-color:var(--bat); }
-  .role-card.batter .role-fig { -webkit-mask-image:url(batter-figure.png); mask-image:url(batter-figure.png); }
+  .role-card.striker { --rc:var(--pitch); border-color:var(--pitch); }
+  .role-card.striker .role-fig { -webkit-mask-image:url(striker-figure.png); mask-image:url(striker-figure.png); }
+  .role-card.keeper { --rc:var(--bat); border-color:var(--bat); }
+  .role-card.keeper .role-fig { -webkit-mask-image:url(keeper-figure.png); mask-image:url(keeper-figure.png); }
   .role-sub { color:var(--muted); margin-top:18px; font-size:14px; max-width:340px; }
   .hist-head { font-family:'Oswald',sans-serif; font-size:13px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin:22px 0 8px; }
   .hist-row { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--line); }
@@ -299,7 +299,7 @@
   .slot .shot { width:26px; height:26px; border-radius:6px; object-fit:cover; background:#11161d; }
 
   .reel-wrap { width:100%; }
-  /* full-size reel - identical layout to the Build a Pitcher game */
+  /* full-size reel - identical layout to the Build a Striker game */
   .reel { position:relative; height:226px; overflow:hidden; border-radius:14px; margin-top:6px; }
   .reel .pointer { position:absolute; top:0; left:50%; transform:translateX(-50%); width:0; height:0;
     border-left:9px solid transparent; border-right:9px solid transparent; border-top:13px solid var(--accent);
@@ -356,15 +356,21 @@
       radial-gradient(120% 80% at 50% 120%, #1f6b2e 0%, #14502160 45%, transparent 70%),
       linear-gradient(180deg,#0b1b2e,#04070d); }
   .crowd { position:absolute; top:0; left:0; right:0; height:64px; background:repeating-linear-gradient(90deg,#1a2335 0 6px,#222d44 6px 12px); opacity:.5; }
-  .mound { position:absolute; left:14%; bottom:30%; width:120px; height:30px; background:radial-gradient(circle,#7a5a36,#5a3f24); border-radius:50%; opacity:.8; }
-  .plate { position:absolute; right:16%; bottom:18%; width:26px; height:26px; background:#e9eef6; transform:rotate(45deg); border-radius:4px; opacity:.85; }
-  .silho { position:absolute; bottom:30%; height:150px; width:110px; mask-size:contain; mask-repeat:no-repeat; mask-position:center bottom;
+  .goal { position:absolute; right:5.5%; bottom:27%; width:28%; height:50%; z-index:1;
+    border:5px solid #e9eef6; border-bottom:none; border-radius:3px 3px 0 0;
+    filter:drop-shadow(0 4px 14px rgba(0,0,0,.45)); }
+  .goal-net { position:absolute; inset:0; opacity:.6; background:
+    repeating-linear-gradient(0deg, rgba(226,238,252,.22) 0 1.5px, transparent 1.5px 11px),
+    repeating-linear-gradient(90deg, rgba(226,238,252,.22) 0 1.5px, transparent 1.5px 11px); }
+  .spot { position:absolute; left:24.5%; bottom:27.5%; width:34px; height:7px;
+    background:rgba(233,238,246,.45); border-radius:50%; }
+  .silho { position:absolute; bottom:28%; height:150px; width:110px; z-index:3; mask-size:contain; mask-repeat:no-repeat; mask-position:center bottom;
     -webkit-mask-size:contain; -webkit-mask-repeat:no-repeat; -webkit-mask-position:center bottom; filter:drop-shadow(0 8px 16px rgba(0,0,0,.5)); }
-  .silho.p { left:9%; }    /* pose masks + facing are set by abPose()/abFace() */
-  .silho.b { right:9%; }
-  .ball { position:absolute; width:19px; height:19px; border-radius:50%;
-    background:url(baseball-anim/bb-ball.png) center/contain no-repeat;
-    box-shadow:0 0 10px rgba(255,255,255,.6); left:18%; bottom:42%; opacity:0; z-index:5; }
+  .silho.p { left:13%; }   /* striker — pose masks set by stPose() */
+  .silho.b { right:9%; height:126px; bottom:27.5%; }   /* keeper in the goalmouth — kpPose() */
+  .ball { position:absolute; width:26px; height:26px; border-radius:50%;
+    background:url(soccer-ball.png) center/contain no-repeat;
+    box-shadow:0 0 10px rgba(255,255,255,.55); left:26%; bottom:29%; opacity:0; z-index:5; }
   .callout { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; }
   .callout span { font-family:'Oswald',sans-serif; font-weight:700; font-size:56px; letter-spacing:2px; text-transform:uppercase;
     opacity:0; text-shadow:0 6px 24px rgba(0,0,0,.6); text-align:center; }
@@ -400,9 +406,9 @@
   .silho.dim { opacity:.18; filter:grayscale(1); }
   /* name tags under the two figures — separate siblings (NOT nested in the masked/mirrored
      silhouettes), anchored to each figure's fixed spot so they never mirror with silhoB */
-  .silho-name { position:absolute; bottom:calc(30% - 27px); width:110px; display:flex;
+  .silho-name { position:absolute; bottom:calc(28% - 27px); width:110px; display:flex;
     justify-content:center; pointer-events:none; z-index:4; }
-  .silho-name.p { left:9%; } .silho-name.b { right:9%; }
+  .silho-name.p { left:13%; } .silho-name.b { right:9%; }
   .silho-name span { font-family:'Oswald',sans-serif; font-size:10px; font-weight:600;
     letter-spacing:1.2px; text-transform:uppercase; color:#eaf1fa; background:rgba(8,14,24,.78);
     border:1px solid rgba(255,255,255,.22); border-radius:999px; padding:2px 9px;
@@ -416,8 +422,8 @@
     text-transform:uppercase; color:var(--muted); }
   .ab-count b { font-family:'Oswald',sans-serif; font-size:22px; line-height:1.1; color:#eaf1fa; }
   .ab-count b i { font-style:normal; }
-  .ab-count b i:first-child { color:var(--gold); }      /* balls */
-  .ab-count b i:last-child { color:var(--pitch); }      /* strikes */
+  .ab-count b i:first-child { color:var(--pitch); }     /* goals (striker) */
+  .ab-count b i:last-child { color:var(--bat); }        /* stops (keeper) */
   #abSkipBtn { margin-top:12px; }
   .matchup { width:100%; max-width:680px; display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
   .matchup .side { display:flex; flex-direction:column; align-items:center; gap:2px; }
@@ -520,7 +526,7 @@
     <div class="hero">
       <div class="kick">Live 1v1</div>
       <h1>Face <i>Off</i></h1>
-      <p>Match up with a real player. One of you pitches, one of you hits. Build fast - highest Overall wins the at-bat.</p>
+      <p>Match up with a real player. One of you strikes, one keeps goal. Build fast - highest Overall wins the penalty shootout.</p>
     </div>
     <div class="live-ticker" id="liveTicker" style="display:none"><span class="lt-dot"></span><span id="ltText">…</span></div>
     <div class="vs-card">
@@ -568,8 +574,8 @@
         </button>
         <button class="lmode" data-mode="legends">
           <div class="lm-icon">🟣</div>
-          <div class="lm-name">Legends</div>
-          <div class="lm-desc">Purple legends only</div>
+          <div class="lm-name">Icons</div>
+          <div class="lm-desc">Purple icons only</div>
         </button>
         <button class="lmode" data-mode="hard">
           <div class="lm-icon">🔒</div>
@@ -598,7 +604,8 @@
     <div class="hero" style="margin:22px 0 14px"><h1 style="font-size:clamp(30px,7vw,48px)">My <i>Stats</i></h1></div>
     <div class="vs-card" style="max-width:520px; text-align:left">
       <div class="stats-tabs" id="statsSportToggle" style="margin-bottom:9px">
-        <button class="stab active" data-sport="baseball">⚾ Baseball</button>
+        <button class="stab active" data-sport="soccer">⚽ Soccer</button>
+        <button class="stab" data-sport="baseball">⚾ Baseball</button>
         <button class="stab" data-sport="hoops">🏀 Hoops</button>
       </div>
       <div class="stats-tabs">
@@ -680,17 +687,17 @@
     <div class="diamond" id="diamond">
       <div class="crowd"></div>
       <div class="pitch-info" id="pitchInfo"></div>
-      <div class="mound"></div><div class="plate"></div>
+      <div class="goal"><div class="goal-net" id="goalNet"></div></div><div class="spot"></div>
       <div class="silho p" id="silhoP"></div>
       <div class="silho b" id="silhoB"></div>
       <div class="silho-name p" id="abNameP"><span></span></div>
       <div class="silho-name b" id="abNameB"><span></span></div>
-      <div class="ab-count" id="abCount"><span>Count</span><b><i id="cntB">0</i>–<i id="cntS">0</i></b></div>
+      <div class="ab-count" id="abCount"><span>⚽ – 🧤</span><b><i id="cntB">0</i>–<i id="cntS">0</i></b></div>
       <div class="ball" id="ball"></div>
       <div class="callout"><span id="callout"></span></div>
       <div class="wait-arena" id="waitArena">
         <div class="wa-spin"></div>
-        <div class="wa-title" id="waTitle">Waiting for the Pitcher…</div>
+        <div class="wa-title" id="waTitle">Waiting for the Striker…</div>
         <div class="wa-bar"><div class="wa-fill" id="waFill"></div></div>
         <div class="wa-count" id="waCount">building…</div>
       </div>
@@ -759,24 +766,30 @@ function escapeHTML(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;',
 function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
 
 /* ---------- shared data: slots / weights / OVR per role ---------- */
-const TEAM_COLORS = {
-  ARI:'#A71930', ATL:'#CE1141', BAL:'#DF4601', BOS:'#BD3039', CHC:'#0E3386',
-  CIN:'#C6011F', CLE:'#00385D', COL:'#33006F', CWS:'#27251F', DET:'#0C2340',
-  HOU:'#EB6E1F', KC:'#004687', LAA:'#BA0021', LAD:'#005A9C', MIA:'#00A3E0',
-  MIL:'#12284B', MIN:'#002B5C', NYM:'#002D72', NYY:'#0C2340', OAK:'#003831',
-  PHI:'#E81828', PIT:'#FDB827', SD:'#2F241D', SEA:'#005C5C', SF:'#FD5A1E',
-  STL:'#C41E3A', TB:'#092C5C', TEX:'#003278', TOR:'#134A8E', WAS:'#AB0003', FA:'#5b636e',
+// Jersey tints come from the landed players' CLUBS (~300 real clubs): the famous ones are
+// hardcoded, everything else gets a stable palette color hashed from the club name. Icons purple.
+const POOL_CLUB_COLORS = {
+  'Real Madrid':'#d9d5c4','FC Barcelona':'#a50044','Atlético de Madrid':'#cb3524',
+  'Manchester City':'#6cabdd','Man Utd':'#da291c','Liverpool':'#c8102e','Arsenal':'#ef0107',
+  'Chelsea':'#034694','Spurs':'#1b2b57','Newcastle Utd':'#35363c','Aston Villa':'#670e36','West Ham':'#7a263a',
+  'Juventus':'#2f3238','Lombardia FC':'#0068a8','Milano FC':'#fb090b','SSC Napoli':'#12a0d7','AS Roma':'#8e1f2f',
+  'FC Bayern München':'#dc052d','Borussia Dortmund':'#fde100','Leverkusen':'#e32221','RB Leipzig':'#dd0741',
+  'Paris SG':'#004170','AS Monaco':'#e63312',
+  'SL Benfica':'#d81e2c','FC Porto':'#1a4f8f','Sporting CP':'#067c50',
+  'Celtic':'#018749','Rangers':'#1b458f','Galatasaray':'#e30a17','Fenerbahçe':'#ffed00',
+  'Inter Miami CF':'#f5b6cd','Al Nassr':'#f6c500','Al Hilal':'#1a63b7','Al Ittihad':'#f0c645',
+  'River Plate':'#d94a4a','Boca Juniors':'#103f7b','Icons':'#a366ff',
 };
-const TEAM_NAMES = {
-  ARI:'Diamondbacks', ATL:'Braves', BAL:'Orioles', BOS:'Red Sox', CHC:'Cubs', CIN:'Reds',
-  CLE:'Guardians', COL:'Rockies', CWS:'White Sox', DET:'Tigers', HOU:'Astros', KC:'Royals',
-  LAA:'Angels', LAD:'Dodgers', MIA:'Marlins', MIL:'Brewers', MIN:'Twins', NYM:'Mets',
-  NYY:'Yankees', OAK:'Athletics', PHI:'Phillies', PIT:'Pirates', SD:'Padres', SEA:'Mariners',
-  SF:'Giants', STL:'Cardinals', TB:'Rays', TEX:'Rangers', TOR:'Blue Jays', WAS:'Nationals',
-};
+const HASH_PALETTE = ['#c0392b','#2980b9','#27ae60','#8e44ad','#d35400','#16a085','#7f8c8d','#2c3e50',
+  '#a04000','#1f618d','#117a65','#6c3483','#b7950b','#4a6741','#884ea0','#5d6d7e'];
 const IDLE_JERSEY = '#aeb6c2';
-function teamColor(t){ return TEAM_COLORS[t] || IDLE_JERSEY; }
-function brightTeam(t){ // lighten dark team colors so the silhouette reads on the dark field
+function teamColor(t){
+  if(!t) return IDLE_JERSEY;
+  if(POOL_CLUB_COLORS[t]) return POOL_CLUB_COLORS[t];
+  let h=0; for(let i=0;i<t.length;i++) h=(h*31+t.charCodeAt(i))>>>0;
+  return HASH_PALETTE[h%HASH_PALETTE.length];
+}
+function brightTeam(t){ // lighten dark club colors so the silhouette reads on the dark field
   const hex = teamColor(t); const n = parseInt(hex.slice(1),16);
   let r=n>>16, g=(n>>8)&255, b=n&255; const luma=0.299*r+0.587*g+0.114*b;
   if (luma>=90) return hex; const k=(90-luma)/(255-luma+1);
@@ -786,7 +799,7 @@ function brightTeam(t){ // lighten dark team colors so the silhouette reads on t
 const SILHOUETTE = 'data:image/svg+xml;utf8,' + encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="%2311161d"/><circle cx="50" cy="38" r="20" fill="%23394150"/><path d="M50 62c-20 0-34 14-34 34h68c0-20-14-34-34-34z" fill="%23394150"/></svg>'
 );
-function headshot(p){ return p.img || (p.mlbamId ? `https://midfield.mlbstatic.com/v1/people/${p.mlbamId}/spots/180` : SILHOUETTE); }
+function headshot(p){ return p.img || (p.eaId ? `https://ratings-images-prod.pulse.ea.com/FC25/full/player-portraits/p${p.eaId}.png?width=220` : SILHOUETTE); }
 function tier(ovr){ return ovr>=85?'diamond':ovr>=80?'gold':ovr>=75?'silver':ovr>=65?'bronze':'grey'; }
 function borderTier(p){ return p.legend?'legend':tier(p.ovr); }
 
@@ -858,7 +871,8 @@ function seasonDisplay(){
   return { number:info.number, active:true, endMs:info.endMs, phase, placementGames:pg };
 }
 let seasonBarTimer = null;
-function renderSeasonBar(){
+function renderSeasonBar(){ return;   // soccer: no seasons yet
+  // eslint-disable-next-line no-unreachable
   const d = seasonDisplay();
   let html;
   if (!d.active) html = `🏆 <b>Season 1</b> begins in <b>${fmtCountdown(d.endMs - seasonNow())}</b> · your current rating carries into placements`;
@@ -866,56 +880,47 @@ function renderSeasonBar(){
   else html = `🏆 <b>Season ${d.number}</b> · ends in <b>${fmtCountdown(d.endMs - seasonNow())}</b>`;
   document.querySelectorAll('[data-season-bar]').forEach(el => { el.innerHTML = html; el.style.display = ''; });
 }
-function startSeasonBar(){ renderSeasonBar(); if (seasonBarTimer) clearInterval(seasonBarTimer); seasonBarTimer = setInterval(renderSeasonBar, 30000); }
+function startSeasonBar(){ /* soccer 1v1 has no Elo seasons (yet) — all-time rating only */ }
 
-const PITCHER_SLOTS = [
-  { key:'hr_per_bf', label:'Ground Ball', part:'Ball', ax:30, ay:5, lx:13, ly:9 },
-  { key:'pitch_movement', label:'Break', part:'Wrist', ax:29, ay:11, lx:10, ly:27 },
-  { key:'k_per_bf', label:'Strikeout', part:'Forearm', ax:28, ay:18, lx:10, ly:45 },
-  { key:'pitch_velocity', label:'Velocity', part:'Bicep', ax:38, ay:23, lx:13, ly:63 },
-  { key:'pitch_control', label:'Command', part:'Shoulder', ax:48, ay:19, lx:90, ly:24 },
-  { key:'pitching_clutch', label:'Clutch', part:'Head', ax:53, ay:11, lx:90, ly:7 },
-  { key:'fielding_ability', label:'Defense', part:'Glove', ax:77, ay:33, lx:92, ly:41 },
-  { key:'frame', label:'Frame', part:'Body', ax:50, ay:37, lx:92, ly:58, type:'height' },
-  { key:'stamina', label:'Stamina', part:'Legs', ax:47, ay:67, lx:86, ly:80 },
-].map(s => ({ ...s, mask:`seg-${s.key}.png` }));
-const BATTER_SLOTS = [
-  { key:'plate_vision', label:'Vision', part:'Eyes', mask:'bat-seg-plate_vision.png', ax:52, ay:20, lx:12, ly:13 },
-  { key:'power', label:'Power', part:'Bat', mask:'bat-seg-power.png', ax:39, ay:30, lx:10, ly:35 },
-  { key:'contact', label:'Contact', part:'Hands', mask:'bat-seg-contact.png', ax:44, ay:31, lx:10, ly:57 },
-  { key:'speed', label:'Speed', part:'Feet', mask:'bat-seg-speed.png', ax:35, ay:88, lx:14, ly:80 },
-  { key:'batting_clutch', label:'Clutch', part:'Helmet', mask:'bat-seg-batting_clutch.png', ax:53, ay:21, lx:90, ly:12 },
-  { key:'plate_discipline', label:'Discipline', part:'Head', mask:'bat-seg-plate_discipline.png', ax:58, ay:30, lx:90, ly:37 },
-  { key:'frame', label:'Frame', part:'Body', mask:'bat-seg-frame.png', ax:54, ay:49, lx:90, ly:58, type:'height' },
-  { key:'fielding_ability', label:'Defense', part:'Thigh', mask:'bat-seg-fielding_ability.svg', ax:58, ay:66, lx:90, ly:78 },
+const STRIKER_SLOTS = [
+  { key:'finishing', label:'Finishing', part:'Striking Boot', mask:'soc-seg-finishing.png', ax:80, ay:88, lx:89, ly:70 },
+  { key:'pace', label:'Pace', part:'Legs', mask:'soc-seg-pace.png', ax:24, ay:67, lx:9, ly:82 },
+  { key:'power', label:'Shot Power', part:'Thigh', mask:'soc-seg-power.png', ax:63, ay:61, lx:90, ly:58 },
+  { key:'dribbling', label:'Dribbling', part:'Close Control', mask:'soc-seg-dribbling.png', ax:69, ay:46, lx:92, ly:40 },
+  { key:'passing', label:'Passing', part:'Vision Arm', mask:'soc-seg-passing.png', ax:16, ay:24, lx:7, ly:36 },
+  { key:'heading', label:'Heading', part:'Head', mask:'soc-seg-heading.png', ax:53, ay:9, lx:84, ly:6 },
+  { key:'physical', label:'Physical', part:'Engine', mask:'soc-seg-physical.png', ax:52, ay:42, lx:92, ly:22 },
+  { key:'clutch', label:'Clutch', part:'Heart', mask:'soc-seg-clutch.png', ax:52, ay:29, lx:12, ly:8 },
+  { key:'frame', label:'Frame', part:'Height', mask:'soc-seg-frame.png', ax:51, ay:55, lx:9, ly:52, type:'height' },
 ];
-const WEIGHTS_P = { k_per_bf:1.2, hr_per_bf:1.2, pitch_control:1.2, pitch_velocity:1.1, pitch_movement:1.1, stamina:1.1, pitching_clutch:1.1, fielding_ability:1.0, frame:1.0 };
-const WEIGHTS_B = { contact:1.2, power:1.2, plate_discipline:1.1, plate_vision:1.1, batting_clutch:1.1, speed:1.0, fielding_ability:1.0, frame:1.0 };
-function heightToRatingP(inches){ return inches ? clamp(Math.round(50+(inches-67)*3.5),1,99) : 65; }
-function heightToRatingB(inches){ return inches ? clamp(Math.round(82+(inches-72)*1.5),76,93) : 82; }
-// Pitcher Defense (fielding_ability) is uniquely compressed/low in the data (median 48 vs 60s-80s
-// for every other slot), so it was a guaranteed anchor with no agency. For 1v1 we (1) curve it onto
-// the same scale as the other slots so a rare elite glove is a real edge, and (2) keep its weight
-// low for average gloves so it barely drags, ramping up only for genuinely elite (curved) defense.
-// Batter Defense is already well-distributed, so this only applies to the pitcher role.
-function curvePitchDef(v){ return Math.max(1, Math.round(60 + (v - 48) * 1.4)); }   // shaved 2026-07-02: pitchers hit 54% win rate (was 62+1.5x)
-function defWeightP(v){ return 0.3 + 0.9 * clamp((v - 70) / 22, 0, 1); }
-function slotWeightP(k,v){ const ramp=(lo,hi)=>0.4+0.9*clamp((v-lo)/(hi-lo),0,1); if(k==='frame')return ramp(78,92); if(k==='fielding_ability')return defWeightP(v); return WEIGHTS_P[k]||1; }
+const KEEPER_SLOTS = [
+  { key:'diving', label:'Diving', part:'Arms', mask:'kp-seg-diving.png', ax:21, ay:36, lx:8, ly:26 },
+  { key:'reflexes', label:'Reflexes', part:'Left Glove', mask:'kp-seg-reflexes.png', ax:9, ay:44, lx:8, ly:62 },
+  { key:'handling', label:'Handling', part:'Right Glove', mask:'kp-seg-handling.png', ax:91, ay:43, lx:92, ly:62 },
+  { key:'distribution', label:'Distribution', part:'Boots', mask:'kp-seg-distribution.png', ax:78, ay:88, lx:50, ly:90 },
+  { key:'positioning', label:'Positioning', part:'Head', mask:'kp-seg-positioning.png', ax:52, ay:9, lx:86, ly:6 },
+  { key:'agility', label:'Agility', part:'Legs', mask:'kp-seg-agility.png', ax:28, ay:74, lx:10, ly:80 },
+  { key:'command', label:'Command', part:'The Box', mask:'kp-seg-command.png', ax:52, ay:38, lx:92, ly:26 },
+  { key:'clutch', label:'Clutch', part:'Heart', mask:'kp-seg-clutch.png', ax:52, ay:25, lx:14, ly:7 },
+  { key:'frame', label:'Frame', part:'Height', mask:'kp-seg-frame.png', ax:51, ay:54, lx:50, ly:72, type:'height' },
+];
+const WEIGHTS_S = { finishing:1.2, pace:1.2, dribbling:1.1, power:1.1, passing:1.1, clutch:1.1, heading:1.0, physical:1.0, frame:0.9 };
+const WEIGHTS_K = { reflexes:1.2, diving:1.2, positioning:1.1, handling:1.1, clutch:1.1, frame:1.1, command:1.0, distribution:1.0, agility:1.0 };
+function heightToRatingS(inches){ return inches ? clamp(Math.round(48+(inches-64)*3.4),1,125) : 65; }
+function heightToRatingK(inches){ return inches ? clamp(Math.round(38+(inches-64)*4.2),1,125) : 70; }
 
 const ROLE = {
-  pitcher: { data:'pitchers.json', figure:'pitcher-figure.png', slots:PITCHER_SLOTS,
-    h2r:heightToRatingP, slotWeight:slotWeightP },
-  batter: { data:'batters.json', figure:'batter-figure.png', slots:BATTER_SLOTS,
-    h2r:heightToRatingB, slotWeight:(k,v)=>WEIGHTS_B[k]||1 },
+  striker: { data:'strikers.json', figure:'striker-figure.png', slots:STRIKER_SLOTS,
+    h2r:heightToRatingS, slotWeight:(k,v)=>WEIGHTS_S[k]||1 },
+  keeper: { data:'keepers.json', figure:'keeper-figure.png', slots:KEEPER_SLOTS,
+    h2r:heightToRatingK, slotWeight:(k,v)=>WEIGHTS_K[k]||1 },
 };
 function slotNumeric(role,p,s){
   if(s.type==='height') return ROLE[role].h2r(p.heightIn);
-  if(role==='pitcher' && s.key==='fielding_ability') return curvePitchDef(p[s.key]||0);
   return p[s.key]||0;
 }
 function slotDisplay(role,p,s){
   if(s.type==='height') return p.height||'-';
-  if(role==='pitcher' && s.key==='fielding_ability') return curvePitchDef(p[s.key]||0);
   return p[s.key]||0;
 }
 function computeOvr(role, filled){
@@ -939,7 +944,7 @@ const Sound = (() => {
     tick(sp=0.5){ const f=210+Math.min(1,sp)*280; note(f,0,0.05,{type:'square',vol:0.05,glide:f*0.55}); },
     click(){ note(620,0,0.06,{type:'square',vol:0.12,glide:470}); },
     assign(){ note(520,0,0.06,{type:'square',vol:0.14}); note(780,0.05,0.1,{vol:0.16}); },
-    // landing chimes - same as the Build a Pitcher game, scaled by tier
+    // landing chimes - same as the Build a Striker game, scaled by tier
     land(){ note(440,0,0.1,{vol:0.12}); note(660,0.04,0.12,{vol:0.1}); },
     gold(){ arp([660,880],0.09,{vol:0.2,dur:0.18}); },
     diamond(){ arp([660,990,1320],0.08,{vol:0.2,dur:0.2}); note(1980,0.24,0.25,{type:'sine',vol:0.12}); },
@@ -963,8 +968,8 @@ let friendlyMode=false;
 let gameMode='classic'; // 'classic' | 'legends' | 'hard'
 let lobbyWaiting=false;
 let _incomingChalMode='classic';
-const MODE_LABEL={ classic:'⚔️ Classic', legends:'🟣 Legends Only', hard:'🔒 Hard Mode' };
-const MODE_DESC={ classic:'Standard draft · all tiers', legends:'Legends only · purple tier cards', hard:'Standard draft · ratings hidden' };
+const MODE_LABEL={ classic:'⚔️ Classic', legends:'🟣 Icons Only', hard:'🔒 Hard Mode' };
+const MODE_DESC={ classic:'Standard draft · all tiers', legends:'Icons only · purple tier cards', hard:'Standard draft · ratings hidden' };
 let challengeInboxCh=null, _incomingChalId=null, _incomingChalName=null;
 let pendingChallenge=null; // {replyId, replyClientId, name} - incoming challenge waiting on the notif
 let chalWaitTimeout=null;
@@ -1031,7 +1036,7 @@ async function onGoogleCredential(resp){
 async function refreshStats(){
   try {
     const r = await fetch('/api/account', { method:'POST', headers:{'content-type':'application/json'},
-      body: JSON.stringify(Object.assign({ action:'pvpStats' }, principal())) }).then(x=>x.json());
+      body: JSON.stringify(Object.assign({ action:'pvpStats', sport:'soccer' }, principal())) }).then(x=>x.json());
     if (r.ok) myStats = { elo:r.elo, wins:r.wins, losses:r.losses, streak:r.streak||0, season:r.season||0, placementGames:r.placementGames||0 };
     else if (account && r.error === 'Not signed in'){ account=null; try{ localStorage.removeItem('pl_account'); }catch(e){} return refreshStats(); }
   } catch(e){}
@@ -1070,7 +1075,7 @@ async function applyResult(){
   const pr = pendingResult; pendingResult=null;
   try {
     const r = await fetch('/api/account', { method:'POST', headers:{'content-type':'application/json'},
-      body: JSON.stringify(Object.assign({ action:'pvpResult', matchId: pr.matchId, won: pr.won, oppElo: pr.oppElo,
+      body: JSON.stringify(Object.assign({ action:'pvpResult', sport:'soccer', matchId: pr.matchId, won: pr.won, oppElo: pr.oppElo,
         role: pr.role, ovr: pr.ovr, oppOvr: pr.oppOvr, oppName: pr.oppName || '', oppKey: pr.oppKey || '', decided: pr.decided !== false }, principal())) }).then(x=>x.json());
     if (r.ok){
       myStats = { elo:r.elo, wins:r.wins, losses:r.losses, streak:r.streak||0 };
@@ -1229,7 +1234,7 @@ function connectAbly(){
 // The old ticker used Ably presence; fanning presence out to every idle viewer was ~90% of the Ably
 // bill. Now each viewer heartbeats /api/live every ~45s (only while the tab is visible) and the same
 // response returns the live counts. Linear cost, plain DB queries, zero Ably.
-const LIVE_GAME = 'versus';
+const LIVE_GAME = 'versus-soccer';
 let myOnlineStatus = 'idle', liveId = null, liveTimer = null;
 async function goOnline(){
   // Start the live heartbeat; connect Ably + wire the friend-challenge inbox (unrelated to the ticker).
@@ -1270,7 +1275,7 @@ function renderTicker(d){
 function subscribeChallengeInbox(){
   if (challengeInboxCh) return;
   try {
-    challengeInboxCh = ably.channels.get('versus:challenge:' + personId());
+    challengeInboxCh = ably.channels.get('soccer:challenge:' + personId());
     challengeInboxCh.subscribe('m', msg => handleChallengeMsg(msg));
   } catch(e){}
 }
@@ -1304,7 +1309,7 @@ function checkChallengeURL(){
   if (!ch) return;
   _incomingChalId = ch;
   _incomingChalName = cn ? decodeURIComponent(cn) : 'Challenger';
-  try { gtag('event', 'challenge_opened', { game: 'versus' }); } catch(e){}
+  try { gtag('event', 'challenge_opened', { game: 'versus-soccer' }); } catch(e){}
   _incomingChalMode = (md && MODE_LABEL[md]) ? md : 'classic';
   $('chalChallengerName').textContent = _incomingChalName;
   const tag = $('chalModeTag'), tagInner = $('chalModeTagInner');
@@ -1321,7 +1326,7 @@ function checkChallengeURL(){
 
 async function sendChallengeRequest(){
   if (!_incomingChalId) return;
-  try { gtag('event', 'challenge_accepted', { game: 'versus' }); } catch(e){}
+  try { gtag('event', 'challenge_accepted', { game: 'versus-soccer' }); } catch(e){}
   $('chalAcceptBtn').disabled = true;
   $('chalStatus').textContent = 'Connecting…';
   try { await connectAbly(); } catch(e){
@@ -1343,7 +1348,7 @@ async function sendChallengeRequest(){
     tries++;
     setChalStatus(tries === 1 ? 'Contacting challenger…' : `Pinging… (attempt ${tries}/${MAX_TRIES})`);
     try {
-      const ch = ably.channels.get('versus:challenge:' + _incomingChalId);
+      const ch = ably.channels.get('soccer:challenge:' + _incomingChalId);
       await ch.publish('m', { type:'request', replyId: personId(), clientId, name: displayName() });
     } catch(e){}
     if (chalGaveUp) return;
@@ -1366,11 +1371,11 @@ async function acceptChallengeNotif(){
   hideChallengeNotif();
   const pr = pendingChallenge; pendingChallenge = null;
   const newId = rid(), newSeed = (Math.random() * 0xFFFFFFFF)|0;
-  const myNewRole = Math.random() < 0.5 ? 'pitcher' : 'batter';
-  const theirRole = myNewRole === 'pitcher' ? 'batter' : 'pitcher';
+  const myNewRole = Math.random() < 0.5 ? 'striker' : 'keeper';
+  const theirRole = myNewRole === 'striker' ? 'keeper' : 'striker';
   // Retry the accept publish up to 3 times - if this fails silently, the acceptor
   // never gets the green light and times out even though the challenger is ready.
-  const ch = ably.channels.get('versus:challenge:' + pr.replyId);
+  const ch = ably.channels.get('soccer:challenge:' + pr.replyId);
   const payload = { type:'accept', matchId:newId, seed:newSeed, yourRole:theirRole, chalClientId:clientId, mode:gameMode };
   for (let i = 0; i < 3; i++){
     try { await ch.publish('m', payload); break; } catch(e){ if (i < 2) await new Promise(r => setTimeout(r, 800)); }
@@ -1382,7 +1387,7 @@ function declineChallengeNotif(){
   const pr = pendingChallenge; pendingChallenge = null;
   hideChallengeNotif();
   if (pr && ably) {
-    try { ably.channels.get('versus:challenge:' + pr.replyId).publish('m', { type:'decline' }); } catch(e){}
+    try { ably.channels.get('soccer:challenge:' + pr.replyId).publish('m', { type:'decline' }); } catch(e){}
   }
 }
 
@@ -1398,14 +1403,14 @@ function hideChallengeNotif(){
 }
 
 function copyChallengeLinkFn(){
-  const link = location.origin + '/versus?ch=' + encodeURIComponent(personId()) + '&cn=' + encodeURIComponent(displayName()) + '&mode=' + gameMode;
-  try { gtag('event', 'challenge_sent', { game: 'versus', source: 'stats' }); } catch(e){}
+  const link = location.origin + '/versus-soccer?ch=' + encodeURIComponent(personId()) + '&cn=' + encodeURIComponent(displayName()) + '&mode=' + gameMode;
+  try { gtag('event', 'challenge_sent', { game: 'versus-soccer', source: 'stats' }); } catch(e){}
   const done = () => { const c=$('chalCopied'); if(c){ c.style.display=''; setTimeout(()=>{ if(c) c.style.display='none'; },3000); } };
   if (navigator.clipboard) { navigator.clipboard.writeText(link).then(done).catch(()=>{ prompt('Copy this link:', link); }); }
   else { try { prompt('Copy this link:', link); done(); } catch(e){} }
 }
 function challengeLink(){
-  return location.origin + '/versus?ch=' + encodeURIComponent(personId()) + '&cn=' + encodeURIComponent(displayName()) + '&mode=' + gameMode;
+  return location.origin + '/versus-soccer?ch=' + encodeURIComponent(personId()) + '&cn=' + encodeURIComponent(displayName()) + '&mode=' + gameMode;
 }
 function updateLobbyLink(){
   const link = challengeLink();
@@ -1443,14 +1448,14 @@ async function findMatch(){
   } catch(e){ setStatus('Could not connect. Check Ably is configured, then retry.'); failBack(); return; }
   setStatus('Searching for an opponent…');
   setOnlineStatus('searching');
-  try { gtag('event', 'versus_search', { game: 'versus' }); } catch(e){}
+  try { gtag('event', 'versus_search', { game: 'versus-soccer' }); } catch(e){}
 
   searching = true;
   // after ~20s alone, offer a Ghost match (a real recent build) so an empty lobby isn't a dead end
   if (ghostTimer) clearTimeout(ghostTimer);
   ghostTimer = setTimeout(() => { if (searching) { $('ghostOffer').style.display = 'block'; Sound.whoosh(); } }, 20000);
   // subscribe to my invite channel BEFORE asking the server (so I can't miss a hand-off)
-  inviteCh = ably.channels.get('versus:invite:' + clientId);
+  inviteCh = ably.channels.get('soccer:invite:' + clientId);
   inviteCh.subscribe('match', msg => {
     const d = msg.data;
     stopSearch();
@@ -1465,16 +1470,16 @@ async function attemptMatch(){
   if (!searching) return;
   let r;
   try {
-    r = await fetch('/api/match', { method:'POST', headers:{'content-type':'application/json'},
+    r = await fetch('/api/match-soccer', { method:'POST', headers:{'content-type':'application/json'},
       body: JSON.stringify({ action:'find', id: clientId, pid: personId() }) }).then(x=>x.json());
   } catch(e){ if (searching) retryTimer = setTimeout(attemptMatch, 3000); return; }
   if (!searching) return;
 
   if (r && r.matched){
     stopSearch();
-    const theirRole = r.role === 'pitcher' ? 'batter' : 'pitcher';
+    const theirRole = r.role === 'striker' ? 'keeper' : 'striker';
     try {
-      await ably.channels.get('versus:invite:' + r.oppId).publish('match',
+      await ably.channels.get('soccer:invite:' + r.oppId).publish('match',
         { matchId: r.matchId, role: theirRole, seed: r.seed, oppId: clientId });
     } catch(e){}
     startMatch(r.matchId, r.role, r.seed, r.oppId, true);
@@ -1491,7 +1496,7 @@ function failBack(){ $('findBtn').style.display='inline-block'; $('mmSpin').styl
 async function cancelSearch(){
   stopSearch();
   setOnlineStatus('idle');
-  if (clientId) { try { await fetch('/api/match',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'leave',id:clientId})}); } catch(e){} }
+  if (clientId) { try { await fetch('/api/match-soccer',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'leave',id:clientId})}); } catch(e){} }
   if (inviteCh) { inviteCh.unsubscribe(); try{ inviteCh.detach(); }catch(e){} inviteCh=null; }
   failBack(); setStatus('');
 }
@@ -1499,7 +1504,7 @@ async function cancelSearch(){
 /* ---------- Ghost match (async vs a real recent build) ---------- */
 const GHOST_NAMES = ['The Phantom', 'Anonymous', 'A Challenger', 'Ghost Runner', 'The Stranger', 'Nobody', 'Mystery Build', 'The Visitor'];
 async function fetchGhostBuild(role){
-  // role is the ghost's role, which doubles as the leaderboard `game` key (pitcher|batter)
+  // role is the ghost's role, which doubles as the leaderboard `game` key (striker|keeper)
   try {
     const r = await fetch(`/api/score?action=ghost&game=${role}&min=87&max=95`).then(x=>x.json());
     return (r && r.ghost) ? r.ghost : null;
@@ -1509,13 +1514,13 @@ async function startGhostMatch(){
   resetMatch();                       // clears any prior match/timers (and isGhost)
   gameMode = 'classic';
   isGhost = true; friendlyMode = false;   // a ghost is a real build → Elo counts
-  try { gtag('event', 'versus_ghost_start', { game: 'versus' }); } catch(e){}
+  try { gtag('event', 'versus_ghost_start', { game: 'versus-soccer' }); } catch(e){}
   // leave the live queue so nobody claims us while we play the ghost
-  if (clientId) { try { fetch('/api/match',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'leave',id:clientId})}); } catch(e){} }
+  if (clientId) { try { fetch('/api/match-soccer',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'leave',id:clientId})}); } catch(e){} }
   if (inviteCh) { inviteCh.unsubscribe(); try{ inviteCh.detach(); }catch(e){} inviteCh=null; }
   setOnlineStatus('playing');
-  myRole = Math.random() < 0.5 ? 'pitcher' : 'batter';
-  oppRole = myRole === 'pitcher' ? 'batter' : 'pitcher';
+  myRole = Math.random() < 0.5 ? 'striker' : 'keeper';
+  oppRole = myRole === 'striker' ? 'keeper' : 'striker';
   matchId = 'ghost:' + Math.random().toString(16).slice(2, 10);
   seed = (Math.random() * 0xffffffff) >>> 0;
   rng = mulberry32(seed || 1);
@@ -1553,13 +1558,13 @@ function resetMatch(){
 let oppPresent=false;
 async function startMatch(mId, role, sd, opp, claimer, friendly=false){
   friendlyMode = !!friendly;
-  try { gtag('event', 'versus_match_found', { game: 'versus', friendly: friendlyMode ? 1 : 0 }); } catch(e){}
+  try { gtag('event', 'versus_match_found', { game: 'versus-soccer', friendly: friendlyMode ? 1 : 0 }); } catch(e){}
   setOnlineStatus('playing');
   if (inviteCh){ inviteCh.unsubscribe(); try{ inviteCh.detach(); }catch(e){} inviteCh=null; }
-  matchId=mId; myRole=role; oppRole=role==='pitcher'?'batter':'pitcher'; seed=(sd>>>0); oppId=opp; wasClaimer=!!claimer;
+  matchId=mId; myRole=role; oppRole=role==='striker'?'keeper':'striker'; seed=(sd>>>0); oppId=opp; wasClaimer=!!claimer;
   rng = mulberry32(seed || 1);
 
-  matchCh = ably.channels.get('versus:match:' + matchId);
+  matchCh = ably.channels.get('soccer:match:' + matchId);
   // ignore our own messages (belt-and-suspenders alongside echoMessages:false)
   matchCh.subscribe('build',    m => { if (m.clientId === clientId) return; oppBuild = m.data; updateOppPill(); if (myBuild && !atBatStarted && !matchResolved){ try{ matchCh.publish('build', myBuild); }catch(e){} } maybeStartAtBat(); });
   matchCh.subscribe('progress', m => { if (m.clientId === clientId) return; updateOppProgress(m.data); });
@@ -1599,9 +1604,9 @@ function beginRoleReveal(){
   showScreen('roleScreen');
   const card = $('roleCard');
   card.className = 'role-card ' + myRole;
-  $('roleLabel').textContent = "You're the " + (myRole === 'pitcher' ? 'Pitcher' : 'Batter');
-  $('roleSub').textContent = myRole === 'pitcher'
-    ? 'Build a pitcher to strike them out. Highest Overall wins.'
+  $('roleLabel').textContent = "You're the " + (myRole === 'striker' ? 'Striker' : 'Keeper');
+  $('roleSub').textContent = myRole === 'striker'
+    ? 'Build a striker to strike them out. Highest Overall wins.'
     : 'Build a hitter to crush it. Highest Overall wins.';
   updateOppChip();
   gsap.set('#oppChip', { opacity:0, y:18 });
@@ -1651,7 +1656,7 @@ function rcardHTML(p){ const t=borderTier(p);
     <div class="nm">${escapeHTML(p.name)}</div>
     <div class="ov">${p.ovr}</div>
     ${meta}
-    <div class="pos">${escapeHTML(p.pos||'')} · ${escapeHTML(p.team||'')}</div>
+    <div class="pos">${escapeHTML(p.pos||'')} · ${escapeHTML(p.club||'')}</div>
   </div>`; }
 
 function beginBuild(){
@@ -1826,7 +1831,7 @@ function land(p){
   $('snagRightBtn').disabled = !canSnag || !buildState.strip[buildState.targetIndex+1];
   renderSlots(); renderNodes();
   revealWin(p);
-  // landing sound by rarity - same chimes as the Build a Pitcher game
+  // landing sound by rarity - same chimes as the Build a Striker game
   if (p.legend) Sound.legend();
   else { const tt = tier(p.ovr); if (tt === 'diamond') Sound.diamond(); else if (tt === 'gold') Sound.gold(); else Sound.land(); }
   $('buildHint').textContent='Tap a glowing body part to assign ' + p.name + ' - or use a power-up.';
@@ -1879,7 +1884,7 @@ function assign(key){
   const p=buildState.landed, s=ROLE[myRole].slots.find(x=>x.key===key);
   const originRect = $('landedImg').getBoundingClientRect();
   buildState.filled[key]={ slot:s.label, value:slotNumeric(myRole,p,s), display:String(slotDisplay(myRole,p,s)),
-    player:p.name, team:p.team, legend:!!p.legend, img:headshot(p), ovr:p.ovr };
+    player:p.name, team:p.club, legend:!!p.legend, img:headshot(p), ovr:p.ovr };
   buildState.used.add(p.name); buildState.landed=null; Sound.assign();
   $('landedLi').classList.remove('show'); $('powerups').classList.remove('show'); $('spinBtn').disabled=false;
   renderSlots(); renderNodes(); updateFigure(); updateOvr(); publishProgress();
@@ -1927,7 +1932,7 @@ function autoFill(){
   const empties=openSlots();
   for(const s of empties){ const p=randPlayer(); buildState.used.add(p.name);
     buildState.filled[s.key]={ slot:s.label, value:slotNumeric(myRole,p,s), display:String(slotDisplay(myRole,p,s)),
-      player:p.name, team:p.team, legend:!!p.legend, img:headshot(p), ovr:p.ovr }; }
+      player:p.name, team:p.club, legend:!!p.legend, img:headshot(p), ovr:p.ovr }; }
   buildState.landed=null; renderSlots(); renderNodes(); updateFigure(); updateOvr();
   finishBuild();
 }
@@ -1961,27 +1966,26 @@ function stopWaitClock(){ if(waClockTimer){ clearInterval(waClockTimer); waClock
 function showWaitArena(){
   waitingArena=true;
   showScreen('atbatScreen');
-  const minePitcher = myRole==='pitcher';
-  const pitcherSide = minePitcher
-    ? `<div class="who" style="color:var(--pitch)">⚾ ${escapeHTML(displayName())} (You)</div><div class="o" style="color:var(--pitch)">${myBuild.ovr}</div>`
-    : `<div class="who" style="color:var(--pitch)">⚾ Pitcher</div><div class="o" style="color:var(--pitch)">?</div>`;
-  const batterSide = !minePitcher
-    ? `<div class="who" style="color:var(--bat)">🏏 ${escapeHTML(displayName())} (You)</div><div class="o" style="color:var(--bat)">${myBuild.ovr}</div>`
-    : `<div class="who" style="color:var(--bat)">🏏 Batter</div><div class="o" style="color:var(--bat)">?</div>`;
-  $('matchup').innerHTML = `<div class="side">${pitcherSide}</div><div class="mid">VS</div><div class="side">${batterSide}</div>`;
-  abFace($('silhoP'),1); abFace($('silhoB'),-1);
-  abPose($('silhoP'),'windup'); abPose($('silhoB'),'stance1');
-  $('silhoP').style.background = brightTeam(minePitcher ? myBuild.team : 'FA');
-  $('silhoB').style.background = brightTeam(!minePitcher ? myBuild.team : 'FA');
-  $('silhoP').classList.toggle('dim', !minePitcher);
-  $('silhoB').classList.toggle('dim', minePitcher);
-  $('abNameP').firstChild.textContent = minePitcher ? (displayName()||'You').slice(0,14) : 'Opponent';
-  $('abNameB').firstChild.textContent = minePitcher ? 'Opponent' : (displayName()||'You').slice(0,14);
+  const mineStriker = myRole==='striker';
+  const strikerSide = mineStriker
+    ? `<div class="who" style="color:var(--pitch)">⚽ ${escapeHTML(displayName())} (You)</div><div class="o" style="color:var(--pitch)">${myBuild.ovr}</div>`
+    : `<div class="who" style="color:var(--pitch)">⚽ Striker</div><div class="o" style="color:var(--pitch)">?</div>`;
+  const keeperSide = !mineStriker
+    ? `<div class="who" style="color:var(--bat)">🧤 ${escapeHTML(displayName())} (You)</div><div class="o" style="color:var(--bat)">${myBuild.ovr}</div>`
+    : `<div class="who" style="color:var(--bat)">🧤 Keeper</div><div class="o" style="color:var(--bat)">?</div>`;
+  $('matchup').innerHTML = `<div class="side">${strikerSide}</div><div class="mid">VS</div><div class="side">${keeperSide}</div>`;
+  stPose('run'); kpPose('ready');
+  $('silhoP').style.background = brightTeam(mineStriker ? myBuild.team : 'FA');
+  $('silhoB').style.background = brightTeam(!mineStriker ? myBuild.team : 'FA');
+  $('silhoP').classList.toggle('dim', !mineStriker);
+  $('silhoB').classList.toggle('dim', mineStriker);
+  $('abNameP').firstChild.textContent = mineStriker ? (displayName()||'You').slice(0,14) : 'Opponent';
+  $('abNameB').firstChild.textContent = mineStriker ? 'Opponent' : (displayName()||'You').slice(0,14);
   $('abNameP').firstChild.style.borderColor=''; $('abNameB').firstChild.style.borderColor='';
   $('abSkipBtn').style.display='none'; $('abCount').classList.remove('show');
   gsap.set('#ball', { opacity:0 }); $('callout').textContent=''; $('pitchInfo').style.opacity=0;
   $('pitchSeq').innerHTML=''; gsap.set('#pitchSeq', { opacity:0 });
-  $('waTitle').textContent = 'Waiting for the ' + (minePitcher ? 'Batter' : 'Pitcher') + '…';
+  $('waTitle').textContent = 'Waiting for the ' + (mineStriker ? 'Keeper' : 'Striker') + '…';
   $('waitArena').classList.add('show');
   waClockLeft = Math.max(0, clockLeft);   // shared shot clock was frozen at finish; count it down for display
   stopWaitClock();
@@ -1990,13 +1994,13 @@ function showWaitArena(){
 }
 function updateWaitArena(){
   if (!waitingArena) return;
-  const oppIsPitcher = myRole !== 'pitcher';
-  const total = oppProg.total || (oppIsPitcher ? 9 : 8);
+  const oppIsStriker = myRole !== 'striker';
+  const total = oppProg.total || 9;
   const filled = Math.min(oppProg.filled || 0, total);
   $('waFill').style.width = Math.round(100 * filled / total) + '%';
   const clk = waClockLeft>0 ? ' · ' + fmtClock(waClockLeft) + ' left' : ' · time’s up';
   $('waCount').textContent = oppPresent
-    ? (oppIsPitcher ? 'Pitcher' : 'Batter') + ' building · ' + filled + '/' + total + ' slots' + clk
+    ? (oppIsStriker ? 'Striker' : 'Keeper') + ' building · ' + filled + '/' + total + ' slots' + clk
     : 'Connecting to opponent…';
 }
 function showNoContest(){
@@ -2111,7 +2115,7 @@ function updateOppPill(){
   updateWaitArena();
 }
 
-/* ---------- at-bat ---------- */
+/* ---------- penalty shootout ---------- */
 function maybeStartAtBat(){
   if(matchResolved || atBatStarted || !myBuild || !oppBuild) return;
   atBatStarted=true;
@@ -2123,53 +2127,50 @@ function playAtBat(){
   showScreen('atbatScreen');
   waitingArena=false; stopWaitClock(); $('waitArena').classList.remove('show');
   $('silhoP').classList.remove('dim'); $('silhoB').classList.remove('dim');
-  const pitcher = myRole==='pitcher' ? myBuild : oppBuild;
-  const batter  = myRole==='pitcher' ? oppBuild : myBuild;
-  const abRng = atBatRng(pitcher, batter);
+  const shooter = myRole==='striker' ? myBuild : oppBuild;
+  const gk      = myRole==='striker' ? oppBuild : myBuild;
+  const abRng = atBatRng(shooter, gk);
   // winner: higher OVR; tie -> seeded coin (identical on both phones)
   let winnerRole;
-  if(batter.ovr>pitcher.ovr)winnerRole='batter';
-  else if(pitcher.ovr>batter.ovr)winnerRole='pitcher';
-  else winnerRole = abRng()<0.5?'pitcher':'batter';
+  if(gk.ovr>shooter.ovr)winnerRole='keeper';
+  else if(shooter.ovr>gk.ovr)winnerRole='striker';
+  else winnerRole = abRng()<0.5?'striker':'keeper';
   const iWon = winnerRole===myRole;
-  const script = makePitchSequence(pitcher, batter, winnerRole, abRng);
+  const script = makeShootout(shooter, gk, winnerRole, abRng);
 
-  // matchup header (with each player's name)
-  const pName = escapeHTML(pitcher.name || 'Pitcher') + (myRole==='pitcher'?' (You)':(isGhost?' 👻':''));
-  const bName = escapeHTML(batter.name || 'Batter') + (myRole==='batter'?' (You)':(isGhost?' 👻':''));
+  const sName = escapeHTML(shooter.name || 'Striker') + (myRole==='striker'?' (You)':(isGhost?' 👻':''));
+  const kName = escapeHTML(gk.name || 'Keeper') + (myRole==='keeper'?' (You)':(isGhost?' 👻':''));
   $('matchup').innerHTML =
-    `<div class="side"><div class="who" style="color:var(--pitch)">⚾ ${pName}</div><div class="o" style="color:var(--pitch)">${pitcher.ovr}</div></div>`+
+    `<div class="side"><div class="who" style="color:var(--pitch)">⚽ ${sName}</div><div class="o" style="color:var(--pitch)">${shooter.ovr}</div></div>`+
     `<div class="mid">VS</div>`+
-    `<div class="side"><div class="who" style="color:var(--bat)">🏏 ${bName}</div><div class="o" style="color:var(--bat)">${batter.ovr}</div></div>`;
-  const pTint = brightTeam(pitcher.team);
-  const bTint = distinctTint(pTint, brightTeam(batter.team));   // same/similar team colors → shift batter's hue
-  $('silhoP').style.background = pTint;
-  $('silhoB').style.background = bTint;
-  // name tags under the figures
-  $('abNameP').firstChild.textContent = (pitcher.name||'Pitcher').slice(0,14);
-  $('abNameB').firstChild.textContent = (batter.name||'Batter').slice(0,14);
-  $('abNameP').firstChild.style.borderColor = pTint;
-  $('abNameB').firstChild.style.borderColor = bTint;
+    `<div class="side"><div class="who" style="color:var(--bat)">🧤 ${kName}</div><div class="o" style="color:var(--bat)">${gk.ovr}</div></div>`;
+  const sTint = brightTeam(shooter.team);
+  const kTint = distinctTint(sTint, brightTeam(gk.team));   // same/similar club colors → shift the keeper's hue
+  $('silhoP').style.background = sTint;
+  $('silhoB').style.background = kTint;
+  $('abNameP').firstChild.textContent = (shooter.name||'Striker').slice(0,14);
+  $('abNameB').firstChild.textContent = (gk.name||'Keeper').slice(0,14);
+  $('abNameP').firstChild.style.borderColor = sTint;
+  $('abNameB').firstChild.style.borderColor = kTint;
 
   const ball=$('ball'), call=$('callout'); call.style.opacity=0; call.textContent='';
-  gsap.set(ball,{ opacity:0, left:'18%', bottom:'42%', scale:1, rotation:0 });
-  gsap.set('#silhoP',{ x:0, rotation:0 }); gsap.set('#silhoB',{ x:0, rotation:0 });
-  abFace($('silhoP'),1); abFace($('silhoB'),-1);               // pitcher throws right, batter faces left
-  abPose($('silhoP'),'windup'); abPose($('silhoB'),'stance1');
-  renderPitchSeq(script);
+  gsap.set(ball,{ opacity:0, left:'26%', bottom:'29%', scale:1, rotation:0 });
+  gsap.set('#silhoP',{ x:0, y:0, rotation:0 }); gsap.set('#silhoB',{ x:0, y:0, rotation:0 });
+  stPose('run'); kpPose('ready');
+  renderKickSeq(script);
   gsap.set('#pitchSeq', { opacity:1 });
   setCount(0,0); $('abCount').classList.add('show');
   $('abSkipBtn').style.display='inline-block';   // skip is LOCAL-only: your opponent keeps watching
 
   const tl = gsap.timeline();
-  script.pitches.forEach((pitch, idx) => appendPitch(tl, pitch, idx));
+  script.pitches.forEach((kick, idx) => appendKick(tl, kick, idx));
   tl.add(()=> { $('abSkipBtn').style.display='none';
-    setTimeout(()=>showResult(iWon, pitcher, batter, winnerRole, script), 1300); });
-  abGame = { tl, iWon, pitcher, batter, winnerRole, script };
+    setTimeout(()=>showResult(iWon, shooter, gk, winnerRole, script), 1500); });
+  abGame = { tl, iWon, shooter, gk, winnerRole, script };
 }
 let abGame = null;
-// Both tints run through brightTeam, but two builds can pick the same (or similar) MLB teams —
-// nudge the batter's hue ~150° so the two silhouettes are always tellable apart.
+// Both tints run through brightTeam, but two builds can pick the same (or similar) clubs —
+// nudge the keeper's hue ~150° so the two silhouettes are always tellable apart.
 function distinctTint(pHex, bHex){
   const rgb = c => { const m=/^#([0-9a-f]{6})$/i.exec(c||''); if(!m) return null;
     const n=parseInt(m[1],16); return [n>>16&255, n>>8&255, n&255]; };
@@ -2181,38 +2182,29 @@ function distinctTint(pHex, bHex){
   if(d>0){ h = mx===r ? ((g-bl)/d+(g<bl?6:0)) : mx===g ? (bl-r)/d+2 : (r-g)/d+4; h/=6; }
   return `hsl(${Math.round(((h+0.42)%1)*360)} 75% 60%)`;
 }
-// ⏩ Skip the at-bat (this side only — it's a local playback of the seeded result, so skipping
-// never affects what the opponent sees). Jump straight to the result screen.
+// ⏩ Skip the shootout (this side only — a local playback of the seeded result).
 function abSkipSim(){
   if(!abGame || matchResolved) return;
   const g = abGame;
   try{ g.tl.kill(); }catch(e){}
   gsap.killTweensOf('#ball,#silhoP,#silhoB,#pitchInfo,#callout,#diamond');
   gsap.set('#ball',{ opacity:0 });
-  gsap.set('#silhoP',{ x:0, rotation:0 }); gsap.set('#silhoB',{ x:0, rotation:0 });
-  abPose($('silhoP'),'followthrough'); abPose($('silhoB'),'stance1');
+  gsap.set('#silhoP',{ x:0, y:0, rotation:0 }); gsap.set('#silhoB',{ x:0, y:0, rotation:0 });
   $('callout').style.opacity=0; $('pitchInfo').style.opacity=0;
   $('abSkipBtn').style.display='none';
-  showResult(g.iWon, g.pitcher, g.batter, g.winnerRole, g.script);   // sets matchResolved → pending timeout bails
+  showResult(g.iWon, g.shooter, g.gk, g.winnerRole, g.script);
 }
-function atBatRng(pitcher, batter){
-  const n = ((seed || 1) ^ Math.imul(pitcher.ovr || 0, 2654435761) ^ Math.imul(batter.ovr || 0, 1597334677)) >>> 0;
+function atBatRng(a, b){
+  const n = ((seed || 1) ^ Math.imul(a.ovr || 0, 2654435761) ^ Math.imul(b.ovr || 0, 1597334677)) >>> 0;
   return mulberry32(n || 1);
 }
-/* ---------- pose-swapped figures (baseball-anim/*.png, baked by make-baseball-anim.py) ---------- */
-// Native art direction of each pose: +1 faces image-right, -1 image-left. abPose() combines this
-// with the figure's assigned direction so poses always face the right way (windup art faces left!).
-const BB_FACING = { windup:-1, release:1, followthrough:1,
-  stance1:1, stance2:1, load:1, contact:1, swingfollow:1 };
-// The flip is set through gsap (scaleX) so it composes with the rotation/x tweens on the same element.
-function abApplyFlip(el){ const d=+(el.dataset.dir||1), f=BB_FACING[el.dataset.pose]||1;
-  gsap.set(el,{ scaleX:d*f }); }
-function abPose(el,name){ el.dataset.pose=name;
-  el.style.webkitMaskImage=`url(baseball-anim/${name}.png)`; el.style.maskImage=`url(baseball-anim/${name}.png)`;
-  abApplyFlip(el); }
-function abFace(el,dir){ el.dataset.dir=dir; abApplyFlip(el); }
-// warm the pose masks so the first pitch doesn't flicker
-(function(){ Object.keys(BB_FACING).concat(['bb-ball']).forEach(n=>{ const i=new Image(); i.src='baseball-anim/'+n+'.png'; }); })();
+/* ---------- pose-swapped figures (soccer-anim/*.png, baked by make-soccer-anim.py) ---------- */
+function stPose(name){ const el=$('silhoP');
+  el.style.webkitMaskImage=`url(soccer-anim/st-${name}.png)`; el.style.maskImage=`url(soccer-anim/st-${name}.png)`; }
+function kpPose(name){ const el=$('silhoB');
+  el.style.webkitMaskImage=`url(soccer-anim/kp-${name}.png)`; el.style.maskImage=`url(soccer-anim/kp-${name}.png)`; }
+// warm the pose masks so the first kick doesn't flicker
+(function(){ ['st-run','st-sprint','st-shot','st-shothigh','st-volley','st-celebrate','kp-ready','kp-readylow','kp-divehigh','kp-divelow','kp-catchhigh','kp-savelow'].forEach(n=>{ const i=new Image(); i.src='soccer-anim/'+n+'.png'; }); })();
 
 // Pull a named slot rating out of a build (the quick-build slots travel with the match message).
 function slotVal(build, label, fb){
@@ -2220,78 +2212,35 @@ function slotVal(build, label, fb){
   const v = s ? Number(s.value) : NaN;
   return Number.isFinite(v) && v>0 ? v : fb;
 }
-// Fastball mph anchored to the build's REAL Velocity rating: 60→93, 80→96, 99→99, boosted 125→103.
-function fbMph(velo){ return 84 + velo*0.155; }
-const PITCH_TYPES = [
-  { n:'Four-Seam', off:0,   w:.30 },
-  { n:'Sinker',    off:-2,  w:.12 },
-  { n:'Cutter',    off:-4,  w:.12 },
-  { n:'Slider',    off:-7,  w:.18 },
-  { n:'Changeup',  off:-9,  w:.14 },
-  { n:'Curveball', off:-13, w:.14 },
-];
-// A real seeded at-bat: the count evolves pitch by pitch (strike% = pitcher Command vs batter
-// Discipline), fouls can't add a third strike, 3-ball counts force a painted strike (no walks —
-// the winner is already decided), and the ending matches the predetermined winner.
-function makePitchSequence(pitcher, batter, winnerRole, rr){
-  const velo = slotVal(pitcher,'Velocity', 40 + (pitcher.ovr||75)*0.45);
-  const cmd  = slotVal(pitcher,'Command',  pitcher.ovr||75);
-  const disc = slotVal(batter, 'Discipline', batter.ovr||75);
-  const fb   = fbMph(velo);
-  const pickType = putaway => {
-    if(putaway){ const P=['Four-Seam','Four-Seam','Slider','Curveball']; const n=P[Math.floor(rr()*P.length)];
-      return PITCH_TYPES.find(t=>t.n===n); }
-    let r=rr(); for(const t of PITCH_TYPES){ if((r-=t.w)<=0) return t; } return PITCH_TYPES[0];
-  };
-  const mk=(klass,call,result,opts={})=>{
-    const t=pickType(!!opts.putaway);
-    const mph=Math.round(fb + t.off + (rr()*2-1));
-    const missHigh=rr()<0.5;                                     // where a ball misses (seeded)
-    return Object.assign({ call, klass, result, type:t.n, velo:mph, swing:false, final:false,
-      missHigh }, opts);
-  };
-  const disparity=(pitcher.ovr||0)-(batter.ovr||0);
-  const pitcherEnd = winnerRole==='pitcher';
-  const byK = pitcherEnd && rr()<0.7;                            // pitcher wins: 70% K, else groundout
-  const maxP = disparity>=8 && pitcherEnd ? 4 : 6;
-  const strikeBias = Math.min(.72, Math.max(.38, .52 + (cmd-70)*.004 - (disc-70)*.003));
-  let b=0, s=0; const pitches=[];
-  while(true){
-    const n=pitches.length, mustFinish = n>=maxP-1;
-    if(byK && s===2 && (mustFinish || rr()<.6)){
-      const looking = rr()<.35;
-      pitches.push(mk('k','Strike 3','strikeout',{ swing:!looking, final:true, putaway:true, count:{b,s} }));
-      break;
-    }
-    if(!byK && (mustFinish || (n>=2 && rr()<.5))){
-      if(pitcherEnd){ pitches.push(mk('inplay','Grounder','groundout',{ swing:true, contact:true, final:true, count:{b,s} })); }
-      else          { pitches.push(mk('hit','Crushed','hit',{ swing:true, contact:true, final:true, count:{b,s} })); }
-      break;
-    }
-    // a live pitch that moves the count
-    let isStrike = rr()<strikeBias;
-    if(b===3) isStrike=true;                                     // full count: he paints the corner
-    if(byK && (maxP-1-n) <= (2-s)) isStrike=true;                // must reach 2 strikes before the K
-    if(isStrike){
-      if(s<2){
-        const kind=rr(); s++;
-        if(kind<.4)      pitches.push(mk('strike',`Strike ${s}`,'strike',{ swing:false, count:{b,s} }));
-        else if(kind<.7) pitches.push(mk('strike',`Strike ${s}`,'strike',{ swing:true,  count:{b,s} }));
-        else             pitches.push(mk('strike','Foul','foul',{ swing:true, contact:true, count:{b,s} }));
-      } else {
-        pitches.push(mk('strike','Foul','foul',{ swing:true, contact:true, count:{b,s} }));   // 2-strike foul: count holds
-      }
-    } else {
-      b++;
-      pitches.push(mk('ball',`Ball ${b}`,'ball',{ swing:false, count:{b,s} }));
-    }
-  }
-  const cnt = `${b}–${s}`;
-  if(byK) return { outcome:'strikeout', summary:`Pitcher wins by strikeout on a ${cnt} count`, finalCall:'STRIKEOUT!', pitches };
-  if(pitcherEnd) return { outcome:'groundout', summary:`Pitcher wins on a ${cnt} groundout`, finalCall:'GROUND OUT!', pitches };
-  return { outcome:'hit', summary:`Batter wins on a crushed home run (${cnt} count)`, finalCall:'HOME RUN!', pitches };
+// Kick speed anchored to the build's REAL Shot Power rating: 60→71, 90→81, 114→88 mph.
+function kickMph(power){ return Math.round(52 + power*0.32); }
+
+// Best-of-5 with a built-in cliffhanger: kicks 1-4 are ALWAYS 2 goals + 2 stops (seeded order),
+// so the 5th kick decides it — buried = striker wins, stopped = keeper wins.
+function makeShootout(shooter, gk, winnerRole, rr){
+  const strikerWins = winnerRole==='striker';
+  const order=[true,true,false,false];
+  for(let i=3;i>0;i--){ const j=Math.floor(rr()*(i+1)); const t=order[i]; order[i]=order[j]; order[j]=t; }
+  order.push(strikerWins);
+  const power = slotVal(shooter,'Shot Power', 40 + (shooter.ovr||75)*0.45);
+  let g=0, s=0; const kicks=[];
+  order.forEach((goal,i)=>{
+    const high = rr()<0.45;
+    let result;
+    if(goal) result='goal';
+    else result = (i<4 && !high && rr()<0.28) ? 'post' : 'save';   // the decider is always a clean SAVE
+    if(goal) g++; else s++;
+    kicks.push({ n:i+1, high, result, pose: high ? 'shothigh' : (rr()<0.5 ? 'shot' : 'volley'),
+      mph: kickMph(power) + Math.round(rr()*4-2),
+      final:i===4, count:{g,s},
+      call: result==='goal'?'Goal':result==='post'?'Post':'Saved',
+      klass: result==='goal'?'hit':result==='post'?'ball':'k' });
+  });
+  return strikerWins
+    ? { outcome:'goal', summary:`Striker buries ${g} of 5 — the decider hits the net`, finalCall:'GOAL!', pitches:kicks }
+    : { outcome:'save', summary:'Keeper stands tall — the decisive penalty is SAVED', finalCall:'SAVED!', pitches:kicks };
 }
-function renderPitchSeq(script){
+function renderKickSeq(script){
   $('pitchSeq').innerHTML = script.pitches.map((p,i) =>
     `<div class="pitch-dot" id="pitchPill${i}"><div class="pd-num">${i+1}</div><div class="pd-call">-</div></div>`
   ).join('');
@@ -2308,75 +2257,68 @@ function activatePitch(idx){
   gsap.fromTo(num, { scale:1 }, { scale:1.25, duration:.22, ease:'back.out(2.5)' });
   gsap.to(num, { scale:1.05, duration:.2, delay:.22, ease:'power2.inOut' });
 }
-function resolvePitch(idx, pitch){
+function resolvePitch(idx, kick){
   const pill = $('pitchPill' + idx);
   if(!pill) return;
-  pill.className = 'pitch-dot active ' + pitch.klass;
+  pill.className = 'pitch-dot active ' + kick.klass;
   const call = pill.querySelector('.pd-call');
-  call.textContent = pitch.call;
+  call.textContent = kick.call;
   gsap.fromTo(call, { opacity:0, y:4 }, { opacity:1, y:0, duration:.22, ease:'power2.out' });
-  // the count ticks the moment the pitch resolves at the plate (final pitch: the callout is the payoff)
-  if(pitch.count && !pitch.final) setCount(pitch.count.b, pitch.count.s);
+  if(kick.count && !kick.final) setCount(kick.count.g, kick.count.s);
 }
-function setCount(b, s){
-  $('cntB').textContent=b; $('cntS').textContent=s;
+function setCount(g, s){
+  $('cntB').textContent=g; $('cntS').textContent=s;
   gsap.fromTo('#abCount',{ scale:1.16 },{ scale:1, duration:.3, ease:'back.out(2)' });
 }
-function appendPitch(tl, pitch, idx){
+function appendKick(tl, kick, idx){
   const ball = $('ball');
-  // flight time comes from the REAL mph (99mph ≈ .34s, a 86mph curveball ≈ .40s)
-  const flight = Math.max(.30, Math.min(.46, 34/Math.max(80, pitch.velo)));
-  // where a non-contact pitch crosses the zone: strikes catch the plate, balls miss high or low
-  const crossY = pitch.contact ? '28%' : pitch.result==='ball' ? (pitch.missHigh?'44%':'24%') : '33%';
+  const targetY = kick.high ? '55%' : '30%';
+  const targetX = kick.result==='post' ? '89%' : '83%';
   tl.add(() => {
       activatePitch(idx);
-      $('pitchInfo').style.opacity=0;                       // don't telegraph the pitch pre-windup
-      abPose($('silhoP'),'windup'); abPose($('silhoB'),'stance1');   // reset the figures for this pitch
-      if(!pitch.final) { $('callout').textContent=''; $('callout').style.opacity=0; }
-    }, idx ? '+=.42' : 0)
-    .set(ball,{ opacity:0, left:'21%', bottom:'52%', scale:1, rotation:0 })
-    .set('#silhoB',{ rotation:0, x:0 })
-    .to('#silhoP',{ rotation:-4, duration:.30, ease:'power2.in' })   // gathers into the leg lift
-    .add(()=>{ // stride + release: pose swap, ball leaves the hand, radar-gun banner
-      abPose($('silhoP'),'release'); abPose($('silhoB'),'load');
-      $('pitchInfo').textContent = `${pitch.type} · ${pitch.velo} MPH`;
+      $('pitchInfo').style.opacity=0;
+      stPose('run'); kpPose(kick.high?'ready':'readylow');
+      gsap.set('#silhoP',{ x:-52, y:0, rotation:0 });
+      gsap.set('#silhoB',{ x:0, y:0, rotation:0 });
+      $('callout').textContent=''; $('callout').style.opacity=0;
+    }, idx ? '+=.6' : 0)
+    .set(ball,{ opacity:1, left:'26%', bottom:'29%', scale:1, rotation:0 })
+    .add(()=>stPose('sprint'))
+    .to('#silhoP',{ x:0, duration:.36, ease:'power2.in' })          // the run-up
+    .add(()=>{ stPose(kick.pose||'shot'); Sound.crack();
+      $('pitchInfo').textContent = `PENALTY ${kick.n} · ${kick.mph} MPH · ${kick.high?'TOP BIN':'LOW'}`;
       gsap.to('#pitchInfo',{ opacity:1, duration:.15 });
     })
-    .to('#silhoP',{ rotation:0, duration:.1 })
-    .set(ball,{ opacity:1 },'<')
-    .to(ball,{ left:'72%', bottom:crossY, rotation:540, duration:flight, ease:'power1.in' },'<')
-    .add(()=>abPose($('silhoP'),'followthrough'), '<.13');   // arm whips through after the ball is gone
+    .to(ball,{ left:targetX, bottom:targetY, rotation:660, duration:.32, ease:'power1.in' },'<.04');
 
-  if(pitch.swing){
-    // the swing fires into the contact pose just before the ball arrives, whatever the speed
-    tl.add(()=>abPose($('silhoB'),'contact'), '<' + Math.max(0, flight-.10).toFixed(2));
-  }
-
-  if(pitch.result === 'groundout'){
-    tl.add(()=> { Sound.crack(); resolvePitch(idx, pitch); abPose($('silhoB'),'swingfollow'); })
-      .to(ball,{ left:'46%', bottom:'8%', scale:.75, rotation:'+=360', duration:.55, ease:'power2.out' })
-      .add(()=> showCall('GROUND OUT!', 'var(--pitch)'));
-  } else if(pitch.result === 'strikeout'){
-    tl.add(()=> { Sound.catch(); resolvePitch(idx, pitch);
-        if(pitch.swing) abPose($('silhoB'),'swingfollow');   // swung through it; looking = frozen in the load
+  if(kick.result === 'save'){
+    tl.add(()=>{ kpPose(kick.high?'catchhigh':'savelow'); }, '<.12')
+      .to('#silhoB',{ x:12, y:kick.high?-30:24, rotation:kick.high?-12:6, duration:.24, ease:'power2.out' },'<')
+      .add(()=>{ Sound.catch(); resolvePitch(idx, kick); gsap.set(ball,{ opacity:0 });   // in the gloves
+        showCall('SAVED!','var(--bat)'); })
+      .to('#silhoB',{ x:0, y:0, rotation:0, duration:.4, ease:'power2.inOut' }, '+=.55')
+      .add(()=>kpPose('ready'));
+  } else if(kick.result === 'post'){
+    tl.add(()=>{ kpPose(kick.high?'divehigh':'divelow'); }, '<.12')
+      .to('#silhoB',{ x:kick.high?-22:18, y:kick.high?-32:18, rotation:kick.high?-18:8, duration:.26, ease:'power2.out' },'<')
+      .add(()=>{ Sound.catch(); resolvePitch(idx, kick); showCall('OFF THE POST!','var(--gold)'); })
+      .to(ball,{ left:'56%', bottom:'42%', rotation:'+=420', scale:.9, duration:.5, ease:'power2.out' })
+      .to(ball,{ opacity:0, duration:.2 },'-=.1')
+      .to('#silhoB',{ x:0, y:0, rotation:0, duration:.4 }, '+=.35')
+      .add(()=>kpPose('ready'));
+  } else {   // GOAL — the keeper guesses wrong
+    tl.add(()=>{ kpPose(kick.high?'divelow':'divehigh'); }, '<.12')
+      .to('#silhoB',{ x:kick.high?16:-22, y:kick.high?22:-28, rotation:kick.high?8:-16, duration:.26, ease:'power2.out' },'<')
+      .add(()=>{ Sound.crack(); resolvePitch(idx, kick);
+        gsap.fromTo('#goalNet',{ scaleX:1 },{ scaleX:1.04, yoyo:true, repeat:1, duration:.12, transformOrigin:'right center' });
+        showCall('GOAL!','var(--pitch)');
+        if(kick.final && kick.result==='goal'){ stPose('celebrate');
+          gsap.fromTo('#silhoP',{ y:0 },{ y:-10, yoyo:true, repeat:3, duration:.15 }); }
       })
-      .to(ball,{ left:'82%', bottom:'30%', scale:.8, duration:.16, ease:'power2.in' })
-      .add(()=> showCall('STRIKEOUT!', 'var(--pitch)'))
-      .to(ball,{ opacity:0, duration:.15 });
-  } else if(pitch.result === 'hit'){
-    tl.add(()=> { Sound.crack(); resolvePitch(idx, pitch); abPose($('silhoB'),'swingfollow'); })
-      .to(ball,{ left:'-10%', bottom:'86%', scale:1.3, rotation:'+=720', duration:.85, ease:'power2.out' })
-      .add(()=> showCall('HOME RUN!', 'var(--bat)'));
-  } else if(pitch.result === 'foul'){
-    // foul tick: the ball deflects up and back behind the plate
-    tl.add(()=> { Sound.crack(); resolvePitch(idx, pitch); abPose($('silhoB'),'swingfollow'); })
-      .to(ball,{ left:'60%', bottom:'80%', scale:.7, rotation:'+=300', duration:.42, ease:'power2.out' })
-      .to(ball,{ opacity:0, duration:.18 },'-=.12');
-  } else {
-    tl.add(()=> { Sound.catch(); resolvePitch(idx, pitch); })
-      .to(ball,{ left:'82%', bottom:crossY, scale:.8, duration:.14, ease:'power2.in' })
-      .to(ball,{ opacity:0, duration:.12 })
-      .add(()=>abPose($('silhoB'),'stance1'), '+=.1');   // took the pitch — settle back into the stance
+      .to(ball,{ left:'86.5%', bottom: kick.high?'52%':'30%', scale:.82, duration:.1, ease:'power1.out' })
+      .to(ball,{ opacity:0, duration:.3 }, '+=.3')
+      .to('#silhoB',{ x:0, y:0, rotation:0, duration:.4 }, '+=.3')
+      .add(()=>kpPose('ready'));
   }
 }
 function showCall(text, color){
@@ -2429,7 +2371,7 @@ async function acceptOppRematch(){
   if (rematchCountdown){ clearInterval(rematchCountdown); rematchCountdown=null; }
   const newId = rid();
   const newSeed = (Math.random() * 0xFFFFFFFF) | 0;
-  const myNewRole  = myRole === 'pitcher' ? 'batter' : 'pitcher';
+  const myNewRole  = myRole === 'striker' ? 'keeper' : 'striker';
   const oppNewRole = myRole; // roles swap
   try { await matchCh.publish('rematch', { type:'start', matchId:newId, seed:newSeed, yourRole:oppNewRole }); } catch(e){}
   doRematch(newId, myNewRole, newSeed);
@@ -2443,18 +2385,18 @@ function doRematch(newMatchId, newRole, newSeed){
 }
 
 /* ---------- result ---------- */
-function showResult(iWon, pitcher, batter, winnerRole, script){
+function showResult(iWon, striker, keeper, winnerRole, script){
   if(matchResolved) return;
   matchResolved=true;
-  try { gtag('event', 'versus_result', { game: 'versus', won: iWon ? 1 : 0, role: myRole, friendly: friendlyMode ? 1 : 0 }); } catch(e){}
+  try { gtag('event', 'versus_result', { game: 'versus-soccer', won: iWon ? 1 : 0, role: myRole, friendly: friendlyMode ? 1 : 0 }); } catch(e){}
   showScreen('resultScreen');
   setOnlineStatus('idle');
   resetRematchUI();
   const card=$('resultCard'); card.className='result-card '+(iWon?'win':'lose');
   $('resultHead').textContent = iWon ? 'YOU WIN' : 'YOU LOSE';
-  const winSide = winnerRole==='pitcher'?'Pitcher':'Batter';
+  const winSide = winnerRole==='striker'?'Striker':'Keeper';
   const sequenceLine = script && script.summary ? script.summary : `${winSide} wins`;
-  $('resultLine').textContent = `${sequenceLine} · ${pitcher.ovr} OVR pitcher vs ${batter.ovr} OVR batter`;
+  $('resultLine').textContent = `${sequenceLine} · ${striker.ovr} OVR striker vs ${keeper.ovr} OVR keeper`;
   const oppName = (oppBuild && oppBuild.name) ? oppBuild.name : 'your opponent';
   const oppTag = isGhost ? ' (Ghost)' : '';
   $('resultSub').textContent = iWon ? `You beat ${oppName}${oppTag}. Run it back?` : `${oppName}${oppTag} got you. Build a better one.`;
@@ -2506,7 +2448,7 @@ function openStats(tab='stats'){
   startSeasonBar();
   loadStats();
 }
-let statsView = 'baseball';   // which sport's 1v1 board the stats screen is showing (toggle below)
+let statsView = 'soccer';   // which sport's 1v1 board the stats screen is showing (toggle below)
 async function loadStats(){
   loadSeasons();   // fire the Seasons tab load in parallel (baseball-only, own render target)
   let data, hist;
@@ -2524,7 +2466,7 @@ async function loadStats(){
     const rows = histRows.map(r => {
       const delta = (r.elo_after != null && r.elo_before != null) ? (r.elo_after - r.elo_before) : null;
       const sign = delta >= 0 ? '+' : '';
-      const roleIcon = r.my_role === 'pitcher' ? '⚾' : '🏏';
+      const roleIcon = ({striker:'⚽',keeper:'🧤',pitcher:'⚾',batter:'🏏'})[r.my_role] || '🏀';
       const sub = [r.my_ovr ? `${r.my_ovr} OVR` : null, r.opp_ovr ? `opp ${r.opp_ovr}` : null].filter(Boolean).join(' · ');
       return `<div class="hist-row">
         <div class="hist-wl ${r.won?'w':'l'}">${r.won?'W':'L'}</div>
@@ -2566,7 +2508,7 @@ async function loadStats(){
       const rt = getEloTier(r.elo, i + 1);
       return `<div class="lb-row${mine?' mine':''}"><span class="lr-rank">${i+1}</span><span class="lr-name">${escapeHTML(r.name||'Player')}</span><span class="lr-rec">${r.wins}-${r.losses}</span><span class="lr-elo">${batSVG(rt.color, rt.glow, 14)}<span style="color:${rt.color}">${r.elo}</span></span></div>`;
     }).join('');
-    $('statsBoard').innerHTML = `<div class="lb-head">${statsView==='hoops'?'🏀 Hoops':'⚾ Baseball'} · Top Players</div><div class="lb-rows">${rowsHtml}</div>`;
+    $('statsBoard').innerHTML = `<div class="lb-head">${statsView==='soccer'?'⚽ Soccer':statsView==='hoops'?'🏀 Hoops':'⚾ Baseball'} · Top Players</div><div class="lb-rows">${rowsHtml}</div>`;
   } else {
     $('statsBoard').innerHTML = `<div class="prompt" style="margin-top:16px">No ranked players yet - be the first!</div>`;
   }
@@ -2576,7 +2518,7 @@ async function loadStats(){
 async function loadSeasons(){
   const body = $('seasonsBody'); if (!body) return;
   const info = seasonInfo();
-  if (statsView !== 'baseball'){ body.innerHTML = `<div class="prompt">Seasons are coming to Hoops soon — for now Hoops uses an all-time rating.</div>`; return; }
+  if (statsView !== 'baseball'){ body.innerHTML = `<div class="prompt">Seasons are coming to Soccer soon — for now Soccer uses an all-time rating.</div>`; return; }
   let res = null;
   try { res = await fetch('/api/account', { method:'POST', headers:{'content-type':'application/json'},
     body: JSON.stringify(Object.assign({ action:'pvpSeasonHistory' }, principal())) }).then(x=>x.json()); } catch(e){}
@@ -2652,7 +2594,7 @@ $('lobbyCancelBtn').onclick = () => { Sound.click(); cancelLobby(); };
 $('lobbyCopyBtn').onclick = () => {
   Sound.click();
   const link = updateLobbyLink();
-  try { gtag('event', 'challenge_sent', { game: 'versus', source: 'lobby' }); } catch(e){}
+  try { gtag('event', 'challenge_sent', { game: 'versus-soccer', source: 'lobby' }); } catch(e){}
   const done = () => { const c=$('lobbyCopied'); if(c){ c.style.display=''; setTimeout(()=>{ if(c)c.style.display='none'; },3000); } };
   if (navigator.clipboard){ navigator.clipboard.writeText(link).then(done).catch(()=>{ prompt('Copy this link:',link); done(); }); }
   else { try{ prompt('Copy this link:',link); done(); }catch(e){} }
@@ -2675,11 +2617,11 @@ goOnline();  // connect + wire the friend-challenge inbox (global presence is jo
   const q=new URLSearchParams(location.search);
   if(q.get('animtest')!=='1') return;
   friendlyMode = true;
-  myRole='pitcher'; seed=(+q.get('seed'))||12345;
-  myBuild  = { name:'Tester A', ovr:(+q.get('aovr'))||95, team:q.get('ateam')||'LAD', elo:1000,
-    slots:[ {slot:'Velocity',value:(+q.get('avelo'))||96}, {slot:'Command',value:(+q.get('acmd'))||90} ] };
-  oppBuild = { name:'Tester B', ovr:(+q.get('bovr'))||88, team:q.get('bteam')||'NYY', elo:1000,
-    slots:[ {slot:'Discipline',value:(+q.get('bdisc'))||85} ] };
+  myRole='striker'; seed=(+q.get('seed'))||12345;
+  myBuild  = { name:'Tester A', ovr:(+q.get('aovr'))||95, team:q.get('ateam')||'Real Madrid', elo:1000,
+    slots:[ {slot:'Shot Power',value:(+q.get('apow'))||96}, {slot:'Finishing',value:(+q.get('afin'))||90} ] };
+  oppBuild = { name:'Tester B', ovr:(+q.get('bovr'))||88, team:q.get('bteam')||'FC Barcelona', elo:1000,
+    slots:[ {slot:'Reflexes',value:(+q.get('bref'))||85} ] };
   setTimeout(playAtBat, 400);
 })();
 // dev harness: /versus.html?ghost=1 runs the REAL ghost flow (fetch a ghost build, reveal, build,
@@ -2687,7 +2629,7 @@ goOnline();  // connect + wire the friend-challenge inbox (global presence is jo
 (function(){ if(new URLSearchParams(location.search).get('ghost')==='1') setTimeout(startGhostMatch, 300); })();
 // leave the queue if the tab closes while waiting
 window.addEventListener('pagehide', () => {
-  if (clientId) { try { navigator.sendBeacon('/api/match', JSON.stringify({ action:'leave', id: clientId })); } catch(e){} }
+  if (clientId) { try { navigator.sendBeacon('/api/match-soccer', JSON.stringify({ action:'leave', id: clientId })); } catch(e){} }
   if (ably) { try { ably.close(); } catch(e){} }
 });
 </script>

@@ -101,6 +101,11 @@ function ensure() {
       await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS pvp_wins_hoops int NOT NULL DEFAULT 0`;
       await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS pvp_losses_hoops int NOT NULL DEFAULT 0`;
       await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS pvp_streak_hoops int NOT NULL DEFAULT 0`;
+      // Separate soccer-1v1 rating board (striker vs keeper), same pattern as hoops
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS pvp_elo_soccer int NOT NULL DEFAULT 1000`;
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS pvp_wins_soccer int NOT NULL DEFAULT 0`;
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS pvp_losses_soccer int NOT NULL DEFAULT 0`;
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS pvp_streak_soccer int NOT NULL DEFAULT 0`;
       await sql`ALTER TABLE pvp_history ADD COLUMN IF NOT EXISTS sport text`;
       await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS achievements jsonb NOT NULL DEFAULT '{}'::jsonb`;
       // Cross-game player XP (drives the account Level). Monotonic; server keeps the max of
@@ -379,6 +384,141 @@ async function hoopsLeaderboard(body, res) {
   return res.status(200).json({ ok: true, rows, me });
 }
 
+// ---- Soccer 1v1 (striker vs keeper) rating: a fully separate Elo board in *_soccer columns,
+// cloned from the hoops block above. Runs ONLY when the client sends sport:'soccer'. Roles are
+// real here, so results also feed the anonymous pvp_matches balance log (striker vs keeper win
+// rates, read via pvpMatchStats — same as baseball's pitcher/batter tuning loop). ----
+async function soccerStats(key, res) {
+  const [u] = await sql`SELECT pvp_elo_soccer AS elo, pvp_wins_soccer AS wins, pvp_losses_soccer AS losses, pvp_streak_soccer AS streak FROM users WHERE google_sub = ${key}`;
+  if (!u) return res.status(401).json({ ok: false, error: 'Not signed in' });
+  return res.status(200).json({ ok: true, elo: u.elo, wins: u.wins, losses: u.losses, streak: u.streak });
+}
+async function soccerResult(body, key, res) {
+  const matchId = String(body.matchId || '').slice(0, 80);
+  if (!matchId) return res.status(400).json({ ok: false, error: 'missing matchId' });
+  const won = !!body.won;
+  const decided = body.decided !== false;
+  const oppElo = Math.max(100, Math.min(4000, Math.round(Number(body.oppElo) || 1000)));
+  const myOvr = Math.round(Number(body.ovr) || 0) || null;
+  const oppOvr = Math.round(Number(body.oppOvr) || 0) || null;
+  const oppName = String(body.oppName || '').trim().slice(0, 40) || null;
+  const myRole = (body.role === 'striker' || body.role === 'keeper') ? body.role : null;
+  const normKey = p => (p && p.indexOf('acct:') === 0) ? p.slice(5) : p;
+  let recordedOpp = null;
+  try {
+    const [mp] = await sql`SELECT claimer_pid, opp_pid FROM pvp_match_players WHERE match_id = ${matchId}`;
+    if (mp) {
+      const a = normKey(mp.claimer_pid), b = normKey(mp.opp_pid);
+      if (key !== a && key !== b) return res.status(403).json({ ok: false, error: 'not a participant in this match' });
+      recordedOpp = (key === a) ? b : a;
+    }
+  } catch (e) {}
+  // anonymous balance log (one row per match+role; idempotent) — the striker-vs-keeper tuning loop
+  if (myRole) {
+    try {
+      await sql`INSERT INTO pvp_matches (match_id, role, won, ovr, opp_ovr)
+        VALUES (${matchId}, ${myRole}, ${won}, ${myOvr}, ${oppOvr})
+        ON CONFLICT (match_id, role) DO NOTHING`;
+    } catch (e) {}
+  }
+  const [u] = await sql`SELECT pvp_elo_soccer AS elo, pvp_wins_soccer AS wins, pvp_losses_soccer AS losses, pvp_streak_soccer AS streak FROM users WHERE google_sub = ${key}`;
+  if (!u) return res.status(401).json({ ok: false, error: 'Not signed in' });
+  const dedup = 's:' + matchId;   // namespaced so a soccer match never collides in shared pvp_results
+  const ins = await sql`INSERT INTO pvp_results (match_id, google_sub) VALUES (${dedup}, ${key}) ON CONFLICT DO NOTHING RETURNING match_id`;
+  if (!ins.length) {
+    let delta = 0, elo = u.elo, recWon = won, hRow = null;
+    try {
+      const [h] = await sql`SELECT id, won, elo_before, elo_after FROM pvp_history
+        WHERE match_id = ${matchId} AND player_key = ${key} AND sport = 'soccer'
+        ORDER BY created_at DESC LIMIT 1`;
+      if (h) { hRow = h; delta = h.elo_after - h.elo_before; elo = h.elo_after; recWon = !!h.won; }
+    } catch (e) {}
+    // completed-shootout win overrides a forfeit/quit claim that wrongly settled this player as a loss
+    if (decided && won && hRow && hRow.won === false && myOvr && oppOvr && myOvr >= oppOvr) {
+      const oppKeyVal = body.oppKey ? String(body.oppKey).slice(0, 80) : null;
+      const clientOpp = oppKeyVal && /^(acct:|guest:)/.test(oppKeyVal) ? normKey(oppKeyVal) : null;
+      const oppK = recordedOpp || clientOpp;
+      if (oppK && oppK !== key) {
+        try {
+          const [oh] = await sql`SELECT id, won, decided, elo_before, elo_after FROM pvp_history
+            WHERE match_id = ${matchId} AND player_key = ${oppK} AND sport = 'soccer'
+            ORDER BY created_at DESC LIMIT 1`;
+          if (oh && oh.won === true && oh.decided === false) {
+            const uBefore = hRow.elo_before, oBefore = oh.elo_before;
+            const uWin = nextElo(uBefore, oBefore, true).delta;
+            const oLoss = nextElo(oBefore, uBefore, false).delta;
+            const uAdj = uWin - (hRow.elo_after - uBefore);
+            const oAdj = oLoss - (oh.elo_after - oBefore);
+            const [uNow] = await sql`SELECT pvp_elo_soccer AS elo, pvp_wins_soccer AS wins, pvp_losses_soccer AS losses FROM users WHERE google_sub = ${key}`;
+            const [oNow] = await sql`SELECT pvp_elo_soccer AS elo, pvp_wins_soccer AS wins, pvp_losses_soccer AS losses FROM users WHERE google_sub = ${oppK}`;
+            if (uNow && oNow) {
+              const uNewElo = Math.max(100, uNow.elo + uAdj);
+              const oNewElo = Math.max(100, oNow.elo + oAdj);
+              await sql`UPDATE users SET pvp_elo_soccer = ${uNewElo}, pvp_wins_soccer = ${uNow.wins + 1}, pvp_losses_soccer = ${Math.max(0, uNow.losses - 1)}, pvp_streak_soccer = 1 WHERE google_sub = ${key}`;
+              await sql`UPDATE users SET pvp_elo_soccer = ${oNewElo}, pvp_wins_soccer = ${Math.max(0, oNow.wins - 1)}, pvp_losses_soccer = ${oNow.losses + 1}, pvp_streak_soccer = 0 WHERE google_sub = ${oppK}`;
+              await sql`UPDATE pvp_history SET won = true, decided = true, elo_after = ${uBefore + uWin} WHERE id = ${hRow.id}`;
+              await sql`UPDATE pvp_history SET won = false, elo_after = ${oBefore + oLoss} WHERE id = ${oh.id}`;
+              return res.status(200).json({ ok: true, counted: true, reversed: true, won: true, elo: uNewElo, delta: uWin, bonus: 0, streak: 1, wins: uNow.wins + 1, losses: Math.max(0, uNow.losses - 1) });
+            }
+          }
+        } catch (e) {}
+      }
+    }
+    return res.status(200).json({ ok: true, counted: false, won: recWon, elo, delta, bonus: 0, streak: u.streak, wins: u.wins, losses: u.losses });
+  }
+  const { delta } = nextElo(u.elo, oppElo, won);
+  const streak = won ? (u.streak || 0) + 1 : 0;
+  const bonus = won ? Math.min(streak, STREAK_CAP) * STREAK_BONUS : 0;
+  const elo = Math.max(100, u.elo + delta + bonus);
+  const wins = u.wins + (won ? 1 : 0), losses = u.losses + (won ? 0 : 1);
+  await sql`UPDATE users SET pvp_elo_soccer = ${elo}, pvp_wins_soccer = ${wins}, pvp_losses_soccer = ${losses}, pvp_streak_soccer = ${streak} WHERE google_sub = ${key}`;
+  const oppKeyVal = body.oppKey ? String(body.oppKey).slice(0, 80) : null;
+  const clientOpp = oppKeyVal && /^(acct:|guest:)/.test(oppKeyVal) ? normKey(oppKeyVal) : null;
+  const settleOpp = recordedOpp || clientOpp;
+  const validOppKey = settleOpp && settleOpp !== key ? settleOpp : null;
+  try {
+    await sql`INSERT INTO pvp_history (player_key, match_id, won, my_role, my_ovr, opp_name, opp_ovr, opp_key, elo_before, elo_after, sport, decided)
+      VALUES (${key}, ${matchId}, ${won}, ${myRole || 'soccer'}, ${myOvr}, ${oppName}, ${oppOvr}, ${validOppKey}, ${u.elo}, ${elo}, 'soccer', ${decided})`;
+  } catch (e) {}
+  if (won && validOppKey) {
+    try {
+      const oppIns = await sql`INSERT INTO pvp_results (match_id, google_sub) VALUES (${dedup}, ${validOppKey}) ON CONFLICT DO NOTHING RETURNING match_id`;
+      if (oppIns.length) {
+        const [opp] = await sql`SELECT pvp_elo_soccer AS elo, pvp_wins_soccer AS wins, pvp_losses_soccer AS losses FROM users WHERE google_sub = ${validOppKey}`;
+        if (opp) {
+          const { delta: oppDelta } = nextElo(opp.elo, u.elo, false);
+          const oppNewElo = Math.max(100, opp.elo + oppDelta);
+          await sql`UPDATE users SET pvp_elo_soccer = ${oppNewElo}, pvp_losses_soccer = ${opp.losses + 1}, pvp_streak_soccer = 0 WHERE google_sub = ${validOppKey}`;
+          const winnerName = String(body.name || '').slice(0, 40);
+          const oppRole = myRole === 'striker' ? 'keeper' : (myRole === 'keeper' ? 'striker' : 'soccer');
+          await sql`INSERT INTO pvp_history (player_key, match_id, won, my_role, my_ovr, opp_name, opp_ovr, opp_key, elo_before, elo_after, sport, decided)
+            VALUES (${validOppKey}, ${matchId}, false, ${oppRole}, ${oppOvr}, ${winnerName}, ${myOvr}, ${key}, ${opp.elo}, ${oppNewElo}, 'soccer', ${decided})`;
+        }
+      }
+    } catch (e) {}
+  }
+  return res.status(200).json({ ok: true, counted: true, won, elo, delta: delta + bonus, bonus, streak, wins, losses });
+}
+async function soccerLeaderboard(body, res) {
+  const limit = Math.max(1, Math.min(100, parseInt(body.limit, 10) || 50));
+  const rows = await sql`SELECT name, pvp_elo_soccer AS elo, pvp_wins_soccer AS wins, pvp_losses_soccer AS losses
+    FROM users WHERE (pvp_wins_soccer + pvp_losses_soccer) > 0
+    ORDER BY pvp_elo_soccer DESC, (pvp_wins_soccer + pvp_losses_soccer) DESC LIMIT ${limit}`;
+  let me = null;
+  const key = await pvpKey(body);
+  if (key) {
+    const [u] = await sql`SELECT name, pvp_elo_soccer AS elo, pvp_wins_soccer AS wins, pvp_losses_soccer AS losses FROM users WHERE google_sub = ${key}`;
+    if (u && (u.wins + u.losses) > 0) {
+      const [{ ahead }] = await sql`SELECT count(*)::int AS ahead FROM users
+        WHERE (pvp_wins_soccer + pvp_losses_soccer) > 0 AND pvp_elo_soccer > ${u.elo}`;
+      me = { rank: ahead + 1, name: u.name, elo: u.elo, wins: u.wins, losses: u.losses };
+    } else if (u) {
+      me = { rank: null, name: u.name, elo: u.elo, wins: u.wins, losses: u.losses };
+    }
+  }
+  return res.status(200).json({ ok: true, rows, me });
+}
+
 async function authed(sub, sessionToken) {
   if (!sub || !sessionToken) return false;
   const [u] = await sql`SELECT session_token FROM users WHERE google_sub = ${sub}`;
@@ -603,6 +743,7 @@ module.exports = async (req, res) => {
         const key = await pvpKey(body);
         if (!key) return res.status(401).json({ ok: false, error: 'Not signed in' });
         if (body.sport === 'hoops') return hoopsStats(key, res);
+        if (body.sport === 'soccer') return soccerStats(key, res);
         const [u] = await sql`SELECT pvp_elo AS elo, pvp_wins AS wins, pvp_losses AS losses, pvp_streak AS streak, pvp_season AS season, pvp_placement_games AS placement_games FROM users WHERE google_sub = ${key}`;
         if (!u) return res.status(401).json({ ok: false, error: 'Not signed in' });
         // season/placementGames let the chip show a live band or "Placement N/5"; the client computes
@@ -614,6 +755,7 @@ module.exports = async (req, res) => {
         const key = await pvpKey(body);
         if (!key) return res.status(401).json({ ok: false, error: 'Not signed in' });
         if (body.sport === 'hoops') return hoopsResult(body, key, res);
+        if (body.sport === 'soccer') return soccerResult(body, key, res);
         const matchId = String(body.matchId || '').slice(0, 80);
         if (!matchId) return res.status(400).json({ ok: false, error: 'missing matchId' });
         const won = !!body.won;
@@ -768,8 +910,11 @@ module.exports = async (req, res) => {
         const rows = body.sport === 'hoops'
           ? await sql`SELECT won, my_role, my_ovr, opp_name, opp_ovr, elo_before, elo_after, created_at
               FROM pvp_history WHERE player_key = ${key} AND sport = 'hoops' ORDER BY created_at DESC LIMIT 20`
+          : body.sport === 'soccer'
+          ? await sql`SELECT won, my_role, my_ovr, opp_name, opp_ovr, elo_before, elo_after, created_at
+              FROM pvp_history WHERE player_key = ${key} AND sport = 'soccer' ORDER BY created_at DESC LIMIT 20`
           : await sql`SELECT won, my_role, my_ovr, opp_name, opp_ovr, elo_before, elo_after, created_at
-              FROM pvp_history WHERE player_key = ${key} AND sport IS DISTINCT FROM 'hoops' ORDER BY created_at DESC LIMIT 20`;
+              FROM pvp_history WHERE player_key = ${key} AND sport IS DISTINCT FROM 'hoops' AND sport IS DISTINCT FROM 'soccer' ORDER BY created_at DESC LIMIT 20`;
         return res.status(200).json({ ok: true, history: rows });
       }
 
@@ -783,21 +928,23 @@ module.exports = async (req, res) => {
       if (action === 'pvpClaim') {
         if (!(await authed(body.sub, body.sessionToken))) return res.status(401).json({ ok: false, error: 'Not signed in' });
         const gid = body.guestId ? ('guest:' + String(body.guestId).slice(0, 48)) : null;
-        let claimedBase = false, claimedHoops = false;
+        let claimedBase = false, claimedHoops = false, claimedSoccer = false;
         const [g] = gid ? await sql`DELETE FROM users WHERE google_sub = ${gid}
-          AND (pvp_wins > 0 OR pvp_losses > 0 OR pvp_wins_hoops > 0 OR pvp_losses_hoops > 0)
+          AND (pvp_wins > 0 OR pvp_losses > 0 OR pvp_wins_hoops > 0 OR pvp_losses_hoops > 0 OR pvp_wins_soccer > 0 OR pvp_losses_soccer > 0)
           RETURNING pvp_elo AS elo, pvp_wins AS wins, pvp_losses AS losses, pvp_streak AS streak,
             pvp_season AS season, pvp_placement_games AS placement,
-            pvp_elo_hoops AS helo, pvp_wins_hoops AS hwins, pvp_losses_hoops AS hlosses, pvp_streak_hoops AS hstreak` : [];
+            pvp_elo_hoops AS helo, pvp_wins_hoops AS hwins, pvp_losses_hoops AS hlosses, pvp_streak_hoops AS hstreak,
+            pvp_elo_soccer AS selo, pvp_wins_soccer AS swins, pvp_losses_soccer AS slosses, pvp_streak_soccer AS sstreak` : [];
         if (g) {
           const [acct] = await sql`SELECT pvp_elo AS elo, pvp_wins AS wins, pvp_losses AS losses,
-            pvp_elo_hoops AS helo, pvp_wins_hoops AS hwins, pvp_losses_hoops AS hlosses FROM users WHERE google_sub = ${body.sub}`;
+            pvp_elo_hoops AS helo, pvp_wins_hoops AS hwins, pvp_losses_hoops AS hlosses,
+            pvp_elo_soccer AS selo, pvp_wins_soccer AS swins, pvp_losses_soccer AS slosses FROM users WHERE google_sub = ${body.sub}`;
           if (acct) {
             if (g.wins > 0 || g.losses > 0) {
               const elo = Math.max(100, Math.min(4000, acct.elo + (g.elo - 1000)));
               // carry the guest's season/placement so placements done as a guest survive sign-in
               await sql`UPDATE users SET pvp_elo = ${elo}, pvp_wins = ${acct.wins + g.wins}, pvp_losses = ${acct.losses + g.losses}, pvp_streak = ${g.streak}, pvp_season = ${g.season || 0}, pvp_placement_games = ${g.placement || 0} WHERE google_sub = ${body.sub}`;
-              await sql`UPDATE pvp_history SET player_key = ${body.sub} WHERE player_key = ${gid} AND sport IS DISTINCT FROM 'hoops'`;
+              await sql`UPDATE pvp_history SET player_key = ${body.sub} WHERE player_key = ${gid} AND sport IS DISTINCT FROM 'hoops' AND sport IS DISTINCT FROM 'soccer'`;
               // re-key the guest's season standings onto the account (drop any that would collide with
               // a season the account already has a row for, then re-key the rest — no PK violation)
               await sql`DELETE FROM pvp_seasons WHERE player_key = ${gid} AND season IN (SELECT season FROM pvp_seasons WHERE player_key = ${body.sub})`;
@@ -810,16 +957,23 @@ module.exports = async (req, res) => {
               await sql`UPDATE pvp_history SET player_key = ${body.sub} WHERE player_key = ${gid} AND sport = 'hoops'`;
               claimedHoops = true;
             }
+            if (g.swins > 0 || g.slosses > 0) {
+              const selo = Math.max(100, Math.min(4000, acct.selo + (g.selo - 1000)));
+              await sql`UPDATE users SET pvp_elo_soccer = ${selo}, pvp_wins_soccer = ${acct.swins + g.swins}, pvp_losses_soccer = ${acct.slosses + g.slosses}, pvp_streak_soccer = ${g.sstreak} WHERE google_sub = ${body.sub}`;
+              await sql`UPDATE pvp_history SET player_key = ${body.sub} WHERE player_key = ${gid} AND sport = 'soccer'`;
+              claimedSoccer = true;
+            }
             await sql`UPDATE pvp_history SET opp_key = ${body.sub} WHERE opp_key = ${gid}`;
           }
         }
         const [after] = await sql`SELECT pvp_elo AS elo, pvp_wins AS wins, pvp_losses AS losses FROM users WHERE google_sub = ${body.sub}`;
-        return res.status(200).json({ ok: true, claimed: claimedBase || claimedHoops, claimedHoops,
+        return res.status(200).json({ ok: true, claimed: claimedBase || claimedHoops || claimedSoccer, claimedHoops, claimedSoccer,
           elo: after ? after.elo : 1000, wins: after ? after.wins : 0, losses: after ? after.losses : 0 });
       }
 
       if (action === 'pvpLeaderboard') {
         if (body.sport === 'hoops') return hoopsLeaderboard(body, res);
+        if (body.sport === 'soccer') return soccerLeaderboard(body, res);
         const limit = Math.max(1, Math.min(100, parseInt(body.limit, 10) || 50));
         // ?season=N → that season's final standings from pvp_seasons (only PLACED players rank);
         // no season param → the existing live board off users (= current lifetime/season Elo).
@@ -889,6 +1043,12 @@ module.exports = async (req, res) => {
           count(*) FILTER (WHERE role='batter' AND won)::int AS batter_wins,
           round(avg(ovr) FILTER (WHERE role='pitcher'), 1) AS pitcher_avg_ovr,
           round(avg(ovr) FILTER (WHERE role='batter'), 1) AS batter_avg_ovr,
+          count(*) FILTER (WHERE role='striker')::int AS striker_n,
+          count(*) FILTER (WHERE role='striker' AND won)::int AS striker_wins,
+          count(*) FILTER (WHERE role='keeper')::int AS keeper_n,
+          count(*) FILTER (WHERE role='keeper' AND won)::int AS keeper_wins,
+          round(avg(ovr) FILTER (WHERE role='striker'), 1) AS striker_avg_ovr,
+          round(avg(ovr) FILTER (WHERE role='keeper'), 1) AS keeper_avg_ovr,
           count(DISTINCT match_id)::int AS matches
           FROM pvp_matches`;
         const pr = r.pitcher_n ? (100 * r.pitcher_wins / r.pitcher_n) : null;
