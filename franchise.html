@@ -334,7 +334,7 @@ button.btn.danger { color:#ffdede; background:rgba(255,77,94,.14); border:1px so
     <div class="seagrid">
       <div class="panel standings">
         <div class="eyebrow" style="margin-bottom:8px">Standings</div>
-        <table><thead><tr><th>Team</th><th>W</th><th>L</th><th style="text-align:right">OVR</th></tr></thead>
+        <table><thead><tr><th>Team</th><th>W</th><th>L</th><th>GB</th><th style="text-align:right">OVR</th></tr></thead>
         <tbody id="standBody"></tbody></table>
         <div class="hint">Top 4 make the playoffs · best-of-5 · tap a team for their roster · trade deadline: game 24</div>
       </div>
@@ -488,6 +488,53 @@ button.btn.danger { color:#ffdede; background:rgba(255,77,94,.14); border:1px so
     <div style="display:flex;gap:10px">
       <button class="btn" id="offerAccept" style="flex:1">✅ Accept trade</button>
       <button class="btn danger" id="offerDecline" style="flex:1">Hang up</button>
+    </div>
+  </div>
+</div>
+
+<!-- box score -->
+<div class="fr-ov" id="boxOv">
+  <div class="panel fr-card">
+    <div class="eyebrow" id="boxTitle">Box score</div>
+    <div class="sub" id="boxSub" style="margin:4px 0 10px"></div>
+    <div id="boxBody"></div>
+    <button class="btn ghost" id="boxClose" style="width:100%;margin-top:12px">Close</button>
+  </div>
+</div>
+
+<!-- rookie draft ceremony -->
+<div class="fr-ov" id="rookieOv">
+  <div class="confetti-host" id="rookieConfetti"></div>
+  <div class="panel fr-card trophy">
+    <div class="eyebrow">🏟️ Franchise Draft · 1st overall pick</div>
+    <div class="tn" style="margin-top:14px;font-size:15px;color:var(--muted)">With the first pick, <span id="rookieClub"></span> select…</div>
+    <div class="tt" id="rookieName" style="font-size:26px"></div>
+    <div class="tn" id="rookieMeta" style="color:var(--accent2)"></div>
+    <button class="btn" id="rookieAssign" style="margin-top:18px">📋 Choose his spot →</button>
+    <button class="btn ghost" id="rookieLater" style="margin-top:8px">Later</button>
+  </div>
+</div>
+
+<!-- rookie seat assignment -->
+<div class="fr-ov" id="assignOv">
+  <div class="panel fr-card">
+    <div class="eyebrow" id="assignTitle">Assign a spot</div>
+    <div class="sub" id="assignSub" style="margin:4px 0 10px"></div>
+    <div id="assignList"></div>
+    <button class="btn ghost" id="assignClose" style="width:100%;margin-top:6px">Later</button>
+  </div>
+</div>
+
+<!-- franchise legacy (end it all) -->
+<div class="fr-ov" id="legacyOv">
+  <div class="panel fr-card trophy">
+    <div class="cup">🏁</div>
+    <div class="tt" style="font-size:24px">Franchise Legacy</div>
+    <div class="tn" id="legacyName"></div>
+    <div class="tm" id="legacyMeta"></div>
+    <div style="display:flex;gap:10px;margin-top:18px">
+      <button class="btn danger" id="legacyEnd" style="flex:1">🏁 End it forever</button>
+      <button class="btn ghost" id="legacyKeep" style="flex:1">Keep playing</button>
     </div>
   </div>
 </div>
@@ -992,9 +1039,11 @@ function renderRoster() {
   const rb = $('rookieBanner');
   if (rk) {
     rb.style.display = '';
-    rb.innerHTML = `<div class="panel" style="padding:12px 14px;margin-top:10px;border-color:rgba(67,233,123,.5)">
+    rb.innerHTML = `<div class="panel" style="padding:12px 14px;margin-top:10px;border-color:rgba(67,233,123,.5);cursor:pointer" id="rookieBannerGo">
       🎓 <b>${escapeHTML(rk.name)}</b> (${rk.ovr} OVR ${rk.game === 'pitcher' ? 'SP' : 'batter'}) went <b>#1 in your Franchise Draft</b> —
-      tap a ${rk.game === 'pitcher' ? 'rotation' : 'lineup'} seat to sign him.</div>`;
+      <span style="color:var(--accent2)">tap here to give him a spot</span>.</div>`;
+    const go = $('rookieBannerGo');
+    if (go) go.onclick = openAssign;
   } else rb.style.display = 'none';
   $('rotSeats').innerHTML = F.rotation.map((p, i) => seatHtml(p, 'rot', i)).join('');
   $('lineSeats').innerHTML = F.lineup.map((p, i) => seatHtml(p, 'line', i)).join('');
@@ -1002,7 +1051,13 @@ function renderRoster() {
   $('startSeason').disabled = filled < 14;
   $('startSeason').textContent = `▶ Start Season ${F.season}`;
   $('rosterHint').textContent = filled < 14 ? `${14 - filled} seat${filled === 13 ? '' : 's'} to fill` : 'Roster complete — play ball!';
-  document.querySelectorAll('#rotSeats .seat, #lineSeats .seat').forEach(el => el.onclick = () => openPicker(el.dataset.w, Number(el.dataset.i)));
+  // occupied seat -> the player's card (stats + Replace); empty seat -> straight to the picker
+  document.querySelectorAll('#rotSeats .seat, #lineSeats .seat').forEach(el => el.onclick = () => {
+    const w = el.dataset.w, i = Number(el.dataset.i);
+    const p = (w === 'rot' ? F.rotation : F.lineup)[i];
+    if (p) openPlayerCard(p, { replaceLabel: '🔁 Replace / release…', onReplace: () => { closeOv('playerOv'); openPicker(w, i); } });
+    else openPicker(w, i);
+  });
 }
 async function openPicker(where, idx) {
   pickSeat = { where, idx };
@@ -1046,17 +1101,63 @@ async function openPicker(where, idx) {
     });
   } catch (e) { const hint = $('hofHint'); if (hint) hint.textContent = 'Could not reach your Hall of Fame — try again.'; }
 }
+// turn the pendingRookie into a real player and put him in a seat (any phase — if the
+// season's running he just gets a fresh stat line, like a trade arrival)
+function signRookieTo(where, idx) {
+  const rk = F.pendingRookie;
+  if (!rk) return;
+  const rng = seededRandom(`${F.id}|rookie|${rk.name}|${F.prog || 0}`);
+  const p = mkPlayer(rng, rk.game, clamp(Math.round(rk.ovr), 40, 99), 22, 'rookie');
+  p.name = String(rk.name).slice(0, 26);
+  if (F.phase === 'season' || F.phase === 'playoffs') p.s = blankS(p.game);
+  const arr = where === 'rot' ? F.rotation : F.lineup;
+  const out = arr[idx];
+  arr[idx] = p;
+  F.pendingRookie = null;
+  (F.gameLog = F.gameLog || []).push({ t: '🎓', note: `🎓 ${p.name} signs with ${F.name}${out ? ` — ${out.name} is released` : ''}. The Franchise Draft pick is official.` });
+  bump(); save();
+  toast(`${p.name} signed${out ? ` — ${out.name} released` : ''}.`);
+  render();
+}
+// ceremony: fires once per visit when a fresh build arrives from the builder pages
+let rookieCeremonyShown = false;
+function maybeRookieCeremony() {
+  if (!F || !F.pendingRookie || rookieCeremonyShown) return;
+  rookieCeremonyShown = true;
+  const rk = F.pendingRookie;
+  $('rookieClub').textContent = F.name;
+  $('rookieName').textContent = rk.name;
+  $('rookieMeta').textContent = `${rk.ovr} OVR · ${rk.game === 'pitcher' ? 'Starting Pitcher' : 'Batter'} · age 22`;
+  $('rookieOv').classList.add('show');
+  confettiRain($('rookieConfetti'));
+  if (window.gsap) gsap.fromTo($('rookieOv').querySelector('.fr-card'), { y: 24, scale: .92, opacity: 0 }, { y: 0, scale: 1, opacity: 1, duration: .5, ease: 'back.out(1.5)' });
+}
+$('rookieAssign').onclick = () => { closeOv('rookieOv'); openAssign(); };
+$('rookieLater').onclick = () => { closeOv('rookieOv'); toast('He\'ll wait — assign him from the roster banner anytime.'); };
+function openAssign() {
+  const rk = F.pendingRookie;
+  if (!rk) return;
+  const where = rk.game === 'pitcher' ? 'rot' : 'line';
+  const arr = where === 'rot' ? F.rotation : F.lineup;
+  $('assignTitle').textContent = `Where does ${rk.name} play?`;
+  $('assignSub').textContent = rk.game === 'pitcher'
+    ? 'Pick his rotation spot — whoever holds it is released.'
+    : 'Pick his lineup spot — whoever holds it is released.';
+  $('assignList').innerHTML = arr.map((p, i) => `<div class="pickrow" data-assign="${i}">
+    <span class="pos" style="font-family:'Oswald',sans-serif;font-size:10px;letter-spacing:1.5px;color:var(--dim);width:34px">${where === 'rot' ? 'SP' + (i + 1) : 'B' + (i + 1)}</span>
+    ${p ? `<span class="nm">${escapeHTML(p.name)}</span><span class="meta">age ${p.age} · would be released</span><span class="ov ${tierCls(p.ovr)}">${p.ovr}</span>`
+        : `<span class="nm" style="color:var(--accent2)">Empty seat</span><span class="meta">walks right in</span>`}</div>`).join('');
+  $('assignOv').classList.add('show');
+  document.querySelectorAll('[data-assign]').forEach(el => el.onclick = () => {
+    closeOv('assignOv');
+    signRookieTo(where, Number(el.dataset.assign));
+  });
+}
+$('assignClose').onclick = () => closeOv('assignOv');
+$('assignOv').addEventListener('click', e => { if (e.target === $('assignOv')) closeOv('assignOv'); });
 function wirePickRows() {
   const rw = document.querySelector('[data-rookie]');
-  if (rw) rw.onclick = () => {
-    const rk = F.pendingRookie;
-    if (!rk) return;
-    const rng = seededRandom(`${F.id}|rookie|${rk.name}|${F.prog || 0}`);
-    const p = mkPlayer(rng, rk.game, clamp(Math.round(rk.ovr), 40, 99), 22, 'rookie');
-    p.name = String(rk.name).slice(0, 26);
-    F.pendingRookie = null;
-    placePlayer(p);
-  };
+  if (rw) rw.onclick = () => { closeOv('pickOv'); signRookieTo(pickSeat.where, pickSeat.idx); };
   const fa = document.querySelector('[data-fa]');
   if (fa) fa.onclick = () => {
     const rng = seededRandom(`${F.id}|fa|${F.season}|${pickSeat.where}${pickSeat.idx}|${(F.prog || 0)}`);
@@ -1083,7 +1184,7 @@ $('startSeason').onclick = () => {
   if (!F.rivals || !F.rivals.length || !F.rivals[0].rot) F.rivals = mkRivals(F.id, F.season);
   else F.rivals.forEach(r => { r.w = 0; r.l = 0; });   // league persists across seasons now
   F.day = 0; F.wins = 0; F.losses = 0; F.phase = 'season'; F.playoffs = null;
-  F.tradesIn = 0; F.tradesUser = 0; F.tradeLog = [];
+  F.tradesIn = 0; F.tradesUser = 0; F.tradeLog = []; F.gameLog = []; F.poLog = [];
   resetSeasonStats(F);
   tab = 'season';
   bump(); save(); render();
@@ -1095,12 +1196,51 @@ const SEASON_GAMES = 32;
 let auto = false, autoTimer2 = null;
 function renderStandings() {
   const rows = standingsRows(F);
-  $('standBody').innerHTML = rows.map((r, i) => `<tr class="${r.me ? 'me' : ''} ${F.day >= SEASON_GAMES && i < 4 ? 'pl' : ''}" data-team="${r.idx}">
-    <td>${escapeHTML(r.name)}</td><td>${r.w}</td><td>${r.l}</td><td style="text-align:right;color:var(--dim)">${r.ovr}</td></tr>`).join('');
+  const lead = rows[0];
+  $('standBody').innerHTML = rows.map((r, i) => {
+    const gb = ((lead.w - r.w) + (r.l - lead.l)) / 2;
+    return `<tr class="${r.me ? 'me' : ''} ${F.day >= SEASON_GAMES && i < 4 ? 'pl' : ''}" data-team="${r.idx}">
+    <td>${escapeHTML(r.name)}</td><td>${r.w}</td><td>${r.l}</td>
+    <td style="color:var(--dim)">${gb === 0 ? '—' : gb}</td>
+    <td style="text-align:right;color:var(--dim)">${r.ovr}</td></tr>`;
+  }).join('');
   document.querySelectorAll('#standBody tr').forEach(tr => tr.onclick = () => openTeam(Number(tr.dataset.team)));
 }
+function logCard(e, idx) {
+  if (e.note) return `<div class="gcard ${e.t === '🔁' ? 'trade' : 'big'}"><div class="hero">${escapeHTML(e.note)}</div></div>`;
+  return `<div class="gcard ${e.hero && e.w ? 'big' : ''}" data-log="${idx}" style="cursor:pointer" title="Tap for the box score">
+    <div class="top"><span class="gnum">${escapeHTML(e.t)}</span>
+      <span class="res ${e.w ? 'w' : 'l'}">${e.w ? 'W' : 'L'}</span>
+      <span class="score">${e.rf}–${e.ra}</span>
+      <span class="opp">vs ${escapeHTML(e.opp)}${e.oppSp ? ` (${escapeHTML(e.oppSp)})` : ''}</span></div>
+    <div class="line">${escapeHTML(e.line)}</div>
+    ${e.hero ? `<div class="hero">${escapeHTML(e.hero)}</div>` : ''}</div>`;
+}
+function renderFeed(el, log) {
+  el.innerHTML = (log || []).map((e, i) => logCard(e, i)).reverse().join('')
+    || '<div class="hint">First pitch is yours — play a game.</div>';
+  el.querySelectorAll('[data-log]').forEach(c => c.onclick = () => openBox(log[Number(c.dataset.log)]));
+}
+function openBox(e) {
+  if (!e || e.rf == null) return;
+  $('boxTitle').textContent = `${e.t} · ${e.w ? 'W' : 'L'} ${e.rf}–${e.ra}`;
+  $('boxSub').textContent = `${F.name} vs ${e.opp}${e.oppSp ? ` · their starter: ${e.oppSp}` : ''}`;
+  const rows = (e.box || []).map(b => `<div class="prow" style="cursor:default">
+    <span class="nm">${escapeHTML(b.n)}</span>
+    <span class="age">${b.h}-for-${b.ab}</span>
+    <span class="age">${b.hr ? '💣 ' + b.hr + ' HR' : ''}</span>
+    <span class="ov" style="font-size:13px;width:52px">${b.rbi} RBI</span></div>`).join('');
+  $('boxBody').innerHTML = `<div class="pcard-sec">On the mound</div>
+    <div class="sub">${escapeHTML(e.line)}</div>
+    ${rows ? `<div class="pcard-sec">At the plate</div>${rows}` : '<div class="hint">No batting box for playoff games (yet).</div>'}
+    ${e.hero ? `<div class="pcard-sec">Moment of the game</div><div class="sub">${escapeHTML(e.hero)}</div>` : ''}`;
+  $('boxOv').classList.add('show');
+}
+$('boxClose').onclick = () => closeOv('boxOv');
+$('boxOv').addEventListener('click', e => { if (e.target === $('boxOv')) closeOv('boxOv'); });
 function renderSeason() {
-  $('gProg').textContent = `Game ${Math.min(F.day + 1, SEASON_GAMES)} of ${SEASON_GAMES}${F.day < TRADE_DEADLINE ? '' : ' · deadline passed'}`;
+  $('gProg').textContent = `Game ${Math.min(F.day + 1, SEASON_GAMES)} of ${SEASON_GAMES}${streakOf()}${F.day < TRADE_DEADLINE ? '' : ' · deadline passed'}`;
+  renderFeed($('gameFeed'), F.gameLog);
   renderStandings();
   $('nextGame').disabled = F.day >= SEASON_GAMES;
   // next matchup: opponent + both probable starters (the 2K pre-game strip)
@@ -1111,15 +1251,6 @@ function renderSeason() {
       · <span>P: <b>${escapeHTML(ours ? ours.name : '?')}</b> (${ours ? ours.ovr : '?'}) vs <b>${escapeHTML(theirs.name)}</b> (${theirs.ovr})</span>`;
   } else $('nextUp').innerHTML = `<span class="vs">Regular season complete</span>`;
 }
-function gameCard(g, dayNum, big) {
-  return `<div class="gcard ${big ? 'big' : ''}">
-    <div class="top"><span class="gnum">G${dayNum}</span>
-      <span class="res ${g.win ? 'w' : 'l'}">${g.win ? 'W' : 'L'}</span>
-      <span class="score">${g.runsFor}–${g.runsAgainst}</span>
-      <span class="opp">vs ${escapeHTML(g.opp)}${g.oppStarter ? ` (${escapeHTML(g.oppStarter)})` : ''}</span></div>
-    <div class="line">${escapeHTML(g.line)}</div>
-    ${g.hero ? `<div class="hero">${escapeHTML(g.hero)}</div>` : ''}</div>`;
-}
 // one league day of pure state advance (shared by play-one and sim-to-end)
 function simOneDay() {
   const g = simGame(F, F.day);
@@ -1127,21 +1258,35 @@ function simOneDay() {
   if (g.win) { F.wins++; F.rivals[g.oppIdx].l++; awardWinXP(); } else { F.losses++; F.rivals[g.oppIdx].w++; }
   simRivalDay(F, F.day).forEach(r => { if (r.aWins) { F.rivals[r.a].w++; F.rivals[r.b].l++; } else { F.rivals[r.b].w++; F.rivals[r.a].l++; } });
   F.day++;
+  // the season's story is persisted (box scores + reload-proof feed)
+  (F.gameLog = F.gameLog || []).push({
+    t: 'G' + F.day, w: g.win ? 1 : 0, rf: g.runsFor, ra: g.runsAgainst,
+    opp: g.opp, oppSp: g.oppStarter, line: g.line, hero: g.hero || null,
+    box: g.box.map((x, i) => ({ n: F.lineup[i] ? F.lineup[i].name : '—', ab: x.ab, h: x.h, hr: x.hr, rbi: x.rbi })),
+  });
+  if (F.wins === 20) F.gameLog.push({ t: '★', note: `🏅 20 wins! ${F.name} are the talk of the league.` });
   // the phones: a rival may call after tonight's game
   const offer = genTradeOffer(F, F.day);
   if (offer) { F.pendingOffer = offer; F.tradesIn = (F.tradesIn || 0) + 1; }
   return g;
 }
+// current run of Ws or Ls, straight off the log
+function streakOf() {
+  const games = (F.gameLog || []).filter(e => e.rf != null);
+  if (!games.length) return '';
+  const last = games[games.length - 1].w;
+  let n = 0;
+  for (let i = games.length - 1; i >= 0 && games[i].w === last; i--) n++;
+  return n >= 2 ? ` · ${last ? 'W' : 'L'}${n} ${last ? '🔥' : ''}` : '';
+}
 function playNextGame() {
   if (F.phase !== 'season' || F.day >= SEASON_GAMES) return;
   if (F.pendingOffer) { showOffer(); return; }   // answer the phone first
-  const g = simOneDay();
-  const feed = $('gameFeed');
-  feed.insertAdjacentHTML('afterbegin', gameCard(g, F.day, !!g.hero && g.win));
-  if (window.gsap) gsap.fromTo(feed.firstElementChild, { x: -16, opacity: 0 }, { x: 0, opacity: 1, duration: .3 });
-  if (F.wins === 20) feed.insertAdjacentHTML('afterbegin', `<div class="gcard big"><div class="hero">🏅 20 wins! ${escapeHTML(F.name)} are the talk of the league.</div></div>`);
+  simOneDay();
   bump(); save();
   renderSeason(); renderHead();
+  const first = $('gameFeed').firstElementChild;
+  if (window.gsap && first) gsap.fromTo(first, { x: -16, opacity: 0 }, { x: 0, opacity: 1, duration: .3 });
   if (F.pendingOffer) { stopAuto(); showOffer(); }
   if (F.day >= SEASON_GAMES) endRegularSeason();
 }
@@ -1157,8 +1302,8 @@ $('simSeason').onclick = () => {
     simOneDay();
     F.pendingOffer = null;   // every call goes to voicemail
   }
+  F.gameLog.push({ t: '★', note: `⏭ Simmed the final ${SEASON_GAMES - startDay} games: went ${F.wins - startW}–${F.losses - startL}. Trade calls went to voicemail.` });
   bump(); save();
-  $('gameFeed').insertAdjacentHTML('afterbegin', `<div class="gcard big"><div class="hero">⏭ Simmed the final ${SEASON_GAMES - startDay} games: went ${F.wins - startW}–${F.losses - startL}. Trade calls went to voicemail.</div></div>`);
   renderSeason(); renderHead();
   endRegularSeason();
 };
@@ -1222,9 +1367,9 @@ $('offerAccept').onclick = () => {
   const done = applyTrade(F, F.pendingOffer);
   F.pendingOffer = null;
   (F.tradeLog = F.tradeLog || []).push({ day: F.day, got: done.got.name, sent: done.sent.name, team: done.team });
+  (F.gameLog = F.gameLog || []).push({ t: '🔁', note: `🔁 TRADE: ${done.got.name} joins ${F.name} — ${done.sent.name} heads to the ${done.team}.` });
   bump(); save();
   closeOv('offerOv');
-  $('gameFeed').insertAdjacentHTML('afterbegin', `<div class="gcard trade"><div class="hero">🔁 TRADE: ${escapeHTML(done.got.name)} joins ${escapeHTML(F.name)} — ${escapeHTML(done.sent.name)} heads to the ${escapeHTML(done.team)}.</div></div>`);
   toast(`Deal! ${done.got.name} is on the roster.`);
   render();
 };
@@ -1255,12 +1400,12 @@ function renderMyTeam() {
     if (p) openPlayerCard(p);
   });
 }
-function openPlayerCard(p) {
+function openPlayerCard(p, opts) {
   const isP = p.game === 'pitcher';
   const s = p.s, c = p.c;
   const cells = (st) => isP
-    ? [[`${st.w}-${st.l}`, 'Record'], [st.ip > 0 ? era(st) : '—', 'ERA'], [st.k, 'K']]
-    : [[st.ab > 0 ? avg(st) : '—', 'AVG'], [st.hr, 'HR'], [st.rbi, 'RBI']];
+    ? [[`${st.w}-${st.l}`, 'Record'], [st.ip > 0 ? era(st) : '—', 'ERA'], [st.k, 'K'], [st.gs, 'Starts'], [st.ip ? st.ip.toFixed(1) : 0, 'IP'], [st.ip > 0 ? (st.k * 9 / st.ip).toFixed(1) : '—', 'K/9']]
+    : [[st.ab > 0 ? avg(st) : '—', 'AVG'], [st.hr, 'HR'], [st.rbi, 'RBI'], [st.h, 'Hits'], [st.g, 'Games'], [st.ab, 'AB']];
   const grid = st => `<div class="pcard-stats">${cells(st).map(([v, l]) => `<div class="pstat"><div class="v">${v}</div><div class="l">${l}</div></div>`).join('')}</div>`;
   $('playerOvCard').innerHTML = `
     <div class="pcard-head">
@@ -1270,9 +1415,11 @@ function openPlayerCard(p) {
     </div>
     ${s ? `<div class="pcard-sec">This season</div>${grid(s)}` : ''}
     ${c && c.seasons ? `<div class="pcard-sec">Career · ${c.seasons} season${c.seasons === 1 ? '' : 's'}</div>${grid(c)}` : '<div class="hint">Career stats start counting at the end of this season.</div>'}
-    <button class="btn ghost" id="pcardClose" style="width:100%;margin-top:16px">Close</button>`;
+    ${opts && opts.onReplace ? `<button class="btn danger" id="pcardReplace" style="width:100%;margin-top:14px">${opts.replaceLabel || 'Replace…'}</button>` : ''}
+    <button class="btn ghost" id="pcardClose" style="width:100%;margin-top:${opts && opts.onReplace ? '8' : '16'}px">Close</button>`;
   $('playerOv').classList.add('show');
   $('pcardClose').onclick = () => closeOv('playerOv');
+  if (opts && opts.onReplace) $('pcardReplace').onclick = opts.onReplace;
 }
 
 /* ---------- League + team rosters ---------- */
@@ -1289,10 +1436,15 @@ function openTeam(idx) {
   const T = isMe ? { name: F.name, rot: F.rotation, line: F.lineup, w: F.wins, l: F.losses } : F.rivals[idx];
   $('teamOvName').textContent = (isMe ? '⭐ ' : '') + T.name;
   $('teamOvMeta').textContent = `${T.w}–${T.l} · ${teamOvr(T)} team OVR · rotation ${Math.round(rosterAvg(T.rot))} · lineup ${Math.round(rosterAvg(T.line))}`;
-  const row = (p, pos) => p ? `<div class="prow" style="cursor:default">
+  const row = (p, pos, key) => p ? `<div class="prow" data-tp="${key}">
     <span class="pos">${pos}</span><span class="nm">${escapeHTML(p.name)} ${potStars(p)}</span>
     <span class="age">${p.age}y</span><span class="ov ${tierCls(p.ovr)}">${p.ovr}</span></div>` : '';
-  $('teamOvList').innerHTML = T.rot.map((p, i) => row(p, `SP${i + 1}`)).join('') + T.line.map((p, i) => row(p, `B${i + 1}`)).join('');
+  $('teamOvList').innerHTML = T.rot.map((p, i) => row(p, `SP${i + 1}`, 'r' + i)).join('') + T.line.map((p, i) => row(p, `B${i + 1}`, 'l' + i)).join('');
+  document.querySelectorAll('#teamOvList .prow').forEach(el => el.onclick = () => {
+    const k = el.dataset.tp;
+    const p = k[0] === 'r' ? T.rot[Number(k.slice(1))] : T.line[Number(k.slice(1))];
+    if (p) openPlayerCard(p);
+  });
   $('teamOv').classList.add('show');
 }
 $('teamOvClose').onclick = () => closeOv('teamOv');
@@ -1346,11 +1498,11 @@ function proposeTrade(theirIdx) {
     const done = applyTrade(F, offer);
     F.tradesUser = (F.tradesUser || 0) + 1;
     (F.tradeLog = F.tradeLog || []).push({ day: F.day, got: done.got.name, sent: done.sent.name, team: done.team });
+    (F.gameLog = F.gameLog || []).push({ t: '🔁', note: `🔁 TRADE: ${done.got.name} joins ${F.name} — ${done.sent.name} heads to the ${done.team}.` });
     th = { mine: null, team: null };
     bump(); save();
     sum.innerHTML = `<span style="color:var(--green);font-weight:700">✅ DEAL!</span> <b>${escapeHTML(done.got.name)}</b> (${done.got.ovr})
       joins for <b>${escapeHTML(done.sent.name)}</b>. The ${escapeHTML(done.team)} fax back the paperwork.`;
-    $('gameFeed').insertAdjacentHTML('afterbegin', `<div class="gcard trade"><div class="hero">🔁 TRADE: ${escapeHTML(done.got.name)} joins ${escapeHTML(F.name)} — ${escapeHTML(done.sent.name)} heads to the ${escapeHTML(done.team)}.</div></div>`);
     toast(`Deal! ${done.got.name} is on the roster.`);
     renderTrades(); renderHead();
   } else {
@@ -1465,8 +1617,36 @@ function renderHistory() {
       ${h.mvp ? `<span style="color:var(--muted);font-size:11px">MVP ${escapeHTML(h.mvp.name)}</span>` : ''}
       ${h.ace ? `<span style="color:var(--muted);font-size:11px">Ace ${escapeHTML(h.ace.name)}</span>` : ''}
     </div>`).join('') : '<div class="hint">No completed seasons yet.</div>')
-    + (trades.length ? `<div class="rsec">This season's deals</div>` + trades.map(t => `<div class="histrow"><span class="sn">G${t.day}</span><span style="flex:1">🔁 ${escapeHTML(t.got)} in, ${escapeHTML(t.sent)} out (${escapeHTML(t.team)})</span></div>`).join('') : '');
+    + (trades.length ? `<div class="rsec">This season's deals</div>` + trades.map(t => `<div class="histrow"><span class="sn">G${t.day}</span><span style="flex:1">🔁 ${escapeHTML(t.got)} in, ${escapeHTML(t.sent)} out (${escapeHTML(t.team)})</span></div>`).join('') : '')
+    + `<div class="rosterbar" style="margin-top:22px"><button class="btn danger" id="endFr">🏁 End this franchise</button>
+       <span class="hint">Closes the book for good — you get a legacy card first.</span></div>`;
+  $('endFr').onclick = showLegacy;
 }
+/* ---------- ending it all: the legacy card, then the void ---------- */
+function showLegacy() {
+  const hist = F.history || [];
+  const allW = hist.reduce((s, h) => s + h.w, 0) + (F.phase === 'season' || F.phase === 'playoffs' ? F.wins : 0);
+  const allL = hist.reduce((s, h) => s + h.l, 0) + (F.phase === 'season' || F.phase === 'playoffs' ? F.losses : 0);
+  const titles = hist.filter(h => h.result === 'CHAMPIONS').length;
+  const mvps = [...new Set(hist.filter(h => h.mvp).map(h => h.mvp.name))];
+  $('legacyName').textContent = F.name;
+  $('legacyMeta').innerHTML = `${hist.length} completed season${hist.length === 1 ? '' : 's'} · all-time <b>${allW}–${allL}</b><br>
+    ${titles ? `🏆 ${titles} title${titles === 1 ? '' : 's'}` : 'No titles — the almosts hurt the most'}
+    ${mvps.length ? `<br>MVPs: ${mvps.slice(0, 4).map(escapeHTML).join(', ')}${mvps.length > 4 ? '…' : ''}` : ''}`;
+  $('legacyOv').classList.add('show');
+}
+$('legacyKeep').onclick = () => closeOv('legacyOv');
+$('legacyEnd').onclick = () => {
+  if (!confirm(`Really end ${F.name} forever? The save is deleted.`)) return;
+  closeOv('legacyOv');
+  const name = F.name;
+  if (W.active != null) W.saves[W.active] = null;
+  W.active = null; F = null;
+  W.prog = (Number(W.prog) || 0) + 1;
+  uiView = 'mode'; tab = 'season';
+  persist(); render();
+  toast(`${name} rides into the sunset. 🌅`);
+};
 
 /* ---------- playoffs ---------- */
 function rivalName(idx) { return F.rivals[idx].name; }
@@ -1488,6 +1668,7 @@ function renderPlayoffs() {
   $('bracket').innerHTML = my + other;
   $('pProg').textContent = `Best of 5 · Game ${Math.min(P.gameNo + 1, 5)}`;
   $('nextPGame').disabled = P.myW === 3 || P.oppW === 3;
+  renderFeed($('pFeed'), F.poLog);
 }
 $('nextPGame').onclick = () => playPlayoffGame();
 // sim the CURRENT series to its end (the final still waits for another click)
@@ -1503,10 +1684,12 @@ function playPlayoffGame() {
   const g = simPlayoffGame(F, P.round === 'semi' ? 'po-semi' : 'po-final', P.myOppIdx, P.gameNo);
   P.gameNo++;
   if (g.win) { P.myW++; awardWinXP(); } else P.oppW++;
+  (F.poLog = F.poLog || []).push({
+    t: `${P.round === 'semi' ? 'SF' : 'F'}${P.gameNo}`, w: g.win ? 1 : 0, rf: g.runsFor, ra: g.runsAgainst,
+    opp: rivalName(P.myOppIdx), oppSp: g.oppStarter, line: g.line,
+    hero: g.k >= 11 ? `🔥 ${g.starter} strikes out ${g.k} on the big stage.` : null, box: null,
+  });
   bump(); save();
-  const feed = $('pFeed');
-  feed.insertAdjacentHTML('afterbegin', gameCard({ win: g.win, runsFor: g.runsFor, runsAgainst: g.runsAgainst, opp: rivalName(P.myOppIdx), oppStarter: g.oppStarter, line: g.line, hero: g.k >= 11 ? `🔥 ${g.starter} strikes out ${g.k} on the big stage.` : null }, `${P.round === 'semi' ? 'SF' : 'F'}${P.gameNo}`, false));
-  if (window.gsap) gsap.fromTo(feed.firstElementChild, { x: -16, opacity: 0 }, { x: 0, opacity: 1, duration: .3 });
   renderPlayoffs();
   if (P.myW === 3) {
     if (P.round === 'semi') {
@@ -1734,6 +1917,7 @@ function render() {
   if (uiView === 'clubs') { show('scrClubs'); $('clubsBack').style.display = ''; renderClubs(); return; }
   if (!F) { show('scrNew'); return; }   // an empty slot was picked — found the franchise
   $('clubsBack').style.display = 'none';
+  maybeRookieCeremony();   // a fresh build just arrived from the builder pages
   // league-wide tabs work during roster + season + playoffs
   if ((F.phase === 'season' || F.phase === 'roster' || F.phase === 'playoffs') && tab !== 'season') {
     if (tab === 'myteam') { show('scrMyTeam'); renderMyTeam(); return; }

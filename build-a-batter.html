@@ -3168,39 +3168,24 @@ const FRANCHISE_DRAFT = (() => {
 })();
 if (FRANCHISE_DRAFT) {
   const fb = $('simBtn');
-  if (fb) fb.textContent = '🏟️ Declare for the ' + FRANCHISE_DRAFT.name + ' Draft';
+  if (fb) fb.textContent = '➕ Add to ' + FRANCHISE_DRAFT.name;
 }
 function franchiseDraft() {
   if (state.rookieDrafted) return;
+  state.rookieDrafted = true;
   $('simBtn').disabled = true;
   if (!$('nameInput').value.trim()) $('nameInput').value = randomPlayerName();
   const rookieName = $('nameInput').value.trim().slice(0, 26);
-  const vals = {};
-  for (const s of SLOTS) vals[s.key] = state.filled[s.key].value;
-  // re-skin the ceremony for the club (keeps the ids runDraftAnimation fills)
-  const lg = document.querySelector('#draftOverlay .draft-league');
-  if (lg) lg.textContent = FRANCHISE_DRAFT.name + ' · Franchise Draft';
-  $('draftCall').innerHTML = 'With the <b id="draftPickOrd">1st</b> pick<span id="draftRoundNum" style="display:none"></span> of the Franchise Draft…';
-  runDraftAnimation({
-    round: 1, pick: 1,
-    teamAbbr: null, teamName: FRANCHISE_DRAFT.name, tColor: '#ff7a18',
-    hitter: rookieName, ovr: state.finalOvr, role: batterRole(vals),
-  }, () => {
-    state.rookieDrafted = true;
-    try {
-      const F = JSON.parse(localStorage.getItem('pl_franchise') || 'null');
-      if (F && F.id) {
-        F.pendingRookie = { name: rookieName, ovr: Math.round(state.finalOvr), game: 'batter' };
-        F.prog = (Number(F.prog) || 0) + 1;
-        localStorage.setItem('pl_franchise', JSON.stringify(F));
-      }
-    } catch (e) {}
-    const fb = $('simBtn');
-    fb.disabled = false;
-    fb.textContent = '➡️ Take ' + rookieName + ' to the Franchise';
-    fb.onclick = () => { location.href = '/franchise'; };
-    toast('🏟️ ' + rookieName + ' drafted by ' + FRANCHISE_DRAFT.name + '! Waiting in your clubhouse.');
-  });
+  try {
+    const F = JSON.parse(localStorage.getItem('pl_franchise') || 'null');
+    if (F && F.id) {
+      F.pendingRookie = { name: rookieName, ovr: Math.round(state.finalOvr), game: 'batter' };
+      F.prog = (Number(F.prog) || 0) + 1;
+      localStorage.setItem('pl_franchise', JSON.stringify(F));
+    }
+  } catch (e) {}
+  toast('➕ ' + rookieName + ' is headed to ' + FRANCHISE_DRAFT.name + '…');
+  setTimeout(() => { location.href = '/franchise'; }, 800);
 }
 
 function runCareerPlaythrough() {
