@@ -3155,8 +3155,57 @@ function randomPlayerName() {
   return NAME_FIRST[Math.floor(Math.random() * NAME_FIRST.length)] + ' ' + NAME_LAST[Math.floor(Math.random() * NAME_LAST.length)];
 }
 
+
+/* ===== 🏟️ Franchise Draft (?franchise=1): this build becomes your franchise's rookie.
+   Instead of simulating a career, YOUR club drafts them (full ceremony) and they ride
+   back to /franchise as a pending rookie waiting for a roster seat. ===== */
+const FRANCHISE_DRAFT = (() => {
+  try {
+    if (new URLSearchParams(location.search).get('franchise') !== '1') return null;
+    const f = JSON.parse(localStorage.getItem('pl_franchise') || 'null');
+    return (f && f.id) ? { id: f.id, name: f.name || 'Your Franchise' } : null;
+  } catch (e) { return null; }
+})();
+if (FRANCHISE_DRAFT) {
+  const fb = $('simBtn');
+  if (fb) fb.textContent = '🏟️ Declare for the ' + FRANCHISE_DRAFT.name + ' Draft';
+}
+function franchiseDraft() {
+  if (state.rookieDrafted) return;
+  $('simBtn').disabled = true;
+  if (!$('nameInput').value.trim()) $('nameInput').value = randomPlayerName();
+  const rookieName = $('nameInput').value.trim().slice(0, 26);
+  const vals = {};
+  for (const s of SLOTS) vals[s.key] = state.filled[s.key].value;
+  // re-skin the ceremony for the club (keeps the ids runDraftAnimation fills)
+  const lg = document.querySelector('#draftOverlay .draft-league');
+  if (lg) lg.textContent = FRANCHISE_DRAFT.name + ' · Franchise Draft';
+  $('draftCall').innerHTML = 'With the <b id="draftPickOrd">1st</b> pick<span id="draftRoundNum" style="display:none"></span> of the Franchise Draft…';
+  runDraftAnimation({
+    round: 1, pick: 1,
+    teamAbbr: null, teamName: FRANCHISE_DRAFT.name, tColor: '#ff7a18',
+    hitter: rookieName, ovr: state.finalOvr, role: batterRole(vals),
+  }, () => {
+    state.rookieDrafted = true;
+    try {
+      const F = JSON.parse(localStorage.getItem('pl_franchise') || 'null');
+      if (F && F.id) {
+        F.pendingRookie = { name: rookieName, ovr: Math.round(state.finalOvr), game: 'batter' };
+        F.prog = (Number(F.prog) || 0) + 1;
+        localStorage.setItem('pl_franchise', JSON.stringify(F));
+      }
+    } catch (e) {}
+    const fb = $('simBtn');
+    fb.disabled = false;
+    fb.textContent = '➡️ Take ' + rookieName + ' to the Franchise';
+    fb.onclick = () => { location.href = '/franchise'; };
+    toast('🏟️ ' + rookieName + ' drafted by ' + FRANCHISE_DRAFT.name + '! Waiting in your clubhouse.');
+  });
+}
+
 function runCareerPlaythrough() {
   if (state.career) return;
+  if (FRANCHISE_DRAFT && !dailyMode) return franchiseDraft();   // 🏟️ rookie build, not a career
   // Daily: if the auto-popup hasn't fired yet, show the results panel first (fallback path).
   if (dailyMode && !dailyResultsShown) { showDailyResults(); return; }
   $('simBtn').disabled = true;

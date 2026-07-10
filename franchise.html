@@ -278,8 +278,9 @@ button.btn.danger { color:#ffdede; background:rgba(255,77,94,.14); border:1px so
     <h1 class="h">The <i>Roster</i></h1>
     <p class="sub">Tap a seat to sign a player — import from your <b>Hall of Fame</b> saves or sign a replacement-level free agent.
       Signings start at <b>age 23</b>; young players grow toward their <span class="potstars">★ potential</span>, veterans fade.
-      Fresh off a build? It's waiting in the seat picker under 🏛️ — or go <a href="/pitching" style="color:var(--accent2)">build a pitcher</a> /
-      <a href="/batting" style="color:var(--accent2)">build a batter</a> right now.</p>
+      Want a brand-new creation? <a href="/pitching?franchise=1" style="color:var(--accent2)">Build a pitcher</a> /
+      <a href="/batting?franchise=1" style="color:var(--accent2)">build a batter</a> — your club drafts them on the spot.</p>
+    <div id="rookieBanner" style="display:none"></div>
     <div class="rsec">Starting Rotation — 5 pitchers</div>
     <div class="seats" id="rotSeats"></div>
     <div class="rsec">Lineup — 9 hitters</div>
@@ -387,11 +388,11 @@ button.btn.danger { color:#ffdede; background:rgba(255,77,94,.14); border:1px so
     <div class="panel" style="padding:14px;margin-top:14px;border-color:rgba(25,198,255,.35)">
       <div class="eyebrow">🛠️ Build next season's rookie</div>
       <div class="sub" style="margin-top:6px">Every offseason is a chance to add a brand-new creation to the club:
-        spin up a player, 💾 <b>save them to your Hall of Fame</b>, then sign them into any roster seat before
-        Opening Day (tap a seat → 🏛️). Your franchise will be right here when you get back.</div>
+        spin up a player and <b>your franchise drafts them on the spot</b> — full ceremony, then they're waiting
+        in your clubhouse for a roster seat before Opening Day.</div>
       <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
-        <a class="btn cy" href="/pitching" style="text-decoration:none">⚾ Build a Pitcher ↗</a>
-        <a class="btn cy" href="/batting" style="text-decoration:none">💥 Build a Batter ↗</a>
+        <a class="btn cy" href="/pitching?franchise=1" style="text-decoration:none">⚾ Build a Pitcher ↗</a>
+        <a class="btn cy" href="/batting?franchise=1" style="text-decoration:none">💥 Build a Batter ↗</a>
       </div>
     </div>
     <div class="rsec">Player development — growth, decline, goodbyes</div>
@@ -903,7 +904,7 @@ let pickSeat = null;
 function seatHtml(p, where, i, withStats) {
   const pos = where === 'rot' ? `SP${i + 1}` : `Batter ${i + 1}`;
   if (!p) return `<div class="seat empty" data-w="${where}" data-i="${i}"><span class="plus">＋</span><span class="pos">${pos} · empty</span></div>`;
-  const srcTag = p.src === 'hof' ? '🏛️' : p.src === 'draft' ? '📋' : p.src === 'rival' ? '🔁' : '✍️';
+  const srcTag = p.src === 'hof' ? '🏛️' : p.src === 'draft' ? '📋' : p.src === 'rival' ? '🔁' : p.src === 'rookie' ? '🎓' : '✍️';
   const stat = withStats && p.s ? `<span class="stat">${p.game === 'pitcher'
     ? `${p.s.w}-${p.s.l} · ${era(p.s)} ERA · ${p.s.k} K`
     : `${avg(p.s)} · ${p.s.hr} HR · ${p.s.rbi} RBI`}</span>` : '';
@@ -915,6 +916,14 @@ function seatHtml(p, where, i, withStats) {
     <span class="ov ${tierCls(p.ovr)}">${p.ovr}</span></div>`;
 }
 function renderRoster() {
+  const rk = F.pendingRookie;
+  const rb = $('rookieBanner');
+  if (rk) {
+    rb.style.display = '';
+    rb.innerHTML = `<div class="panel" style="padding:12px 14px;margin-top:10px;border-color:rgba(67,233,123,.5)">
+      🎓 <b>${escapeHTML(rk.name)}</b> (${rk.ovr} OVR ${rk.game === 'pitcher' ? 'SP' : 'batter'}) went <b>#1 in your Franchise Draft</b> —
+      tap a ${rk.game === 'pitcher' ? 'rotation' : 'lineup'} seat to sign him.</div>`;
+  } else rb.style.display = 'none';
   $('rotSeats').innerHTML = F.rotation.map((p, i) => seatHtml(p, 'rot', i)).join('');
   $('lineSeats').innerHTML = F.lineup.map((p, i) => seatHtml(p, 'line', i)).join('');
   const filled = F.rotation.filter(Boolean).length + F.lineup.filter(Boolean).length;
@@ -929,7 +938,11 @@ async function openPicker(where, idx) {
   $('pickTitle').textContent = where === 'rot' ? `Sign a pitcher — SP${idx + 1}` : `Sign a hitter — spot ${idx + 1}`;
   const list = $('pickList');
   const cur = (where === 'rot' ? F.rotation : F.lineup)[idx];
-  list.innerHTML = `<div class="pickrow" data-fa="1"><span class="nm">✍️ Replacement-level Free Agent</span><span class="meta">OVR 60–70 · age 23</span></div>
+  const rk = (F.pendingRookie && F.pendingRookie.game === game) ? F.pendingRookie : null;
+  list.innerHTML = `${rk ? `<div class="pickrow" data-rookie="1" style="border-color:rgba(67,233,123,.5)">
+      <span class="nm">🎓 Sign rookie ${escapeHTML(rk.name)}</span><span class="meta">age 22 · your build</span>
+      <span class="ov ${tierCls(rk.ovr)}">${rk.ovr}</span></div>` : ''}
+    <div class="pickrow" data-fa="1"><span class="nm">✍️ Replacement-level Free Agent</span><span class="meta">OVR 60–70 · age 23</span></div>
     ${cur ? '<div class="pickrow" data-cut="1"><span class="nm">🪓 Release this player</span><span class="meta">empties the seat</span></div>' : ''}
     <div class="hint" id="hofHint">Loading your Hall of Fame…</div>`;
   $('pickOv').classList.add('show');
@@ -962,6 +975,16 @@ async function openPicker(where, idx) {
   } catch (e) { const hint = $('hofHint'); if (hint) hint.textContent = 'Could not reach your Hall of Fame — try again.'; }
 }
 function wirePickRows() {
+  const rw = document.querySelector('[data-rookie]');
+  if (rw) rw.onclick = () => {
+    const rk = F.pendingRookie;
+    if (!rk) return;
+    const rng = seededRandom(`${F.id}|rookie|${rk.name}|${F.prog || 0}`);
+    const p = mkPlayer(rng, rk.game, clamp(Math.round(rk.ovr), 40, 99), 22, 'rookie');
+    p.name = String(rk.name).slice(0, 26);
+    F.pendingRookie = null;
+    placePlayer(p);
+  };
   const fa = document.querySelector('[data-fa]');
   if (fa) fa.onclick = () => {
     const rng = seededRandom(`${F.id}|fa|${F.season}|${pickSeat.where}${pickSeat.idx}|${(F.prog || 0)}`);
@@ -976,7 +999,7 @@ function setSeat(p) {
   closeOv('pickOv');
   renderRoster();
 }
-function placePlayer(p) { setSeat(p); toast(`${p.name} signed ${p.src === 'hof' ? 'from your Hall of Fame' : 'as a free agent'}.`); }
+function placePlayer(p) { setSeat(p); toast(`${p.name} signed ${p.src === 'hof' ? 'from your Hall of Fame' : p.src === 'rookie' ? '— your Franchise Draft pick is official' : 'as a free agent'}.`); }
 $('pickClose').onclick = () => closeOv('pickOv');
 $('autoFill').onclick = () => {
   let n = 0;
