@@ -1,0 +1,22 @@
+{
+  "appId": "com.wolfflabs.goatlab",
+  "appName": "GoatLab",
+  "webDir": "www",
+  "backgroundColor": "#0a1320",
+  "ios": {
+    "contentInset": "automatic",
+    "backgroundColor": "#0a1320",
+    "preferredContentMode": "mobile"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "backgroundColor": "#0a1320",
+      "launchAutoHide": true,
+      "launchShowDuration": 800
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#0a1320"
+    }
+  }
+}

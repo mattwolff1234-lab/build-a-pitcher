@@ -1,0 +1,59 @@
+# GoatLab iOS build - GitHub Actions (macOS runner). MANUAL trigger only.
+# Activate by moving this file to .github/workflows/ios-build.yml AFTER:
+#   1. The Apple Developer account exists (PLAN.md Phase 0)
+#   2. `npx cap add ios` has been run once and the ios/ folder is committed
+#   3. Repo secrets are set: ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8 (base64 of the .p8)
+# Each run builds the web bundle, archives the app, and uploads to TestFlight.
+name: iOS build (TestFlight)
+on:
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+
+      - name: Install Capacitor + build web bundle
+        working-directory: ios-app
+        run: |
+          npm ci
+          npm run build:www
+          npx cap sync ios
+
+      - name: Import App Store Connect API key
+        working-directory: ios-app
+        run: |
+          mkdir -p ~/.appstoreconnect/private_keys
+          echo "${{ secrets.ASC_KEY_P8 }}" | base64 --decode > ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.ASC_KEY_ID }}.p8
+
+      - name: Archive
+        working-directory: ios-app/ios/App
+        run: |
+          xcodebuild -workspace App.xcworkspace -scheme App -configuration Release \
+            -archivePath $PWD/build/App.xcarchive \
+            -allowProvisioningUpdates \
+            -authenticationKeyID ${{ secrets.ASC_KEY_ID }} \
+            -authenticationKeyIssuerID ${{ secrets.ASC_ISSUER_ID }} \
+            -authenticationKeyPath ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.ASC_KEY_ID }}.p8 \
+            archive
+
+      - name: Export + upload to TestFlight
+        working-directory: ios-app/ios/App
+        run: |
+          cat > ExportOptions.plist <<'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+          </dict></plist>
+          EOF
+          xcodebuild -exportArchive -archivePath $PWD/build/App.xcarchive \
+            -exportOptionsPlist ExportOptions.plist \
+            -allowProvisioningUpdates \
+            -authenticationKeyID ${{ secrets.ASC_KEY_ID }} \
+            -authenticationKeyIssuerID ${{ secrets.ASC_ISSUER_ID }} \
+            -authenticationKeyPath ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.ASC_KEY_ID }}.p8
