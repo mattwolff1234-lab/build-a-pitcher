@@ -1155,8 +1155,8 @@ function renderRoster() {
   $('startSeason').disabled = created < target;
   $('startSeason').textContent = `▶ Start Season ${F.season}`;
   $('rosterHint').innerHTML = created < target
-    ? `Your plan: <b>${target}</b> creation${target === 1 ? '' : 's'} · ${created} so far — build/import ${target - created} more (or lower it in ⚙️)`
-    : (target ? `Creation plan met (${created}/${target}) — empty seats auto-fill at first pitch. Play ball!`
+    ? `Your plan: <b>${target}</b> creation${target === 1 ? '' : 's'} · ${created} so far — tap an empty seat to 🛠️ build one (or lower the plan in ⚙️)`
+    : (target ? `Creations used: ${created}/${target} — empty seats auto-fill at first pitch. Play ball!`
               : 'Empty seats auto-fill with free agents at first pitch. Play ball!');
   // occupied seat -> the player's card (stats + Replace); empty seat -> straight to the picker
   document.querySelectorAll('#rotSeats .seat, #lineSeats .seat').forEach(el => el.onclick = () => {
@@ -1172,15 +1172,25 @@ async function openPicker(where, idx) {
   $('pickTitle').textContent = where === 'rot' ? `Sign a pitcher — SP${idx + 1}` : `Sign a hitter — spot ${idx + 1}`;
   const list = $('pickList');
   const cur = (where === 'rot' ? F.rotation : F.lineup)[idx];
-  const rk = (F.pendingRookie && F.pendingRookie.game === game) ? F.pendingRookie : null;
+  const left = createSlotsLeft(cur);
+  const rk = (F.pendingRookie && F.pendingRookie.game === game && left > 0) ? F.pendingRookie : null;
+  const buildRow = left > 0
+    ? `<div class="pickrow" data-build="1" style="border-color:rgba(25,198,255,.5)">
+        <span class="nm">🛠️ Build a brand-new ${game === 'pitcher' ? 'pitcher' : 'hitter'}</span>
+        <span class="meta">opens the builder — your club drafts them (${createdCount()}/${createLimit()} plan used)</span></div>`
+    : `<div class="pickrow" style="opacity:.45;cursor:default">
+        <span class="nm">🛠️ Build a new player</span>
+        <span class="meta">creation plan full (${createdCount()}/${createLimit()}) — raise it in ⚙️ Settings</span></div>`;
   list.innerHTML = `${rk ? `<div class="pickrow" data-rookie="1" style="border-color:rgba(67,233,123,.5)">
       <span class="nm">🎓 Sign rookie ${escapeHTML(rk.name)}</span><span class="meta">age 22 · your build</span>
       <span class="ov ${tierCls(rk.ovr)}">${rk.ovr}</span></div>` : ''}
+    ${buildRow}
     <div class="pickrow" data-fa="1"><span class="nm">✍️ Replacement-level Free Agent</span><span class="meta">OVR 60–70 · age 23</span></div>
     ${cur ? '<div class="pickrow" data-cut="1"><span class="nm">🪓 Release this player</span><span class="meta">empties the seat</span></div>' : ''}
     <div class="hint" id="hofHint">Loading your Hall of Fame…</div>`;
   $('pickOv').classList.add('show');
   wirePickRows();
+  if (left <= 0) { $('hofHint').textContent = `Hall of Fame imports count toward your creation plan — it's full (${createdCount()}/${createLimit()}). Raise it in ⚙️ Settings, or replace one of your created players.`; return; }
   const a = acct();
   if (!a || !a.sub || !a.sessionToken) { $('hofHint').textContent = 'Sign in with Google (in any game\'s ☰ menu) to import your Hall of Fame builds here.'; return; }
   try {
@@ -1213,6 +1223,11 @@ async function openPicker(where, idx) {
 function signRookieTo(where, idx) {
   const rk = F.pendingRookie;
   if (!rk) return;
+  const occupant = (where === 'rot' ? F.rotation : F.lineup)[idx];
+  if (createSlotsLeft(occupant) <= 0) {
+    toast(`Creation plan full (${createdCount()}/${createLimit()}) — replace one of your own creations, or raise the plan in ⚙️ Settings.`);
+    return;
+  }
   const rng = seededRandom(`${F.id}|rookie|${rk.name}|${F.prog || 0}`);
   const p = mkPlayer(rng, rk.game, clamp(Math.round(rk.ovr), 40, 99), 22, 'rookie');
   p.name = String(rk.name).slice(0, 26);
@@ -1250,10 +1265,15 @@ function openAssign() {
   $('assignSub').textContent = rk.game === 'pitcher'
     ? 'Pick his rotation spot — whoever holds it is released.'
     : 'Pick his lineup spot — whoever holds it is released.';
-  $('assignList').innerHTML = arr.map((p, i) => `<div class="pickrow" data-assign="${i}">
+  const anyRoom = arr.some(p => createSlotsLeft(p) > 0);
+  if (!anyRoom) $('assignSub').textContent = `Creation plan full (${createdCount()}/${createLimit()}) — he can only replace one of your own creations, or raise the plan in ⚙️ Settings.`;
+  $('assignList').innerHTML = arr.map((p, i) => {
+    const ok = createSlotsLeft(p) > 0;
+    return `<div class="pickrow" ${ok ? `data-assign="${i}"` : 'style="opacity:.4;cursor:default"'}>
     <span class="pos" style="font-family:'Oswald',sans-serif;font-size:10px;letter-spacing:1.5px;color:var(--dim);width:34px">${where === 'rot' ? 'SP' + (i + 1) : 'B' + (i + 1)}</span>
-    ${p ? `<span class="nm">${escapeHTML(p.name)}</span><span class="meta">age ${p.age} · would be released</span><span class="ov ${tierCls(p.ovr)}">${p.ovr}</span>`
-        : `<span class="nm" style="color:var(--accent2)">Empty seat</span><span class="meta">walks right in</span>`}</div>`).join('');
+    ${p ? `<span class="nm">${escapeHTML(p.name)}</span><span class="meta">${ok ? `age ${p.age} · would be released` : 'blocked by the creation plan'}</span><span class="ov ${tierCls(p.ovr)}">${p.ovr}</span>`
+        : `<span class="nm" style="color:var(--accent2)">Empty seat</span><span class="meta">${ok ? 'walks right in' : 'blocked by the creation plan'}</span>`}</div>`;
+  }).join('');
   $('assignOv').classList.add('show');
   document.querySelectorAll('[data-assign]').forEach(el => el.onclick = () => {
     closeOv('assignOv');
@@ -1265,6 +1285,10 @@ $('assignOv').addEventListener('click', e => { if (e.target === $('assignOv')) c
 function wirePickRows() {
   const rw = document.querySelector('[data-rookie]');
   if (rw) rw.onclick = () => { closeOv('pickOv'); signRookieTo(pickSeat.where, pickSeat.idx); };
+  const bd = document.querySelector('[data-build]');
+  if (bd) bd.onclick = () => {
+    location.href = pickSeat.where === 'rot' ? '/pitching?franchise=1' : '/batting?franchise=1';
+  };
   const fa = document.querySelector('[data-fa]');
   if (fa) fa.onclick = () => {
     const rng = seededRandom(`${F.id}|fa|${F.season}|${pickSeat.where}${pickSeat.idx}|${(F.prog || 0)}`);
@@ -1291,6 +1315,13 @@ $('autoFill').onclick = () => {
 // creations = players YOU made (built rookies + Hall of Fame imports), anywhere on the roster
 function createdCount() {
   return F.rotation.concat(F.lineup).filter(p => p && (p.src === 'hof' || p.src === 'rookie')).length;
+}
+// the ⚙️ plan is a hard cap too: you can only build/import as many as you chose.
+// Replacing one of your own creations frees its slot.
+function createLimit() { return Math.min(14, Math.max(0, settingsOf(F).create)); }
+function createSlotsLeft(replacing) {
+  const freed = replacing && (replacing.src === 'hof' || replacing.src === 'rookie') ? 1 : 0;
+  return createLimit() - createdCount() + freed;
 }
 $('startSeason').onclick = () => {
   // the front office quietly signs FAs into any seats you left open
