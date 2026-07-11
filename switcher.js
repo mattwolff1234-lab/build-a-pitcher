@@ -229,11 +229,23 @@
       const vvGap = window.visualViewport ? Math.max(0, window.innerHeight - window.visualViewport.height) : 0;
       document.querySelectorAll('[class*="bottom_rail"],[id*="bottom_rail"],[class*="adhesion"],[id*="adhesion"],[id*="pw-oop"],[class*="pw-oop"]').forEach(el => {
         try {
+          if (/top_rail|left_rail|right_rail/i.test(el.className + ' ' + el.id)) return;   // side/top units live elsewhere on purpose
           const cs = getComputedStyle(el);
-          if (cs.position !== 'fixed' || cs.display === 'none' || cs.visibility === 'hidden') return;
+          if (cs.display === 'none' || cs.visibility === 'hidden') return;
+          const fixed = cs.position === 'fixed';
+          // Some Safari paths leave the anchor position:absolute with a computed top, so it
+          // SCROLLS with the page and parks mid-screen — the old fixed-only check ignored it
+          // entirely. Only trust absolute units injected directly under <body> (Playwire's
+          // out-of-page wrappers); absolute elements inside an ad's own wrapper are internals.
+          const looseAbs = cs.position === 'absolute' && el.parentElement === document.body;
+          if (!fixed && !looseAbs) return;
           const r = el.getBoundingClientRect();
-          // detached anchor: short unit, clearly above the real bottom, not a top rail → re-pin
-          if (r.height > 0 && r.height <= 220 && r.top > 120 && (window.innerHeight - r.bottom) > 40 + vvGap) {
+          // detached anchor: short unit, clearly off the real bottom → re-pin as a fixed bottom
+          // anchor. Fixed units keep the r.top > 120 top-rail guard; absolute body-level units
+          // are bottom anchors wherever they've drifted (even stuck above the viewport).
+          const offBottom = (window.innerHeight - r.bottom) > 40 + vvGap;
+          if (r.height > 0 && r.height <= 220 && offBottom && (looseAbs || r.top > 120)) {
+            el.style.setProperty('position', 'fixed', 'important');
             el.style.setProperty('top', 'auto', 'important');
             el.style.setProperty('bottom', '0px', 'important');
           }
@@ -248,6 +260,12 @@
     // the URL bar collapsing / keyboard / PWA chrome all resize the visual viewport · re-check fast
     if (window.visualViewport) window.visualViewport.addEventListener('resize', () => setTimeout(measure, 60));
     window.addEventListener('orientationchange', () => setTimeout(measure, 250));
+    // an absolute (not-yet-re-pinned) anchor drifts on every scroll — catch it quickly
+    let schT = 0;
+    window.addEventListener('scroll', () => {
+      if (schT) return;
+      schT = setTimeout(() => { schT = 0; measure(); }, 200);
+    }, { passive: true });
   }
 
   function build() {
