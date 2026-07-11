@@ -468,7 +468,7 @@
         <div class="hh-row"><i>🎯</i><div><b>Daily</b><span>One shot a day, same cards for everyone worldwide. Beat the board, keep your streak alive.</span></div></div>
         <div class="hh-row"><i>⚔️</i><div><b>1v1 Live</b><span>Match a real person, quick-build on a shot clock, watch the showdown. Higher overall wins.</span></div></div>
         <div class="hh-row"><i>🏟️</i><div><b>Franchise</b><span>Sign your creations to a club. Seasons, trades, drafts, titles.</span></div></div>
-        <div class="hh-row"><i>🏀</i><div><b>Three sports</b><span>Baseball, basketball, and soccer. Switch anytime with the chips below.</span></div></div>
+        <div class="hh-row"><i>🏀</i><div><b>Four sports</b><span>Baseball, basketball, soccer, and college football. Switch anytime with the chips below.</span></div></div>
       </div>
     </details>
   </div>
@@ -542,11 +542,13 @@ gsap.from('.hero p', { y: 10, opacity: 0, duration: .35, delay: .1, ease: 'power
     baller:  { icon: '🏀', name: 'Hooper',  path: LOCAL ? '/build-a-baller.html' : '/hoops',    fig: '/baller-figure.png',  sport: 'hoops' },
     striker: { icon: '⚽', name: 'Striker', path: LOCAL ? '/build-a-striker.html' : '/striker',  fig: '/striker-figure.png', sport: 'soccer' },
     keeper:  { icon: '⚽', name: 'Keeper',  path: LOCAL ? '/build-a-keeper.html' : '/keeper',   fig: '/keeper-figure.png',  sport: 'soccer' },
+    cfb:     { icon: '🏈', name: 'College Star', path: LOCAL ? '/college.html' : '/college', fig: '/cfb-wr-figure.png', sport: 'cfb' },
   };
   const SPORTS = [
     { id: 'baseball', icon: '⚾', name: 'Baseball', roles: ['pitcher', 'batter'], accent: '#ff7a18', vs: LOCAL ? '/versus.html' : '/versus' },
     { id: 'hoops',    icon: '🏀', name: 'Hoops',    roles: ['baller'],            accent: '#ff8a3c', vs: LOCAL ? '/versus-hoops.html' : '/versus-hoops' },
-    { id: 'soccer',   icon: '⚽', name: 'Soccer',   roles: ['striker', 'keeper'], accent: '#4ade80', vs: LOCAL ? '/versus-soccer.html' : '/versus-soccer', isNew: true },
+    { id: 'soccer',   icon: '⚽', name: 'Soccer',   roles: ['striker', 'keeper'], accent: '#4ade80', vs: LOCAL ? '/versus-soccer.html' : '/versus-soccer' },
+    { id: 'cfb',      icon: '🏈', name: 'College',  roles: ['cfb'],               accent: '#d97a32', isNew: true },
   ];
   const todayLocal = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
   // Baseball and soccer each rotate ONE shared daily between their two games (date-seeded, same
@@ -554,7 +556,7 @@ gsap.from('.hero p', { y: 10, opacity: 0, duration: .35, delay: .1, ease: 'power
   const rotDay = () => Math.floor(Date.parse(todayLocal() + 'T00:00:00Z') / 86400000);
   const rotationGame = () => (rotDay() % 2 === 1) ? 'pitcher' : 'batter';
   const soccerRotation = () => (rotDay() % 2 === 1) ? 'striker' : 'keeper';
-  const dailyGameOf = g => GAME[g].sport === 'baseball' ? rotationGame() : (GAME[g].sport === 'soccer' ? soccerRotation() : g);
+  const dailyGameOf = g => GAME[g].sport === 'baseball' ? rotationGame() : (GAME[g].sport === 'soccer' ? soccerRotation() : (GAME[g].sport === 'cfb' ? null : g));   // cfb: no daily yet
 
   let active = 'pitcher';
   try { const g = localStorage.getItem('pl_activeGame'); if (GAME[g]) active = g; } catch (e) {}
@@ -575,7 +577,8 @@ gsap.from('.hero p', { y: 10, opacity: 0, duration: .35, delay: .1, ease: 'power
 
   function render(animate) {
     const sport = sportOf(active), g = GAME[active];
-    const playedToday = playedFor(dailyGameOf(active));
+    const dg0 = dailyGameOf(active);
+    const playedToday = dg0 ? playedFor(dg0) : false;
     $('hub').style.setProperty('--hubac', sport.accent);
     $('sportSeg').innerHTML = SPORTS.map(s =>
       `<button class="sport-chip${s.id === sport.id ? ' on' : ''}" data-sport="${s.id}">
@@ -587,10 +590,15 @@ gsap.from('.hero p', { y: 10, opacity: 0, duration: .35, delay: .1, ease: 'power
     // resume hero: streak at risk > daily ready > daily done. Always badge it as the DAILY and
     // name the host game · the rotation means "Play Daily" as a Batter fan opens the Pitcher
     // daily today, which read as a glitch when the button didn't say so.
-    const dg = dailyGameOf(active);
-    const D = GAME[dg];
+    const dg = dg0;
+    const D = dg ? GAME[dg] : null;
     const rc = $('resumeCard');
-    if (playedToday) {
+    if (!D) {
+      $('rzKick').textContent = '🏈 NEW · College Football';
+      $('rzLine').innerHTML = 'Spin real <b>College Football 27</b> stars into a QB, RB, or WR build';
+      $('rzGo').textContent = 'Build a College Star';
+      rc.href = g.path;
+    } else if (playedToday) {
       $('rzKick').textContent = '✅ Daily done for today';
       $('rzLine').innerHTML = `${streakN >= 2 ? `<b>${streakN}-day</b> streak is safe · ` : ''}run a new build?`;
       $('rzGo').textContent = `Build a ${g.name}`;
@@ -610,16 +618,21 @@ gsap.from('.hero p', { y: 10, opacity: 0, duration: .35, delay: .1, ease: 'power
 
     // mode grid, scoped to the active game
     const tiles = [
-      { i: '🎯', b: 'Daily', s: (playedToday ? '<span class="done">✅ Done today</span>' : `Today: ${D.icon} ${D.name}`) + '<span id="dcCount" style="display:block;color:var(--accent2)"></span>', href: D.path + '#daily' },
-      { i: '🛠️', b: 'Build', s: `Draft a ${g.name.toLowerCase()}, sim the career`, href: g.path },
+      D ? { i: '🎯', b: 'Daily', s: (playedToday ? '<span class="done">✅ Done today</span>' : `Today: ${D.icon} ${D.name}`) + '<span id="dcCount" style="display:block;color:var(--accent2)"></span>', href: D.path + '#daily' }
+        : { i: '🎯', b: 'Daily', s: 'College daily · coming soon', lock: true },
+      { i: '🛠️', b: 'Build', s: sport.id === 'cfb' ? 'Draft a QB, RB, or WR · sim the college career' : `Draft a ${g.name.toLowerCase()}, sim the career`, href: g.path },
       sport.vs ? { i: '⚔️', b: '1v1 Live', s: 'Real players, live builds', href: sport.vs, cls: ' mtile-vs' }
-               : { i: '⚔️', b: '1v1 Live', s: 'Soccer 1v1 · coming soon', lock: true },
-      { i: '🏟️', b: 'Franchise', s: '<span style="color:var(--accent2)">NEW</span> · sign your builds, chase a title',
-        href: sport.id === 'hoops' ? (LOCAL ? '/franchise-hoops.html' : '/franchise-hoops')
-            : sport.id === 'soccer' ? (LOCAL ? '/franchise-soccer.html' : '/franchise-soccer')
-            : (LOCAL ? '/franchise.html' : '/franchise') },
+               : { i: '⚔️', b: '1v1 Live', s: `${sport.name} 1v1 · coming soon`, lock: true },
+      sport.id === 'cfb'
+        ? { i: '🏟️', b: 'Franchise', s: 'College franchise · coming soon', lock: true }
+        : { i: '🏟️', b: 'Franchise', s: '<span style="color:var(--accent2)">NEW</span> · sign your builds, chase a title',
+            href: sport.id === 'hoops' ? (LOCAL ? '/franchise-hoops.html' : '/franchise-hoops')
+                : sport.id === 'soccer' ? (LOCAL ? '/franchise-soccer.html' : '/franchise-soccer')
+                : (LOCAL ? '/franchise.html' : '/franchise') },
       { i: '🏆', b: 'Leaderboard', s: 'Top builds, all-time & today', href: g.path + '#leaderboard' },
-      { i: '📇', b: 'Collection', s: 'Every card you\'ve pulled', href: g.path + '#collection' },
+      sport.id === 'cfb'
+        ? { i: '📇', b: 'Collection', s: 'College binder · coming soon', lock: true }
+        : { i: '📇', b: 'Collection', s: 'Every card you\'ve pulled', href: g.path + '#collection' },
       { i: '🏛️', b: 'Hall of Fame', s: 'Your saved careers', href: g.path + '#hof' },
     ];
     $('modeGrid').innerHTML = tiles.map(t => t.lock
@@ -629,7 +642,7 @@ gsap.from('.hero p', { y: 10, opacity: 0, duration: .35, delay: .1, ease: 'power
     $('sportSeg').querySelectorAll('[data-sport]').forEach(b => b.onclick = () => { const s = SPORTS.find(x => x.id === b.dataset.sport); setActive(roleFor(s)); });
     $('roleSeg').querySelectorAll('[data-role]').forEach(b => b.onclick = () => setActive(b.dataset.role));
     // ☰ menu deep links follow the ACTIVE game (daily/streak follow its rotation)
-    const dgP = GAME[dg].path;
+    const dgP = D ? D.path : g.path;
     const deep = { daily: dgP, streak: dgP, quests: g.path, hof: g.path, achievements: g.path, collection: g.path, leaderboard: g.path };
     document.querySelectorAll('#menu a[href*="#"]').forEach(a => {
       const h = (a.getAttribute('href').split('#')[1] || '').toLowerCase();
@@ -645,9 +658,11 @@ gsap.from('.hero p', { y: 10, opacity: 0, duration: .35, delay: .1, ease: 'power
   function refreshPlayCount() {
     const dg = dailyGameOf(active);
     const paint = n => {
+      if (!dg) n = 0;
       const a = $('dcCount'); if (a) a.textContent = n > 0 ? `${n.toLocaleString()} played today` : '';
       const b = $('rzSub'); if (b) b.textContent = n > 0 ? `${n.toLocaleString()} played today's daily` : '';
     };
+    if (!dg) return paint(0);
     if (dcCounts[dg] != null) return paint(dcCounts[dg]);
     fetch(`/api/score?action=challengeLeaderboard&game=${dg}&limit=1&date=${todayLocal()}`).then(r => r.json()).then(j => {
       dcCounts[dg] = (j && j.ok && j.total) || 0;

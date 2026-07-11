@@ -40,7 +40,7 @@ function findConn() {
 }
 const CONN = findConn();
 const sql = CONN ? neon(CONN) : null;
-const gameOf = g => (g === 'batter' || g === 'baller' || g === 'striker' || g === 'keeper') ? g : 'pitcher';
+const gameOf = g => (g === 'batter' || g === 'baller' || g === 'striker' || g === 'keeper' || g === 'cfb') ? g : 'pitcher';
 
 let ready;
 function ensure() {

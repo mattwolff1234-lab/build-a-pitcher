@@ -23,7 +23,7 @@ function findConn() {
 }
 const CONN = findConn();
 const sql = CONN ? neon(CONN) : null;
-const gameOf = g => (g === 'batter' || g === 'baller' || g === 'striker' || g === 'keeper') ? g : 'pitcher';
+const gameOf = g => (g === 'batter' || g === 'baller' || g === 'striker' || g === 'keeper' || g === 'cfb') ? g : 'pitcher';
 // Per-player key for daily dedup: signed-in account, else device guest id. Trust-the-client, same
 // posture as the rest of the leaderboard · the UNIQUE constraint is what enforces one attempt/day.
 const playerKey = b => (b && b.sub ? 'acct:' + String(b.sub).slice(0, 80) : (b && b.guestId ? 'guest:' + String(b.guestId).slice(0, 80) : null));
@@ -51,6 +51,9 @@ const SLOT_MAX = {
   // Soccer caps = true maxima across pool+prime+icons in strikers/keepers.json, +5 boost headroom +3 buffer.
   striker: { _default: 125, Finishing: 123, Pace: 125, 'Shot Power': 119, Dribbling: 122, Passing: 122, Heading: 120, Physical: 119, Clutch: 119, Frame: 102 },
   keeper:  { _default: 122, Diving: 122, Reflexes: 122, Handling: 116, Distribution: 116, Positioning: 119, Agility: 113, Command: 119, Clutch: 119, Frame: 112 },
+  // CFB27 raw attributes cap at 99; synthesized Primes add +6 and Boost keeps the better per
+  // stat (no stacking), so 108 covers every legit slot. Frame = heightToRating (48+(in-66)*3.4).
+  cfb:     { _default: 108, Frame: 102 },
 };
 // Plain weighted-avg OVR · matches batter/baller's client computeOvr exactly, so we can reject an
 // inflated OVR claim. Pitcher uses a value-scaled formula, so we don't recompute it (its slot caps
@@ -60,6 +63,11 @@ const OVR_W = {
   baller: { '3-Pointer': 1.2, Finishing: 1.2, Playmaking: 1.2, Dribble: 1.1, Defense: 1.1, Rebounding: 1.1, Clutch: 1.1, Speed: 0.9, Frame: 1.0 },
   striker: { Finishing: 1.2, Pace: 1.2, Dribbling: 1.1, 'Shot Power': 1.1, Passing: 1.1, Clutch: 1.1, Heading: 1.0, Physical: 1.0, Frame: 0.7 },
   keeper: { Reflexes: 1.2, Diving: 1.2, Positioning: 1.1, Handling: 1.1, Clutch: 1.1, Frame: 1.1, Command: 1.0, Distribution: 1.0, Agility: 1.0 },
+  // cfb: one flat map spanning all three positions' slot labels (labels are unique per weight -
+  // RB's catch slot is labeled "Catching" so it can't collide with WR's 1.2x "Hands").
+  cfb: { 'Short Accuracy': 1.2, 'Mid Accuracy': 1.2, 'Deep Ball': 1.2, 'Arm Power': 1.1, Poise: 1.1, 'Football IQ': 1.1, 'On the Run': 1.0, Wheels: 1.0,
+    Vision: 1.2, 'Break Tackle': 1.2, Power: 1.1, Burst: 1.1, Elusiveness: 1.1, 'Ball Security': 1.0, Catching: 1.0,
+    Hands: 1.2, Routes: 1.2, Speed: 1.2, Release: 1.1, 'In Traffic': 1.1, Spectacular: 1.1, Agility: 1.0, Leaping: 1.0, Frame: 1.0 },
 };
 // Legend names per game, loaded lazily from the baked data (auto-updates on refresh; only read on
 // submit, so the GET leaderboard hot path is untouched). Blocks impossible "all-legends" builds:
@@ -72,18 +80,20 @@ function legendSet(game) {
     try {
       _legends = { pitcher: names(require('../pitchers.json')), batter: names(require('../batters.json')), baller: names(require('../ballers.json')),
         striker: names(require('../strikers.json')), keeper: names(require('../keepers.json')) };
-    } catch (e) { _legends = { pitcher: new Set(), batter: new Set(), baller: new Set(), striker: new Set(), keeper: new Set() }; }
+      const cfbLeg = require('../cfb.json').legends || {};
+      _legends.cfb = names({ legends: [].concat(cfbLeg.qb || [], cfbLeg.rb || [], cfbLeg.wr || []) });
+    } catch (e) { _legends = { pitcher: new Set(), batter: new Set(), baller: new Set(), striker: new Set(), keeper: new Set(), cfb: new Set() }; }
   }
   return _legends[game] || null;
 }
-const LEGEND_CAP = { baller: 6, batter: 7, pitcher: 7, striker: 6, keeper: 6 };   // observed legit maxima: baller 3, batter 4, pitcher 5; soccer icon odds match baller's 4%
+const LEGEND_CAP = { baller: 6, batter: 7, pitcher: 7, striker: 6, keeper: 6, cfb: 6 };   // observed legit maxima: baller 3, batter 4, pitcher 5; soccer icon odds match baller's 4%
 
 // Career-total sanity caps · above these is impossible under the tuned sim (verified with the
 // Node sim harness: batter maxed-build career HR tops out ~734, pitcher career K ~6129), so an
 // over-cap career is either a stale pre-fix client (2026-07-10 inflated-HR bug) or a doctored
 // payload. We KEEP the score (ovr is validated separately) and just strip the career object,
 // so the entry stays on the OVR board but can't pollute the career-stat sorts.
-const CAREER_MAX = { batter: { hr: 760 }, pitcher: { k: 6300 } };
+const CAREER_MAX = { batter: { hr: 760 }, pitcher: { k: 6300 }, cfb: { yds: 17000, td: 170 } };
 function stripInsaneCareer(game, build) {
   const caps = CAREER_MAX[game];
   const t = build && build.career && build.career.totals;
@@ -361,7 +371,7 @@ module.exports = async (req, res) => {
     const daily = scope === 'daily';
     const game = gameOf(req.query && req.query.game);
     // Optional sort by a career-total stat (trust-the-client, same as ovr). Whitelisted keys map to build.career.totals fields.
-    const SORT_FIELDS = { k: 'k', war: 'war', wins: 'wins', rings: 'rings', cyYoung: 'cyYoung', hr: 'hr', hits: 'h', mvp: 'mvp', pts: 'pts', reb: 'reb', ast: 'ast', goals: 'goals', assists: 'assists', cs: 'cs', saves: 'saves' };
+    const SORT_FIELDS = { k: 'k', war: 'war', wins: 'wins', rings: 'rings', cyYoung: 'cyYoung', hr: 'hr', hits: 'h', mvp: 'mvp', pts: 'pts', reb: 'reb', ast: 'ast', goals: 'goals', assists: 'assists', cs: 'cs', saves: 'saves', yds: 'yds', td: 'td', heisman: 'heisman', natty: 'natty' };
     const sortField = SORT_FIELDS[req.query && req.query.sort] || null;
     const asc = (req.query && req.query.dir) === 'asc';       // flip any stat sort to worst-first
     const worst = (req.query && req.query.sort) === 'ovrAsc'; // ascending OVR ("worst overall")

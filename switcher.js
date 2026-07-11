@@ -19,8 +19,9 @@
     baller:  { icon: '🏀', sport: 'hoops',    sportName: 'Basketball', name: 'Hooper',  path: LOCAL ? '/build-a-baller.html' : '/hoops' },
     striker: { icon: '⚽', sport: 'soccer',   sportName: 'Soccer',     name: 'Striker', path: LOCAL ? '/build-a-striker.html' : '/striker' },
     keeper:  { icon: '⚽', sport: 'soccer',   sportName: 'Soccer',     name: 'Keeper',  path: LOCAL ? '/build-a-keeper.html' : '/keeper' },
+    cfb:     { icon: '🏈', sport: 'cfb',      sportName: 'College Football', name: 'College Star', path: LOCAL ? '/college.html' : '/college' },
   };
-  const ORDER = ['pitcher', 'batter', 'baller', 'striker', 'keeper'];
+  const ORDER = ['pitcher', 'batter', 'baller', 'striker', 'keeper', 'cfb'];
   const VERSUS = { baseball: LOCAL ? '/versus.html' : '/versus', hoops: LOCAL ? '/versus-hoops.html' : '/versus-hoops', soccer: LOCAL ? '/versus-soccer.html' : '/versus-soccer' };
   const FRANCHISE = { baseball: LOCAL ? '/franchise.html' : '/franchise', hoops: LOCAL ? '/franchise-hoops.html' : '/franchise-hoops', soccer: LOCAL ? '/franchise-soccer.html' : '/franchise-soccer' };
 
@@ -49,7 +50,7 @@
     const sport = GAMES[g].sport;
     if (sport === 'hoops') return g;
     const days = Math.floor(Date.parse(todayLocal() + 'T00:00:00Z') / 86400000);
-    if (sport === 'baseball') return (days % 2 === 1) ? 'pitcher' : 'batter';
+    if (sport === 'baseball' || sport === 'cfb') return (days % 2 === 1) ? 'pitcher' : 'batter';   // cfb: no own daily yet
     return (days % 2 === 1) ? 'striker' : 'keeper';
   }
 
