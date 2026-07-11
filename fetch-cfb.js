@@ -191,9 +191,11 @@ const WR_ICONS = [
   ['Braylon Edwards',  'Michigan',       75, 92, 92, 90, 89, 87, 92, 93, 85, 93],
   ['Percy Harvin',     'Florida',        71, 93, 90, 96, 88, 91, 89, 90, 97, 86],
 ];
+let LEGEND_IMGS = {};
 function icon(row, posKey, pos) {
   const [name, school, heightIn, ovr, ...vals] = row;
   const card = { name, pos, team: school, cls: 'Legend', ovr, height: inToStr(heightIn), heightIn, legend: true };
+  if (LEGEND_IMGS[name]) card.img = LEGEND_IMGS[name];
   SLOT_KEYS[posKey].forEach((k, i) => { card[k] = vals[i]; });
   return card;
 }
@@ -263,6 +265,66 @@ async function downloadEspn() {
   console.log('Wrote cfb-espn-raw.json: ' + Object.keys(out.players).length + ' team rosters');
 }
 
+// ---------------------------------------------------------------- legend photos
+// Retired greats aren't on ESPN rosters. ESPN's search API has legacy NFL headshots for most;
+// pre-headshot-era guys (Frazier, Campbell, Griffin...) fall back to their Wikipedia portrait.
+// Cached in cfb-legend-imgs.json (delete to re-fetch). Misses keep the school-crest card art.
+const WIKI_TITLES = {   // disambiguation where the plain name isn't the football player
+  'Tim Brown': 'Tim Brown (American football)',
+  'Randy Moss': 'Randy Moss',
+  'Marcus Allen': 'Marcus Allen',
+  'Vince Young': 'Vince Young',
+  'Charlie Ward': 'Charlie Ward',
+  'Ron Dayne': 'Ron Dayne',
+};
+async function urlOk(u) {
+  try { const r = await fetch(u, { method: 'HEAD' }); return r.ok; } catch (e) { return false; }
+}
+async function espnLegendImg(name) {
+  try {
+    const r = await fetch('https://site.web.api.espn.com/apis/search/v2?query=' + encodeURIComponent(name) + '&limit=5',
+      { headers: { 'User-Agent': HEADERS['User-Agent'] } });
+    const j = await r.json();
+    const players = ((j.results || []).find(x => x.type === 'player') || {}).contents || [];
+    const want = normName(name);
+    for (const pl of players) {
+      if (normName(pl.displayName) !== want) continue;
+      const img = pl.image && (pl.image.default || pl.image.defaultDark);
+      if (img && await urlOk(img)) return img;
+    }
+  } catch (e) {}
+  return null;
+}
+async function wikiLegendImg(name) {
+  try {
+    const title = WIKI_TITLES[name] || name;
+    const u = 'https://en.wikipedia.org/w/api.php?action=query&format=json&prop=pageimages&piprop=thumbnail&pithumbsize=400&redirects=1&titles=' + encodeURIComponent(title);
+    const r = await fetch(u, { headers: { 'User-Agent': 'GoatLab/1.0 (goat-lab.app)' } });
+    const j = await r.json();
+    const pages = (j.query || {}).pages || {};
+    for (const k of Object.keys(pages)) {
+      const t = pages[k].thumbnail;
+      if (t && t.source) return t.source;
+    }
+  } catch (e) {}
+  return null;
+}
+async function downloadLegendImgs() {
+  console.log('Legend photos: ESPN search + wiki fallback...');
+  const names = [...QB_ICONS, ...RB_ICONS, ...WR_ICONS].map(r => r[0]);
+  const out = {};
+  for (const name of names) {
+    let img = await espnLegendImg(name);
+    let via = 'espn';
+    if (!img) { img = await wikiLegendImg(name); via = 'wiki'; }
+    if (img) { out[name] = img; console.log('  ' + name + ' <- ' + via); }
+    else console.log('  ' + name + ' <- MISS (keeps school crest)');
+    await sleep(250);
+  }
+  fs.writeFileSync('cfb-legend-imgs.json', JSON.stringify(out));
+  console.log('Wrote cfb-legend-imgs.json: ' + Object.keys(out).length + '/' + names.length);
+}
+
 // ---------------------------------------------------------------- teams
 // Crests: EA's drop-api filters endpoint has official crest PNGs for the 41 marquee programs
 // (saved by hand below — endpoint: /rating/ea-sports-college-football/filters). Colors hand-mapped
@@ -307,6 +369,8 @@ const TEAM_COLORS = {
   // ESPN enrichment (headshots + logos), downloaded once into cfb-espn-raw.json
   let espn = { teams: {}, players: {} };
   if (!fs.existsSync('cfb-espn-raw.json')) await downloadEspn();
+  if (!fs.existsSync('cfb-legend-imgs.json')) await downloadLegendImgs();
+  try { LEGEND_IMGS = JSON.parse(fs.readFileSync('cfb-legend-imgs.json', 'utf8')); } catch (e) {}
   try { espn = JSON.parse(fs.readFileSync('cfb-espn-raw.json', 'utf8')); } catch (e) {}
   // Match tiers: (1) exact name on the same team, (2) globally-unique exact name — the EA
   // rosters carry spring-2026 portal moves (Lagway is a Bear) that other sources lag, and the
