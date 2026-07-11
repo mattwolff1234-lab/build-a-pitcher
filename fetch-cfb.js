@@ -271,12 +271,11 @@ async function downloadEspn() {
 // Cached in cfb-legend-imgs.json (delete to re-fetch). Misses keep the school-crest card art.
 const WIKI_TITLES = {   // disambiguation where the plain name isn't the football player
   'Tim Brown': 'Tim Brown (American football)',
-  'Randy Moss': 'Randy Moss',
-  'Marcus Allen': 'Marcus Allen',
-  'Vince Young': 'Vince Young',
-  'Charlie Ward': 'Charlie Ward',
-  'Ron Dayne': 'Ron Dayne',
 };
+// Names whose ESPN search hit is a DIFFERENT active athlete (an MMA Charlie Ward, a hoops
+// Marcus Allen, a current college RB named Bo Jackson) - go straight to Wikipedia, where the
+// legend IS the primary topic. Audit any new icon on a contact sheet before trusting a match.
+const WIKI_FORCE = new Set(['Charlie Ward', 'Marcus Allen', 'Bo Jackson']);
 async function urlOk(u) {
   try { const r = await fetch(u, { method: 'HEAD' }); return r.ok; } catch (e) { return false; }
 }
@@ -289,6 +288,7 @@ async function espnLegendImg(name) {
     const want = normName(name);
     for (const pl of players) {
       if (normName(pl.displayName) !== want) continue;
+      if (pl.sport && pl.sport !== 'football') continue;   // the MMA Charlie Wards of the world
       const img = pl.image && (pl.image.default || pl.image.defaultDark);
       if (img && await urlOk(img)) return img;
     }
@@ -314,7 +314,7 @@ async function downloadLegendImgs() {
   const names = [...QB_ICONS, ...RB_ICONS, ...WR_ICONS].map(r => r[0]);
   const out = {};
   for (const name of names) {
-    let img = await espnLegendImg(name);
+    let img = WIKI_FORCE.has(name) ? null : await espnLegendImg(name);
     let via = 'espn';
     if (!img) { img = await wikiLegendImg(name); via = 'wiki'; }
     if (img) { out[name] = img; console.log('  ' + name + ' <- ' + via); }
