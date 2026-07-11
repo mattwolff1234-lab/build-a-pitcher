@@ -48,9 +48,9 @@
   function todayLocal() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
   function dailyGame(g) {
     const sport = GAMES[g].sport;
-    if (sport === 'hoops') return g;
+    if (sport === 'hoops' || sport === 'cfb') return g;   // both run their own daily every day
     const days = Math.floor(Date.parse(todayLocal() + 'T00:00:00Z') / 86400000);
-    if (sport === 'baseball' || sport === 'cfb') return (days % 2 === 1) ? 'pitcher' : 'batter';   // cfb: no own daily yet
+    if (sport === 'baseball') return (days % 2 === 1) ? 'pitcher' : 'batter';
     return (days % 2 === 1) ? 'striker' : 'keeper';
   }
 

@@ -556,7 +556,7 @@ gsap.from('.hero p', { y: 10, opacity: 0, duration: .35, delay: .1, ease: 'power
   const rotDay = () => Math.floor(Date.parse(todayLocal() + 'T00:00:00Z') / 86400000);
   const rotationGame = () => (rotDay() % 2 === 1) ? 'pitcher' : 'batter';
   const soccerRotation = () => (rotDay() % 2 === 1) ? 'striker' : 'keeper';
-  const dailyGameOf = g => GAME[g].sport === 'baseball' ? rotationGame() : (GAME[g].sport === 'soccer' ? soccerRotation() : (GAME[g].sport === 'cfb' ? null : g));   // cfb: no daily yet
+  const dailyGameOf = g => GAME[g].sport === 'baseball' ? rotationGame() : (GAME[g].sport === 'soccer' ? soccerRotation() : g);   // hoops + cfb run their own daily
 
   let active = 'pitcher';
   try { const g = localStorage.getItem('pl_activeGame'); if (GAME[g]) active = g; } catch (e) {}
@@ -618,8 +618,7 @@ gsap.from('.hero p', { y: 10, opacity: 0, duration: .35, delay: .1, ease: 'power
 
     // mode grid, scoped to the active game
     const tiles = [
-      D ? { i: '🎯', b: 'Daily', s: (playedToday ? '<span class="done">✅ Done today</span>' : `Today: ${D.icon} ${D.name}`) + '<span id="dcCount" style="display:block;color:var(--accent2)"></span>', href: D.path + '#daily' }
-        : { i: '🎯', b: 'Daily', s: 'College daily · coming soon', lock: true },
+      { i: '🎯', b: 'Daily', s: (playedToday ? '<span class="done">✅ Done today</span>' : `Today: ${D.icon} ${D.name}`) + '<span id="dcCount" style="display:block;color:var(--accent2)"></span>', href: D.path + '#daily' },
       { i: '🛠️', b: 'Build', s: sport.id === 'cfb' ? 'Draft a QB, RB, or WR · sim the college career' : `Draft a ${g.name.toLowerCase()}, sim the career`, href: g.path },
       sport.vs ? { i: '⚔️', b: '1v1 Live', s: 'Real players, live builds', href: sport.vs, cls: ' mtile-vs' }
                : { i: '⚔️', b: '1v1 Live', s: `${sport.name} 1v1 · coming soon`, lock: true },

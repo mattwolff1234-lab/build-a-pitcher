@@ -731,8 +731,10 @@
   <div class="brand">
     <span class="mark">Gridiron <i>Lab</i></span>
     <span class="tag">Draft Mode</span>
+    <span id="streakChip" class="streak-chip" title="Your daily streak" style="display:none">🔥 0</span>
     <span class="brand-rule"></span>
     <button id="muteBtn" class="mute" title="Toggle sound">🔊</button>
+    <button id="dailyBtn" class="coming-tab live dc-btn" title="Daily Challenge - same players for everyone!">🎯 Daily</button>
     <a id="buildTab" class="coming-tab live" href="/" title="GoatLab home">🏠 GoatLab</a>
     <button id="menuBtn" class="mute" title="Menu">☰</button>
   </div>
@@ -752,6 +754,7 @@
   </div>
 
   <div id="game" style="display:none">
+    <div id="dailyInfo" class="daily-info" style="display:none"></div>
     <div class="reel-frame panel">
       <div class="pointer"></div>
       <div class="pointer bottom"></div>
@@ -869,6 +872,8 @@
       <div id="acctSlot"></div>
       <div class="menu-sec">Play</div>
       <a class="menu-item" href="/">🏠 Home</a>
+      <button class="menu-item" id="miDaily">🎯 Daily Challenge</button>
+      <button class="menu-item" id="miStreak">🔥 Streak Calendar</button>
       <button class="menu-item" id="miSwitchPos">🔁 Switch Position</button>
       <div class="menu-sec">Your Stuff</div>
       <button class="menu-item" id="miHof">🏛️ My Hall of Fame</button>
@@ -1014,6 +1019,58 @@
         <button id="sharedCloseBtn" class="ghost-btn">Just browse</button>
       </div>
     </div>
+  </div>
+</div>
+
+<div id="streakModal" class="overlay">
+  <div class="overlay-card panel">
+    <div class="overlay-head"><span class="overlay-title">🔥 Your Streak</span><button class="overlay-close" data-close="streakModal">✕</button></div>
+    <div class="overlay-body">
+      <div class="sk-stats">
+        <div class="sk-stat"><b id="skCount">0</b><span>Current 🔥</span></div>
+        <div class="sk-stat"><b id="skBest">0</b><span>Best Ever</span></div>
+        <div class="sk-stat" id="skFreezeWrap" style="display:none"><b id="skFreeze">0</b><span>Freezes 🧊</span></div>
+      </div>
+      <div class="sk-next" id="skNext"></div>
+      <div class="sk-timeline" id="skTimeline"></div>
+      <div class="sk-legend">🔥 played · 🎯 today · 🧊 freeze earned · 🏆/🐐 milestone</div>
+    </div>
+  </div>
+</div>
+
+<div id="dailyReveal" class="daily-reveal">
+  <div id="drCard" class="dr-card">
+    <div class="dr-eyebrow">🎯 Daily Challenge</div>
+    <div class="dr-ovr"><span id="drDailyOvr">0</span><small>OVR</small></div>
+    <div id="drPB" class="dr-pb" style="display:none">🏆 NEW PERSONAL BEST!</div>
+    <div id="drFroze" class="dr-froze" style="display:none">🧊 Streak Freeze used - your streak is safe!</div>
+    <div class="dr-rank"><span id="drRankNum">-</span></div>
+    <div class="dr-pct">Top <span id="drPctNum">0</span>%</div>
+    <div id="drField" class="dr-field"></div>
+    <div id="drStreak" class="dr-streak"></div>
+    <div id="drReplay" class="dr-replay"></div>
+    <button id="drClose" class="primary" style="margin-top:14px;width:100%">Nice 🔥</button>
+  </div>
+</div>
+
+<div id="dailyResults" class="daily-reveal">
+  <div id="dResCard" class="dr-card dres-card">
+    <div class="dr-eyebrow">🎯 Today's Daily · Results</div>
+    <div class="dres-you">
+      <div class="dres-ovrbox"><span id="dResOvr">0</span><small>YOUR OVR</small></div>
+      <div class="dres-rankbox">
+        <div class="dres-rank"><span id="dResRank">-</span></div>
+        <div class="dres-pct">Top <span id="dResPct">0</span>%</div>
+        <div id="dResField" class="dr-field"></div>
+      </div>
+    </div>
+    <div id="dResPB" class="dr-pb" style="display:none">🏆 NEW PERSONAL BEST!</div>
+    <div id="dResFroze" class="dr-froze" style="display:none">🧊 Streak Freeze used - your streak is safe!</div>
+    <div class="dres-best" id="dResBest"></div>
+    <div class="dres-board-label">Today's top builds</div>
+    <div class="dres-board" id="dResBoard"></div>
+    <div id="dResStreak" class="dr-streak"></div>
+    <button id="dResSim" class="primary" style="margin-top:14px;width:100%">Continue → name &amp; simulate</button>
   </div>
 </div>
 
@@ -1313,9 +1370,22 @@ async function init() {
   renderAcct();
   initGoogle();
 
-  // deep-links: /college#leaderboard, /college#hof
+  // Daily Challenge + streak wiring
+  $('dailyBtn').onclick = () => { Sound.click(); startDailyChallenge(); };
+  $('drClose').onclick = () => { Sound.click(); closeDailyReveal(); };
+  $('dailyReveal').addEventListener('click', e => { if (e.target.id === 'dailyReveal') closeDailyReveal(); });
+  $('dResSim').onclick = () => { Sound.click(); closeDailyResults(true); };
+  $('miDaily').onclick = () => { Sound.click(); startDailyChallenge(); };
+  $('miStreak').onclick = () => { Sound.click(); openStreak(); };
+  renderStreakChip();
+  updateDailyBtn();
+  syncAccountDates();
+
+  // deep-links: /college#daily, /college#streak, /college#leaderboard, /college#hof
   const h = (location.hash || '').replace('#', '').toLowerCase();
-  if (h === 'leaderboard' || h === 'lb') setTimeout(() => openLeaderboard('global'), 250);
+  if (h === 'daily') setTimeout(startDailyChallenge, 350);
+  else if (h === 'streak') setTimeout(openStreak, 200);
+  else if (h === 'leaderboard' || h === 'lb') setTimeout(() => openLeaderboard('global'), 250);
   else if (h === 'hof') setTimeout(openHof, 250);
 
   // ?b=<scoreId> · a shared build link: show that career + the "Beat this career" challenge
@@ -2301,17 +2371,23 @@ function showDailyInfo() {
   if (luckyToday) html += `<span class="di-lucky">✨ LUCKY SPIN - a 💎 Diamond is locked into your first card!</span>`;
   if (best > 0) html += `<span class="di-best">🏆 Your best daily: <b>${best}</b> OVR - beat it!</span>`;
   if (preview) html += `<span class="di-prev">${preview}</span>`;
-  el.innerHTML = html || `<span class="di-prev">🎯 Same players for everyone today. One shot - make it count.</span>`;
+  html = `<span class="di-prev">🎯 ${POS.label} day - same players for everyone. One shot!</span>` + html;
+  el.innerHTML = html;
   el.style.display = 'flex';
 }
 function hideDailyInfo() { const el = $('dailyInfo'); if (el) el.style.display = 'none'; }
+// The daily rotates the POSITION by date (QB → RB → WR, 3-day cycle) so everyone worldwide
+// builds the same position from the same seeded cards.
+function dailyPosKey() {
+  const days = Math.floor(Date.parse(todayUTC() + 'T00:00:00Z') / 86400000);
+  return ['qb', 'rb', 'wr'][days % 3];
+}
 async function startDailyChallenge() {
-  // Basketball has its OWN daily every day · not part of the pitcher/batter rotation, so no hand-off.
   closeOverlay('menu');
   const serverToday = await syncAccountDates();
   const done = serverToday || getDailyStatus();
   if (done) { rankReveal(done.ovr, done.rank, done.total, false, true); return; }
-  reset();
+  selectPosition(dailyPosKey());   // forces today's position (also resets + shows the game)
   dailyMode = true;
   luckyConsumed = false;
   dailyRng = seededRandom(`pl-daily-${todayUTC()}-cfb-v1`);
@@ -2328,7 +2404,7 @@ async function finishDailyChallenge(ovr, name, build) {
   dailyMode = false; dailyRng = null; luckyToday = false;
   hideDailyInfo();
   const tagEl = document.querySelector('header .tag');
-  if (tagEl) { tagEl.textContent = 'Draft Mode'; tagEl.classList.remove('dc-header-tag'); }
+  if (tagEl) { tagEl.textContent = hardMode ? 'Hard Mode 🙈' : (POS ? POS.short + ' Draft' : 'Draft Mode'); tagEl.classList.remove('dc-header-tag'); }
   const reel = document.querySelector('.reel-frame'); if (reel) reel.classList.remove('lucky');
   let rank = 1, total = 1;
   try {
