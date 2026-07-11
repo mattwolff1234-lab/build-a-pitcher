@@ -266,12 +266,12 @@ module.exports = async (req, res) => {
       return res.status(200).json({ ok: true, dates: rows.map(r => r.d), today });
     }
 
-    // redactCareers also answers GET (?action=redactCareers&token=…&dryRun=1&…) so it can be
+    // redactCareers/redactHotCareers also answer GET (?action=…&token=…) so they can be
     // triggered from environments that can only issue GETs. Token-gated either way; a GET
-    // without dryRun=0 defaults to a dry run so a stray crawl can never mutate anything.
-    if (req.method !== 'POST' && (req.query && req.query.action) === 'redactCareers') {
+    // never carries apply/dryRun=0, so a stray crawl can never mutate anything.
+    if (req.method !== 'POST' && ['redactCareers', 'redactHotCareers'].includes((req.query && req.query.action) || '')) {
       req.method = 'POST';
-      req.body = { ...req.query, dryRun: req.query.dryRun == null ? '1' : req.query.dryRun };
+      req.body = { ...req.query, dryRun: req.query.dryRun == null ? '1' : req.query.dryRun, apply: 0 };
     }
 
     if (req.method === 'POST') {
@@ -318,6 +318,43 @@ module.exports = async (req, res) => {
             AND build->'career' IS NOT NULL AND jsonb_typeof(build->'slots') = 'array'
             AND EXISTS (SELECT 1 FROM jsonb_array_elements(build->'slots') e
                         WHERE e->>'slot' = ${slot} AND (e->>'value')::numeric > ${over})
+          RETURNING id`;
+        return res.status(200).json({ ok: true, redacted: rows.length, ids: rows.map(r => Number(r.id)) });
+      }
+
+      // Admin (token-gated): like redactCareers, but matches ANY slot over the threshold —
+      // the 2026-07-09 Last Night's Studs boost pushes EVERY attribute past 99, and pitcher
+      // careers simmed before the 2026-07-11 over-99 soft-cap are inflated/irreproducible.
+      // Dry-run by default; ONLY {"apply":1} writes. Window defaults to the hot-feature ship
+      // (2026-07-09T07:00Z) → now; pass "until" (the soft-cap deploy time) if run after deploy,
+      // because post-fix over-99 careers are legit and must not be stripped. Example:
+      //   curl -X POST .../api/score -H 'content-type: application/json' -d '{"action":"redactHotCareers",
+      //     "token":"<STATS_TOKEN>","game":"pitcher","apply":1}'
+      if (body.action === 'redactHotCareers') {
+        if (String(body.token || '') !== ADMIN_TOKEN) return res.status(403).json({ ok: false, error: 'Bad token' });
+        const game = gameOf(body.game || 'pitcher');
+        const over = Number.isFinite(Number(body.over)) ? Number(body.over) : 99;
+        const ts = v => (typeof v === 'string' && !Number.isNaN(Date.parse(v)) ? new Date(v).toISOString() : null);
+        const since = ts(body.since) || '2026-07-09T07:00:00Z';   // Last Night's Studs shipped 2026-07-09 ~07:00 UTC
+        const until = ts(body.until) || new Date().toISOString();
+        const apply = body.apply === 1 || body.apply === '1' || body.apply === true;
+        if (!apply) {
+          const rows = await sql`
+            SELECT id, name, ovr, created_at, build->'career'->'totals' AS totals FROM scores
+            WHERE game = ${game} AND created_at >= ${since} AND created_at < ${until}
+              AND build->'career' IS NOT NULL AND jsonb_typeof(build->'slots') = 'array'
+              AND EXISTS (SELECT 1 FROM jsonb_array_elements(build->'slots') e
+                          WHERE (e->>'value') ~ '^[0-9.]+$' AND (e->>'value')::numeric > ${over})
+            ORDER BY created_at`;
+          return res.status(200).json({ ok: true, dryRun: true, game, since, until, count: rows.length,
+            rows: rows.map(r => ({ id: Number(r.id), name: r.name, ovr: r.ovr, created_at: r.created_at, totals: r.totals })) });
+        }
+        const rows = await sql`
+          UPDATE scores SET build = build - 'career'
+          WHERE game = ${game} AND created_at >= ${since} AND created_at < ${until}
+            AND build->'career' IS NOT NULL AND jsonb_typeof(build->'slots') = 'array'
+            AND EXISTS (SELECT 1 FROM jsonb_array_elements(build->'slots') e
+                        WHERE (e->>'value') ~ '^[0-9.]+$' AND (e->>'value')::numeric > ${over})
           RETURNING id`;
         return res.status(200).json({ ok: true, redacted: rows.length, ids: rows.map(r => Number(r.id)) });
       }
