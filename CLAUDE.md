@@ -369,6 +369,13 @@ normal draft loop runs. Cloned from `build-a-baller.html` (build script pattern 
   score, **NFL Draft projection** verdict line ("Going pro in something other than sports" at
   the bottom). Tiers: 🐐 College GOAT (2 Heismans, or H+natty at 98+) · 🏆 College Legend ·
   🏈 Hall of Stat-Stuffers · Campus Hero · Solid Saturday Starter · Hall of Walk-Ons.
+  **Decision events (always on):** same halt-and-resume engine as the other games — separate
+  `|cfb-decisions-v1` stream plans events with a FIXED draw count, picks consumed positionally,
+  risk rolls pre-drawn (same picks → same career; don't break this). Pool = campus life (party,
+  frat, roommate, midterms, mascot heist, spring break, the DM) + career (NIL bag, five-star
+  position battle, rivalry mic, transfer portal → school actually changes mid-career, injury
+  sit-or-play, junior-year declare-or-return where ⏩-skip defaults preserve classic lengths).
+  `CFB_EVENTS` fx pills must mirror `applyChoice`.
   Re-verify with a Node harness that extracts the sim from the HTML (see git history).
 - **Server:** `'cfb'` in both `gameOf` whitelists; `api/score.js` has SLOT_MAX/OVR_W/LEGEND_CAP/
   CAREER_MAX (yds 17000 / td 170) + sort keys `yds/td/heisman/natty`. Leaderboard + Google
