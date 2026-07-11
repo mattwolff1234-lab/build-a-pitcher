@@ -18,6 +18,10 @@
 <meta name="twitter:card" content="summary">
 <meta name="twitter:image" content="/icon-512.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="/achievements.js" defer></script>
+<script src="/xp.js" defer></script>
+<script src="/collection.js?v=4" defer></script>
+<script src="/quests.js" defer></script>
 <script src="/share-card.js" defer></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <!-- Google tag (gtag.js) -->
@@ -894,6 +898,7 @@
     <div class="overlay-head"><span class="overlay-title">Menu</span><button class="overlay-close" data-close="menu">✕</button></div>
     <div class="overlay-body">
       <div id="acctSlot"></div>
+      <div data-xp-bar></div>
       <div class="menu-sec">Play</div>
       <a class="menu-item" href="/">🏠 Home</a>
       <button class="menu-item" id="miDaily">🎯 Daily Challenge</button>
@@ -901,6 +906,9 @@
       <button class="menu-item" id="miSwitchPos">🔁 Switch Position</button>
       <div class="menu-sec">Your Stuff</div>
       <button class="menu-item" id="miHof">🏛️ My Hall of Fame</button>
+      <button class="menu-item" id="miAch">🏅 Achievements<span class="mi-chev" data-ach-count style="margin-left:auto;font-family:'Oswald',sans-serif;font-size:12px;color:var(--gold)">0/0</span></button>
+      <button class="menu-item" id="miCol">📇 My Collection<span class="mi-chev" data-col-count style="margin-left:auto;font-family:'Oswald',sans-serif;font-size:12px;color:var(--gold)">0</span></button>
+      <button class="menu-item" id="miQuests">📜 Daily Quests<span class="mi-chev" data-quest-count style="margin-left:auto;font-family:'Oswald',sans-serif;font-size:12px;color:var(--gold)">0/3</span></button>
       <div class="menu-sec">Compete</div>
       <button class="menu-item" id="miLb">🏆 Leaderboard</button>
       <div class="menu-sec">Help</div>
@@ -1344,6 +1352,21 @@ async function init() {
     return;
   }
   $('loading').style.display = 'none';
+  // register every card across all three positions with the Collection binder
+  (function regPool() {
+    if (!window.Collection) return setTimeout(regPool, 250);
+    const names = new Set(), list = [];
+    const add = (c, isLegend) => {
+      if (!c || !c.name || names.has(c.name)) return;
+      names.add(c.name);
+      list.push({ name: c.name, tier: isLegend ? 'legend' : tier(c.ovr), img: c.img || teamLogoUrl(c.team) || SILHOUETTE });
+    };
+    for (const k of ['qb', 'rb', 'wr']) {
+      (CFB.positions[k].pool || []).forEach(c => add(c, false));
+      (CFB.legends[k] || []).forEach(c => add(c, true));
+    }
+    Collection.setPool(LEADERBOARD_GAME, list);
+  })();
   // position select screen first - the game boots once a position is picked
   document.querySelectorAll('#posSelect [data-pos]').forEach(b => b.onclick = () => selectPosition(b.dataset.pos));
   document.querySelectorAll('#posSelect [data-count]').forEach(el => {
@@ -1360,7 +1383,7 @@ async function init() {
   $('snagRightBtn').onclick = () => snag(1);
   $('resetBtn').onclick = reset;
   $('switchPosBtn').onclick = () => { Sound.click(); showPositionSelect(); };
-  $('muteBtn').onclick = () => { const m = !Sound.isMuted(); Sound.setMuted(m); $('muteBtn').textContent = m ? '🔇' : '🔊'; };
+  $('muteBtn').onclick = () => { const m = !Sound.isMuted(); Sound.setMuted(m); if (window.Ach) Ach.muted = m; $('muteBtn').textContent = m ? '🔇' : '🔊'; };
   $('buildTab').onclick = () => Sound.click();
   $('simBtn').onclick = runCareerPlaythrough;
   $('goProBtn').onclick = runNflPlaythrough;
@@ -1372,6 +1395,9 @@ async function init() {
   $('menuBtn').onclick = () => { Sound.click(); openOverlay('menu'); };
   $('miSwitchPos').onclick = () => { Sound.click(); closeOverlay('menu'); showPositionSelect(); };
   $('miHof').onclick = () => { closeOverlay('menu'); openHof(); };
+  $('miAch').onclick = () => { closeOverlay('menu'); Sound.click(); window.Ach && Ach.open(); };
+  $('miCol').onclick = () => { closeOverlay('menu'); Sound.click(); window.Collection && Collection.open(LEADERBOARD_GAME); };
+  $('miQuests').onclick = () => { closeOverlay('menu'); Sound.click(); window.Quests && Quests.open(); };
   $('saveHofBtn').onclick = () => saveToHof($('saveHofBtn'));
   $('miLb').onclick = () => { closeOverlay('menu'); openLeaderboard('global'); };
   $('miHow').onclick = () => { closeOverlay('menu'); openOverlay('howModal'); };
@@ -1410,6 +1436,9 @@ async function init() {
   const h = (location.hash || '').replace('#', '').toLowerCase();
   if (h === 'daily') setTimeout(startDailyChallenge, 350);
   else if (h === 'streak') setTimeout(openStreak, 200);
+  else if (h === 'achievements' || h === 'ach') { const o = () => (window.Ach ? Ach.open() : setTimeout(o, 120)); o(); }
+  else if (h === 'collection' || h === 'binder') { const o = () => (window.Collection ? Collection.open(LEADERBOARD_GAME) : setTimeout(o, 120)); o(); }
+  else if (h === 'quests') { const o = () => (window.Quests ? Quests.open() : setTimeout(o, 120)); o(); }
   else if (h === 'leaderboard' || h === 'lb') setTimeout(() => openLeaderboard('global'), 250);
   else if (h === 'hof') setTimeout(openHof, 250);
 
@@ -2593,11 +2622,41 @@ function bumpDailyAch() {
   if (n >= 100) Ach.unlock('grind3');
 }
 
-/* ===== Achievements/XP: v1 of the college game ships without the drop-in modules
-   (achievements.js / xp.js / quests.js / collection.js) - these hooks stay as no-op
-   seams so wiring them later is a two-line change per module. ===== */
-function checkBuildAchievements() {}
-function checkCareerAchievements(t, verdict, votePct) {}
+/* ===== Achievements + XP + Quests (drop-in modules, college-flavored unlocks) ===== */
+function parseHeightIn(s) {
+  const m = String(s || '').match(/(\d+)\s*'\s*(\d+)/);
+  return m ? (+m[1]) * 12 + (+m[2]) : 0;
+}
+function checkBuildAchievements() {
+  if (window.XP) XP.award(20 + Math.max(0, Math.round((Number(state.finalOvr) || 0) - 60)), 'build');
+  if (window.Quests) Quests.event('build', { game: LEADERBOARD_GAME, ovr: Number(state.finalOvr) || 0, vals: SLOTS.map(s => Number(state.filled[s.key].value) || 0), legends: SLOTS.filter(s => state.filled[s.key].legend).length, powers: (state.respinUsed ? 1 : 0) + (state.boostUsed ? 1 : 0) + (state.snagUsed ? 1 : 0), daily: !!dailyMode, hard: !!hardMode });
+  if (!window.Ach) return;
+  const f = state.filled, ovr = state.finalOvr;
+  Ach.unlock('draft_root');
+  if (ovr >= 90) Ach.unlock('builder1');
+  if (ovr >= 95) Ach.unlock('builder2');
+  if (ovr === 99) Ach.unlock('the_goat');
+  if (ovr > 99) Ach.unlock('beyond');
+  if (ovr < 60) Ach.unlock('bargain');
+  if (state.respinUsed && state.boostUsed && state.snagUsed) Ach.unlock('triple1');
+  const hi = parseHeightIn(f['frame'] && f['frame'].display);
+  if (hi && hi <= 70) Ach.unlock('short_king');
+  if (hi >= 79) Ach.unlock('tall_tale');
+  const teams = SLOTS.map(s => f[s.key].team);
+  if (teams[0] && teams.every(t => t === teams[0])) Ach.unlock('one_team');
+}
+function checkCareerAchievements(t, verdict, votePct) {
+  if (window.XP) { const x = 40 + (t && t.hallOfFame ? 150 : 0) + Math.max(0, Math.round((Number(state.finalOvr) || 0) - 70)) + Math.min(60, (Number(t && t.natty) || 0) * 12); XP.award(x, 'career'); }
+  if (window.Quests) Quests.event('career', { game: LEADERBOARD_GAME, ovr: Number(state.finalOvr) || 0, hof: !!(t && t.hallOfFame), rings: Number(t && t.natty) || 0, earnings: Number(t && t.earnings) || 0, votePct: Number(votePct) || 0 });
+  if (!window.Ach) return;
+  Ach.unlock('sim_root');
+  if (t.natty >= 1) Ach.unlock('ring1');
+  if (t.natty >= 3) Ach.unlock('ring2');
+  if (t.hallOfFame) Ach.unlock('cooperstown');
+  if (votePct >= 99) Ach.unlock('unanimous');
+  if (verdict.cls === 'no') Ach.unlock('hopg');
+  if (verdict.cls === 'low') Ach.unlock('hall_not_good');
+}
 
 function positionRole(vals) {
   if (POS.key === 'qb') {
@@ -3815,6 +3874,7 @@ function runNflPlaythrough() {
     function finishNfl(nflC) {
       state.career.nfl = nflC;
       $('tkMoney').textContent = fmtMoney((state.career.totals.earnings || 0) + nflC.totals.earnings);
+      if (window.XP) XP.award(60 + (nflC.totals.hallOfFame ? 150 : 0) + Math.min(60, (nflC.totals.sb || 0) * 15), 'nfl');
       if (nflC.totals.hallOfFame) {
         addNews(news, { text: `🏛️ Five years later, the call from Canton: <b>${P} is a Pro Football Hall of Famer.</b>`, big: true });
         Sound.legend();

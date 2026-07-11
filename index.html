@@ -629,9 +629,7 @@ gsap.from('.hero p', { y: 10, opacity: 0, duration: .35, delay: .1, ease: 'power
                 : sport.id === 'soccer' ? (LOCAL ? '/franchise-soccer.html' : '/franchise-soccer')
                 : (LOCAL ? '/franchise.html' : '/franchise') },
       { i: '🏆', b: 'Leaderboard', s: 'Top builds, all-time & today', href: g.path + '#leaderboard' },
-      sport.id === 'cfb'
-        ? { i: '📇', b: 'Collection', s: 'College binder · coming soon', lock: true }
-        : { i: '📇', b: 'Collection', s: 'Every card you\'ve pulled', href: g.path + '#collection' },
+      { i: '📇', b: 'Collection', s: 'Every card you\'ve pulled', href: g.path + '#collection' },
       { i: '🏛️', b: 'Hall of Fame', s: 'Your saved careers', href: g.path + '#hof' },
     ];
     $('modeGrid').innerHTML = tiles.map(t => t.lock

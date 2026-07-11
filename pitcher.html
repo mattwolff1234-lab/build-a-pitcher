@@ -23,7 +23,7 @@
 <script src="/xp.js" defer></script>
 <script src="/social.js" defer></script>
 <script src="/switcher.js?v=15" defer></script>
-<script src="/collection.js?v=3" defer></script>
+<script src="/collection.js?v=4" defer></script>
 <script src="/hotboard.js" defer></script>
 <script src="/quests.js" defer></script>
 <script src="/season-track.js" defer></script>
@@ -1432,6 +1432,8 @@ async function init() {
   updateDailyBtn();
   syncAccountDates();   // pull this device/account's daily status from the server (locks today if already played)
 
+  maybeResumeDraft();   // interrupted run? offer to pick it back up (before deep links fire)
+
   // deep-link from the home-page menu, e.g. /pitching#leaderboard → open that panel on load
   const h = (location.hash || '').replace('#', '').toLowerCase();
   if (h === 'hof') openHof();
@@ -1899,6 +1901,85 @@ function setDailyDone(data) { try { localStorage.setItem(dcKey(), JSON.stringify
 // Lucky Spin: 1-in-7 days (seeded by date → same for everyone) the reel guarantees a Diamond in slot 1.
 function isLuckyToday() { return seededRandom(`pl-lucky-${todayUTC()}`)() < (1 / 7); }
 
+/* ===== Draft autosave / resume (a refresh or phone lock no longer eats the run) =====
+   Saved on every landing/assign/power-up into pl_draft_pitcher; cleared on reset, submit,
+   or daily submit. Daily Challenge resumes keep the SEEDED STREAM byte-identical: dailyRng
+   is wrapped in a draw counter, and resume re-creates the rng and fast-forwards the same
+   number of draws — with state.used restored, every future spin matches an uninterrupted
+   run (so a refresh can never re-roll a card). */
+const DRAFT_KEY = 'pl_draft_pitcher';
+let draftRngCount = 0;
+function countedRng(fn) { return () => { draftRngCount++; return fn(); }; }
+function draftSave() {
+  try {
+    if (FRANCHISE_DRAFT) return;   // franchise rookie builds hand off to the franchise page
+    if (!Object.keys(state.filled).length && !state.landed && !state.scoutTarget) { localStorage.removeItem(DRAFT_KEY); return; }
+    const ti = state.targetIndex, strip = state.strip;
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({
+      v: 1, t: Date.now(), hardMode,
+      daily: dailyMode ? { date: todayUTC(), rngCount: draftRngCount, luckyConsumed } : null,
+      filled: state.filled, used: [...state.used], dealtCards: state.dealtCards || [],
+      landed: state.landed, boostedThisLand: state.boostedThisLand,
+      strip3: state.landed && strip ? [strip[ti - 1] || null, strip[ti], strip[ti + 1] || null] : null,
+      scoutTarget: state.scoutTarget || null,
+      respinUsed: state.respinUsed, boostUsed: state.boostUsed, snagUsed: state.snagUsed,
+    }));
+  } catch (e) {}
+}
+function draftClear() { try { localStorage.removeItem(DRAFT_KEY); } catch (e) {} }
+function maybeResumeDraft() {
+  if (FRANCHISE_DRAFT) return false;   // arriving to build a franchise rookie - don't interject an old run
+  let d = null;
+  try { d = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null'); } catch (e) {}
+  if (!d || d.v !== 1) return false;
+  const nFilled = Object.keys(d.filled || {}).length;
+  if (!nFilled && !d.landed) { draftClear(); return false; }
+  if (Date.now() - (d.t || 0) > 48 * 3600e3) { draftClear(); return false; }             // stale draft
+  if (d.daily && (d.daily.date !== todayUTC() || getDailyStatus())) { draftClear(); return false; }
+  const what = d.daily ? "today's Daily Challenge run" : 'your draft';
+  if (!confirm(`Resume ${what}? (${nFilled}/${SLOTS.length} slots filled${d.landed ? ' · a card is waiting' : ''})\n\nOK resumes it · Cancel starts fresh.`)) { draftClear(); return false; }
+  state.filled = d.filled || {};
+  state.used = new Set(d.used || []);
+  state.dealtCards = d.dealtCards || [];
+  state.respinUsed = !!d.respinUsed; state.boostUsed = !!d.boostUsed; state.snagUsed = !!d.snagUsed;
+  state.boostedThisLand = !!d.boostedThisLand;
+  state.scoutTarget = d.scoutTarget || null;
+  hardMode = !!d.hardMode; hardRevealed = false;
+  if (d.daily) {
+    dailyMode = true;
+    luckyConsumed = !!d.daily.luckyConsumed;
+    luckyToday = isLuckyToday();
+    draftRngCount = 0;
+    dailyRng = countedRng(seededRandom(`pl-daily-${todayUTC()}-pitcher-v1`));
+    for (let i = 0, n = d.daily.rngCount || 0; i < n; i++) dailyRng();   // fast-forward the seeded stream
+    const tagEl = document.querySelector('header .tag');
+    if (tagEl) { tagEl.textContent = '🎯 Daily Challenge'; tagEl.classList.add('dc-header-tag'); }
+    const reel = document.querySelector('.reel-frame'); if (reel) reel.classList.toggle('lucky', luckyToday);
+    showDailyInfo();
+  } else {
+    const tagEl = document.querySelector('header .tag');
+    if (tagEl) tagEl.textContent = hardMode ? 'Hard Mode 🙈' : 'Draft Mode';
+  }
+  if (state.scoutTarget) {
+    const p = state.scoutTarget, peek = $('scoutPeek');
+    peek.innerHTML = `🔭 Next spin: <img src="${headshot(p)}" alt="" onerror="this.style.display='none'"> <b>${p.name}</b> · ${p.ovr} OVR`;
+    peek.style.display = 'flex';
+  }
+  updateScoutUI();
+  updatePowerups();
+  renderNodes();
+  if (d.landed) {
+    state.strip = d.strip3 || [null, d.landed, null];
+    state.targetIndex = 1;
+    state.turnPowers = new Set(); state.snaggedThisLand = false;
+    land(d.landed);
+  } else if (!SLOTS.some(s => !state.filled[s.key])) {
+    finish();
+  }
+  toast(d.daily ? 'Daily resumed · same cards, same one shot.' : 'Draft resumed - pick up where you left off.');
+  return true;
+}
+
 let _playedTodayCache = null;
 async function fetchPlayedToday() {
   if (_playedTodayCache != null) return _playedTodayCache;
@@ -1937,6 +2018,7 @@ function hideDailyInfo() { const el = $('dailyInfo'); if (el) el.style.display =
 async function startDailyChallenge() {
   // Off-day: today's daily is the other game · hand off to it.
   if (dailyGameFor(todayUTC()) !== LEADERBOARD_GAME) { location.href = (LEADERBOARD_GAME === 'pitcher' ? '/batting' : '/pitching') + '#daily'; return; }
+  if (dailyMode) { closeOverlay('menu'); showDailyInfo(); return; }   // already mid-daily (e.g. resumed) - don't restart it
   closeOverlay('menu');
   const serverToday = await syncAccountDates();   // fresh server result (account or guest), authoritative
   const done = serverToday || getDailyStatus();
@@ -1944,7 +2026,8 @@ async function startDailyChallenge() {
   reset();                          // reset() clears dailyMode/lucky, so set them right after
   dailyMode = true;
   luckyConsumed = false;
-  dailyRng = seededRandom(`pl-daily-${todayUTC()}-pitcher-v1`);
+  draftRngCount = 0;
+  dailyRng = countedRng(seededRandom(`pl-daily-${todayUTC()}-pitcher-v1`));
   luckyToday = isLuckyToday();
   const tagEl = document.querySelector('header .tag');
   if (tagEl) { tagEl.textContent = '🎯 Daily Challenge'; tagEl.classList.add('dc-header-tag'); }
@@ -1969,6 +2052,7 @@ async function finishDailyChallenge(ovr, name, build) {
     const j = await r.json(); if (j.ok) { rank = j.rank; total = j.total; }
   } catch (e) {}
   setDailyDone({ ovr, rank, total });
+  draftClear();
   _playedTodayCache = null;
   updateDailyBtn();
   const prevBest = dailyBest(); const isPB = ovr > prevBest; if (isPB) setDailyBest(ovr);
@@ -2329,6 +2413,7 @@ function land(p) {
   if (p.legend) {
     gsap.fromTo($('burst'), { opacity: 0 }, { opacity: 1, duration: .22, yoyo: true, repeat: 1, ease: 'power2.out' });
   }
+  draftSave();   // every landing persists the run (also covers re-spin / boost / snag - they all land)
 }
 
 let segEls = {};
@@ -2382,6 +2467,7 @@ function scout() {
   peek.style.display = 'flex';
   gsap.fromTo(peek, { y: -8, opacity: 0 }, { y: 0, opacity: 1, duration: .3, ease: 'power2.out' });
   updateScoutUI();
+  draftSave();   // the scout token is already spent - don't let a refresh eat the peek
 }
 function updateScoutUI() {
   const btn = $('scoutBtn');
@@ -2499,6 +2585,7 @@ function assign(slotKey) {
   state.turnPowers = new Set(); state.snaggedThisLand = false;
   state.landed = null;
   state.boostedThisLand = false;
+  draftSave();
   Sound.assign();
   $('landed').classList.remove('show');
   updatePowerups();
@@ -3831,6 +3918,7 @@ async function submitScore() {
     const data = await res.json();
     if (!data.ok) { const err = new Error(data.error || 'rejected'); err.server = true; throw err; }
     myEntryId = data.id;
+    draftClear();
     try { gtag('event', 'leaderboard_submit', { game: LEADERBOARD_GAME, ovr: state.finalOvr }); } catch (e) {}
     $('submitRow').style.display = 'none';
     $('submitMsg').textContent = `You're #${data.globalRank} all-time. Open the menu anytime to see the board.`;
@@ -4010,6 +4098,7 @@ function initTilt() {
 }
 
 function reset() {
+  draftClear();                         // abandoning the run abandons its autosave
   dailyMode = false; dailyRng = null;   // a fresh game is never a daily until startDailyChallenge says so
   // Hard Mode is settable from the ☰ menu now · re-read it so a toggle applies to the NEXT build
   // (never mid-run: the current run keeps the setting it started with).
