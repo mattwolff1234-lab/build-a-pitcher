@@ -63,7 +63,7 @@ Every monetized page needs exactly this, nothing more:
 Everything else (which ads show, where side rails/anchors go) is injected by `ramp.js` and
 configured in the RAMP dashboard — not in this repo.
 
-## Where the tag lives (8 pages)
+## Where the tag lives (9 pages)
 | Page | Head snippet | `#game-ad` slot |
 |---|---|---|
 | `index.html` (landing) | ✅ | — |
@@ -74,6 +74,7 @@ configured in the RAMP dashboard — not in this repo.
 | `build-a-keeper.html` | ✅ | ✅ |
 | `versus.html` | ✅ | — |
 | `versus-hoops.html` | ✅ | — |
+| `college.html` | ✅ | ✅ |
 
 **New pages/games must get the head snippet** (and the `#game-ad` slot if they have a game
 area). Copy from any existing page.
