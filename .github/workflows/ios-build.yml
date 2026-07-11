@@ -34,6 +34,7 @@ jobs:
             -destination 'generic/platform=iOS' \
             -archivePath $PWD/build/App.xcarchive \
             CURRENT_PROJECT_VERSION=${{ github.run_number }} MARKETING_VERSION=1.0.0 \
+            DEVELOPMENT_TEAM=JBQB4PU4MN CODE_SIGN_STYLE=Automatic \
             -allowProvisioningUpdates \
             -authenticationKeyID ${{ secrets.ASC_KEY_ID }} \
             -authenticationKeyIssuerID ${{ secrets.ASC_ISSUER_ID }} \
