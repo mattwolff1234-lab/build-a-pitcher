@@ -395,11 +395,25 @@ normal draft loop runs. Cloned from `build-a-baller.html` (build script pattern 
 - **Server:** `'cfb'` in both `gameOf` whitelists; `api/score.js` has SLOT_MAX/OVR_W/LEGEND_CAP/
   CAREER_MAX (yds 17000 / td 170) + sort keys `yds/td/heisman/natty`. Leaderboard + Google
   sign-in + personal HOF fully live (`HOF_GAME='cfb'`, build payload carries `pos`).
-- **v1 scope cuts (deliberate):** no ads (Playwire block stripped — read `ads.md` before
-  re-adding), no daily challenge/streak UI (dormant guarded code remains, keys namespaced
-  `_cfb`), no achievements/xp/collection/quests/season-track/social/switcher modules on the
-  page (no-op seams kept), no versus/franchise. Landing hub shows those tiles as 🔒 coming
-  soon; `dailyGameOf` returns `null` for cfb — every consumer is null-guarded.
+- **Daily Challenge (LIVE):** the position ROTATES by date (3-day QB→RB→WR cycle,
+  `dailyPosKey()`), so everyone worldwide builds the same position from the same seeded cards.
+  `startDailyChallenge` forces `selectPosition(dailyPosKey())` before seeding. Shared cross-game
+  streak; posts as game `cfb`; `/college#daily` + `#streak` deep links; hub + switcher route to it.
+- **🏈 Go Pro / NFL continuation (LIVE):** optional second act — `goProBtn` on the verdict
+  screen → Draft Night ceremony (same GSAP skeleton; UDFA variant: "the phone never rang") →
+  `simulateNflCareer` (seed `|cfb-nfl-<pos>-v1`, deterministic). Draft stock = college resume +
+  combine swing; a wide **destiny roll** makes ~10% of arcs true busts (proPeak craters) and
+  late picks/UDFAs get chip-on-shoulder upside (💎 DRAFT STEAL when they reach Canton; UDFA
+  без upside = 🎽 Cut in August, 0 seasons). Pro seasons append to the same career log
+  (Y1/Y2 rows, NFL logos via a.espncdn.com, MVP/All-Pro/SB badges), ticker keeps accumulating,
+  card gets an NFL strip (draft line, pro totals, trophies, verdict). Tuned: 95-OVR QB ≈
+  1.1 MVP + 1.0 SB/career, HOF 89% (RB 23% / WR 54% — position-realistic), careers QB≈14yr /
+  RB≈8 / WR≈10, earnings soft-capped $620M. College OVR/leaderboard untouched — NFL is legacy
+  flavor; HOF saves carry a slim `nfl` block. Верdicts: 🐐 NFL GOAT · 🏆 Pro Football Hall of
+  Fame · ⭐ Franchise Legend · Solid Pro · 🚨 First-Round Bust · Journeyman · 🎽 Cut in August.
+- **v1 scope cuts (still open):** no ads (Playwire block stripped — read `ads.md` before
+  re-adding), no achievements/xp/collection/quests/season-track/social/switcher modules on the
+  page (no-op seams kept), no versus/franchise. Hub shows those as 🔒 coming soon.
 
 ---
 

@@ -852,6 +852,7 @@
 
       <div id="careerCard" class="career-card" style="display:none"></div>
 
+      <button id="goProBtn" class="primary" style="display:none;margin:14px auto 2px">🏈 Enter the NFL Draft</button>
       <div id="submitRow" class="submit-row" style="display:none">
         <button id="saveHofBtn" class="save-hof-btn">💾 Save to my Hall of Fame</button>
         <button id="submitBtn" class="primary">Submit to Leaderboard</button>
@@ -1339,6 +1340,7 @@ async function init() {
   $('muteBtn').onclick = () => { const m = !Sound.isMuted(); Sound.setMuted(m); $('muteBtn').textContent = m ? '🔇' : '🔊'; };
   $('buildTab').onclick = () => Sound.click();
   $('simBtn').onclick = runCareerPlaythrough;
+  $('goProBtn').onclick = runNflPlaythrough;
   $('submitBtn').onclick = submitScore;
   $('nameInput').addEventListener('keydown', e => { if (e.key === 'Enter') runCareerPlaythrough(); });
   document.querySelectorAll('.lb-scope-tab').forEach(t => t.onclick = () => loadLeaderboard(t.dataset.scope, lbGame));
@@ -1505,6 +1507,7 @@ async function saveToHof(btn) {
   try {
     const slimSlots = state.build.map(({ img: _img, ...s }) => s);
     const slimCareer = { totals: state.career.totals, role: state.career.role, finalTeam: state.career.finalTeam, pos: state.career.pos };
+    if (state.career.nfl) slimCareer.nfl = { draft: state.career.nfl.draft, totals: state.career.nfl.totals, verdict: state.career.nfl.verdict, steal: !!state.career.nfl.steal, epitaph: state.career.nfl.epitaph };
     const r = await fetch('/api/account', { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'save', sub: account.sub, sessionToken: account.sessionToken, game: HOF_GAME,
         name: state.simName || 'My Player', ovr: state.finalOvr,
@@ -3410,8 +3413,399 @@ function finishPlaythrough(career) {
     $('submitRow').style.display = 'flex';
     const shb = $('saveHofBtn'); shb.disabled = false; shb.textContent = '💾 Save to my Hall of Fame';
     gsap.fromTo($('submitRow'), { y: 8, opacity: 0 }, { y: 0, opacity: 1, duration: .4, delay: .2 });
+    if (!career.nfl) {
+      const gp = $('goProBtn');
+      gp.style.display = 'inline-block';
+      gsap.fromTo(gp, { scale: .9, opacity: 0 }, { scale: 1, opacity: 1, duration: .4, delay: .35, ease: 'back.out(1.6)' });
+    }
     updateResimBtn();
   }, 550);
+}
+
+
+/* ===== 🏈 Go Pro: the NFL continuation ==========================================
+   Optional second act after the college career. Deterministic like everything else -
+   seeded from the same build (|cfb-nfl-<pos>-v1), so the same college career always
+   produces the same pro career. Draft stock comes from the college resume with combine
+   variance; a destiny roll makes busts and late-round steals real. The college OVR and
+   leaderboard are untouched - the NFL is legacy flavor on top. */
+const NFL_TEAMS = [
+  ['ari', 'Cardinals', '#97233F'], ['atl', 'Falcons', '#A71930'], ['bal', 'Ravens', '#241773'],
+  ['buf', 'Bills', '#00338D'], ['car', 'Panthers', '#0085CA'], ['chi', 'Bears', '#0B162A'],
+  ['cin', 'Bengals', '#FB4F14'], ['cle', 'Browns', '#311D00'], ['dal', 'Cowboys', '#003594'],
+  ['den', 'Broncos', '#FB4F14'], ['det', 'Lions', '#0076B6'], ['gb', 'Packers', '#203731'],
+  ['hou', 'Texans', '#03202F'], ['ind', 'Colts', '#002C5F'], ['jax', 'Jaguars', '#006778'],
+  ['kc', 'Chiefs', '#E31837'], ['lv', 'Raiders', '#000000'], ['lac', 'Chargers', '#0080C6'],
+  ['lar', 'Rams', '#003594'], ['mia', 'Dolphins', '#008E97'], ['min', 'Vikings', '#4F2683'],
+  ['ne', 'Patriots', '#002244'], ['no', 'Saints', '#D3BC8D'], ['nyg', 'Giants', '#0B2265'],
+  ['nyj', 'Jets', '#125740'], ['phi', 'Eagles', '#004C54'], ['pit', 'Steelers', '#FFB612'],
+  ['sea', 'Seahawks', '#002244'], ['sf', '49ers', '#AA0000'], ['tb', 'Buccaneers', '#D50A0A'],
+  ['ten', 'Titans', '#0C2340'], ['wsh', 'Commanders', '#5A1414'],
+];
+function nflLogoHTML(abbr, cls = '') {
+  return `<span class="team-logo ${cls}"><img src="https://a.espncdn.com/i/teamlogos/nfl/500/${abbr}.png" alt="" onerror="this.parentElement.style.display='none'"></span>`;
+}
+
+// Draft stock: college resume + a combine swing. Returns { round, pick, overall, udfa, note }.
+function nflDraftSlot(t, ovr, rng) {
+  let score = ovr + (t.heisman || 0) * 4 + Math.min(3, t.allAmerican || 0) * 1.5 + (t.natty || 0);
+  const swing = bell(rng, 2.4);
+  score += swing;
+  const note = swing >= 2.2 ? 'His stock ROSE after a monster combine.'
+             : swing <= -2.2 ? 'A rough combine sent his stock sliding.' : null;
+  if (score >= 96.5) return { round: 1, pick: 1 + Math.floor(rng() * 3), udfa: false, note };
+  if (score >= 90) return { round: 1, pick: 4 + Math.floor(rng() * 29), udfa: false, note };
+  if (score >= 84) { const o = 33 + Math.floor(rng() * 68); return { round: o <= 64 ? 2 : 3, pick: o, udfa: false, note }; }
+  if (score >= 77) { const o = 101 + Math.floor(rng() * 157); return { round: 4 + Math.floor((o - 101) / 40), pick: o, udfa: false, note }; }
+  return { round: 0, pick: 0, udfa: true, note };
+}
+
+function simulateNflCareer(collegeCareer, finalOvr) {
+  const rng = seededRandom(collegeCareer.seed + '|cfb-nfl-' + POS.key + '-v1');
+  const t = collegeCareer.totals;
+  const draft = nflDraftSlot(t, finalOvr, rng);
+  const team0 = NFL_TEAMS[Math.floor(rng() * NFL_TEAMS.length)];
+  draft.team = { abbr: team0[0], name: team0[1], color: team0[2] };
+
+  // Destiny: the pro arc. Late picks and UDFAs who stick get chip-on-the-shoulder upside;
+  // top picks can crater. This single roll is what makes draft night a beginning, not a verdict.
+  const destiny = clamp(bell(rng, 8) + (draft.udfa ? 2.0 : draft.pick > 100 ? 1.4 : 0), -9, 10);
+  // a hard-negative destiny (~10% of arcs) is a true bust: the tools never translate
+  const proPeak = destiny <= -5.2
+    ? clamp(finalOvr - 13 + destiny * 0.5, 55, 74)
+    : clamp(finalOvr - 2 + destiny * 0.75, 56, 104);
+  // UDFA long shots without real upside get cut in camp - a 0-season career with a story.
+  if (draft.udfa && destiny < 0.5) {
+    const totals = { seasons: 0, gp: 0, yds: 0, td: 0, proBowl: 0, allPro: 0, mvp: 0, sb: 0, sbMvp: 0,
+      wins: 0, losses: 0, earnings: Math.round(randRange(rng, 60e3, 240e3)), legacy: 0, hallOfFame: false, pos: POS.key };
+    return { draft, destiny: round(destiny, 1), seasons: [], totals,
+      verdict: { txt: '🎽 Cut in August', cls: 'low' },
+      epitaph: 'Waived on final cuts. Two practice squads, one UFL spring, and a real estate license.' };
+  }
+
+  const seasons = [];
+  const agg = { seasons: 0, gp: 0, yds: 0, td: 0, ints: 0, passYds: 0, passTd: 0, rushYds: 0, rushTd: 0,
+    rec: 0, recYds: 0, recTd: 0, proBowl: 0, allPro: 0, mvp: 0, opoy: 0, sb: 0, sbApp: 0, sbMvp: 0,
+    wins: 0, losses: 0, earnings: 0 };
+  let teamNow = draft.team, teamQ = randRange(rng, -0.12, 0.12), moved = 0;
+  const ageCap = POS.key === 'rb' ? Math.round(randRange(rng, 27, 31)) : POS.key === 'qb' ? Math.round(randRange(rng, 33, 39)) : Math.round(randRange(rng, 30, 34));
+  // rookie contract (4yr total) by slot; veteran money comes per-season below
+  agg.earnings += draft.udfa ? 2.9e6 : draft.round === 1 ? Math.round((44 - draft.pick * 0.85) * 1e6) : draft.round <= 3 ? 8.5e6 : 4.6e6;
+
+  for (let age = 22; age <= ageCap; age++) {
+    const yr = age - 22;
+    const growth = age < 27 ? 1 - (26 - age) * 0.035 : 1;
+    const declineAge = POS.key === 'rb' ? 27 : POS.key === 'qb' ? 33 : 30;
+    const decline = age > declineAge ? 1 - Math.pow(age - declineAge, 1.35) * 0.02 : 1;
+    const proOvr = clamp(proPeak * growth * decline + bell(rng, 1.6), 50, 105);
+    const starter = proOvr >= 72 || (yr >= 1 && proOvr >= 68);
+    const share = starter ? 1 : randRange(rng, 0.1, 0.4);
+    const hurt = rng() < (POS.key === 'rb' ? 0.14 : 0.09);
+    const gp = Math.round(clamp(17 * (hurt ? randRange(rng, 0.35, 0.7) : 1) * (starter ? 1 : randRange(rng, 0.3, 0.9)), 1, 17));
+
+    let line = '', yds = 0, td = 0, prod = 0;
+    const sea = { age, yr, team: teamNow, gp, starter, hurt };
+    if (POS.key === 'qb') {
+      const att = Math.max(30, Math.round((420 + (proOvr - 70) * 6) * share * (gp / 17)));
+      const ypa = clamp(6.1 + (proOvr - 70) * 0.055 + bell(rng, 0.3), 5.2, 8.9);
+      const passYds = Math.round(att * ypa);
+      const passTd = Math.max(1, Math.round(att * clamp(0.032 + (proOvr - 70) * 0.0011, 0.02, 0.075) + bell(rng, 1.6)));
+      const ints = Math.max(1, Math.round(att * clamp(0.032 - (proOvr - 70) * 0.0006, 0.008, 0.04) + bell(rng, 1.2)));
+      yds = passYds; td = passTd; prod = (passTd - ints) * 0.5 + (ypa - 6.8) * 4 + (passYds - 3400) * 0.002;
+      line = `${passYds.toLocaleString()} yds · ${passTd} TD · ${ints} INT`;
+      Object.assign(sea, { passYds, passTd, ints });
+      agg.passYds += passYds; agg.passTd += passTd; agg.ints += ints;
+    } else if (POS.key === 'rb') {
+      const carries = Math.max(20, Math.round((160 + (proOvr - 70) * 6.5) * share * (gp / 17)));
+      const ypc = clamp(3.5 + (proOvr - 70) * 0.05 + bell(rng, 0.3), 3.0, 5.9);
+      const rushYds = Math.round(carries * ypc);
+      const rushTd = Math.max(0, Math.round(carries * clamp(0.032 + (proOvr - 70) * 0.0008, 0.015, 0.075) + bell(rng, 1.2)));
+      yds = rushYds; td = rushTd; prod = (ypc - 4.1) * 5 + (rushYds - 900) * 0.006 + rushTd * 0.5;
+      line = `${rushYds.toLocaleString()} yds · ${round(ypc, 1)} ypc · ${rushTd} TD`;
+      Object.assign(sea, { carries, ypc: round(ypc, 1), rushYds, rushTd });
+      agg.rushYds += rushYds; agg.rushTd += rushTd;
+    } else {
+      const targets = Math.max(15, Math.round((85 + (proOvr - 70) * 4.5) * share * (gp / 17)));
+      const recs = Math.round(targets * clamp(0.58 + (proOvr - 70) * 0.004, 0.5, 0.74));
+      const ypr = clamp(10.5 + (proOvr - 70) * 0.16 + bell(rng, 0.5), 8, 18.5);
+      const recYds = Math.round(recs * ypr);
+      const recTd = Math.max(0, Math.round(recs * clamp(0.06 + (proOvr - 70) * 0.0012, 0.03, 0.14) + bell(rng, 1)));
+      yds = recYds; td = recTd; prod = (recYds - 750) * 0.008 + recTd * 0.55 + (ypr - 11.5) * 0.6;
+      line = `${recs} rec · ${recYds.toLocaleString()} yds · ${recTd} TD`;
+      Object.assign(sea, { rec: recs, recYds, recTd });
+      agg.rec += recs; agg.recYds += recYds; agg.recTd += recTd;
+    }
+
+    const wins = clamp(Math.round(8.5 + teamQ * 22 + clamp(prod, -4, 10) * 0.28 + bell(rng, 1.7)), 2, 15);
+    const losses = 17 - wins;
+    const proBowl = starter && rng() < clamp((prod - 4) * 0.08 + 0.06, 0, 0.72);
+    const allPro = proBowl && rng() < clamp((prod - 9) * 0.07, 0, 0.5);
+    const mvp = POS.key === 'qb' && starter && wins >= 11 && rng() < clamp((prod - 11) * 0.055, 0, 0.42);
+    const opoy = !mvp && allPro && POS.key !== 'qb' && rng() < 0.35;
+    const playoff = rng() < clamp(0.30 + teamQ * 1.4 + prod * 0.012, 0.08, 0.85);
+    const sbApp = playoff && rng() < clamp(0.16 + teamQ * 0.7 + prod * 0.012, 0.05, 0.45);
+    const ring = sbApp && rng() < 0.5;
+    const sbMvp = ring && starter && rng() < (POS.key === 'qb' ? 0.6 : 0.3);
+    // veteran money after the rookie deal
+    if (yr >= 4) {
+      const perYr = POS.key === 'qb' ? clamp((proOvr - 68) * 2.3e6, 2e6, 58e6)
+                  : POS.key === 'rb' ? clamp((proOvr - 68) * 0.55e6, 1.1e6, 15e6)
+                  : clamp((proOvr - 68) * 1.35e6, 1.3e6, 36e6);
+      agg.earnings += Math.round(perYr * (proBowl ? 1.1 : 1));
+    }
+
+    Object.assign(sea, { line, yds, td, wins, losses, proBowl, allPro, mvp, opoy, playoff, sbApp, ring, sbMvp,
+      proOvr: Math.round(proOvr) });
+    seasons.push(sea);
+    agg.seasons++; agg.gp += gp; agg.yds += yds; agg.td += td; agg.wins += wins; agg.losses += losses;
+    agg.proBowl += proBowl ? 1 : 0; agg.allPro += allPro ? 1 : 0; agg.mvp += mvp ? 1 : 0; agg.opoy += opoy ? 1 : 0;
+    agg.sbApp += sbApp ? 1 : 0; agg.sb += ring ? 1 : 0; agg.sbMvp += sbMvp ? 1 : 0;
+
+    // move teams on contract cycles / poor fits
+    if (yr >= 3 && moved < 3 && rng() < (proOvr < 72 ? 0.3 : 0.12)) {
+      const nt = NFL_TEAMS[Math.floor(rng() * NFL_TEAMS.length)];
+      if (nt[0] !== teamNow.abbr) { teamNow = { abbr: nt[0], name: nt[1], color: nt[2] }; teamQ = randRange(rng, -0.12, 0.14); moved++; sea.movedTo = teamNow; }
+    }
+    // washouts: bad early careers end fast; fading vets hang it up
+    if (yr >= 2 && proOvr < 63 && rng() < 0.55) break;
+    if (yr >= 1 && !starter && proOvr < 66 && rng() < 0.4) break;
+    if (age >= (POS.key === 'rb' ? 28 : POS.key === 'qb' ? 33 : 30) && prod < 5 && rng() < 0.4) break;
+    if (yr >= 6 && prod < 2 && rng() < 0.35) break;
+  }
+
+  agg.earnings = Math.min(agg.earnings, 620e6);
+  const volK = POS.key === 'qb' ? 0.0006 : POS.key === 'rb' ? 0.0019 : 0.0014;
+  const tdK = POS.key === 'qb' ? 0.09 : POS.key === 'rb' ? 0.2 : 0.16;
+  const legacy = round(agg.mvp * 30 + agg.sb * 13 + agg.sbMvp * 8 + agg.allPro * 9 + agg.opoy * 6
+    + agg.proBowl * 2.5 + agg.yds * volK + agg.td * tdK, 1);
+  const slamDunk = agg.mvp >= 2 || agg.sb >= 3 || (agg.mvp >= 1 && agg.sb >= 1);
+  const hallOfFame = slamDunk || legacy >= 85 || rng() < clamp((legacy - 62) / 46, 0, 1);
+  let verdict;
+  if (agg.mvp >= 3 || (agg.sb >= 4 && agg.mvp >= 1)) verdict = { txt: '🐐 NFL GOAT', cls: 'goat' };
+  else if (hallOfFame) verdict = { txt: '🏆 Pro Football Hall of Fame', cls: 'yes' };
+  else if (legacy >= 50) verdict = { txt: '⭐ Franchise Legend', cls: 'no' };
+  else if (draft.round === 1 && agg.proBowl === 0 && agg.seasons <= 5) verdict = { txt: '🚨 First-Round Bust', cls: 'low' };
+  else if (agg.seasons >= 7) verdict = { txt: 'Solid Pro', cls: 'mid' };
+  else verdict = { txt: 'Journeyman', cls: 'low' };
+  const totals = { ...agg, legacy, hallOfFame, pos: POS.key };
+  return { draft, destiny: round(destiny, 1), seasons, totals, verdict,
+    steal: (draft.udfa || draft.pick > 100) && hallOfFame };
+}
+
+// Draft-night ceremony - the pro sequel to Signing Day, same GSAP skeleton.
+function runNflDraftAnimation(nfl, hitter, onDone) {
+  const overlay = $('draftOverlay');
+  const d = nfl.draft;
+  const bColor = brightColor(d.team.color);
+  overlay.querySelector('.draft-league').textContent = 'The NFL Draft';
+  overlay.querySelector('.draft-headline').textContent = 'Draft Night';
+  $('draftRoundTag').textContent = d.udfa ? 'Undrafted Free Agent' : `Round ${d.round} · Pick ${d.pick}`;
+  $('draftSelecting').textContent = '';
+  $('draftSelecting').style.color = bColor;
+  const reveal = $('draftReveal');
+  const logo = $('drLogo');
+  const logoImg = logo && logo.querySelector('img');
+  if (logo && logoImg) {
+    logo.style.display = 'inline-grid';
+    logoImg.src = `https://a.espncdn.com/i/teamlogos/nfl/500/${d.team.abbr}.png`;
+    logoImg.onerror = () => { logo.style.display = 'none'; };
+  }
+  $('drTeam').textContent = 'The ' + d.team.name.toUpperCase();
+  $('drName').textContent = hitter;
+  $('drName').style.textShadow = `0 0 36px ${bColor}80`;
+  $('drOvr').textContent = d.udfa ? 'CAMP INVITE' : ordinal(d.pick) + ' OVERALL';
+  $('drOvr').style.color = bColor;
+  $('drArch').textContent = nfl.draft.note || (d.udfa ? 'The chip on the shoulder' : 'The green room hug');
+  $('drArch').style.background = bColor + '1a';
+  $('drArch').style.border = `1px solid ${bColor}55`;
+  $('drArch').style.color = bColor;
+  $('draftSkip').classList.remove('show');
+  const league = overlay.querySelector('.draft-league');
+  const headline = overlay.querySelector('.draft-headline');
+  const roundTag = overlay.querySelector('.draft-round-tag');
+  const divider = overlay.querySelector('.draft-divider');
+  const call = $('draftCall');
+  const selecting = $('draftSelecting');
+  let spot = overlay.querySelector('.draft-spot');
+  if (!spot) { spot = document.createElement('div'); spot.className = 'draft-spot'; overlay.prepend(spot); }
+  let confetti = overlay.querySelector('.draft-confetti');
+  if (!confetti) { confetti = document.createElement('div'); confetti.className = 'draft-confetti'; overlay.prepend(confetti); }
+  confetti.innerHTML = '';
+  const callText = d.udfa
+    ? 'Three days. 257 picks. The phone never rang... until a Sunday-night call about a camp tryout.'
+    : `With the ${ordinal(d.pick)} pick in the NFL Draft...`;
+  call.textContent = '';
+  reveal.style.cssText = `margin-top:22px; padding:20px 18px 22px; border-radius:16px; border:1px solid ${bColor}66;` +
+    `background:linear-gradient(165deg, ${bColor}24, rgba(10,16,26,.92) 58%); box-shadow:0 24px 70px rgba(0,0,0,.55), 0 0 46px -12px ${bColor}aa;`;
+  gsap.set([league, headline, roundTag, divider, call, selecting, reveal], { opacity: 0, y: 0 });
+  gsap.set(spot, { opacity: 0, x: '-38%' });
+  overlay.classList.add('show');
+  gsap.fromTo(overlay, { opacity: 0 }, { opacity: 1, duration: .35 });
+  const typeText = (el, text, dur) => {
+    const st = { n: 0 };
+    return gsap.to(st, { n: text.length, duration: dur, ease: 'none', onUpdate: () => {
+      const k = Math.round(st.n);
+      if (k !== el.__tw) { el.__tw = k; el.textContent = text.slice(0, k); if (k % 3 === 1 && Sound.tick) Sound.tick(0.12); }
+    } });
+  };
+  const confettiBurst = () => {
+    const n = window.innerWidth < 600 ? 30 : 54;
+    const colors = [bColor, '#ffd23f', '#ffffff'];
+    for (let i = 0; i < n; i++) {
+      const pc = document.createElement('i');
+      pc.style.left = (6 + Math.random() * 88) + '%';
+      pc.style.background = colors[i % colors.length];
+      confetti.appendChild(pc);
+      gsap.fromTo(pc, { y: -40 - Math.random() * 40, rotation: Math.random() * 360, opacity: 1 },
+        { y: overlay.clientHeight + 60, x: (Math.random() - .5) * 140, rotation: '+=' + (240 + Math.random() * 480),
+          opacity: .75, duration: 2.2 + Math.random() * 1.6, delay: Math.random() * .35, ease: 'power1.in',
+          onComplete: () => pc.remove() });
+    }
+  };
+  const tl = gsap.timeline();
+  tl.to(league,   { opacity: 1, y: 0, duration: .4, ease: 'power2.out' }, 0.15)
+    .to(spot,     { opacity: 1, duration: .8, ease: 'power2.out' }, 0.15)
+    .to(spot,     { x: '38%', duration: 1.4, ease: 'sine.inOut' }, 0.3)
+    .to(spot,     { x: '0%', duration: .9, ease: 'sine.inOut' }, 1.7)
+    .fromTo(headline, { y: 16, opacity: 0, letterSpacing: '12px' }, { y: 0, opacity: 1, letterSpacing: '5px', duration: .7, ease: 'power3.out' }, 0.35)
+    .to(roundTag,  { opacity: 1, duration: .4 }, 0.9)
+    .to(divider,   { opacity: 1, duration: .5 }, 1.05)
+    .to(call,      { opacity: 1, duration: .2 }, 1.3)
+    .add(typeText(call, callText, 1.3), 1.35)
+    .add(() => { selecting.textContent = d.udfa ? 'A lifeline from...' : `The ${d.team.name} select...`; if (Sound.whoosh) Sound.whoosh(); }, 3.0)
+    .fromTo(selecting, { opacity: 0, y: 8, scale: .96 }, { opacity: 1, y: 0, scale: 1, duration: .45, ease: 'power2.out' }, 3.0)
+    .fromTo(reveal, { rotationY: 90, opacity: 0, transformPerspective: 800 }, { rotationY: 0, opacity: 1, duration: .7, ease: 'back.out(1.4)' }, 3.9)
+    .add(() => {
+      if (!d.udfa && d.pick <= 5) Sound.legend(); else if (!d.udfa && d.round === 1) Sound.diamond(); else Sound.gold();
+      confettiBurst();
+      gsap.fromTo(reveal, { scale: .94 }, { scale: 1, duration: .5, ease: 'back.out(2)' });
+    }, 4.0)
+    .add(() => { $('draftSkip').classList.add('show'); }, 4.8);
+  let done = false;
+  function complete() {
+    if (done) return;
+    done = true;
+    tl.kill();
+    $('draftSkip').classList.remove('show');
+    gsap.to(overlay, { opacity: 0, duration: .38, onComplete: () => {
+      overlay.classList.remove('show');
+      gsap.set(overlay, { opacity: '' });
+      // restore Signing Day copy for the next college run
+      overlay.querySelector('.draft-league').textContent = 'National Signing Day';
+      overlay.querySelector('.draft-headline').textContent = 'Signing Day';
+      onDone();
+    }});
+  }
+  const autoTimer = setTimeout(complete, 7400);
+  overlay.onclick = () => { clearTimeout(autoTimer); complete(); };
+}
+
+function nflSeasonHeadlines(s, idx, total, P, nfl) {
+  const h = [];
+  const tm = 'the ' + s.team.name;
+  if (idx === 0) {
+    if (!s.starter) h.push({ text: `${P} spends his rookie year holding a clipboard for ${tm}.` });
+    else h.push({ text: `${P} starts Week 1 as a rookie for ${tm}.`, big: true });
+  }
+  if (s.movedTo) h.push({ text: `${P} signs with <b>the ${s.movedTo.name}</b> in free agency.`, big: true });
+  if (s.mvp) h.push({ text: `🏆 ${P} is named <b>NFL MVP</b>!`, big: true });
+  else if (s.opoy) h.push({ text: `${P} wins <b>Offensive Player of the Year</b>.`, big: true });
+  else if (s.allPro) h.push({ text: `${P} earns <b>First-Team All-Pro</b>.` });
+  if (s.sbMvp) h.push({ text: `🏆 ${P} wins the <b>Super Bowl AND Super Bowl MVP</b>!`, big: true });
+  else if (s.ring) h.push({ text: `💍 ${P} and ${tm} win the <b>Super Bowl</b>!`, big: true });
+  else if (s.sbApp) h.push({ text: `${tm.charAt(0).toUpperCase() + tm.slice(1)} reach the Super Bowl... and lose it. Brutal.`, big: true });
+  if (s.hurt) h.push({ text: `${P} battles injury, limited to ${s.gp} games.` });
+  if (idx === total - 1) h.push({ text: `${P} announces his <b>retirement</b> after ${total} NFL season${total === 1 ? '' : 's'}.`, big: true });
+  return h;
+}
+
+function nflStripHTML(nfl) {
+  const t = nfl.totals, d = nfl.draft;
+  const draftLine = d.udfa ? 'Undrafted · camp invite' : `Round ${d.round}, Pick ${d.pick} · ${d.team.name}`;
+  const trophies = [];
+  for (let i = 0; i < t.mvp; i++) trophies.push('🏆');
+  for (let i = 0; i < t.sb; i++) trophies.push('💍');
+  if (t.allPro) trophies.push(`🥇 ${t.allPro}`);
+  if (t.proBowl) trophies.push(`⭐ ${t.proBowl}`);
+  const pos = t.pos;
+  const cells = t.seasons === 0 ? [[0, 'SEASONS'], ['-', 'YDS'], ['-', 'TD'], ['-', 'PRO BOWLS'], ['-', 'RINGS'], [fmtMoney(t.earnings), 'EARNED']]
+    : [[t.seasons, 'SEASONS'],
+       [(pos === 'qb' ? t.passYds : pos === 'rb' ? t.rushYds : t.recYds).toLocaleString(), pos === 'qb' ? 'PASS YDS' : pos === 'rb' ? 'RUSH YDS' : 'REC YDS'],
+       [pos === 'qb' ? t.passTd : pos === 'rb' ? t.rushTd : t.recTd, 'TD'],
+       [t.proBowl, 'PRO BOWLS'], [t.sb, 'RINGS'], [fmtMoney(t.earnings), 'EARNED']];
+  return `
+    <div class="cc-verdict" style="border-top:2px solid rgba(120,160,210,.25); color:${verdictColor(nfl.verdict.cls)}">🏈 NFL: ${nfl.verdict.txt}<div class="cc-vote">${draftLine}${nfl.steal ? ' · 💎 DRAFT STEAL' : ''}</div></div>
+    <div class="cc-line">${cells.map(c => `<div><b>${c[0]}</b><span>${c[1]}</span></div>`).join('')}</div>
+    <div class="cc-trophies">${trophies.length ? trophies.join('&nbsp; ') : `<span class="none">${nfl.epitaph || 'No pro hardware'}</span>`}</div>`;
+}
+
+function runNflPlaythrough() {
+  if (!state.career || state.career.nfl || state.nflRunning) return;
+  state.nflRunning = true;
+  $('goProBtn').style.display = 'none';
+  Sound.click();
+  const nfl = simulateNflCareer(state.career, state.finalOvr);
+  const P = state.simName || 'Your player';
+  try { gtag('event', 'nfl_sim', { ovr: state.finalOvr, round: nfl.draft.round, hof: nfl.totals.hallOfFame ? 1 : 0 }); } catch (e) {}
+  runNflDraftAnimation(nfl, P, () => {
+    const log = $('careerLog'), news = $('careerNews');
+    const div = document.createElement('div');
+    div.className = 'season-row big';
+    div.style.borderLeft = `3px solid ${nfl.draft.team.color}`;
+    div.innerHTML = `<div class="s-main"><span class="age">NFL</span>${nflLogoHTML(nfl.draft.team.abbr, 'sm')}<span class="s-line">${nfl.draft.udfa ? 'Undrafted - camp invite' : `Drafted Round ${nfl.draft.round}, Pick ${nfl.draft.pick}`} · ${nfl.draft.team.name}</span><span class="s-war"></span></div>`;
+    log.appendChild(div);
+    log.scrollTop = log.scrollHeight;
+    addNews(news, { text: `🏈 <b>${P} is ${nfl.draft.udfa ? 'signed by' : 'drafted by'} the ${nfl.draft.team.name}</b>${nfl.draft.udfa ? '' : ` (${ordinal(nfl.draft.pick)} overall)`}.`, big: true });
+    if (nfl.draft.note) addNews(news, { text: nfl.draft.note });
+    if (nfl.totals.seasons === 0) { addNews(news, { text: nfl.epitaph, big: true }); return finishNfl(nfl); }
+    let i = 0;
+    const delay = clamp(5200 / nfl.seasons.length, 260, 800);
+    let runYds = Number(($('tkK').textContent || '0').replace(/,/g, '')) || 0;
+    let runTd = Number($('tkW').textContent) || 0;
+    let runWins = Number($('tkWar').textContent) || 0;
+    let runMoney = state.career.totals.earnings || 0;
+    function step() {
+      if (i >= nfl.seasons.length) return finishNfl(nfl);
+      const s = nfl.seasons[i]; i++;
+      const badges = [s.mvp ? '🏆 MVP' : '', s.sbMvp ? 'SB MVP' : '', s.ring ? '💍 SB CHAMP' : '', s.sbApp && !s.ring ? 'SB LOSS' : '',
+        s.opoy ? 'OPOY' : '', s.allPro ? 'ALL-PRO' : '', s.proBowl && !s.allPro ? 'PRO BOWL' : ''].filter(Boolean).join(' · ');
+      const row = document.createElement('div');
+      row.className = 'season-row' + (s.mvp || s.ring ? ' big' : '');
+      row.style.borderLeft = `3px solid ${s.team.color}`;
+      row.innerHTML = `<div class="s-main">
+          <span class="age">Y${s.yr + 1}</span>
+          ${nflLogoHTML(s.team.abbr, 'sm')}
+          <span class="s-line">${s.line}</span>
+          <span class="s-war">${s.wins}-${s.losses}</span>
+        </div>${badges ? `<div class="s-badges">${badges}</div>` : ''}`;
+      log.appendChild(row);
+      log.scrollTop = log.scrollHeight;
+      gsap.fromTo(row, { x: -14, opacity: 0 }, { x: 0, opacity: 1, duration: .22 });
+      runYds += s.yds; runTd += s.td; runWins += s.wins;
+      $('tkK').textContent = runYds.toLocaleString(); $('tkW').textContent = runTd; $('tkWar').textContent = runWins;
+      nflSeasonHeadlines(s, i - 1, nfl.seasons.length, P, nfl).forEach(hh => addNews(news, hh));
+      if (s.mvp || s.ring) Sound.gold(); else Sound.tick(0.35);
+      setTimeout(step, delay);
+    }
+    $('careerSpan').textContent = `${state.career.school} → NFL · ${state.career.role}`;
+    setTimeout(step, 500);
+    function finishNfl(nflC) {
+      state.career.nfl = nflC;
+      $('tkMoney').textContent = fmtMoney((state.career.totals.earnings || 0) + nflC.totals.earnings);
+      if (nflC.totals.hallOfFame) {
+        addNews(news, { text: `🏛️ Five years later, the call from Canton: <b>${P} is a Pro Football Hall of Famer.</b>`, big: true });
+        Sound.legend();
+      } else Sound.complete();
+      if (nflC.steal) addNews(news, { text: `💎 From ${nflC.draft.udfa ? 'undrafted' : 'pick ' + nflC.draft.pick} to Canton - one of the great draft steals.`, big: true });
+      // re-render the card with the NFL strip + refresh the HOF save button
+      const t = state.career.totals;
+      const verdict = careerTier(t, state.finalOvr);
+      buildCard(state.career, verdict, hofVoteLine(t, state.finalOvr).voteLine);
+      const shb = $('saveHofBtn');
+      if (shb && shb.textContent === '✓ Saved') { shb.disabled = false; shb.textContent = '💾 Save to my Hall of Fame'; }
+      state.nflRunning = false;
+    }
+  });
 }
 
 function fmtMoney(v) {
@@ -3494,7 +3888,7 @@ function buildCard(career, verdict, voteLine) {
     career, verdict, voteLine,
     name: state.simName, ovr: state.finalOvr,
     teamAb: (state.simTeam && state.simTeam.abbr) || state.draftTeamAb,
-  }) + `
+  }) + (career.nfl ? nflStripHTML(career.nfl) : '') + `
     <div class="cc-share-row"><button id="ccShareBtn" class="primary">📤 Share this card</button></div>
     <div class="cc-hint">Shares a card image. Submit to the leaderboard first and your link goes with it</div>`;
   const sb = $('ccShareBtn');
@@ -3818,6 +4212,8 @@ function reset() {
   state.spinning = false;
   state.strip = null;
   state.career = null;
+  state.nflRunning = false;
+  if ($('goProBtn')) $('goProBtn').style.display = 'none';
   state.scoutTarget = null; state.resimSalt = ''; state.resimN = 0;
   updateScoutUI(); if ($('resimBtn')) $('resimBtn').style.display = 'none';
   state.draftTeamAb = null;
