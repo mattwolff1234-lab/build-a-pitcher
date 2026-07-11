@@ -35,6 +35,50 @@ jobs:
           mkdir -p ~/.appstoreconnect/private_keys
           echo "${{ secrets.ASC_KEY_P8 }}" | base64 --decode > ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.ASC_KEY_ID }}.p8
 
+      # Sign In with Apple only works if the App ID itself has the capability attached.
+      # -allowProvisioningUpdates usually auto-registers it, but don't gamble: check via
+      # the App Store Connect API and attach it if missing (idempotent). Also list the
+      # last few uploaded builds + their processing state for debuggability.
+      - name: Ensure Sign In with Apple capability on the App ID
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          node - <<'EOF'
+          const crypto = require('crypto'), fs = require('fs');
+          const KEY_ID = process.env.ASC_KEY_ID, ISSUER = process.env.ASC_ISSUER_ID;
+          const key = fs.readFileSync(`${process.env.HOME}/.appstoreconnect/private_keys/AuthKey_${KEY_ID}.p8`, 'utf8');
+          const b64 = o => Buffer.from(JSON.stringify(o)).toString('base64url');
+          const now = Math.floor(Date.now() / 1000);
+          const unsigned = b64({ alg: 'ES256', kid: KEY_ID, typ: 'JWT' }) + '.' +
+            b64({ iss: ISSUER, iat: now, exp: now + 900, aud: 'appstoreconnect-v1' });
+          const jwt = unsigned + '.' + crypto.sign('sha256', Buffer.from(unsigned), { key, dsaEncoding: 'ieee-p1363' }).toString('base64url');
+          const api = (path, opts = {}) => fetch('https://api.appstoreconnect.apple.com' + path, {
+            ...opts, headers: { authorization: 'Bearer ' + jwt, 'content-type': 'application/json', ...(opts.headers || {}) },
+          }).then(async r => ({ status: r.status, body: await r.json().catch(() => ({})) }));
+          (async () => {
+            const bid = await api('/v1/bundleIds?filter[identifier]=com.wolfflabs.goatlab&include=bundleIdCapabilities');
+            const rec = bid.body.data && bid.body.data[0];
+            if (!rec) { console.log('bundle id not found:', JSON.stringify(bid.body).slice(0, 400)); process.exit(1); }
+            const caps = (bid.body.included || []).map(c => c.attributes && c.attributes.capabilityType);
+            console.log('App ID', rec.id, 'capabilities:', caps.join(', ') || '(none)');
+            if (!caps.includes('APPLE_ID_AUTH')) {
+              const r = await api('/v1/bundleIdCapabilities', { method: 'POST', body: JSON.stringify({
+                data: { type: 'bundleIdCapabilities', attributes: { capabilityType: 'APPLE_ID_AUTH' },
+                  relationships: { bundleId: { data: { type: 'bundleIds', id: rec.id } } } } }) });
+              console.log(r.status < 300 ? 'ATTACHED Sign In with Apple capability' : 'attach failed: ' + JSON.stringify(r.body).slice(0, 400));
+              if (r.status >= 300) process.exit(1);
+            } else console.log('Sign In with Apple capability already attached');
+            const apps = await api('/v1/apps?filter[bundleId]=com.wolfflabs.goatlab');
+            const app = apps.body.data && apps.body.data[0];
+            if (app) {
+              const builds = await api(`/v1/builds?filter[app]=${app.id}&sort=-uploadedDate&limit=5`);
+              for (const b of builds.body.data || [])
+                console.log('build', b.attributes.version, '->', b.attributes.processingState, b.attributes.uploadedDate);
+            }
+          })();
+          EOF
+
       # Archive UNSIGNED: a fresh team has no registered devices, so the development
       # profile the archive step wants can't exist. Signing happens at export instead,
       # where Apple issues an App Store DISTRIBUTION profile (no devices required).
@@ -63,7 +107,21 @@ jobs:
           EOF
           xcodebuild -exportArchive -archivePath $PWD/build/App.xcarchive \
             -exportOptionsPlist ExportOptions.plist \
+            -exportPath $PWD/build/export \
             -allowProvisioningUpdates \
             -authenticationKeyID ${{ secrets.ASC_KEY_ID }} \
             -authenticationKeyIssuerID ${{ secrets.ASC_ISSUER_ID }} \
             -authenticationKeyPath ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.ASC_KEY_ID }}.p8
+
+      # Proof the signed app carries the Sign in with Apple entitlement - if this
+      # prints no applesignin line, the export dropped it and sign-in WILL fail on device.
+      - name: Verify signed entitlements
+        working-directory: ios-app/ios/App
+        run: |
+          ls -la build/export || true
+          if [ -f build/export/DistributionSummary.plist ]; then
+            plutil -p build/export/DistributionSummary.plist | grep -A2 -i "applesignin" \
+              && echo "ENTITLEMENT PRESENT" || echo "WARNING: applesignin entitlement NOT in signed app"
+          else
+            echo "no DistributionSummary.plist written (destination=upload)"
+          fi
