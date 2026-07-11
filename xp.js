@@ -373,7 +373,7 @@
   });
 
   // ---- local-only test bar (never appears on the live site) --------------
-  if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) {
+  if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname) && !window.GOATLAB_NATIVE) {
     const add = () => {
       const wrap = document.createElement('div');
       wrap.style.cssText = 'position:fixed;right:12px;bottom:12px;z-index:400;display:flex;gap:8px;';
