@@ -1,0 +1,19 @@
+{
+  "ranAt": "2026-07-11T00:18:41.248Z",
+  "result": {
+    "ok": true,
+    "applied": false,
+    "counts": {
+      "users": 3,
+      "handles": 2,
+      "saves": 262,
+      "scores": 452,
+      "daily_scores": 7,
+      "clubs": 0,
+      "club_gms": 0,
+      "pvp_opp_names": 8,
+      "pvp_seasons": 0,
+      "club_rosters_touched": 0
+    }
+  }
+}
