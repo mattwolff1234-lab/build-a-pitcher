@@ -376,6 +376,12 @@ normal draft loop runs. Cloned from `build-a-baller.html` (build script pattern 
   position battle, rivalry mic, transfer portal → school actually changes mid-career, injury
   sit-or-play, junior-year declare-or-return where ⏩-skip defaults preserve classic lengths).
   `CFB_EVENTS` fx pills must mirror `applyChoice`.
+  **CFP bracket (no flat title roll):** playoff seasons run a real 12-team bracket - seed from
+  wins+prestige (1-4 = bye), per-game win prob from prestige/warScore/seed, opponents weighted
+  to blue bloods, per-game player stat lines that count toward totals and feed headlines
+  ("💔 CFP Semifinal: ..."). Natty ONLY by sweeping the run; losing the final = 🥈 runner-up
+  (badge, trophy, +5 legacy; cfpWins +1.5 each). Tuned to match the old flat rates
+  (95 OVR ≈ 1.4 natties/career, 85 ≈ 0.2) - re-verify with the harness if touched.
   Re-verify with a Node harness that extracts the sim from the HTML (see git history).
 - **Server:** `'cfb'` in both `gameOf` whitelists; `api/score.js` has SLOT_MAX/OVR_W/LEGEND_CAP/
   CAREER_MAX (yds 17000 / td 170) + sort keys `yds/td/heisman/natty`. Leaderboard + Google

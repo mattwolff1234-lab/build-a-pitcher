@@ -2719,7 +2719,7 @@ function simulateCareer(filled, finalOvr, school, choices) {
 
   const seasons = [];
   const agg = { gp: 0, yds: 0, td: 0, wins: 0, losses: 0, heisman: 0, natty: 0, allAmerican: 0, allConf: 0,
-    confTitles: 0, bowls: 0, playoffs: 0, earnings: 0, ints: 0,
+    confTitles: 0, bowls: 0, playoffs: 0, earnings: 0, ints: 0, cfpWins: 0, runnerUp: 0,
     passYds: 0, passTd: 0, rushYds: 0, rushTd: 0, carries: 0, rec: 0, recYds: 0, recTd: 0 };
   let wasStarter = false;
   const loopMax = evOn && finalOvr >= 80 ? Math.max(years, 4) : years;
@@ -2811,9 +2811,60 @@ function simulateCareer(filled, finalOvr, school, choices) {
     const wins = clamp(Math.round(5.5 + curPrestige * 16 + clamp(warScore, -2, 14) * 0.42 + mods.winsBonus + bell(rng, 1.5)), 2, 13);
     const losses = 13 - wins;
     const playoff = wins >= 11 || (wins === 10 && rng() < 0.35);
-    const natty = playoff && rng() < clamp(0.14 + curPrestige * 1.2 + (warScore - 8) * 0.015 + Math.max(0, wins - 11) * 0.06, 0.05, 0.5);
     const confTitle = wins >= 10 && rng() < 0.55 + curPrestige;
     const bowlWin = !playoff && wins >= 6 && rng() < 0.5;
+
+    // ---- College Football Playoff: a real 12-team bracket run, game by game. The natty is
+    // EARNED by surviving it - no flat title roll. Seeds 1-4 get the bye; per-game player
+    // stat lines feed the headlines and count toward career totals.
+    let natty = false, runnerUp = false, seed = 0, cfpGames = null, cfpExit = '', cfpG = 0;
+    if (playoff) {
+      seed = clamp(Math.round(14 - wins - curPrestige * 6 + bell(rng, 1.2)), 1, 12);
+      const rounds = seed <= 4 ? ['Quarterfinal', 'Semifinal', 'National Championship']
+                               : ['First Round', 'Quarterfinal', 'Semifinal', 'National Championship'];
+      const pGame = clamp(0.50 + curPrestige * 0.9 + (warScore - 8) * 0.022 + (5 - Math.min(seed, 5)) * 0.015, 0.30, 0.80);
+      const bbPool = [...BLUE_BLOODS].filter(t => t !== curSchool && CFB.teams[t]);
+      const anyPool = Object.keys(CFB.teams).filter(t => t !== curSchool);
+      const oppPick = () => (rng() < 0.6 && bbPool.length ? bbPool[Math.floor(rng() * bbPool.length)] : anyPool[Math.floor(rng() * anyPool.length)]);
+      const perGame = () => {
+        if (POS.key === 'qb') {
+          const y = Math.max(70, Math.round((sea.passYds / 13) * randRange(rng, 0.72, 1.45)));
+          const t = Math.max(0, Math.round((sea.passTd / 13) * randRange(rng, 0.4, 2.3)));
+          sea.passYds += y; sea.passTd += t; agg.passYds += y; agg.passTd += t;
+          sea.yds += y; sea.td += t; agg.yds += y; agg.td += t;
+          return `${y} yds · ${t} TD`;
+        }
+        if (POS.key === 'rb') {
+          const y = Math.max(40, Math.round((sea.rushYds / 13) * randRange(rng, 0.7, 1.5)));
+          const t = Math.max(0, Math.round((sea.rushTd / 13) * randRange(rng, 0.4, 2.4)));
+          sea.rushYds += y; sea.rushTd += t; agg.rushYds += y; agg.rushTd += t;
+          sea.yds += y; sea.td += t; agg.yds += y; agg.td += t;
+          return `${y} rush yds · ${t} TD`;
+        }
+        const r = Math.max(2, Math.round((sea.rec / 13) * randRange(rng, 0.7, 1.5)));
+        const y = Math.max(25, Math.round((sea.recYds / 13) * randRange(rng, 0.7, 1.55)));
+        const t = Math.max(0, Math.round((sea.recTd / 13) * randRange(rng, 0.4, 2.4)));
+        sea.rec += r; sea.recYds += y; sea.recTd += t; agg.rec += r; agg.recYds += y; agg.recTd += t;
+        sea.yds += y; sea.td += t; agg.yds += y; agg.td += t;
+        return `${r} rec · ${y} yds · ${t} TD`;
+      };
+      cfpGames = [];
+      for (const roundName of rounds) {
+        const opp = oppPick();
+        const win = rng() < (pGame - (roundName === 'National Championship' ? 0.04 : 0));
+        const margin = 3 + Math.floor(rng() * (win ? 18 : 15));
+        const base = 21 + Math.floor(rng() * 21);
+        const us = win ? base + margin : base;
+        const them = win ? base : base + margin;
+        cfpGames.push({ round: roundName, opp, us, them, win, line: perGame() });
+        cfpG++;
+        if (!win) { cfpExit = roundName; break; }
+      }
+      natty = cfpGames.every(g => g.win) && cfpGames[cfpGames.length - 1].round === 'National Championship';
+      runnerUp = !natty && cfpExit === 'National Championship';
+      agg.cfpWins = (agg.cfpWins || 0) + cfpGames.filter(g => g.win).length;
+      agg.runnerUp = (agg.runnerUp || 0) + (runnerUp ? 1 : 0);
+    }
     const heismanScore = warScore + wins * 0.5 + (POS.key === 'qb' ? 2.5 : 0) + Math.max(0, finalOvr - 88) * 0.35 + mods.heismanBump + bell(rng, 1.2);
     const heisman = starter && rng() < clamp((heismanScore - 21) * 0.045, 0, 0.3);
     const heismanFinalist = !heisman && heismanScore >= 19;
@@ -2830,9 +2881,10 @@ function simulateCareer(filled, finalOvr, school, choices) {
     nil = Math.round(Math.min(nil * mods.nilMult, 9e6));
 
     Object.assign(sea, { line, yds, td, wins, losses, warScore: round(warScore, 1), monster,
-      playoff, natty, confTitle, bowlWin, heisman, heismanFinalist, allAmerican, allConf, nil });
+      playoff, natty, runnerUp, seed, cfpGames, cfpExit, confTitle, bowlWin, heisman, heismanFinalist, allAmerican, allConf, nil });
+    sea.gp = gp + cfpG;
     seasons.push(sea);
-    agg.gp += gp; agg.yds += yds; agg.td += td; agg.wins += wins; agg.losses += losses;
+    agg.gp += gp + cfpG; agg.yds += yds; agg.td += td; agg.wins += wins; agg.losses += losses;
     agg.heisman += heisman ? 1 : 0; agg.natty += natty ? 1 : 0; agg.allAmerican += allAmerican ? 1 : 0;
     agg.allConf += allConf ? 1 : 0; agg.confTitles += confTitle ? 1 : 0; agg.bowls += bowlWin ? 1 : 0;
     agg.playoffs += playoff ? 1 : 0; agg.earnings += nil;
@@ -2855,7 +2907,8 @@ function simulateCareer(filled, finalOvr, school, choices) {
   // Legacy score = the College Football Hall of Fame case.
   const ydsK = POS.key === 'qb' ? 0.0012 : POS.key === 'rb' ? 0.0030 : 0.0035;
   const tdK = POS.key === 'qb' ? 0.12 : 0.22;
-  const legacy = round(agg.heisman * 28 + agg.natty * 16 + agg.allAmerican * 9 + agg.confTitles * 4
+  const legacy = round(agg.heisman * 28 + agg.natty * 16 + agg.runnerUp * 5 + agg.cfpWins * 1.5
+    + agg.allAmerican * 9 + agg.confTitles * 4
     + agg.td * tdK + agg.yds * ydsK + agg.wins * 0.35 + mods.voteBonus * 2, 1);
   const slamDunk = (agg.heisman >= 1 && agg.natty >= 1) || agg.heisman >= 2;
   const hallOfFame = slamDunk || legacy >= 58 || rng() < clamp((legacy - 40) / 30, 0, 1);
@@ -3033,8 +3086,14 @@ function seasonHeadlines(s, idx, total, P, school) {
   if (s.monster) h.push({ text: `${P} goes nuclear: <b>${s.line}</b>.`, big: true });
   if (s.heisman) h.push({ text: `🏆 ${P} strikes the pose in New York - he wins the <b>Heisman Trophy</b>!`, big: true });
   else if (s.heismanFinalist) h.push({ text: `${P} gets the invite to New York as a <b>Heisman finalist</b>.` });
+  if (s.playoff) h.push({ text: `${school} punches its ticket to the <b>College Football Playoff</b> as the <b>№${s.seed} seed</b>${s.seed <= 4 ? ' (first-round bye)' : ''}.` });
+  for (const g of s.cfpGames || []) {
+    const rd = g.round === 'National Championship' ? 'National Championship' : 'CFP ' + g.round;
+    if (g.win) h.push({ text: `🏈 <b>${rd}:</b> ${school} ${g.us}, ${g.opp} ${g.them} - ${P}: <b>${g.line}</b>.`, big: g.round !== 'First Round' });
+    else h.push({ text: `💔 <b>${rd}:</b> ${g.opp} ends the run, ${g.them}-${g.us}. ${P}: ${g.line}.`, big: true });
+  }
   if (s.natty) h.push({ text: `💍 Confetti rains - ${school} wins the <b>National Championship</b>!`, big: true });
-  else if (s.playoff) h.push({ text: `${school} punches its ticket to the <b>College Football Playoff</b>.` });
+  else if (s.runnerUp) h.push({ text: `So close. ${school} finishes the year as the <b>national runner-up</b>.`, big: true });
   if (s.confTitle) h.push({ text: `${school} wins the <b>conference championship</b>.` });
   if (s.bowlWin && !s.playoff) h.push({ text: `${school} takes its bowl game behind ${P}.` });
   if (s.allAmerican) h.push({ text: `${P} is named a <b>First-Team All-American</b>.` });
@@ -3162,9 +3221,11 @@ function _doCareerSim() {
       return finishPlaythrough(career);
     }
     const s = seasons[i]; i++;
-    const badges = [s.heisman ? '🏆 HEISMAN' : '', s.natty ? '💍 NATTY' : '', s.confTitle ? 'CONF CHAMP' : '',
-      s.allAmerican ? 'ALL-AMERICAN' : '', s.allConf && !s.allAmerican ? 'ALL-CONF' : '',
-      s.playoff && !s.natty ? 'PLAYOFF' : '', s.bowlWin ? 'BOWL W' : ''].filter(Boolean).join(' · ');
+    const EXIT_AB = { 'First Round': 'OUT R1', 'Quarterfinal': 'OUT IN QF', 'Semifinal': 'OUT IN SEMIS', 'National Championship': '' };
+    const badges = [s.heisman ? '🏆 HEISMAN' : '', s.natty ? '💍 NATTY' : '', s.runnerUp ? '🥈 RUNNER-UP' : '',
+      s.playoff && !s.natty && !s.runnerUp ? `CFP №${s.seed} · ${EXIT_AB[s.cfpExit] || 'PLAYOFF'}` : '',
+      s.confTitle ? 'CONF CHAMP' : '', s.allAmerican ? 'ALL-AMERICAN' : '', s.allConf && !s.allAmerican ? 'ALL-CONF' : '',
+      s.bowlWin ? 'BOWL W' : ''].filter(Boolean).join(' · ');
     const rowSchool = s.team || school;
     const row = document.createElement('div');
     row.className = 'season-row' + (s.heisman || s.natty || s.monster ? ' big' : '');
@@ -3306,6 +3367,7 @@ function trophyParts(t) {
   const trophies = [];
   for (let i = 0; i < (t.heisman || 0); i++) trophies.push('🏆');
   for (let i = 0; i < (t.natty || 0); i++) trophies.push('💍');
+  if (t.runnerUp) trophies.push(`🥈 ${t.runnerUp}`);
   if (t.allAmerican) trophies.push(`⭐ ${t.allAmerican}`);
   if (t.confTitles) trophies.push(`🏈 ${t.confTitles}`);
   if (t.bowls) trophies.push(`🥣 ${t.bowls}`);
