@@ -346,10 +346,15 @@ normal draft loop runs. Cloned from `build-a-baller.html` (build script pattern 
   {pool,prime}}, legends:{qb,rb,wr}, teams}`. Source = **CFB Labs' public GraphQL endpoint**
   (`cfblabs.com/.netlify/functions/cfb27-players`, full EA CFB27 default rosters — EA's own
   drop-api for CFB27 was empty at launch; filters endpoint gave the 41 crest PNGs saved in
-  `cfb-filters-raw.json`). QBs are stored as `"QB (Right)"/"QB (Left)"`, RBs as `"HB"`. Pools:
-  578 QB / 747 RB / 1181 WR (floors 62/64/66), synthesized Primes (+6/slot, ovr+5), 12
-  hand-authored college icons per position (rated on their COLLEGE careers — Tebow 97).
-  No player headshots: **the school crest is the card art** (`headshot()` → crest → silhouette).
+  `cfb-filters-raw.json`). QBs are stored as `"QB (Right)"/"QB (Left)"`, RBs as `"HB"`. Pools
+  (v2, per Matt): **Power-4 schools + ND only, floor 64, top 300 per position** (293 QB / 300
+  RB / 300 WR — tune `POOL_FLOOR`/`POOL_CAP`/`P4_TEAMS`), synthesized Primes (+6/slot, ovr+5),
+  12 hand-authored college icons per position (rated on their COLLEGE careers — Tebow 97).
+  **Headshots + logos from ESPN** (`cfb-espn-raw.json`, deleted → re-downloads): rosters matched
+  by mascot displayName, players by name with transfer-aware fallbacks (EA carries spring-2026
+  portal moves ESPN lags — Lagway is a Bear; a globally-unique name match follows the face, not
+  the school). ~48-65% of the pool, 70-90% of the top 30, get real faces; everyone else shows
+  the school crest (`headshot()` → player img → crest → silhouette).
 - **Slots (9 per position, 3× 1.2 / 3× 1.1 / 3× 1.0):** QB Short/Mid/Deep Accuracy premium; RB
   Speed/Break Tackle/Vision; WR Hands/Speed/Routes. RB's catch slot is labeled **"Catching"**
   (not "Hands") so the flat server `OVR_W.cfb` map has no cross-position weight collisions.
