@@ -20,6 +20,9 @@
   "redirects": [
     { "source": "/ads.txt", "destination": "https://config.playwire.com/dyn_ads/1025880/77906/ads.txt", "statusCode": 301 }
   ],
+  "crons": [
+    { "path": "/api/push-cron", "schedule": "0 21 * * *" }
+  ],
   "rewrites": [
     { "source": "/batting", "destination": "/build-a-batter.html" },
     { "source": "/pitching", "destination": "/pitcher.html" },

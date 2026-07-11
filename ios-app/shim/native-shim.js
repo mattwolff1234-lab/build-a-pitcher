@@ -88,6 +88,37 @@
   function obDone() { try { return localStorage.getItem('pl_ob_done') === '1'; } catch (e) { return false; } }
   function markOb() { try { localStorage.setItem('pl_ob_done', '1'); } catch (e) {} }
 
+  /* ---- push notifications: streaks, friend requests, challenges ---- */
+  function pushCreds() {
+    var a = acct();
+    if (a && a.sub && a.sessionToken) return { sub: a.sub, sessionToken: a.sessionToken };
+    var gid = null, gname = null;
+    try { gid = localStorage.getItem('pl_guestId'); gname = localStorage.getItem('pl_guestName'); } catch (e) {}
+    if (gid) return { guestId: gid, name: gname || 'Guest' };
+    return null;
+  }
+  var pushWired = false;
+  function setupPush() {
+    var P = plugins.PushNotifications;
+    var creds = pushCreds();
+    if (!P || !creds || pushWired) return;
+    pushWired = true;
+    P.addListener('registration', function (t) {
+      var body = Object.assign({ action: 'pushRegister', token: t.value, platform: 'ios' }, creds);
+      fetch(API + '/api/account', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }).catch(function () {});
+    });
+    P.addListener('pushNotificationActionPerformed', function (n) {
+      try {
+        var u = n && n.notification && n.notification.data && n.notification.data.url;
+        if (u && u.charAt(0) === '/') location.href = u;
+      } catch (e) {}
+    });
+    P.checkPermissions().then(function (s) {
+      if (s.receive === 'granted') return P.register();
+      if (s.receive === 'prompt') return P.requestPermissions().then(function (r) { if (r.receive === 'granted') P.register(); });
+    }).catch(function () {});
+  }
+
   var SLIDES = [
     { icon: '🐐', title: 'Welcome to GoatLab', body: 'Spin real pro cards, bolt their ratings onto your own player, and chase the perfect 99. Baseball, basketball, and soccer.' },
     { icon: '🛠️', title: 'Build & simulate', body: 'Fill every slot on the body, then simulate a whole career: seasons, awards, rings, and a Hall of Fame verdict.' },
@@ -144,7 +175,7 @@
     function wireAuth() {
       var ap = document.getElementById('obApple');
       var gu = document.getElementById('obGuest');
-      if (gu) gu.onclick = function () { haptic(); markOb(); ov.remove(); };
+      if (gu) gu.onclick = function () { haptic(); markOb(); ov.remove(); setTimeout(setupPush, 1200); };
       if (!ap) return;
       // no plugin (old build) -> hide the Apple button gracefully
       if (!plugins.SignInWithApple) { ap.style.display = 'none'; return; }
@@ -183,7 +214,11 @@
   }
 
   window.addEventListener('DOMContentLoaded', function () {
-    if (obDone() || acct()) return;
+    if (obDone() || acct()) {
+      // returning user: (re-)register for pushes quietly after the page settles
+      setTimeout(setupPush, 3000);
+      return;
+    }
     // only the entry page interrupts with onboarding; deep pages never do
     var p = location.pathname;
     if (p !== '/' && p.indexOf('index.html') < 0) return;

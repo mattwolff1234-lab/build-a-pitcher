@@ -13,6 +13,9 @@ const crypto = require('crypto');
 // (guest handles, display names, HOF saves, club names, roster snapshots).
 // Direct submissions get rejected; passthrough fields get a neutral fallback.
 const NameFilter = require('../namefilter.js');
+// APNs pushes for the iOS app (friend requests, challenges, streak reminders).
+// No-ops until the APNS_* env vars exist - see apns.js.
+const { sendPush } = require('../apns.js');
 const BAD_NAME_MSG = "That name isn't allowed — pick a different one.";
 const cleanName = (v, fb, max) => {
   const s = String(v == null ? '' : v).trim().slice(0, max || 40);
@@ -206,6 +209,18 @@ function ensure() {
         PRIMARY KEY (club_id, player_key)
       )`;
       await sql`CREATE INDEX IF NOT EXISTS idx_club_members_player ON club_members (player_key)`;
+      // iOS push notification device tokens (one row per device; re-registering re-binds
+      // the token to whoever is signed in on that device). last_reminded makes the streak
+      // cron idempotent - max one reminder per device per day no matter who calls it.
+      await sql`CREATE TABLE IF NOT EXISTS push_tokens (
+        token text PRIMARY KEY,
+        player_key text NOT NULL,
+        platform text NOT NULL DEFAULT 'ios',
+        last_reminded date,
+        created_at timestamptz NOT NULL DEFAULT now(),
+        last_seen timestamptz NOT NULL DEFAULT now()
+      )`;
+      await sql`CREATE INDEX IF NOT EXISTS idx_push_tokens_player ON push_tokens (player_key)`;
     })().catch(e => { ready = null; throw e; });   // don't cache a transient failure forever
   }
   return ready;
@@ -646,6 +661,24 @@ async function pvpKey(body) {
 }
 
 // ---- Social helpers ---------------------------------------------------------
+// Push a notification to every registered device of a player. Fire-and-forget
+// semantics but awaited (Vercel may freeze the lambda after the response), and
+// never allowed to break the action that triggered it. Prunes dead tokens.
+async function pushTo(playerKey, title, msg, data) {
+  try {
+    const rows = await sql`SELECT token FROM push_tokens WHERE player_key = ${playerKey}`;
+    if (!rows.length) return;
+    const r = await sendPush(rows.map(x => x.token), { title, body: msg, data });
+    if (r.dead.length) await sql`DELETE FROM push_tokens WHERE token = ANY(${r.dead})`;
+  } catch (e) {}
+}
+// The caller's public display name (handle first), for "X wants to be friends" pushes.
+async function displayNameOf(key) {
+  try {
+    const [u] = await sql`SELECT COALESCE(handle, name) AS n FROM users WHERE google_sub = ${key}`;
+    return cleanName(u && u.n, 'A player');
+  } catch (e) { return 'A player'; }
+}
 // Friend pairs are stored once, keys in sorted order.
 const pairOf = (k1, k2) => (k1 < k2 ? [k1, k2] : [k2, k1]);
 // The client-side personId() form of a stored key ('acct:' + sub for accounts) · this is what
@@ -1083,6 +1116,19 @@ module.exports = async (req, res) => {
 
       // The friends panel's one-stop fetch: my handle, friends, pending requests both ways, and
       // live challenges. Also bumps last_seen, so polling this IS the online-status heartbeat.
+      // iOS app registers its APNs device token here on every launch (token can rotate,
+      // and whoever is signed in on the device owns it).
+      if (action === 'pushRegister') {
+        const key = await pvpKey(body);
+        if (!key) return res.status(401).json({ ok: false, error: 'Not signed in' });
+        const token = String(body.token || '').slice(0, 200);
+        if (!/^[0-9a-f]{32,160}$/i.test(token)) return res.status(400).json({ ok: false, error: 'bad token' });
+        const platform = body.platform === 'android' ? 'android' : 'ios';
+        await sql`INSERT INTO push_tokens (token, player_key, platform) VALUES (${token}, ${key}, ${platform})
+          ON CONFLICT (token) DO UPDATE SET player_key = EXCLUDED.player_key, last_seen = now()`;
+        return res.status(200).json({ ok: true });
+      }
+
       if (action === 'friendList') {
         const key = await pvpKey(body);
         if (!key) return res.status(401).json({ ok: false, error: 'Not signed in' });
@@ -1203,6 +1249,7 @@ module.exports = async (req, res) => {
         if (existing) {
           if (existing.status !== 'accepted' && existing.requested_by !== key) {
             await sql`UPDATE friends SET status = 'accepted', accepted_at = now() WHERE a = ${a} AND b = ${b}`;
+            await pushTo(other, 'New friend 🤝', `You and ${await displayNameOf(key)} are now friends on GoatLab`, { url: '/' });
             return res.status(200).json({ ok: true, status: 'accepted', name: target.name || 'Player' });
           }
           return res.status(200).json({ ok: true, status: existing.status, name: target.name || 'Player' });
@@ -1210,6 +1257,7 @@ module.exports = async (req, res) => {
         const [{ count: n }] = await sql`SELECT count(*)::int AS count FROM friends WHERE a = ${key} OR b = ${key}`;
         if (n >= 200) return res.status(400).json({ ok: false, error: 'Friend list full (200 max)' });
         await sql`INSERT INTO friends (a, b, status, requested_by) VALUES (${a}, ${b}, 'pending', ${key}) ON CONFLICT DO NOTHING`;
+        await pushTo(other, 'Friend request 🤝', `${await displayNameOf(key)} wants to be friends on GoatLab`, { url: '/' });
         return res.status(200).json({ ok: true, status: 'pending', name: target.name || 'Player' });
       }
 
@@ -1224,6 +1272,7 @@ module.exports = async (req, res) => {
         if (body.accept) {
           await sql`UPDATE friends SET status = 'accepted', accepted_at = now()
             WHERE a = ${a} AND b = ${b} AND status = 'pending' AND requested_by = ${other}`;
+          await pushTo(other, 'Friend request accepted 🤝', `${await displayNameOf(key)} accepted your friend request`, { url: '/' });
         } else {
           await sql`DELETE FROM friends WHERE a = ${a} AND b = ${b} AND status = 'pending'`;
         }
@@ -1338,6 +1387,7 @@ module.exports = async (req, res) => {
           WHERE status = 'pending' AND from_key = ${key} AND to_key = ${other}`;
         const id = 'chal_' + crypto.randomBytes(8).toString('hex');
         await sql`INSERT INTO challenges (id, from_key, to_key, sport) VALUES (${id}, ${key}, ${other}, ${sport})`;
+        await pushTo(other, 'Challenge! ⚔️', `${await displayNameOf(key)} challenged you to a ${sport} 1v1`, { url: '/' });
         return res.status(200).json({ ok: true, id, sport });
       }
 

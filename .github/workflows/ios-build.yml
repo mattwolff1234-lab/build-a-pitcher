@@ -92,6 +92,20 @@ jobs:
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
             archive
 
+      # THE SIGN-IN FIX: an unsigned archive carries no entitlements, so the cloud
+      # re-sign at export was silently dropping applesignin/aps-environment - the app
+      # uploaded fine but Sign in with Apple failed on device. Ad-hoc sign the archived
+      # app WITH the entitlements file (no certificate needed); exportArchive reads the
+      # existing signature's entitlements and carries them into the store signature.
+      - name: Stamp entitlements into the archive
+        working-directory: ios-app/ios/App
+        run: |
+          APP=build/App.xcarchive/Products/Applications/App.app
+          find "$APP/Frameworks" -maxdepth 1 -name "*.framework" -exec codesign -s - -f {} \; 2>/dev/null || true
+          codesign -s - -f --entitlements App/App.entitlements "$APP"
+          echo "--- entitlements now in the archive:"
+          codesign -d --entitlements :- "$APP" 2>/dev/null || codesign -d --entitlements - "$APP" || true
+
       - name: Export (cloud-sign) + upload to TestFlight
         working-directory: ios-app/ios/App
         run: |
