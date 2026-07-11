@@ -27,21 +27,20 @@ jobs:
           mkdir -p ~/.appstoreconnect/private_keys
           echo "${{ secrets.ASC_KEY_P8 }}" | base64 --decode > ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.ASC_KEY_ID }}.p8
 
-      - name: Archive
+      # Archive UNSIGNED: a fresh team has no registered devices, so the development
+      # profile the archive step wants can't exist. Signing happens at export instead,
+      # where Apple issues an App Store DISTRIBUTION profile (no devices required).
+      - name: Archive (unsigned)
         working-directory: ios-app/ios/App
         run: |
           xcodebuild -workspace App.xcworkspace -scheme App -configuration Release \
             -destination 'generic/platform=iOS' \
             -archivePath $PWD/build/App.xcarchive \
             CURRENT_PROJECT_VERSION=${{ github.run_number }} MARKETING_VERSION=1.0.0 \
-            DEVELOPMENT_TEAM=JBQB4PU4MN CODE_SIGN_STYLE=Automatic \
-            -allowProvisioningUpdates \
-            -authenticationKeyID ${{ secrets.ASC_KEY_ID }} \
-            -authenticationKeyIssuerID ${{ secrets.ASC_ISSUER_ID }} \
-            -authenticationKeyPath ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.ASC_KEY_ID }}.p8 \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
             archive
 
-      - name: Export + upload to TestFlight
+      - name: Export (cloud-sign) + upload to TestFlight
         working-directory: ios-app/ios/App
         run: |
           cat > ExportOptions.plist <<'EOF'
@@ -50,6 +49,8 @@ jobs:
           <plist version="1.0"><dict>
             <key>method</key><string>app-store-connect</string>
             <key>destination</key><string>upload</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>teamID</key><string>JBQB4PU4MN</string>
           </dict></plist>
           EOF
           xcodebuild -exportArchive -archivePath $PWD/build/App.xcarchive \
