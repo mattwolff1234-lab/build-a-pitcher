@@ -2896,7 +2896,9 @@ function simulateCareer(filled, finalOvr, draftTeamAb, choices, salt) {
     const defRuns = (defense - 50) * 0.12 + (speed - 50) * 0.035;
     const war = clamp((ops - 0.690) * pa * 0.020 + defRuns * 0.1 + (sb - 8) * 0.015 + (seasonOvr - 70) * 0.006 + bell(rng, 0.5), -1.6, 10.5);
 
-    const mvpElite = Math.max(0, finalOvr - 92) * 0.55;
+    // over-99 OVR (hot-boosted / Judge-class) keeps half its headroom here, matching the
+    // pitcher cyElite soft-cap; ≤99 OVR is untouched (byte-identical classic builds).
+    const mvpElite = Math.max(0, (finalOvr > 99 ? 99 + (finalOvr - 99) * 0.5 : finalOvr) - 92) * 0.55;
     const mvpDom = (war - 5.0) * 0.85 + (ops - 0.84) * 22 + (hr - 30) * 0.07 + mvpElite;
     const mvp = rng() < clamp(mvpDom * 0.034, 0, 0.34);
     const allStar = war >= 3.7 || ops >= 0.84;

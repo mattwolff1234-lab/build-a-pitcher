@@ -88,12 +88,17 @@ function legendSet(game) {
 }
 const LEGEND_CAP = { baller: 6, batter: 7, pitcher: 7, striker: 6, keeper: 6, cfb: 6 };   // observed legit maxima: baller 3, batter 4, pitcher 5; soccer icon odds match baller's 4%
 
-// Career-total sanity caps · above these is impossible under the tuned sim (verified with the
-// Node sim harness: batter maxed-build career HR tops out ~734, pitcher career K ~6129), so an
-// over-cap career is either a stale pre-fix client (2026-07-10 inflated-HR bug) or a doctored
-// payload. We KEEP the score (ovr is validated separately) and just strip the career object,
-// so the entry stays on the OVR board but can't pollute the career-stat sorts.
-const CAREER_MAX = { batter: { hr: 760 }, pitcher: { k: 6300 }, cfb: { yds: 17000, td: 170 } };
+// Career-total sanity caps · above these is impossible under the tuned sim, so an over-cap
+// career is either a stale pre-fix client or a doctored payload. We KEEP the score (ovr is
+// validated separately) and just strip the career object, so the entry stays on the OVR board
+// but can't pollute the career-stat sorts. Re-based 2026-07-11 on the soft-capped sims'
+// verified maxima + ~5% margin (Node harness, 2000 seeds on maximal hot-boosted builds:
+// pitcher K 6794 IP 4401 W 370 · batter HR 808 H 4037 RBI 3395 R 2182 SB 690).
+const CAREER_MAX = {
+  batter: { hr: 850, h: 4250, rbi: 3600, r: 2300, sb: 730 },
+  pitcher: { k: 7100, ip: 4650, wins: 390 },
+  cfb: { yds: 17000, td: 170 },
+};
 function stripInsaneCareer(game, build) {
   const caps = CAREER_MAX[game];
   const t = build && build.career && build.career.totals;

@@ -313,10 +313,19 @@ Same game as Pitching Lab, translated to **hitters**. Single file `build-a-batte
   classic 614/647, on purpose; do NOT re-inflate** (the first cut hit 748/918 avg/max career +
   78-HR seasons and got rolled back). ≤99-power builds are byte-identical to the classic sim.
   Verify any change with a Node harness that extracts `simulateCareer` from the HTML (see the git
-  history of this fix). `api/score.js` also strips impossible careers on submit (`CAREER_MAX`:
-  batter hr>760, pitcher k>6300 — keep in sync with verified sim maxima) and has a token-gated
-  `redactCareers` admin action (STATS_TOKEN) that stripped careers from the inflated window
-  (criterion: Power slot > 99 + created_at ≥ 2026-07-10T05:37Z).
+  history of this fix). `api/score.js` also strips impossible careers on submit (`CAREER_MAX` —
+  keep in sync with verified sim maxima; re-based 2026-07-11 for hot-boosted builds under the
+  soft-capped sims: batter hr>850/h>4250/rbi>3600/r>2300/sb>730, pitcher k>7100/ip>4650/wins>390)
+  and has a token-gated `redactCareers` admin action (STATS_TOKEN) that stripped careers from the
+  inflated window (criterion: Power slot > 99 + created_at ≥ 2026-07-10T05:37Z).
+- **Over-99 soft-cap (2026-07-11, both sims):** the 🔥 hot boost stacks past 99 (card display is
+  intentionally uncapped), but the SIMS soft-cap over-99 inputs. Pitcher `simulateCareer` routes
+  every raw build-value read through `soft()` (keeps 40% of over-99 headroom — less than the
+  batter's half because K rate × innings × career length compound): maxed all-109 = +14% avg /
+  +10% max career K over all-99. Batter audit found hits/SB/runs/RBI already contained by the
+  seasonal 99-clamps (+3.5%/+9%/+5%/+15% for a maxed hot build — in band, untouched); only
+  `mvpElite` needed the soft-cap (raw over-99 OVR, same class as pitcher `cyElite`). ≤99 builds
+  byte-identical in both games (harness-verified, 900 careers × 300 random builds each).
 - **Leaderboard:** shared `api/score.js`, separated by `game` column (`pitcher`|`batter`, default
   `pitcher`, backward-compatible). **Live** — batter scores post to the same Neon DB / serverless
   function as the pitcher board.
