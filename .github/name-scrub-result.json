@@ -1,17 +1,17 @@
 {
-  "ranAt": "2026-07-11T00:24:41.149Z",
+  "ranAt": "2026-07-11T00:25:14.388Z",
   "result": {
     "ok": true,
-    "applied": true,
+    "applied": false,
     "counts": {
-      "users": 3,
-      "handles": 2,
-      "saves": 262,
-      "scores": 452,
-      "daily_scores": 7,
+      "users": 0,
+      "handles": 0,
+      "saves": 0,
+      "scores": 0,
+      "daily_scores": 0,
       "clubs": 0,
       "club_gms": 0,
-      "pvp_opp_names": 8,
+      "pvp_opp_names": 0,
       "pvp_seasons": 0,
       "club_rosters_touched": 0
     }
