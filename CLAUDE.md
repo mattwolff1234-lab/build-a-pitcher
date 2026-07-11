@@ -307,6 +307,16 @@ Same game as Pitching Lab, translated to **hitters**. Single file `build-a-batte
 - **Sim** (`simulateCareer`, seed `|bat-career-v1`): OPS/FIP-style hitting model. Career length & PA
   ← **Frame** (replaced durability); defense (`defRuns`)/Gold Glove ← **Speed** (replaced Fielding/Arm).
   HOF via `hofScore` or `slamDunk`. Tuned: 99≈GOAT, 90≈100%, 85≈72%, 80≈23%, ≤77≈0%.
+- **HR top-end (2026-07-10 retune of a retune):** over-99-power builds get HALF their headroom as
+  the seasonal power cap + a small `superPow` slope/variance term; hrRate cap 0.078. Maxed
+  (power-114) build = ~670 avg / ~734 max career HR, best seasons ~48 max — **~10% over the
+  classic 614/647, on purpose; do NOT re-inflate** (the first cut hit 748/918 avg/max career +
+  78-HR seasons and got rolled back). ≤99-power builds are byte-identical to the classic sim.
+  Verify any change with a Node harness that extracts `simulateCareer` from the HTML (see the git
+  history of this fix). `api/score.js` also strips impossible careers on submit (`CAREER_MAX`:
+  batter hr>760, pitcher k>6300 — keep in sync with verified sim maxima) and has a token-gated
+  `redactCareers` admin action (STATS_TOKEN) that stripped careers from the inflated window
+  (criterion: Power slot > 99 + created_at ≥ 2026-07-10T05:37Z).
 - **Leaderboard:** shared `api/score.js`, separated by `game` column (`pitcher`|`batter`, default
   `pitcher`, backward-compatible). **Live** — batter scores post to the same Neon DB / serverless
   function as the pitcher board.

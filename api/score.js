@@ -78,6 +78,25 @@ function legendSet(game) {
 }
 const LEGEND_CAP = { baller: 6, batter: 7, pitcher: 7, striker: 6, keeper: 6 };   // observed legit maxima: baller 3, batter 4, pitcher 5; soccer icon odds match baller's 4%
 
+// Career-total sanity caps · above these is impossible under the tuned sim (verified with the
+// Node sim harness: batter maxed-build career HR tops out ~734, pitcher career K ~6129), so an
+// over-cap career is either a stale pre-fix client (2026-07-10 inflated-HR bug) or a doctored
+// payload. We KEEP the score (ovr is validated separately) and just strip the career object,
+// so the entry stays on the OVR board but can't pollute the career-stat sorts.
+const CAREER_MAX = { batter: { hr: 760 }, pitcher: { k: 6300 } };
+function stripInsaneCareer(game, build) {
+  const caps = CAREER_MAX[game];
+  const t = build && build.career && build.career.totals;
+  if (!caps || !t || typeof t !== 'object') return build;
+  for (const k of Object.keys(caps)) {
+    if (Number(t[k]) > caps[k]) { const b = { ...build }; delete b.career; return b; }
+  }
+  return build;
+}
+
+// Token for admin/maintenance actions (same env + fallback as account.js's pvpMatchStats).
+const ADMIN_TOKEN = process.env.STATS_TOKEN || 'pl-balance-7f3a9c21';
+
 function checkBuild(game, clientOvr, build) {
   const ovr = Math.max(1, Math.min(120, Math.round(Number(clientOvr) || 0)));
   const maxes = SLOT_MAX[game];
@@ -232,6 +251,14 @@ module.exports = async (req, res) => {
       return res.status(200).json({ ok: true, dates: rows.map(r => r.d), today });
     }
 
+    // redactCareers also answers GET (?action=redactCareers&token=…&dryRun=1&…) so it can be
+    // triggered from environments that can only issue GETs. Token-gated either way; a GET
+    // without dryRun=0 defaults to a dry run so a stray crawl can never mutate anything.
+    if (req.method !== 'POST' && (req.query && req.query.action) === 'redactCareers') {
+      req.method = 'POST';
+      req.body = { ...req.query, dryRun: req.query.dryRun == null ? '1' : req.query.dryRun };
+    }
+
     if (req.method === 'POST') {
       const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
 
@@ -240,6 +267,44 @@ module.exports = async (req, res) => {
         const [{ n }] = await sql`INSERT INTO counters (key, n) VALUES ('plays', 1)
           ON CONFLICT (key) DO UPDATE SET n = counters.n + 1 RETURNING n`;
         return res.status(200).json({ ok: true, plays: Number(n) });
+      }
+
+      // Admin (token-gated): strip the stored `career` from leaderboard rows whose build has a
+      // slot over a threshold, inside a time window. One-time cleanup for the 2026-07-10
+      // inflated-HR sim bug: only builds with a Power slot > 99 hit the bad `superPow` path, so
+      // that's the exact affected population. Redacted rows keep their name/OVR/slots (the OVR
+      // board is untouched) but drop off the career-stat sorts (NULLS LAST) and lose the career
+      // line on share pages. Pass dryRun:true to preview. Example:
+      //   curl -X POST .../api/score -H 'content-type: application/json' -d '{"action":"redactCareers",
+      //     "token":"<STATS_TOKEN>","game":"batter","slot":"Power","over":99,
+      //     "since":"2026-07-10T05:37:00Z","dryRun":true}'
+      if (body.action === 'redactCareers') {
+        if (String(body.token || '') !== ADMIN_TOKEN) return res.status(403).json({ ok: false, error: 'Bad token' });
+        const game = gameOf(body.game);
+        const slot = String(body.slot || 'Power').slice(0, 30);
+        const over = Number.isFinite(Number(body.over)) ? Number(body.over) : 99;
+        const ts = v => (typeof v === 'string' && !Number.isNaN(Date.parse(v)) ? new Date(v).toISOString() : null);
+        const since = ts(body.since) || '2026-07-10T05:37:00Z';   // the bad deploy went out 2026-07-10 ~05:37 UTC
+        const until = ts(body.until) || new Date().toISOString();
+        if (body.dryRun && body.dryRun !== 'false' && body.dryRun !== '0') {
+          const rows = await sql`
+            SELECT id, name, ovr, created_at, build->'career'->'totals' AS totals FROM scores
+            WHERE game = ${game} AND created_at >= ${since} AND created_at < ${until}
+              AND build->'career' IS NOT NULL AND jsonb_typeof(build->'slots') = 'array'
+              AND EXISTS (SELECT 1 FROM jsonb_array_elements(build->'slots') e
+                          WHERE e->>'slot' = ${slot} AND (e->>'value')::numeric > ${over})
+            ORDER BY created_at`;
+          return res.status(200).json({ ok: true, dryRun: true, count: rows.length,
+            rows: rows.map(r => ({ id: Number(r.id), name: r.name, ovr: r.ovr, created_at: r.created_at, totals: r.totals })) });
+        }
+        const rows = await sql`
+          UPDATE scores SET build = build - 'career'
+          WHERE game = ${game} AND created_at >= ${since} AND created_at < ${until}
+            AND build->'career' IS NOT NULL AND jsonb_typeof(build->'slots') = 'array'
+            AND EXISTS (SELECT 1 FROM jsonb_array_elements(build->'slots') e
+                        WHERE e->>'slot' = ${slot} AND (e->>'value')::numeric > ${over})
+          RETURNING id`;
+        return res.status(200).json({ ok: true, redacted: rows.length, ids: rows.map(r => Number(r.id)) });
       }
 
       // Daily Challenge submission · one row per player per day; returns today's rank + field size.
@@ -261,7 +326,7 @@ module.exports = async (req, res) => {
         const ovr = chk.ovr;
         const cname = String(body.name == null ? '' : body.name).trim().slice(0, 40) || 'Anonymous';
         if (!NameFilter.isClean(cname)) return res.status(400).json({ ok: false, error: BAD_NAME_MSG });
-        const cbuild = body.build && typeof body.build === 'object' ? JSON.stringify(body.build) : null;
+        const cbuild = body.build && typeof body.build === 'object' ? JSON.stringify(stripInsaneCareer(game, body.build)) : null;
         const cd = dailyDate(body.date);
         await sql`INSERT INTO daily_scores (player_key, game, name, ovr, build, challenge_date)
           VALUES (${key}, ${game}, ${cname}, ${ovr}, ${cbuild}::jsonb, COALESCE(${cd}::date, CURRENT_DATE))
@@ -280,7 +345,7 @@ module.exports = async (req, res) => {
       const chk = checkBuild(game, body.ovr, body.build);
       if (!chk.ok) return res.status(400).json({ ok: false, error: 'Invalid build - ratings exceed what any real card can have' });
       const ovr = chk.ovr;
-      const build = body.build && typeof body.build === 'object' ? JSON.stringify(body.build) : null;
+      const build = body.build && typeof body.build === 'object' ? JSON.stringify(stripInsaneCareer(game, body.build)) : null;
 
       const [row] = await sql`
         INSERT INTO scores (name, ovr, build, game) VALUES (${name}, ${ovr}, ${build}::jsonb, ${game})

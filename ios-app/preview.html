@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>GoatLab · iOS app preview</title>
+<style>
+  body { margin:0; min-height:100vh; background:#05080d; color:#eaf2fb; font-family:-apple-system,Inter,sans-serif;
+    display:flex; flex-direction:column; align-items:center; gap:26px; padding:34px 16px 60px; }
+  h1 { font-size:19px; margin:0; letter-spacing:.5px; }
+  .sub { color:#8ea2bd; font-size:13px; margin:-14px 0 0; text-align:center; max-width:560px; line-height:1.5; }
+  .row { display:flex; gap:44px; align-items:flex-start; flex-wrap:wrap; justify-content:center; }
+  /* home-screen icon */
+  .homescreen { text-align:center; }
+  .icon { width:120px; height:120px; border-radius:27px; box-shadow:0 12px 34px rgba(0,0,0,.6); display:block; margin:0 auto; }
+  .icon-label { font-size:12px; margin-top:8px; color:#fff; text-shadow:0 1px 3px rgba(0,0,0,.8); }
+  .hs-note { font-size:11px; color:#56627a; margin-top:16px; }
+  /* the phone */
+  .phone { width:394px; height:852px; background:#000; border-radius:54px; padding:14px; position:relative;
+    box-shadow:0 30px 90px rgba(0,0,0,.75), inset 0 0 3px 2px #1a1d22; flex:0 0 auto; }
+  .phone .island { position:absolute; top:24px; left:50%; transform:translateX(-50%); width:118px; height:34px;
+    background:#000; border-radius:20px; z-index:3; }
+  .phone iframe { width:100%; height:100%; border:none; border-radius:41px; background:#0a1320; }
+  .splash { width:394px; height:852px; border-radius:54px; padding:14px; background:#000; position:relative;
+    box-shadow:0 30px 90px rgba(0,0,0,.75); flex:0 0 auto; }
+  .splash .inner { width:100%; height:100%; border-radius:41px; background:#0a1320; display:flex; align-items:center; justify-content:center; }
+  .splash img { width:210px; image-rendering:pixelated; }
+  .cap { font-family:ui-monospace,monospace; font-size:11px; letter-spacing:2px; color:#56627a; text-transform:uppercase; text-align:center; margin-top:10px; }
+  @media (max-width:900px) { .phone, .splash { transform:scale(.82); transform-origin:top center; } }
+</style>
+</head>
+<body>
+  <h1>🐐 GoatLab · what the iOS app looks like</h1>
+  <p class="sub">This is the ACTUAL app bundle (ads stripped, live production data) running inside an iPhone-15-sized frame.
+    Click around - dailies, builds, franchise all work. On a real phone there's no browser chrome, just this.</p>
+  <div class="row">
+    <div class="homescreen">
+      <img class="icon" src="/assets-icon.png" alt="GoatLab icon">
+      <div class="icon-label">GoatLab</div>
+      <div class="hs-note">the home-screen icon</div>
+    </div>
+    <div>
+      <div class="splash"><div class="inner"><img src="/assets-icon.png" alt=""></div></div>
+      <div class="cap">launch splash (~1s)</div>
+    </div>
+    <div>
+      <div class="phone"><div class="island"></div><iframe src="/index.html" title="GoatLab app"></iframe></div>
+      <div class="cap">the app · live &amp; clickable</div>
+    </div>
+  </div>
+</body>
+</html>
