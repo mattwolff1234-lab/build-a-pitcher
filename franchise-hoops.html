@@ -1204,10 +1204,16 @@ async function openPicker(where, idx) {
     if (!pickSeat || pickSeat.where !== where || pickSeat.idx !== idx) return;
     const hint = $('hofHint');
     if (!j.ok || !j.rows || !j.rows.length) { if (hint) hint.textContent = 'No saved builds for this position yet · finish a build and 💾 save it to your Hall of Fame.'; return; }
-    const names = new Set([...F.rotation, ...F.lineup].filter(Boolean).map(p => p.name));
+    // "already signed" is keyed by SAVE ID, not name — two of your own HOF builds can share
+    // a name (both importable); only re-importing the SAME save is blocked. Imports from
+    // before hofId existed fall back to name-matching so they can't be double-added either.
+    const roster = [...F.rotation, ...F.lineup].filter(Boolean);
+    const takenIds = new Set(roster.map(p => p.hofId).filter(v => v != null));
+    const legacyHofNames = new Set(roster.filter(p => p.src === 'hof' && p.hofId == null).map(p => p.name));
+    const isTaken = s => takenIds.has(s.id) || legacyHofNames.has(s.name);
     if (hint) hint.remove();
     const rows = j.rows.slice(0, 30).map((s, i) => {
-      const taken = names.has(s.name);
+      const taken = isTaken(s);
       return `<div class="pickrow" data-hof="${i}" style="${taken ? 'opacity:.45' : ''}">
         <span class="nm">🏛️ ${escapeHTML(s.name)}</span><span class="meta">${taken ? 'already signed' : new Date(s.created_at).toLocaleDateString()}</span>
         <span class="ov ${tierCls(s.ovr)}">${s.ovr}</span></div>`;
@@ -1215,10 +1221,11 @@ async function openPicker(where, idx) {
     $('pickList').insertAdjacentHTML('beforeend', rows);
     document.querySelectorAll('[data-hof]').forEach(el => el.onclick = () => {
       const s = j.rows[Number(el.dataset.hof)];
-      if (names.has(s.name)) { toast('Already on the roster.'); return; }
+      if (isTaken(s)) { toast('Already on the roster.'); return; }
       const rng = seededRandom(`${F.id}|hof|${s.id}`);
       const p = mkPlayer(rng, game, clamp(Math.round(s.ovr), 40, 99), 23, 'hof');
       p.name = String(s.name).slice(0, 26);   // your build keeps its name
+      p.hofId = s.id;                          // the save it came from (dedupe key)
       placePlayer(p);
     });
   } catch (e) { const hint = $('hofHint'); if (hint) hint.textContent = 'Could not reach your Hall of Fame · try again.'; }
