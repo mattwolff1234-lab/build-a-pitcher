@@ -927,7 +927,7 @@ module.exports = async (req, res) => {
       // Same always-merge posture as achSync · a fresh device can never wipe the account's binder.
       if (action === 'collectionSync') {
         if (!(await authed(body.sub, body.sessionToken))) return res.status(401).json({ ok: false, error: 'Not signed in' });
-        const GAMES = ['pitcher', 'batter', 'baller'];
+        const GAMES = ['pitcher', 'batter', 'baller', 'striker', 'keeper', 'cfb'];
         const TIER_RANK = { legend: 5, diamond: 4, gold: 3, silver: 2, bronze: 1, grey: 0 };
         const incoming = (body.collection && typeof body.collection === 'object') ? body.collection : {};
         const base = ((await sql`SELECT collection FROM users WHERE google_sub = ${body.sub}`)[0] || {}).collection || {};
@@ -951,6 +951,7 @@ module.exports = async (req, res) => {
               f: (cur.f && (!e.f || String(cur.f) < String(e.f))) ? cur.f : String(e.f || cur.f || new Date().toISOString()).slice(0, 40),
               ...(cur.p || e.p ? { p: 1 } : {}),
               ...(cur.l || e.l ? { l: 1 } : {}),
+              ...(typeof (cur.i || e.i) === 'string' && (cur.i || e.i) ? { i: String(cur.i || e.i).slice(0, 300) } : {}),
             };
           }
         }
