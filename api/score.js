@@ -359,6 +359,49 @@ module.exports = async (req, res) => {
         return res.status(200).json({ ok: true, redacted: rows.length, ids: rows.map(r => Number(r.id)) });
       }
 
+      // Admin (token-gated): one-time XP compensation. Grants `amount` XP (default 250) to every
+      // signed-in account holding an affected save (same criterion as redactHotCareers: any slot
+      // over the threshold, in the window). Lives here rather than account.js only because this
+      // file owns the other admin actions; it writes the same users table. users.xp is monotonic
+      // (clients keep max(local, stored)), so a server-side add follows the account everywhere.
+      // A dedup row per (grantKey, user) makes re-runs safe - each account is paid ONCE per key.
+      // Dry-run by default; ONLY {"apply":1} writes. Example:
+      //   curl -X POST .../api/score -H 'content-type: application/json' -d '{"action":"grantXp",
+      //     "token":"<STATS_TOKEN>","game":"pitcher","grantKey":"hot-sim-comp-2026-07","apply":1}'
+      if (body.action === 'grantXp') {
+        if (String(body.token || '') !== ADMIN_TOKEN) return res.status(403).json({ ok: false, error: 'Bad token' });
+        const game = gameOf(body.game || 'pitcher');
+        const over = Number.isFinite(Number(body.over)) ? Number(body.over) : 99;
+        const amount = Math.max(1, Math.min(1000, Math.round(Number(body.amount) || 250)));
+        const grantKey = String(body.grantKey || 'hot-sim-comp-2026-07').slice(0, 60);
+        const ts = v => (typeof v === 'string' && !Number.isNaN(Date.parse(v)) ? new Date(v).toISOString() : null);
+        const since = ts(body.since) || '2026-07-09T07:00:00Z';
+        const until = ts(body.until) || new Date().toISOString();
+        const apply = body.apply === 1 || body.apply === '1' || body.apply === true;
+        const affected = await sql`
+          SELECT DISTINCT google_sub FROM saves
+          WHERE game = ${game} AND created_at >= ${since} AND created_at < ${until}
+            AND jsonb_typeof(build->'slots') = 'array'
+            AND EXISTS (SELECT 1 FROM jsonb_array_elements(build->'slots') e
+                        WHERE (e->>'value') ~ '^[0-9.]+$' AND (e->>'value')::numeric > ${over})`;
+        const subs = affected.map(r => r.google_sub);
+        if (!apply) {
+          return res.status(200).json({ ok: true, dryRun: true, game, since, until, amount, grantKey, users: subs.length, subs });
+        }
+        await sql`CREATE TABLE IF NOT EXISTS xp_grants (
+          grant_key text NOT NULL, google_sub text NOT NULL, amount int NOT NULL,
+          created_at timestamptz NOT NULL DEFAULT now(), PRIMARY KEY (grant_key, google_sub))`;
+        let granted = 0;
+        for (const sub of subs) {
+          const ins = await sql`INSERT INTO xp_grants (grant_key, google_sub, amount) VALUES (${grantKey}, ${sub}, ${amount})
+            ON CONFLICT (grant_key, google_sub) DO NOTHING RETURNING google_sub`;
+          if (!ins.length) continue;   // already compensated under this key
+          await sql`UPDATE users SET xp = COALESCE(xp, 0) + ${amount} WHERE google_sub = ${sub}`;
+          granted++;
+        }
+        return res.status(200).json({ ok: true, granted, alreadyGranted: subs.length - granted, amount, grantKey });
+      }
+
       // Daily Challenge submission · one row per player per day; returns today's rank + field size.
       if (body.action === 'challengeSubmit') {
         const key = playerKey(body);
