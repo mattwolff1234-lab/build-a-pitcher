@@ -331,8 +331,48 @@ The repo is **NOT** a single `index.html` anymore. Current layout (routes in `ve
 - **`pitcher.html`** = the pitcher game, served at **`/pitching`**.
 - **`build-a-batter.html`** = the batter game, served at **`/batting`**.
 - **`versus.html`** = the **1v1 Face Off** mode, served at **`/versus`** (see below).
+- **`college.html`** = College Football Lab (see section below), served at **`/college`** (+ `/cfb`).
 - Hamburger items that are game-specific deep-link into the pitcher game via hash:
   `/pitching#hof`, `/pitching#leaderboard`, `/pitching#how` → `pitcher.html` opens that panel on load.
+
+---
+
+## College Football Lab (LIVE, v1) — `college.html` at `/college`, game key `cfb`
+**Three positions in ONE page** (QB / RB / WR) — a position-select screen sets `POSITIONS[key]`
+(slots/weights/figure/masks/stage aspect) into the `SLOTS`/`WEIGHTS`/`DATA` globals, then the
+normal draft loop runs. Cloned from `build-a-baller.html` (build script pattern in git history).
+
+- **Data:** `node fetch-cfb.js` (`--fresh` re-downloads) → `cfb.json` `{positions:{qb,rb,wr:
+  {pool,prime}}, legends:{qb,rb,wr}, teams}`. Source = **CFB Labs' public GraphQL endpoint**
+  (`cfblabs.com/.netlify/functions/cfb27-players`, full EA CFB27 default rosters — EA's own
+  drop-api for CFB27 was empty at launch; filters endpoint gave the 41 crest PNGs saved in
+  `cfb-filters-raw.json`). QBs are stored as `"QB (Right)"/"QB (Left)"`, RBs as `"HB"`. Pools:
+  578 QB / 747 RB / 1181 WR (floors 62/64/66), synthesized Primes (+6/slot, ovr+5), 12
+  hand-authored college icons per position (rated on their COLLEGE careers — Tebow 97).
+  No player headshots: **the school crest is the card art** (`headshot()` → crest → silhouette).
+- **Slots (9 per position, 3× 1.2 / 3× 1.1 / 3× 1.0):** QB Short/Mid/Deep Accuracy premium; RB
+  Speed/Break Tackle/Vision; WR Hands/Speed/Routes. RB's catch slot is labeled **"Catching"**
+  (not "Hands") so the flat server `OVR_W.cfb` map has no cross-position weight collisions.
+- **Figures:** 3 AI-generated silhouettes (`_cfb-<pos>-source.jpg`, committed) →
+  `make-cfb-figures.py` (morphological-close before largest-component: thin white seams sever
+  limbs; RB ground-shadow hard cut) → `make-cfb-masks.py` (Voronoi+feather, anchors in file).
+  Stage aspects: QB 1086/1445 · RB 1086/1308 · WR 1086/1338 (set inline by `selectPosition`).
+- **Career sim** (deterministic, seed `|cfb-career-<pos>-v1`): **Signing Day** ceremony (star
+  rating + hat-grab reveal at the **build's modal school**, ties seeded), 3–5 seasons (≥88 OVR
+  declares after junior year, <72 grinds 5), per-position stat lines, Heisman (QB-favored,
+  ~0.5/career at 95) / natty / All-American, **NIL money** (= earnings), College-HOF legacy
+  score, **NFL Draft projection** verdict line ("Going pro in something other than sports" at
+  the bottom). Tiers: 🐐 College GOAT (2 Heismans, or H+natty at 98+) · 🏆 College Legend ·
+  🏈 Hall of Stat-Stuffers · Campus Hero · Solid Saturday Starter · Hall of Walk-Ons.
+  Re-verify with a Node harness that extracts the sim from the HTML (see git history).
+- **Server:** `'cfb'` in both `gameOf` whitelists; `api/score.js` has SLOT_MAX/OVR_W/LEGEND_CAP/
+  CAREER_MAX (yds 17000 / td 170) + sort keys `yds/td/heisman/natty`. Leaderboard + Google
+  sign-in + personal HOF fully live (`HOF_GAME='cfb'`, build payload carries `pos`).
+- **v1 scope cuts (deliberate):** no ads (Playwire block stripped — read `ads.md` before
+  re-adding), no daily challenge/streak UI (dormant guarded code remains, keys namespaced
+  `_cfb`), no achievements/xp/collection/quests/season-track/social/switcher modules on the
+  page (no-op seams kept), no versus/franchise. Landing hub shows those tiles as 🔒 coming
+  soon; `dailyGameOf` returns `null` for cfb — every consumer is null-guarded.
 
 ---
 
