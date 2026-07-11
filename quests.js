@@ -348,7 +348,7 @@
   else refreshBadges();
 
   // ---- local-only test bar (never appears on the live site) -----------------
-  if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) {
+  if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname) && !window.GOATLAB_NATIVE) {
     const mk = (txt, fn) => {
       const b = document.createElement('button');
       b.textContent = txt;
