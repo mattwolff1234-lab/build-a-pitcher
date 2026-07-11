@@ -224,6 +224,38 @@ async function verifyGoogle(idToken) {
   } catch (e) { return null; }
 }
 
+// --- Sign in with Apple (the iOS app) -----------------------------------------
+// Verifies the identity token (RS256 JWT) against Apple's published keys using
+// plain node crypto - no dependencies. Accounts are keyed 'apple:<sub>' in the
+// same users.google_sub column (the key namespacing was built for extra providers),
+// so saves/friends/Elo/franchise all work identically to Google accounts.
+const APPLE_BUNDLE_ID = 'com.wolfflabs.goatlab';
+let _appleKeys = null, _appleKeysAt = 0;
+async function appleJwk(kid) {
+  if (!_appleKeys || Date.now() - _appleKeysAt > 3600e3) {
+    const r = await fetch('https://appleid.apple.com/auth/keys');
+    if (!r.ok) return null;
+    _appleKeys = ((await r.json()) || {}).keys || [];
+    _appleKeysAt = Date.now();
+  }
+  return _appleKeys.find(k => k.kid === kid) || null;
+}
+async function verifyApple(identityToken) {
+  try {
+    const [h, p, s] = String(identityToken || '').split('.');
+    if (!h || !p || !s) return null;
+    const header = JSON.parse(Buffer.from(h, 'base64url').toString());
+    const jwk = await appleJwk(header.kid);
+    if (!jwk) return null;
+    const pub = crypto.createPublicKey({ key: jwk, format: 'jwk' });
+    if (!crypto.verify('RSA-SHA256', Buffer.from(h + '.' + p), pub, Buffer.from(s, 'base64url'))) return null;
+    const c = JSON.parse(Buffer.from(p, 'base64url').toString());
+    if (c.iss !== 'https://appleid.apple.com' || c.aud !== APPLE_BUNDLE_ID || !c.sub) return null;
+    if (Number(c.exp) * 1000 < Date.now()) return null;
+    return c;   // { sub, email? }
+  } catch (e) { return null; }
+}
+
 // Standard Elo (K=32). Each player updates only their own rating, vs the opponent's reported rating.
 // K is overridable so the dodge-loss backfill can apply retro losses at a gentler K (softer penalty).
 function nextElo(elo, oppElo, won, k = 32) {
@@ -733,6 +765,32 @@ module.exports = async (req, res) => {
           name: handleOut || row.name || profile.name, handle: handleOut,
           picture: profile.picture, sessionToken: row.session_token,
           streak: streakOut, bestStreak: bestOut, isNew: row.is_new === true });
+      }
+
+      // Sign in with Apple (the iOS app). Same account model as Google login above:
+      // keep an existing session token, a claimed @handle wins the name, auto-seed a
+      // handle for new accounts. Apple only sends the person's name on the FIRST
+      // authorization, so the client passes it through when it has one.
+      if (action === 'loginApple') {
+        const claims = await verifyApple(body.identityToken);
+        if (!claims) return res.status(401).json({ ok: false, error: 'Apple sign-in failed' });
+        const key = 'apple:' + String(claims.sub).slice(0, 80);
+        const newToken = crypto.randomBytes(24).toString('hex');
+        const seedName = cleanName(String(body.name || '').trim(), 'GOAT');
+        const [row] = await sql`INSERT INTO users (google_sub, email, name, session_token)
+          VALUES (${key}, ${claims.email || null}, ${seedName}, ${newToken})
+          ON CONFLICT (google_sub) DO UPDATE SET
+            email = COALESCE(users.email, EXCLUDED.email),
+            name = COALESCE(users.handle, users.name, EXCLUDED.name),
+            session_token = COALESCE(users.session_token, EXCLUDED.session_token)
+          RETURNING session_token, handle, name, (xmax = 0) AS is_new`;
+        let handleOut = row.handle || null;
+        if (!handleOut) {
+          try { handleOut = await autoClaimHandle(key, row.name || seedName); } catch (e) {}
+        }
+        return res.status(200).json({ ok: true, sub: key, email: claims.email || '',
+          name: handleOut || row.name || seedName, handle: handleOut,
+          picture: '', sessionToken: row.session_token, isNew: row.is_new === true });
       }
 
       if (action === 'save') {
