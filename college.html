@@ -994,6 +994,15 @@
   </div>
 </div>
 
+<div id="decisionModal" class="overlay locked">
+  <div class="overlay-card panel dec-card">
+    <div class="dec-kicker">📣 Decision · <span id="decAge"></span> Year</div>
+    <h3 id="decTitle"></h3>
+    <p class="dec-flavor" id="decFlavor"></p>
+    <div class="dec-opts" id="decOpts"></div>
+  </div>
+</div>
+
 <div id="sharedModal" class="overlay">
   <div class="overlay-card panel">
     <div class="overlay-head"><span class="overlay-title">⚔️ Shared Career</span><button class="overlay-close" data-close="sharedModal">✕</button></div>
@@ -2520,36 +2529,239 @@ function schoolPrestige(name) {
   return t && t.color ? 0.05 : -0.03;
 }
 
+/* ---- mid-career decision events (college edition) --------------------------
+   Same engine as the other games: a separate |cfb-decisions-v1 stream plans which events
+   fire in which years (FIXED draw count - never depends on career length or picks), choices
+   are consumed positionally, the sim halts at an unanswered event and re-runs with the pick
+   appended. Risk rolls are pre-drawn so outcomes are deterministic for the same picks. */
+// Each option carries fx pills [direction, label] that MUST mirror applyChoice below.
+const CFB_EVENTS = {
+  party: { title: 'Thursday Night Rager', icon: '🍻', def: 'stay',
+    flavor: 'A girl from your econ lecture says the whole campus is at the house party tonight. Kickoff against the rival is in 36 hours.',
+    options: [
+      { key: 'go', label: 'Pull up', hint: 'Legends are made after midnight.', fx: [['up', 'NIL clout'], ['down', 'Performance']] },
+      { key: 'stay', label: 'Stay in - film study', hint: "She'll understand. The rival won't.", fx: [['up', 'Performance']] },
+      { key: 'appearance', label: 'One hour, then dip', hint: 'Show face, shake hands, ghost by 11.', fx: [['up', 'NIL clout'], ['up', 'Legacy']] },
+    ] },
+  frat: { title: 'Rush Week', icon: '🏛️', def: 'decline',
+    flavor: 'The biggest frat on campus wants the star {pos} in the pledge class. Hell week overlaps with fall camp.',
+    options: [
+      { key: 'pledge', label: 'Pledge', hint: 'Instant campus royalty. Your hamstrings may disagree.', fx: [['up', 'NIL clout'], ['down', 'Performance']] },
+      { key: 'decline', label: 'Politely decline', hint: 'The locker room is your fraternity.', fx: [['up', 'Performance']] },
+      { key: 'social', label: 'Parties only, no pledging', hint: 'All the mixers, none of the paddles.', fx: [['up', 'NIL clout'], ['down', 'Legacy']] },
+    ] },
+  roommate: { title: 'Roommate Chaos', icon: '🛏️', def: 'facility',
+    flavor: 'You come home to find your roommate sublet your bed to a crypto bro named Chad. You need a new plan tonight.',
+    options: [
+      { key: 'facility', label: 'Sleep at the facility', hint: 'Cot by the film room. Coach pretends not to notice.', fx: [['up', 'Performance']] },
+      { key: 'teamhouse', label: 'Move into the team house', hint: "Chaos, but it's YOUR chaos.", fx: [['up', 'Team wins'], ['up', 'Legacy']] },
+      { key: 'ownplace', label: 'Get your own place', hint: 'NIL money, meet rent. Rent, NIL money.', fx: [['down', 'NIL money'], ['up', 'Performance']] },
+    ] },
+  midterms: { title: 'Eligibility Watch', icon: '📚', def: 'study',
+    flavor: "You're one failed midterm from academic probation. The playbook is thick, but so is the econ textbook.",
+    options: [
+      { key: 'study', label: 'Lock in at the library', hint: 'Six espressos. Zero distractions.', fx: [['up', 'Performance'], ['down', 'NIL time']] },
+      { key: 'tutor', label: "Coach's study hall", hint: 'Mandatory hours. Safe and boring.', fx: [['up', 'Legacy']] },
+      { key: 'wing', label: 'Wing it', hint: 'Ball IS your major.', fx: [['up', 'Pass: campus legend'], ['down', 'Fail: suspended']] },
+    ] },
+  nil: { title: 'The Bag Arrives', icon: '💰', def: 'local',
+    flavor: 'Two NIL offers hit your DMs the same morning: the hometown car dealership, and a national energy-drink campaign.',
+    options: [
+      { key: 'local', label: 'Hometown dealership', hint: 'Your face on the interstate billboard forever.', fx: [['up', 'NIL money'], ['up', 'Legacy']] },
+      { key: 'national', label: 'National campaign', hint: 'Big checks, red-eye flights to shoots.', fx: [['up', 'Big NIL money'], ['down', 'Performance']] },
+      { key: 'decline', label: 'Turn both down', hint: 'No distractions. The bag can wait.', fx: [['up', 'Performance'], ['up', 'Legacy']] },
+    ] },
+  battle: { title: 'The Five-Star Arrives', icon: '⚔️', def: 'outwork',
+    flavor: '{school} just signed the #1 recruit in the country... at YOUR position. Camp opens Monday.',
+    options: [
+      { key: 'outwork', label: 'Outwork him', hint: 'First in, last out. Every rep.', fx: [['up', 'Performance']] },
+      { key: 'mentor', label: 'Mentor him', hint: 'Iron sharpens iron. The room gets stronger.', fx: [['up', 'Legacy']] },
+      { key: 'ultimatum', label: 'Force the coach to choose', hint: "This town isn't big enough for the both of you.", fx: [['up', 'Win: alpha status'], ['down', 'Lose: benched vibes']] },
+    ] },
+  media: { title: 'Rivalry Week Mic', icon: '🎤', def: 'coachspeak',
+    flavor: 'A reporter asks about the rival. The room goes quiet. The camera light is on.',
+    options: [
+      { key: 'bulletin', label: 'Talk your talk', hint: 'Bulletin-board material. Back it up Saturday.', fx: [['up', 'Heisman buzz'], ['down', 'Legacy']] },
+      { key: 'coachspeak', label: '"They\'re a great program"', hint: 'Full robot mode. Nothing to see here.', fx: [['up', 'Performance']] },
+      { key: 'guarantee', label: 'Guarantee the win', hint: 'Say it loud. Now go do it.', fx: [['up', 'Deliver: folk hero'], ['down', 'Bust: eat the clip forever']] },
+    ] },
+  mascot: { title: 'Mascot Beef', icon: '🦉', def: 'ignore',
+    flavor: "The rival's mascot roasted you on TikTok and it has 8 million views. Your teammates are watching you.",
+    options: [
+      { key: 'clapback', label: 'Clap back online', hint: 'Go viral or go home.', fx: [['up', 'NIL clout'], ['down', 'Legacy']] },
+      { key: 'ignore', label: 'Ignore it', hint: 'Scoreboard talks Saturday.', fx: [['up', 'Performance']] },
+      { key: 'heist', label: 'Steal the mascot head', hint: 'A midnight operation. What could go wrong?', fx: [['up', 'Success: folk hero'], ['down', 'Caught: suspended']] },
+    ] },
+  springbreak: { title: 'Spring Break', icon: '🌴', def: 'grind',
+    flavor: 'Half the roster is going to Cabo. The other half is staying for voluntary workouts. Your call.',
+    options: [
+      { key: 'cabo', label: 'Cabo, obviously', hint: 'You only get four spring breaks.', fx: [['up', 'NIL clout'], ['down', 'Performance']] },
+      { key: 'grind', label: 'Stay and train', hint: 'Empty facility. Full focus.', fx: [['up', 'Performance']] },
+      { key: 'beach', label: 'Beach workouts, posted daily', hint: 'Shirtless sprints at sunrise. The algorithm eats.', fx: [['up', 'NIL clout']] },
+    ] },
+  dm: { title: 'The DM', icon: '💬', def: 'lowkey',
+    flavor: 'A verified influencer with 4M followers slides into your DMs after the bowl game.',
+    options: [
+      { key: 'public', label: 'Hard launch', hint: 'Every tailgate knows her name now.', fx: [['up', 'Big NIL clout'], ['down', 'Performance']] },
+      { key: 'lowkey', label: 'Keep it lowkey', hint: 'Situationship security.', fx: [['up', 'NIL clout']] },
+      { key: 'read', label: 'Leave her on read', hint: 'Locked in. The group chat is furious.', fx: [['up', 'Performance'], ['up', 'Legacy']] },
+    ] },
+  portal: { title: 'Portal Season', icon: '🌀', def: 'stay',
+    flavor: "Season's over and your phone buzzes: a blue blood \"would love to connect.\" Tampering? Never heard of her.",
+    options: [
+      { key: 'stay', label: 'Stay loyal to {school}', hint: 'Finish what you started. The fans will remember.', fx: [['up', 'Legacy'], ['up', 'Performance']] },
+      { key: 'enter', label: 'Enter the portal', hint: 'New school, new bag, new SportsCenter graphic.', fx: [['up', 'NIL money'], ['neu', 'New school']] },
+      { key: 'test', label: 'Test the waters, come back', hint: 'Take the calls. Leak the screenshots.', fx: [['up', 'NIL money'], ['down', 'Legacy']] },
+    ] },
+  injury: { title: "The Trainer's Room", icon: '🏥', def: 'sit',
+    flavor: 'Something popped during Tuesday practice. The trainers lay out two roads.',
+    options: [
+      { key: 'sit', label: 'Shut it down, heal up', hint: 'Miss the middle of the season, come back whole.', fx: [['down', 'Games this year'], ['up', 'No lasting damage']] },
+      { key: 'play', label: 'Tape it up and play', hint: "Legends don't sit. Bodies disagree.", fx: [['up', 'Games this year'], ['down', 'Lasting decline']] },
+    ] },
+  draft: { title: 'The Decision', icon: '📋', def: 'return',
+    flavor: 'Your draft evaluation is in, and ESPN has a countdown clock with your name on it.',
+    options: [
+      { key: 'declare', label: 'Declare for the NFL Draft', hint: 'The tape is done. Secure the bag.', fx: [['neu', 'Career ends now'], ['up', 'Draft stock locked']] },
+      { key: 'return', label: 'Run it back', hint: 'One more year. Unfinished business.', fx: [['up', 'Legacy'], ['up', 'One more season']] },
+    ] },
+};
+
 /* ===== College career sim - deterministic, seeded from the build (same contract as the
-   other games: same build -> same career, fair + shareable). 3-5 seasons: elite builds
-   declare for the draft after their junior year, low-end builds grind out five. ===== */
-function simulateCareer(filled, finalOvr, school) {
+   other games: same build + same picks -> same career). 3-5 seasons: elite builds declare
+   for the draft after their junior year, low-end builds grind out five. ===== */
+function simulateCareer(filled, finalOvr, school, choices) {
   const vals = {};
   for (const s of SLOTS) vals[s.key] = filled[s.key].value;
   const seed = SLOTS.map(s => `${s.key}:${vals[s.key]}:${filled[s.key].name}`).join('|');
   const rng = seededRandom(seed + '|cfb-career-' + POS.key + '-v1');
   const role = positionRole(vals);
-  const prestige = schoolPrestige(school);
 
   const years = finalOvr >= 88 ? 3 : finalOvr >= 72 ? 4 : 5;
   const CLASSES = ['Freshman', 'Sophomore', 'Junior', 'Senior', 'Super Senior'];
   const CLS_AB = ['FR', 'SO', 'JR', 'SR', 'SR+'];
+
+  // ---- decision-event machinery (inert when choices == null) ----
+  const evOn = Array.isArray(choices);
+  const dRng = seededRandom(seed + '|cfb-decisions-v1');
+  const FRESH_POOL = ['party', 'frat', 'roommate', 'midterms'];
+  const MID_POOL = ['nil', 'battle', 'media', 'mascot', 'springbreak', 'dm', 'portal'];
+  // fixed draw count: plan + risk rolls never depend on career length or picks
+  const evFresh = FRESH_POOL[Math.floor(dRng() * FRESH_POOL.length)];
+  const evMidA = MID_POOL[Math.floor(dRng() * MID_POOL.length)];
+  const twoMids = dRng() < 0.55;
+  let evMidB = MID_POOL[Math.floor(dRng() * MID_POOL.length)];
+  if (evMidB === evMidA) evMidB = MID_POOL[(MID_POOL.indexOf(evMidA) + 1) % MID_POOL.length];
+  const bbList = [...BLUE_BLOODS].filter(t => t !== school && CFB.teams[t]);
+  const transferSchool = bbList.length ? bbList[Math.floor(dRng() * bbList.length)] : school;
+  const risk = [dRng(), dRng(), dRng()];
+  const evPlan = { 0: evFresh, 1: evMidA };
+  if (twoMids) evPlan[2] = evMidB;
+
+  const decisions = [];
+  const mods = { perf: 0, nilMult: 1, voteBonus: 0, heismanBump: 0, winsBonus: 0 };
+  let pendingDecision = null, choiceIdx = 0, injuryAsked = false, draftAsked = false;
+  let pendingNote = null, pendingMiss = 0, leftEarly = false;
+  let curSchool = school, curPrestige = schoolPrestige(school), transferFlag = null;
+  const takeChoice = () => (choiceIdx < choices.length ? choices[choiceIdx++] : null);
+  const ask = (id, cls, def) => {
+    const d = CFB_EVENTS[id];
+    pendingDecision = { id, age: cls, title: d.title, icon: d.icon,
+      flavor: d.flavor.replace('{school}', curSchool).replace('{pos}', POS.label.toLowerCase()),
+      options: d.options.map(o => ({ ...o, label: o.label.replace('{school}', curSchool) })),
+      def: def || d.def };
+  };
+  function applyChoice(id, pick, cls) {
+    decisions.push({ id, pick, cls });
+    const m = mods;
+    if (id === 'party') { if (pick === 'go') { m.nilMult *= 1.12; m.perf -= 0.012; } else if (pick === 'stay') m.perf += 0.012; else { m.nilMult *= 1.06; m.voteBonus += 1; } }
+    else if (id === 'frat') { if (pick === 'pledge') { m.nilMult *= 1.15; m.perf -= 0.010; } else if (pick === 'decline') m.perf += 0.008; else { m.nilMult *= 1.08; m.voteBonus -= 1; } }
+    else if (id === 'roommate') { if (pick === 'facility') m.perf += 0.012; else if (pick === 'teamhouse') { m.winsBonus += 0.5; m.voteBonus += 1.5; } else { m.nilMult *= 0.9; m.perf += 0.006; } }
+    else if (id === 'midterms') {
+      if (pick === 'study') { m.perf += 0.010; m.nilMult *= 0.95; }
+      else if (pick === 'tutor') m.voteBonus += 1;
+      else if (risk[0] < 0.6) { m.nilMult *= 1.06; m.voteBonus += 0.5; pendingNote = 'Aced the midterm on zero study hours - the legend of the all-nighter grows.'; }
+      else { pendingMiss = 0.25; pendingNote = '📚 Failed the midterm - academic suspension costs the start of the season.'; }
+    }
+    else if (id === 'nil') { if (pick === 'local') { m.nilMult *= 1.15; m.voteBonus += 1; } else if (pick === 'national') { m.nilMult *= 1.35; m.perf -= 0.008; } else { m.perf += 0.010; m.voteBonus += 1; } }
+    else if (id === 'battle') {
+      if (pick === 'outwork') m.perf += 0.012;
+      else if (pick === 'mentor') m.voteBonus += 2;
+      else if (risk[2] < 0.55) { m.perf += 0.008; m.nilMult *= 1.1; pendingNote = 'The coach picked you. The five-star hit the portal by Friday.'; }
+      else { m.perf -= 0.010; m.voteBonus -= 1; pendingNote = 'The ultimatum backfired - now every practice rep is a referendum.'; }
+    }
+    else if (id === 'media') {
+      if (pick === 'bulletin') { m.heismanBump += 0.8; m.voteBonus -= 0.5; }
+      else if (pick === 'coachspeak') m.perf += 0.005;
+      else if (risk[2] < 0.5) { m.voteBonus += 2; m.nilMult *= 1.1; pendingNote = '🎤 Guaranteed the win and DELIVERED - instant folk hero.'; }
+      else { m.voteBonus -= 1.5; pendingNote = 'The guarantee aged terribly. The clip plays in the rival stadium every year now.'; }
+    }
+    else if (id === 'mascot') {
+      if (pick === 'clapback') { m.nilMult *= 1.1; m.voteBonus -= 1; }
+      else if (pick === 'ignore') m.perf += 0.006;
+      else if (risk[1] < 0.55) { m.voteBonus += 2; m.nilMult *= 1.15; pendingNote = '🦉 The mascot head appeared in the locker room Monday. No one saw anything.'; }
+      else { m.voteBonus -= 2; pendingMiss = 0.12; pendingNote = 'Campus security has cameras, it turns out. One-game suspension for the great mascot heist.'; }
+    }
+    else if (id === 'springbreak') { if (pick === 'cabo') { m.nilMult *= 1.08; m.perf -= 0.008; } else if (pick === 'grind') m.perf += 0.012; else m.nilMult *= 1.12; }
+    else if (id === 'dm') { if (pick === 'public') { m.nilMult *= 1.2; m.perf -= 0.010; } else if (pick === 'lowkey') m.nilMult *= 1.05; else { m.perf += 0.008; m.voteBonus += 0.5; } }
+    else if (id === 'portal') {
+      if (pick === 'stay') { m.voteBonus += 1.5; m.perf += 0.008; }
+      else if (pick === 'enter') {
+        transferFlag = { from: curSchool, to: transferSchool };
+        curSchool = transferSchool; curPrestige = schoolPrestige(curSchool);
+        m.nilMult *= 1.2;
+      }
+      else { m.nilMult *= 1.08; m.voteBonus -= 0.5; }
+    }
+    else if (id === 'injury') { if (pick === 'play') m.perf -= 0.008; }
+    else if (id === 'draft') { if (pick === 'declare') leftEarly = true; else m.voteBonus += 1.5; }
+  }
 
   const seasons = [];
   const agg = { gp: 0, yds: 0, td: 0, wins: 0, losses: 0, heisman: 0, natty: 0, allAmerican: 0, allConf: 0,
     confTitles: 0, bowls: 0, playoffs: 0, earnings: 0, ints: 0,
     passYds: 0, passTd: 0, rushYds: 0, rushTd: 0, carries: 0, rec: 0, recYds: 0, recTd: 0 };
   let wasStarter = false;
-  for (let yr = 0; yr < years; yr++) {
-    const dev = clamp(0.84 + yr * 0.065 + (finalOvr - 75) * 0.002 + bell(rng, 0.02), 0.76, 1.08);
+  const loopMax = evOn && finalOvr >= 80 ? Math.max(years, 4) : years;
+  for (let yr = 0; yr < loopMax; yr++) {
+    if (evOn) {
+      // the draft gate guards the senior season: elites default to declaring (classic length),
+      // 4-year builds default to returning - so ⏩ skip preserves the classic career shape
+      if (yr === 3 && !draftAsked && finalOvr >= 80) {
+        draftAsked = true;
+        const pick = takeChoice();
+        if (pick == null) { ask('draft', CLASSES[2], years === 3 ? 'declare' : 'return'); break; }
+        applyChoice('draft', pick, CLASSES[2]);
+        if (pick === 'declare') break;
+      }
+      if (yr >= years && !draftAsked) break;   // safety: never extend without the gate
+      const evId = evPlan[yr];
+      if (evId) {
+        const pick = takeChoice();
+        if (pick == null) { ask(evId, CLASSES[yr]); break; }
+        applyChoice(evId, pick, CLASSES[yr]);
+      }
+    }
+    const dev = clamp(0.84 + yr * 0.065 + (finalOvr - 75) * 0.002 + bell(rng, 0.02) + mods.perf, 0.76, 1.10);
     const starter = yr > 0 || finalOvr >= 80 || rng() < 0.35;
     const breakout = starter && !wasStarter && yr > 0;
     const share = starter ? 1 : randRange(rng, 0.28, 0.55);
     const hurt = rng() < (POS.key === 'rb' ? 0.11 : 0.075);
-    const gp = hurt ? Math.round(13 * randRange(rng, 0.45, 0.75)) : 13;
+    let volOnce = 1;
+    if (evOn && hurt && yr >= 1 && !injuryAsked) {
+      injuryAsked = true;
+      const pick = takeChoice();
+      if (pick == null) { ask('injury', CLASSES[yr]); break; }
+      applyChoice('injury', pick, CLASSES[yr]);
+      volOnce = pick === 'sit' ? 0.5 : 0.9;
+    }
+    const gp = Math.round(clamp((hurt ? 13 * randRange(rng, 0.45, 0.75) : 13) * volOnce * (1 - pendingMiss), 2, 13));
+    pendingMiss = 0;
 
     let line = '', yds = 0, td = 0, warScore = 0, monster = false;
-    const sea = { yr, cls: CLASSES[yr], clsAb: CLS_AB[yr], team: school, gp, starter, breakout, hurt };
+    const sea = { yr, cls: CLASSES[yr], clsAb: CLS_AB[yr], team: curSchool, gp, starter, breakout, hurt };
+    if (transferFlag) { sea.transfer = transferFlag; transferFlag = null; }
+    if (pendingNote) { sea.decNote = pendingNote; pendingNote = null; }
     if (POS.key === 'qb') {
       const skill = (vals.shortAcc * 0.28 + vals.midAcc * 0.24 + vals.deepAcc * 0.16 + vals.iq * 0.14 + vals.armPower * 0.10 + vals.poise * 0.08) * dev;
       const att = Math.max(20, Math.round((330 + (skill - 60) * 3.2 + bell(rng, 25)) * share * (gp / 13)));
@@ -2596,13 +2808,13 @@ function simulateCareer(filled, finalOvr, school) {
       agg.rec += rec; agg.recYds += recYds; agg.recTd += recTd;
     }
 
-    const wins = clamp(Math.round(5.5 + prestige * 16 + clamp(warScore, -2, 14) * 0.42 + bell(rng, 1.5)), 2, 13);
+    const wins = clamp(Math.round(5.5 + curPrestige * 16 + clamp(warScore, -2, 14) * 0.42 + mods.winsBonus + bell(rng, 1.5)), 2, 13);
     const losses = 13 - wins;
     const playoff = wins >= 11 || (wins === 10 && rng() < 0.35);
-    const natty = playoff && rng() < clamp(0.14 + prestige * 1.2 + (warScore - 8) * 0.015 + Math.max(0, wins - 11) * 0.06, 0.05, 0.5);
-    const confTitle = wins >= 10 && rng() < 0.55 + prestige;
+    const natty = playoff && rng() < clamp(0.14 + curPrestige * 1.2 + (warScore - 8) * 0.015 + Math.max(0, wins - 11) * 0.06, 0.05, 0.5);
+    const confTitle = wins >= 10 && rng() < 0.55 + curPrestige;
     const bowlWin = !playoff && wins >= 6 && rng() < 0.5;
-    const heismanScore = warScore + wins * 0.5 + (POS.key === 'qb' ? 2.5 : 0) + Math.max(0, finalOvr - 88) * 0.35 + bell(rng, 1.2);
+    const heismanScore = warScore + wins * 0.5 + (POS.key === 'qb' ? 2.5 : 0) + Math.max(0, finalOvr - 88) * 0.35 + mods.heismanBump + bell(rng, 1.2);
     const heisman = starter && rng() < clamp((heismanScore - 21) * 0.045, 0, 0.3);
     const heismanFinalist = !heisman && heismanScore >= 19;
     const allAmerican = starter && rng() < clamp((warScore - 8) * 0.16, 0, 0.85);
@@ -2610,38 +2822,54 @@ function simulateCareer(filled, finalOvr, school) {
 
     // NIL money (it's 2026 - the bag is real). Stars at brand schools print.
     let nil = (40e3 + Math.max(0, finalOvr - 62) * 30e3) * (1 + yr * 0.45)
-      * (BLUE_BLOODS.has(school) ? 1.7 : (CFB.teams[school] && CFB.teams[school].color) ? 1.15 : 1)
+      * (BLUE_BLOODS.has(curSchool) ? 1.7 : (CFB.teams[curSchool] && CFB.teams[curSchool].color) ? 1.15 : 1)
       * (starter ? 1 : 0.25) * clamp(warScore / 8, 0.3, 1.6);
     if (heisman) nil *= 3.2;
     else if (monster || allAmerican) nil *= 1.5;
     if (natty) nil *= 1.4;
-    nil = Math.round(Math.min(nil, 8e6));
+    nil = Math.round(Math.min(nil * mods.nilMult, 9e6));
 
     Object.assign(sea, { line, yds, td, wins, losses, warScore: round(warScore, 1), monster,
-      playoff, natty, confTitle, bowlWin, heisman, heismanFinalist, allAmerican, allConf, nil,
-      declaredEarly: years === 3 && yr === 2 });
+      playoff, natty, confTitle, bowlWin, heisman, heismanFinalist, allAmerican, allConf, nil });
     seasons.push(sea);
     agg.gp += gp; agg.yds += yds; agg.td += td; agg.wins += wins; agg.losses += losses;
     agg.heisman += heisman ? 1 : 0; agg.natty += natty ? 1 : 0; agg.allAmerican += allAmerican ? 1 : 0;
     agg.allConf += allConf ? 1 : 0; agg.confTitles += confTitle ? 1 : 0; agg.bowls += bowlWin ? 1 : 0;
     agg.playoffs += playoff ? 1 : 0; agg.earnings += nil;
     wasStarter = wasStarter || starter;
+    if (!evOn && yr + 1 >= years) break;
+    if (evOn && yr + 1 >= loopMax) break;
+    if (evOn && yr + 1 >= years && (yr + 1) !== 3) break;   // only the draft gate extends a career
   }
+
+  // sim halted at an unanswered decision: hand back what's played so far - the playback
+  // shows it, asks the player, and re-runs with the pick appended
+  if (pendingDecision) {
+    return { version: 1, seed, role, pos: POS.short, school, seasons, decisions, pendingDecision };
+  }
+
+  if (!evOn && years === 3) leftEarly = true;
+  if (evOn && !draftAsked && years === 3) leftEarly = true;
+  if (seasons.length) seasons[seasons.length - 1].declaredEarly = leftEarly;
 
   // Legacy score = the College Football Hall of Fame case.
   const ydsK = POS.key === 'qb' ? 0.0012 : POS.key === 'rb' ? 0.0030 : 0.0035;
   const tdK = POS.key === 'qb' ? 0.12 : 0.22;
   const legacy = round(agg.heisman * 28 + agg.natty * 16 + agg.allAmerican * 9 + agg.confTitles * 4
-    + agg.td * tdK + agg.yds * ydsK + agg.wins * 0.35, 1);
+    + agg.td * tdK + agg.yds * ydsK + agg.wins * 0.35 + mods.voteBonus * 2, 1);
   const slamDunk = (agg.heisman >= 1 && agg.natty >= 1) || agg.heisman >= 2;
   const hallOfFame = slamDunk || legacy >= 58 || rng() < clamp((legacy - 40) / 30, 0, 1);
   const peak = seasons.reduce((b, s) => (s.warScore > b.warScore ? s : b), seasons[0]);
 
+  const finalTeam = seasons.length ? seasons[seasons.length - 1].team : school;
   const totals = { ...agg, war: legacy, hofScore: legacy, hallOfFame, pos: POS.key,
     ypc: agg.carries ? round(agg.rushYds / agg.carries, 1) : 0,
     ypr: agg.rec ? round(agg.recYds / agg.rec, 1) : 0 };
-  return { version: 1, seed, role, pos: POS.short, school, draftTeam: school, finalTeam: school,
-    teams: [school], seasons, peakSeason: peak, totals, highlight: bestCareerHighlight(totals, peak) };
+  const career = { version: 1, seed, role, pos: POS.short, school, draftTeam: school, finalTeam,
+    teams: [...new Set(seasons.map(s => s.team))], seasons, peakSeason: peak, totals,
+    highlight: bestCareerHighlight(totals, peak) };
+  if (evOn) career.decisions = decisions;
+  return career;
 }
 
 function bestCareerHighlight(totals, peak) {
@@ -2799,7 +3027,9 @@ function seasonHeadlines(s, idx, total, P, school) {
     if (s.starter) h.push({ text: `${P} wins the starting job as a true freshman at <b>${school}</b>.`, big: true });
     else h.push({ text: `${P} arrives on campus at <b>${school}</b> buried on the depth chart.` });
   }
-  if (s.breakout) h.push({ text: `${P} takes over the starting job at ${school}.`, big: true });
+  if (s.transfer) h.push({ text: `🌀 ${P} hits the portal - <b>transfers to ${s.transfer.to}</b>.`, big: true });
+  if (s.decNote) h.push({ text: s.decNote, big: true });
+  if (s.breakout) h.push({ text: `${P} takes over the starting job at ${s.team || school}.`, big: true });
   if (s.monster) h.push({ text: `${P} goes nuclear: <b>${s.line}</b>.`, big: true });
   if (s.heisman) h.push({ text: `🏆 ${P} strikes the pose in New York - he wins the <b>Heisman Trophy</b>!`, big: true });
   else if (s.heismanFinalist) h.push({ text: `${P} gets the invite to New York as a <b>Heisman finalist</b>.` });
@@ -2860,10 +3090,33 @@ function runCareerPlaythrough() {
   }, _doCareerSim);
 }
 
+// Mid-career decision prompt: a locked overlay (no backdrop/Escape dismissal -
+// the career is paused until the player commits to a path).
+function showDecisionModal(pd, onPick) {
+  $('decAge').textContent = pd.age;
+  $('decTitle').textContent = `${pd.icon} ${pd.title}`;
+  $('decFlavor').textContent = pd.flavor;
+  const wrap = $('decOpts');
+  wrap.innerHTML = '';
+  const arrow = { up: '▲', down: '▼', neu: '•' };
+  pd.options.forEach(o => {
+    const b = document.createElement('button');
+    b.className = 'dec-opt';
+    const fx = (o.fx || []).map(([dir, txt]) => `<span class="dec-fx ${dir}">${arrow[dir]} ${txt}</span>`).join('');
+    b.innerHTML = `<b>${o.label}</b><small>${o.hint}</small>${fx ? `<div class="dec-fx-row">${fx}</div>` : ''}`;
+    b.onclick = () => { Sound.click(); closeOverlay('decisionModal'); onPick(o.key); };
+    wrap.appendChild(b);
+  });
+  Sound.whoosh();
+  openOverlay('decisionModal');
+  gsap.fromTo(wrap.children, { y: 12, opacity: 0 }, { y: 0, opacity: 1, duration: .34, stagger: .09, delay: .12, ease: 'power2.out' });
+}
+
 function _doCareerSim() {
   const school = state.draftTeamAb;
-  const career = state.career = simulateCareer(state.filled, state.finalOvr, school);
-  const seasons = career.seasons;
+  state.careerChoices = [];
+  let career = state.career = simulateCareer(state.filled, state.finalOvr, school, state.careerChoices);
+  let seasons = career.seasons;
   state.simTeam = teamInfo(school);
   state.simName = $('nameInput').value.trim() || 'Your player';
   const P = state.simName;
@@ -2882,24 +3135,43 @@ function _doCareerSim() {
   let runYds = 0, runTd = 0, runWins = 0, runNil = 0;
   const YDS_MILES = POS.key === 'qb' ? [5000, 10000, 15000] : POS.key === 'rb' ? [3000, 5000, 7000] : [2000, 3500, 5000];
   const TD_MILES = POS.key === 'qb' ? [40, 80, 120] : [25, 45, 65];
-  const delay = clamp(4200 / seasons.length, 420, 950);
+  let delay = clamp(4200 / Math.max(3, seasons.length), 420, 950);
   let careerSkip = false;
   const skipBtn = $('skipCareerBtn');
   skipBtn.style.display = 'inline-block';
   skipBtn.onclick = () => { careerSkip = true; Sound.click(); };
   let i = 0;
+  function presentDecision() {
+    const pd = career.pendingDecision;
+    const resume = pick => {
+      state.careerChoices.push(pick);
+      career = state.career = simulateCareer(state.filled, state.finalOvr, school, state.careerChoices);
+      seasons = career.seasons;
+      delay = clamp(4200 / Math.max(3, seasons.length), 420, 950);
+      const d = CFB_EVENTS[pd.id], opt = pd.options.find(o => o.key === pick);
+      addNews(news, { text: `${d.icon} <b>${d.title}:</b> ${opt ? opt.label : pick}`, big: true });
+      try { gtag('event', 'career_decision', { game: 'cfb', decision: pd.id, pick }); } catch (e) {}
+      setTimeout(step, careerSkip ? 0 : 450);
+    };
+    if (careerSkip) return resume(pd.def);   // ⏩ skip: auto-take the default path
+    showDecisionModal(pd, resume);
+  }
   function step() {
-    if (i >= seasons.length) return finishPlaythrough(career);
+    if (i >= seasons.length) {
+      if (career.pendingDecision) return presentDecision();
+      return finishPlaythrough(career);
+    }
     const s = seasons[i]; i++;
     const badges = [s.heisman ? '🏆 HEISMAN' : '', s.natty ? '💍 NATTY' : '', s.confTitle ? 'CONF CHAMP' : '',
       s.allAmerican ? 'ALL-AMERICAN' : '', s.allConf && !s.allAmerican ? 'ALL-CONF' : '',
       s.playoff && !s.natty ? 'PLAYOFF' : '', s.bowlWin ? 'BOWL W' : ''].filter(Boolean).join(' · ');
+    const rowSchool = s.team || school;
     const row = document.createElement('div');
     row.className = 'season-row' + (s.heisman || s.natty || s.monster ? ' big' : '');
-    row.style.borderLeft = `3px solid ${state.simTeam.color}`;
+    row.style.borderLeft = `3px solid ${teamColor(rowSchool)}`;
     row.innerHTML = `<div class="s-main">
         <span class="age">${s.clsAb}</span>
-        ${teamLogoHTML(school, 'sm')}
+        ${teamLogoHTML(rowSchool, 'sm')}
         <span class="s-line">${s.line}</span>
         <span class="s-war">${s.wins}-${s.losses}</span>
       </div>${badges ? `<div class="s-badges">${badges}</div>` : ''}`;
@@ -2911,7 +3183,8 @@ function _doCareerSim() {
     runYds += s.yds; runTd += s.td; runWins += s.wins; runNil += s.nil;
     $('tkK').textContent = runYds.toLocaleString(); $('tkW').textContent = runTd; $('tkWar').textContent = runWins;
     $('tkMoney').textContent = fmtMoney(runNil);
-    const heads = seasonHeadlines(s, i - 1, seasons.length, P, school);
+    if (s.transfer) $('careerSpan').textContent = `${s.transfer.from} → ${s.transfer.to} · ${career.role}`;
+    const heads = seasonHeadlines(s, i - 1, seasons.length, P, s.team || school);
     let milestone = false;
     for (const m of YDS_MILES) if (beforeYds < m && runYds >= m) { heads.push({ text: `${P} racks up career yard <b>#${m.toLocaleString()}</b>.`, big: true }); flashTk('tkK'); milestone = true; }
     for (const m of TD_MILES) if (beforeTd < m && runTd >= m) { heads.push({ text: `${P} scores career touchdown <b>#${m}</b>.`, big: true }); flashTk('tkW'); milestone = true; }
