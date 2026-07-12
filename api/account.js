@@ -951,6 +951,7 @@ module.exports = async (req, res) => {
               f: (cur.f && (!e.f || String(cur.f) < String(e.f))) ? cur.f : String(e.f || cur.f || new Date().toISOString()).slice(0, 40),
               ...(cur.p || e.p ? { p: 1 } : {}),
               ...(cur.l || e.l ? { l: 1 } : {}),
+              ...(typeof (cur.i || e.i) === 'string' && (cur.i || e.i) ? { i: String(cur.i || e.i).slice(0, 300) } : {}),
             };
           }
         }
