@@ -30,6 +30,7 @@
     { "source": "/hoops", "destination": "/build-a-baller.html" },
     { "source": "/college", "destination": "/college.html" },
     { "source": "/hockey", "destination": "/hockey.html" },
+    { "source": "/monster", "destination": "/monster.html" },
     { "source": "/cfb", "destination": "/college.html" },
     { "source": "/striker", "destination": "/build-a-striker.html" },
     { "source": "/keeper", "destination": "/build-a-keeper.html" },

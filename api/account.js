@@ -43,7 +43,7 @@ function findConn() {
 }
 const CONN = findConn();
 const sql = CONN ? neon(CONN) : null;
-const gameOf = g => (g === 'batter' || g === 'baller' || g === 'striker' || g === 'keeper' || g === 'cfb' || g === 'hockey') ? g : 'pitcher';
+const gameOf = g => (g === 'batter' || g === 'baller' || g === 'striker' || g === 'keeper' || g === 'cfb' || g === 'hockey' || g === 'mon') ? g : 'pitcher';
 
 let ready;
 function ensure() {
@@ -927,7 +927,7 @@ module.exports = async (req, res) => {
       // Same always-merge posture as achSync · a fresh device can never wipe the account's binder.
       if (action === 'collectionSync') {
         if (!(await authed(body.sub, body.sessionToken))) return res.status(401).json({ ok: false, error: 'Not signed in' });
-        const GAMES = ['pitcher', 'batter', 'baller', 'striker', 'keeper', 'cfb', 'hockey'];
+        const GAMES = ['pitcher', 'batter', 'baller', 'striker', 'keeper', 'cfb', 'hockey', 'mon'];
         const TIER_RANK = { legend: 5, diamond: 4, gold: 3, silver: 2, bronze: 1, grey: 0 };
         const incoming = (body.collection && typeof body.collection === 'object') ? body.collection : {};
         const base = ((await sql`SELECT collection FROM users WHERE google_sub = ${body.sub}`)[0] || {}).collection || {};
