@@ -225,6 +225,20 @@ word-boundary only (so Nigeria/raccoon/therapist/Hancock/Scunthorpe stay legal).
   browser and server pick the change up automatically since it's one file). Franchise clone
   pages regenerate from `franchise.html` via `gen-franchise-clones.js` as usual.
 
+### Creator referral tracking (?ref= — shipped)
+Influencer/creator attribution for marketing pushes. Hand a creator a link like
+`https://goat-lab.app/?ref=koogs` (works on ANY page/deep link — `/pitching?ref=x`, etc.).
+- **`ref.js`** — tiny drop-in loaded on every page right after `xp.js`. Captures `?ref=<code>`
+  (2–32 chars `[a-z0-9_-]`, lowercased, last-touch wins) → localStorage `pl_ref` + a **30-day
+  cookie `pl_ref`**, then scrubs the param from the address bar. Exposes `window.Ref.code()`.
+- **Attribution is server-side via the cookie** (same-origin fetches carry it automatically —
+  zero per-game code): `api/score.js` `refOf()` tags leaderboard submissions (`scores.ref`),
+  daily-challenge runs (`daily_scores.ref`), and first-spin plays (table `ref_plays(ref, day, n)`).
+  Columns/table auto-create in `ensure()`.
+- **Report:** token-gated `GET /api/score?action=refStats&token=<STATS_TOKEN>[&days=90]` →
+  per-code plays / builds (+ per-game split + avg OVR) / dailies / first–last seen.
+- Campaign docs (creator target list, DM templates, plan) live in **`marketing/`**.
+
 ### Known caveat — anti-cheat
 Scores are submitted from the browser; the server only clamps `ovr` 1–99 and name length, so the OVR
 is currently trust-the-client. Harden later by recomputing OVR server-side from the submitted `build`

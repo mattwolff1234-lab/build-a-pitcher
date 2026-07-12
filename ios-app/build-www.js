@@ -18,7 +18,7 @@ const PAGES = [
 ];
 const SCRIPTS = [
   'switcher.js', 'social.js', 'xp.js', 'achievements.js', 'hotboard.js', 'quests.js',
-  'season-track.js', 'streak-pop.js', 'share-card.js', 'collection.js', 'namefilter.js',
+  'season-track.js', 'streak-pop.js', 'share-card.js', 'collection.js', 'namefilter.js', 'ref.js',
 ];
 const DATA = ['pitchers.json', 'batters.json', 'ballers.json', 'strikers.json', 'keepers.json'];
 const ASSET_DIRS = ['avatars', 'baseball-anim', 'hoops-anim', 'soccer-anim'];

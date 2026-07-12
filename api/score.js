@@ -112,6 +112,16 @@ function stripInsaneCareer(game, build) {
 // Token for admin/maintenance actions (same env + fallback as account.js's pvpMatchStats).
 const ADMIN_TOKEN = process.env.STATS_TOKEN || 'pl-balance-7f3a9c21';
 
+// Creator referral code, set by ref.js as a 30-day cookie when a visitor lands with ?ref=<code>.
+// Cookie first (same-origin fetches carry it automatically, so no per-game code), body.ref as a
+// fallback for clients that want to pass it explicitly. Same shape ref.js enforces; anything
+// else counts as absent — this is attribution, never a reason to reject a submission.
+function refOf(req, body) {
+  const m = /(?:^|;\s*)pl_ref=([^;]+)/.exec(String((req.headers && req.headers.cookie) || ''));
+  const v = String((m && m[1]) || (body && body.ref) || '').trim().toLowerCase();
+  return /^[a-z0-9][a-z0-9_-]{1,31}$/.test(v) ? v : null;
+}
+
 function checkBuild(game, clientOvr, build) {
   const ovr = Math.max(1, Math.min(120, Math.round(Number(clientOvr) || 0)));
   const maxes = SLOT_MAX[game];
@@ -167,6 +177,17 @@ function ensure() {
         UNIQUE (player_key, game, challenge_date)
       )`;
       await sql`CREATE INDEX IF NOT EXISTS idx_daily_scores_date ON daily_scores (game, challenge_date, ovr DESC)`;
+      // Creator referral attribution (?ref=<code> links): tagged onto submissions + a per-day
+      // play tally, read back via the token-gated ?action=refStats.
+      await sql`ALTER TABLE scores ADD COLUMN IF NOT EXISTS ref text`;
+      await sql`ALTER TABLE daily_scores ADD COLUMN IF NOT EXISTS ref text`;
+      await sql`CREATE INDEX IF NOT EXISTS idx_scores_ref ON scores (ref) WHERE ref IS NOT NULL`;
+      await sql`CREATE TABLE IF NOT EXISTS ref_plays (
+        ref text NOT NULL,
+        day date NOT NULL DEFAULT CURRENT_DATE,
+        n bigint NOT NULL DEFAULT 0,
+        PRIMARY KEY (ref, day)
+      )`;
     })().catch(e => { ready = null; throw e; });   // don't cache a transient failure forever
   }
   return ready;
@@ -266,6 +287,39 @@ module.exports = async (req, res) => {
       return res.status(200).json({ ok: true, dates: rows.map(r => r.d), today });
     }
 
+    // GET ?action=refStats&token=<STATS_TOKEN>[&days=90] · creator-referral report. Per ref code:
+    // plays (first spins), leaderboard builds (+ per-game split + avg OVR), daily-challenge runs,
+    // first/last seen. Token-gated like the other admin reads. Example:
+    //   curl -s 'https://goat-lab.app/api/score?action=refStats&token=<STATS_TOKEN>'
+    if (req.method !== 'POST' && (req.query && req.query.action) === 'refStats') {
+      if (String((req.query && req.query.token) || '') !== ADMIN_TOKEN) return res.status(403).json({ ok: false, error: 'Bad token' });
+      const days = Math.max(1, Math.min(365, parseInt(req.query && req.query.days, 10) || 90));
+      const since = new Date(Date.now() - days * 86400000).toISOString();
+      const builds = await sql`SELECT ref, game, count(*)::int AS builds, round(avg(ovr))::int AS avg_ovr,
+          min(created_at) AS first_seen, max(created_at) AS last_seen
+        FROM scores WHERE ref IS NOT NULL AND created_at >= ${since} GROUP BY ref, game`;
+      const dailies = await sql`SELECT ref, count(*)::int AS dailies FROM daily_scores
+        WHERE ref IS NOT NULL AND created_at >= ${since} GROUP BY ref`;
+      const plays = await sql`SELECT ref, sum(n)::bigint AS plays FROM ref_plays
+        WHERE day >= ${since.slice(0, 10)}::date GROUP BY ref`;
+      const out = {};
+      const at = ref => (out[ref] = out[ref] || { ref, plays: 0, builds: 0, dailies: 0, games: {}, avgOvr: null, firstSeen: null, lastSeen: null });
+      for (const r of plays) at(r.ref).plays = Number(r.plays);
+      for (const r of dailies) at(r.ref).dailies = r.dailies;
+      const ovrSum = {};
+      for (const r of builds) {
+        const o = at(r.ref);
+        o.builds += r.builds;
+        o.games[r.game] = (o.games[r.game] || 0) + r.builds;
+        ovrSum[r.ref] = (ovrSum[r.ref] || 0) + r.avg_ovr * r.builds;
+        if (!o.firstSeen || r.first_seen < o.firstSeen) o.firstSeen = r.first_seen;
+        if (!o.lastSeen || r.last_seen > o.lastSeen) o.lastSeen = r.last_seen;
+      }
+      for (const ref of Object.keys(ovrSum)) out[ref].avgOvr = Math.round(ovrSum[ref] / out[ref].builds);
+      const refs = Object.values(out).sort((a, b) => (b.plays + b.builds + b.dailies) - (a.plays + a.builds + a.dailies));
+      return res.status(200).json({ ok: true, days, refs });
+    }
+
     // redactCareers/redactHotCareers also answer GET (?action=…&token=…) so they can be
     // triggered from environments that can only issue GETs. Token-gated either way; a GET
     // never carries apply/dryRun=0, so a stray crawl can never mutate anything.
@@ -281,6 +335,9 @@ module.exports = async (req, res) => {
       if (body.action === 'play' || (req.query && req.query.action === 'play')) {
         const [{ n }] = await sql`INSERT INTO counters (key, n) VALUES ('plays', 1)
           ON CONFLICT (key) DO UPDATE SET n = counters.n + 1 RETURNING n`;
+        const ref = refOf(req, body);
+        if (ref) await sql`INSERT INTO ref_plays (ref, day, n) VALUES (${ref}, CURRENT_DATE, 1)
+          ON CONFLICT (ref, day) DO UPDATE SET n = ref_plays.n + 1`;
         return res.status(200).json({ ok: true, plays: Number(n) });
       }
 
@@ -423,8 +480,8 @@ module.exports = async (req, res) => {
         if (!NameFilter.isClean(cname)) return res.status(400).json({ ok: false, error: BAD_NAME_MSG });
         const cbuild = body.build && typeof body.build === 'object' ? JSON.stringify(stripInsaneCareer(game, body.build)) : null;
         const cd = dailyDate(body.date);
-        await sql`INSERT INTO daily_scores (player_key, game, name, ovr, build, challenge_date)
-          VALUES (${key}, ${game}, ${cname}, ${ovr}, ${cbuild}::jsonb, COALESCE(${cd}::date, CURRENT_DATE))
+        await sql`INSERT INTO daily_scores (player_key, game, name, ovr, build, challenge_date, ref)
+          VALUES (${key}, ${game}, ${cname}, ${ovr}, ${cbuild}::jsonb, COALESCE(${cd}::date, CURRENT_DATE), ${refOf(req, body)})
           ON CONFLICT (player_key, game, challenge_date) DO NOTHING`;
         const [{ rank }] = await sql`SELECT count(*)::int + 1 AS rank FROM daily_scores
           WHERE game = ${game} AND challenge_date = COALESCE(${cd}::date, CURRENT_DATE) AND ovr > ${ovr}`;
@@ -443,7 +500,7 @@ module.exports = async (req, res) => {
       const build = body.build && typeof body.build === 'object' ? JSON.stringify(stripInsaneCareer(game, body.build)) : null;
 
       const [row] = await sql`
-        INSERT INTO scores (name, ovr, build, game) VALUES (${name}, ${ovr}, ${build}::jsonb, ${game})
+        INSERT INTO scores (name, ovr, build, game, ref) VALUES (${name}, ${ovr}, ${build}::jsonb, ${game}, ${refOf(req, body)})
         RETURNING id, name, ovr, created_at`;
       const [{ ahead }] = await sql`
         SELECT count(*)::int AS ahead FROM scores
