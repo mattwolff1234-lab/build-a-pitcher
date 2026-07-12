@@ -23,7 +23,7 @@ function findConn() {
 }
 const CONN = findConn();
 const sql = CONN ? neon(CONN) : null;
-const gameOf = g => (g === 'batter' || g === 'baller' || g === 'striker' || g === 'keeper' || g === 'cfb') ? g : 'pitcher';
+const gameOf = g => (g === 'batter' || g === 'baller' || g === 'striker' || g === 'keeper' || g === 'cfb' || g === 'hockey') ? g : 'pitcher';
 // Per-player key for daily dedup: signed-in account, else device guest id. Trust-the-client, same
 // posture as the rest of the leaderboard · the UNIQUE constraint is what enforces one attempt/day.
 const playerKey = b => (b && b.sub ? 'acct:' + String(b.sub).slice(0, 80) : (b && b.guestId ? 'guest:' + String(b.guestId).slice(0, 80) : null));
@@ -54,6 +54,9 @@ const SLOT_MAX = {
   // CFB27 raw attributes cap at 99; synthesized Primes add +6 and Boost keeps the better per
   // stat (no stacking), so 108 covers every legit slot. Frame = heightToRating (48+(in-66)*3.4).
   cfb:     { _default: 108, Frame: 102 },
+  // Hockey ratings are percentile-curved to a 99 max; synthesized Primes add +6, so 108 covers
+  // every legit slot. Frame = heightToRating (58+(in-73)*4.5, hard-capped 99 -> 6'9" Chara 94).
+  hockey:  { _default: 108, Frame: 96 },
 };
 // Plain weighted-avg OVR · matches batter/baller's client computeOvr exactly, so we can reject an
 // inflated OVR claim. Pitcher uses a value-scaled formula, so we don't recompute it (its slot caps
@@ -68,6 +71,7 @@ const OVR_W = {
   cfb: { 'Short Accuracy': 1.2, 'Mid Accuracy': 1.2, 'Deep Ball': 1.2, 'Arm Power': 1.1, Poise: 1.1, 'Football IQ': 1.1, 'On the Run': 1.0, Wheels: 1.0,
     Vision: 1.2, 'Break Tackle': 1.2, Power: 1.1, Burst: 1.1, Elusiveness: 1.1, 'Ball Security': 1.0, Catching: 1.0,
     Hands: 1.2, Routes: 1.2, Speed: 1.2, Release: 1.1, 'In Traffic': 1.1, Spectacular: 1.1, Agility: 1.0, Leaping: 1.0, Frame: 1.0 },
+  hockey: { Sniping: 1.2, Playmaking: 1.2, Defense: 1.2, Motor: 1.1, Clutch: 1.1, 'Hockey IQ': 1.1, 'Shot Power': 1.0, Physicality: 1.0, Frame: 1.0 },
 };
 // Legend names per game, loaded lazily from the baked data (auto-updates on refresh; only read on
 // submit, so the GET leaderboard hot path is untouched). Blocks impossible "all-legends" builds:
@@ -79,14 +83,14 @@ function legendSet(game) {
     const names = d => new Set((((d && d.legends) || [])).map(p => String((p && p.name) || '').trim().toLowerCase()).filter(Boolean));
     try {
       _legends = { pitcher: names(require('../pitchers.json')), batter: names(require('../batters.json')), baller: names(require('../ballers.json')),
-        striker: names(require('../strikers.json')), keeper: names(require('../keepers.json')) };
+        striker: names(require('../strikers.json')), keeper: names(require('../keepers.json')), hockey: names(require('../hockey.json')) };
       const cfbLeg = require('../cfb.json').legends || {};
       _legends.cfb = names({ legends: [].concat(cfbLeg.qb || [], cfbLeg.rb || [], cfbLeg.wr || []) });
-    } catch (e) { _legends = { pitcher: new Set(), batter: new Set(), baller: new Set(), striker: new Set(), keeper: new Set(), cfb: new Set() }; }
+    } catch (e) { _legends = { pitcher: new Set(), batter: new Set(), baller: new Set(), striker: new Set(), keeper: new Set(), cfb: new Set(), hockey: new Set() }; }
   }
   return _legends[game] || null;
 }
-const LEGEND_CAP = { baller: 6, batter: 7, pitcher: 7, striker: 6, keeper: 6, cfb: 6 };   // observed legit maxima: baller 3, batter 4, pitcher 5; soccer icon odds match baller's 4%
+const LEGEND_CAP = { baller: 6, batter: 7, pitcher: 7, striker: 6, keeper: 6, cfb: 6, hockey: 6 };   // observed legit maxima: baller 3, batter 4, pitcher 5; soccer icon odds match baller's 4%
 
 // Career-total sanity caps · above these is impossible under the tuned sim, so an over-cap
 // career is either a stale pre-fix client or a doctored payload. We KEEP the score (ovr is
@@ -98,6 +102,8 @@ const CAREER_MAX = {
   batter: { hr: 850, h: 4250, rbi: 3600, r: 2300, sb: 730 },
   pitcher: { k: 7100, ip: 4650, wins: 390 },
   cfb: { yds: 17000, td: 170 },
+  // Verified sim maxima (Node harness, 400 maxed hot-boosted all-105 builds: g 1009 · p 2262) + ~5%.
+  hockey: { g: 1060, p: 2380 },
 };
 function stripInsaneCareer(game, build) {
   const caps = CAREER_MAX[game];
@@ -456,7 +462,7 @@ module.exports = async (req, res) => {
     const daily = scope === 'daily';
     const game = gameOf(req.query && req.query.game);
     // Optional sort by a career-total stat (trust-the-client, same as ovr). Whitelisted keys map to build.career.totals fields.
-    const SORT_FIELDS = { k: 'k', war: 'war', wins: 'wins', rings: 'rings', cyYoung: 'cyYoung', hr: 'hr', hits: 'h', mvp: 'mvp', pts: 'pts', reb: 'reb', ast: 'ast', goals: 'goals', assists: 'assists', cs: 'cs', saves: 'saves', yds: 'yds', td: 'td', heisman: 'heisman', natty: 'natty' };
+    const SORT_FIELDS = { k: 'k', war: 'war', wins: 'wins', rings: 'rings', cyYoung: 'cyYoung', hr: 'hr', hits: 'h', mvp: 'mvp', pts: 'pts', reb: 'reb', ast: 'ast', goals: 'goals', assists: 'assists', cs: 'cs', saves: 'saves', yds: 'yds', td: 'td', heisman: 'heisman', natty: 'natty', g: 'g', p: 'p' };
     const sortField = SORT_FIELDS[req.query && req.query.sort] || null;
     const asc = (req.query && req.query.dir) === 'asc';       // flip any stat sort to worst-first
     const worst = (req.query && req.query.sort) === 'ovrAsc'; // ascending OVR ("worst overall")

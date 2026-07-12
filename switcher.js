@@ -20,8 +20,9 @@
     striker: { icon: '⚽', sport: 'soccer',   sportName: 'Soccer',     name: 'Striker', path: LOCAL ? '/build-a-striker.html' : '/striker' },
     keeper:  { icon: '⚽', sport: 'soccer',   sportName: 'Soccer',     name: 'Keeper',  path: LOCAL ? '/build-a-keeper.html' : '/keeper' },
     cfb:     { icon: '🏈', sport: 'cfb',      sportName: 'College Football', name: 'College Star', path: LOCAL ? '/college.html' : '/college' },
+    hockey:  { icon: '🏒', sport: 'hockey',   sportName: 'Hockey',     name: 'Skater',  path: LOCAL ? '/hockey.html' : '/hockey' },
   };
-  const ORDER = ['pitcher', 'batter', 'baller', 'striker', 'keeper', 'cfb'];
+  const ORDER = ['pitcher', 'batter', 'baller', 'striker', 'keeper', 'cfb', 'hockey'];
   const VERSUS = { baseball: LOCAL ? '/versus.html' : '/versus', hoops: LOCAL ? '/versus-hoops.html' : '/versus-hoops', soccer: LOCAL ? '/versus-soccer.html' : '/versus-soccer' };
   const FRANCHISE = { baseball: LOCAL ? '/franchise.html' : '/franchise', hoops: LOCAL ? '/franchise-hoops.html' : '/franchise-hoops', soccer: LOCAL ? '/franchise-soccer.html' : '/franchise-soccer' };
 
@@ -33,6 +34,7 @@
     if (p.indexOf('baller') >= 0 || p.indexOf('hoops') >= 0) return 'baller';
     if (p.indexOf('striker') >= 0) return 'striker';
     if (p.indexOf('keeper') >= 0) return 'keeper';
+    if (p.indexOf('hockey') >= 0) return 'hockey';
     if (p.indexOf('pitch') >= 0) return 'pitcher';
     return null;
   }
@@ -48,7 +50,7 @@
   function todayLocal() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
   function dailyGame(g) {
     const sport = GAMES[g].sport;
-    if (sport === 'hoops' || sport === 'cfb') return g;   // both run their own daily every day
+    if (sport === 'hoops' || sport === 'cfb' || sport === 'hockey') return g;   // each runs its own daily every day
     const days = Math.floor(Date.parse(todayLocal() + 'T00:00:00Z') / 86400000);
     if (sport === 'baseball') return (days % 2 === 1) ? 'pitcher' : 'batter';
     return (days % 2 === 1) ? 'striker' : 'keeper';

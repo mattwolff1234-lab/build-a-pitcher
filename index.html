@@ -468,7 +468,7 @@
         <div class="hh-row"><i>🎯</i><div><b>Daily</b><span>One shot a day, same cards for everyone worldwide. Beat the board, keep your streak alive.</span></div></div>
         <div class="hh-row"><i>⚔️</i><div><b>1v1 Live</b><span>Match a real person, quick-build on a shot clock, watch the showdown. Higher overall wins.</span></div></div>
         <div class="hh-row"><i>🏟️</i><div><b>Franchise</b><span>Sign your creations to a club. Seasons, trades, drafts, titles.</span></div></div>
-        <div class="hh-row"><i>🏀</i><div><b>Four sports</b><span>Baseball, basketball, soccer, and college football. Switch anytime with the chips below.</span></div></div>
+        <div class="hh-row"><i>🏀</i><div><b>Five sports</b><span>Baseball, basketball, soccer, college football, and hockey. Switch anytime with the chips below.</span></div></div>
       </div>
     </details>
   </div>
@@ -543,12 +543,14 @@ gsap.from('.hero p', { y: 10, opacity: 0, duration: .35, delay: .1, ease: 'power
     striker: { icon: '⚽', name: 'Striker', path: LOCAL ? '/build-a-striker.html' : '/striker',  fig: '/striker-figure.png', sport: 'soccer' },
     keeper:  { icon: '⚽', name: 'Keeper',  path: LOCAL ? '/build-a-keeper.html' : '/keeper',   fig: '/keeper-figure.png',  sport: 'soccer' },
     cfb:     { icon: '🏈', name: 'College Star', path: LOCAL ? '/college.html' : '/college', fig: '/cfb-wr-figure.png', sport: 'cfb' },
+    hockey:  { icon: '🏒', name: 'Skater', path: LOCAL ? '/hockey.html' : '/hockey', fig: '/hockey-figure.png', sport: 'hockey' },
   };
   const SPORTS = [
     { id: 'baseball', icon: '⚾', name: 'Baseball', roles: ['pitcher', 'batter'], accent: '#ff7a18', vs: LOCAL ? '/versus.html' : '/versus' },
     { id: 'hoops',    icon: '🏀', name: 'Hoops',    roles: ['baller'],            accent: '#ff8a3c', vs: LOCAL ? '/versus-hoops.html' : '/versus-hoops' },
     { id: 'soccer',   icon: '⚽', name: 'Soccer',   roles: ['striker', 'keeper'], accent: '#4ade80', vs: LOCAL ? '/versus-soccer.html' : '/versus-soccer' },
-    { id: 'cfb',      icon: '🏈', name: 'College',  roles: ['cfb'],               accent: '#d97a32', isNew: true },
+    { id: 'cfb',      icon: '🏈', name: 'College',  roles: ['cfb'],               accent: '#d97a32' },
+    { id: 'hockey',   icon: '🏒', name: 'Hockey',   roles: ['hockey'],            accent: '#54c7ff', isNew: true },
   ];
   const todayLocal = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
   // Baseball and soccer each rotate ONE shared daily between their two games (date-seeded, same

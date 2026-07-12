@@ -1231,6 +1231,7 @@ const SORT_OPTIONS = {
   baller: [{ key: 'ovr', label: 'OVR' }, { key: 'pts', label: 'Points' }, { key: 'reb', label: 'Rebounds' }, { key: 'ast', label: 'Assists' }, { key: 'war', label: 'Win Shares' }, { key: 'rings', label: 'Rings' }, { key: 'mvp', label: 'MVPs' }],
   striker: [{ key: 'ovr', label: 'OVR' }, { key: 'goals', label: 'Goals' }, { key: 'assists', label: 'Assists' }, { key: 'war', label: 'Rating' }, { key: 'rings', label: 'UCLs' }, { key: 'mvp', label: "Ballons d'Or" }],
   keeper: [{ key: 'ovr', label: 'OVR' }, { key: 'cs', label: 'Clean Sheets' }, { key: 'saves', label: 'Saves' }, { key: 'war', label: 'Rating' }, { key: 'rings', label: 'UCLs' }, { key: 'mvp', label: 'Yashin Trophies' }],
+  hockey: [{ key: 'ovr', label: 'OVR' }, { key: 'g', label: 'Goals' }, { key: 'p', label: 'Points' }, { key: 'war', label: 'Point Shares' }, { key: 'rings', label: 'Cups' }, { key: 'mvp', label: 'Harts' }],
 };
 function sortOptionsFor(game) { return SORT_OPTIONS[game] || SORT_OPTIONS.pitcher; }
 function fmtStat(v) { return lbSort === 'war' ? Number(v).toFixed(1) : Math.round(v); }
@@ -1241,6 +1242,7 @@ const LB_SPORTS = [
   { id: 'baseball', icon: '⚾', label: 'Baseball', games: [['pitcher', 'Pitchers'], ['batter', 'Batters']] },
   { id: 'hoops',    icon: '🏀', label: 'Hoops',    games: [['baller', 'Hoopers']] },
   { id: 'soccer',   icon: '⚽', label: 'Soccer',   games: [['striker', 'Strikers'], ['keeper', 'Keepers']] },
+  { id: 'hockey',   icon: '🏒', label: 'Hockey',   games: [['hockey', 'Skaters']] },
 ];
 const lbSportOf = g => LB_SPORTS.find(s => s.games.some(x => x[0] === g)) || LB_SPORTS[0];
 function renderLbNav() {
@@ -3650,7 +3652,7 @@ async function loadSharedBuild(id) {
     if (!data.ok || !data.entry) return;
     const entry = data.entry;
     if (entry.game && entry.game !== LEADERBOARD_GAME) {   // wrong game page for this build · hop over
-      const path = entry.game === 'batter' ? '/batting' : entry.game === 'baller' ? '/hoops' : entry.game === 'striker' ? '/striker' : entry.game === 'keeper' ? '/keeper' : '/pitching';
+      const path = entry.game === 'batter' ? '/batting' : entry.game === 'baller' ? '/hoops' : entry.game === 'striker' ? '/striker' : entry.game === 'keeper' ? '/keeper' : entry.game === 'hockey' ? '/hockey' : '/pitching';
       location.replace(`${path}?b=${entry.id}`);
       return;
     }
@@ -3785,13 +3787,14 @@ function headshotByName(name) {
 const TIER_LABELS = { grey: 'Common', bronze: 'Bronze', silver: 'Silver', gold: 'Gold', diamond: 'Diamond', legend: 'Legend' };
 // Mini team-colored figure for a leaderboard build - per game, keyed by slot label (works for either board).
 // Every game's mini-figure config · leaderboards show all five games' builds on every page.
-const GAME_LABEL = { pitcher: 'Pitcher', batter: 'Batter', baller: 'Hooper', striker: 'Striker', keeper: 'Keeper' };
+const GAME_LABEL = { pitcher: 'Pitcher', batter: 'Batter', baller: 'Hooper', striker: 'Striker', keeper: 'Keeper', hockey: 'Skater' };
 const FIG_CONFIG = {
   pitcher: { base: 'pitcher-figure.png', masks: { 'Velocity': 'seg-pitch_velocity.png', 'Break': 'seg-pitch_movement.png', 'Strikeout': 'seg-k_per_bf.png', 'Ground Ball': 'seg-hr_per_bf.png', 'Command': 'seg-pitch_control.png', 'Clutch': 'seg-pitching_clutch.png', 'Defense': 'seg-fielding_ability.png', 'Frame': 'seg-frame.png', 'Stamina': 'seg-stamina.png' } },
   batter: { base: 'batter-figure.png', masks: { 'Vision': 'bat-seg-plate_vision.png', 'Power': 'bat-seg-power.png', 'Contact': 'bat-seg-contact.png', 'Speed': 'bat-seg-speed.png', 'Clutch': 'bat-seg-batting_clutch.png', 'Discipline': 'bat-seg-plate_discipline.png', 'Frame': 'bat-seg-frame.png', 'Defense': 'bat-seg-fielding_ability.svg' } },
   baller: { base: 'baller-figure.png', masks: { '3-Pointer': 'hoop-seg-threept.png', 'Finishing': 'hoop-seg-finishing.png', 'Dribble': 'hoop-seg-dribble.png', 'Playmaking': 'hoop-seg-playmaking.png', 'Defense': 'hoop-seg-defense.png', 'Rebounding': 'hoop-seg-rebounding.png', 'Speed': 'hoop-seg-speed.png', 'Clutch': 'hoop-seg-clutch.png', 'Frame': 'hoop-seg-frame.png' } },
   striker: { base: 'striker-figure.png', masks: { 'Finishing': 'soc-seg-finishing.png', 'Pace': 'soc-seg-pace.png', 'Shot Power': 'soc-seg-power.png', 'Dribbling': 'soc-seg-dribbling.png', 'Passing': 'soc-seg-passing.png', 'Heading': 'soc-seg-heading.png', 'Physical': 'soc-seg-physical.png', 'Clutch': 'soc-seg-clutch.png', 'Frame': 'soc-seg-frame.png' } },
   keeper: { base: 'keeper-figure.png', masks: { 'Diving': 'kp-seg-diving.png', 'Reflexes': 'kp-seg-reflexes.png', 'Handling': 'kp-seg-handling.png', 'Distribution': 'kp-seg-distribution.png', 'Positioning': 'kp-seg-positioning.png', 'Agility': 'kp-seg-agility.png', 'Command': 'kp-seg-command.png', 'Clutch': 'kp-seg-clutch.png', 'Frame': 'kp-seg-frame.png' } },
+  hockey: { base: 'hockey-figure.png', masks: { 'Sniping': 'hockey-seg-sniping.png', 'Playmaking': 'hockey-seg-playmaking.png', 'Shot Power': 'hockey-seg-shotpower.png', 'Physicality': 'hockey-seg-physical.png', 'Defense': 'hockey-seg-defense.png', 'Hockey IQ': 'hockey-seg-iq.png', 'Motor': 'hockey-seg-motor.png', 'Clutch': 'hockey-seg-clutch.png', 'Frame': 'hockey-seg-frame.png' } },
 };
 function miniFigureHTML(entry, slots) {
   const cfg = FIG_CONFIG[entry.game] || FIG_CONFIG.batter;
@@ -3841,7 +3844,7 @@ function openBuildDetails(entryId) {
 }
 async function loadLeaderboard(scope = lbScope, game = lbGame, sort = lbSort, dir = lbDir) {
   lbScope = scope === 'daily' ? 'daily' : 'global';
-  lbGame = (game === 'batter' || game === 'baller' || game === 'striker' || game === 'keeper') ? game : 'pitcher';
+  lbGame = (game === 'batter' || game === 'baller' || game === 'striker' || game === 'keeper' || game === 'hockey') ? game : 'pitcher';
   lbSort = sortOptionsFor(lbGame).some(o => o.key === sort) ? sort : 'ovr';
   lbDir = dir === 'asc' ? 'asc' : 'desc';
   document.querySelectorAll('.lb-scope-tab').forEach(t => t.classList.toggle('active', t.dataset.scope === lbScope));

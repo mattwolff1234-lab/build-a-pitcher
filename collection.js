@@ -27,6 +27,7 @@
     { id: 'striker', icon: '⚽', label: 'Strikers', noun: 'strikers' },
     { id: 'keeper', icon: '🧤', label: 'Keepers', noun: 'keepers' },
     { id: 'cfb', icon: '🏈', label: 'College', noun: 'college stars' },
+    { id: 'hockey', icon: '🏒', label: 'Skaters', noun: 'skaters' },
   ];
   const TIERS = [
     { id: 'legend', label: 'Legends', icon: '🟣', color: '#c084fc' },
