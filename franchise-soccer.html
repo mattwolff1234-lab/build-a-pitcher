@@ -108,6 +108,29 @@ button.btn.danger { color:#ffdede; background:rgba(255,77,94,.14); border:1px so
 .seat .nm { font-weight:700; font-size:13.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding-right:34px; }
 .seat .meta { font-size:11px; color:var(--muted); }
 .seat .stat { font-size:10.5px; color:var(--accent2); font-family:'Oswald',sans-serif; letter-spacing:.5px; }
+/* ---------- founding identity wheels (logo + jerseys) ---------- */
+.idw-wrap { display:flex; flex-direction:column; align-items:center; gap:14px; margin-top:10px; }
+.idw-stage { position:relative; width:min(78vw, 280px); height:min(78vw, 280px); }
+.idw-pointer { position:absolute; top:-6px; left:50%; transform:translateX(-50%); z-index:5; width:0; height:0;
+  border-left:11px solid transparent; border-right:11px solid transparent; border-top:16px solid var(--accent, #ff7a18);
+  filter:drop-shadow(0 0 8px rgba(255,122,24,.8)); }
+.idw-wheel { position:absolute; inset:0; border-radius:50%; border:4px solid rgba(120,160,210,.35);
+  box-shadow:0 0 0 3px rgba(8,14,24,.9), 0 14px 44px rgba(0,0,0,.55), inset 0 0 40px rgba(0,0,0,.45); will-change:transform; }
+.idw-seg { position:absolute; left:50%; top:50%; font-size:24px; transform-origin:0 0; pointer-events:none;
+  text-shadow:0 2px 8px rgba(0,0,0,.6); }
+.idw-hub { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); z-index:4; width:56px; height:56px;
+  border-radius:50%; display:grid; place-items:center; font-size:26px; background:rgba(8,14,24,.95);
+  border:2px solid rgba(120,160,210,.4); box-shadow:0 6px 18px rgba(0,0,0,.6); }
+.idw-result { min-height:30px; font-family:'Oswald',sans-serif; font-size:17px; letter-spacing:.6px; text-align:center; }
+.idw-result b { color:var(--accent2, #19c6ff); }
+.jpv { position:relative; width:92px; height:78px; margin:0 auto; border-radius:10px 10px 12px 12px; display:none;
+  place-items:center; box-shadow:0 8px 22px rgba(0,0,0,.5), inset 0 0 0 3px rgba(255,255,255,.08); }
+.jpv::before, .jpv::after { content:''; position:absolute; top:0; width:24px; height:30px; }
+.jpv::before { left:-14px; border-radius:8px 2px 6px 8px; transform:rotate(8deg); }
+.jpv::after { right:-14px; border-radius:2px 8px 8px 6px; transform:rotate(-8deg); }
+.jpv span { font-family:'Oswald',sans-serif; font-size:30px; font-weight:700; }
+.jpv .vee { position:absolute; top:0; left:50%; transform:translateX(-50%); width:0; height:0;
+  border-left:13px solid transparent; border-right:13px solid transparent; }
 .seat .ov { position:absolute; right:10px; top:9px; font-family:'Oswald',sans-serif; font-size:20px; font-weight:700; }
 .seat.empty { border-style:dashed; color:var(--dim); align-items:center; justify-content:center; }
 .seat.empty .plus { font-size:20px; color:var(--accent2); }
@@ -501,6 +524,27 @@ button.btn.danger { color:#ffdede; background:rgba(255,77,94,.14); border:1px so
 </div>
 
 <!-- franchise settings -->
+<div class="fr-ov" id="identOv">
+  <div class="panel fr-card" style="max-width:420px;text-align:center">
+    <div class="eyebrow" id="idwStep">Founding · 1 of 2</div>
+    <h1 class="h" style="font-size:26px;margin:6px 0 2px" id="idwTitle">Spin for your <i>Logo</i></h1>
+    <p class="sub" id="idwSub" style="margin-bottom:4px">The wheel decides. The wheel is never wrong.</p>
+    <div class="idw-wrap">
+      <div class="idw-stage">
+        <div class="idw-pointer"></div>
+        <div class="idw-wheel" id="idwWheel"></div>
+        <div class="idw-hub" id="idwHub">❓</div>
+      </div>
+      <div class="idw-result" id="idwResult">&nbsp;</div>
+      <div class="jpv" id="idwJersey"><span class="vee"></span><span id="idwJerseyNum">1</span></div>
+    </div>
+    <button class="btn" id="idwSpin" style="width:100%;margin-top:14px">🎡 SPIN</button>
+    <button class="btn ghost" id="idwRespin" style="width:100%;margin-top:8px;display:none">🔁 Re-spin · 1 left</button>
+    <button class="btn" id="idwNext" style="width:100%;margin-top:8px;display:none">Next · Jerseys ›</button>
+    <button class="btn ghost" id="idwCancel" style="width:100%;margin-top:8px">Cancel</button>
+  </div>
+</div>
+
 <div class="fr-ov" id="settingsOv">
   <div class="panel fr-card">
     <div class="eyebrow">⚙️ Franchise settings</div>
@@ -929,7 +973,7 @@ function rivalOffseason(F, pool) {
 }
 function standingsRows(F) {
   const rows = F.rivals.map((r, i) => ({ name: r.name, w: r.w, l: r.l, ovr: teamOvr(r), me: false, idx: i }));
-  rows.push({ name: F.name, w: F.wins, l: F.losses, ovr: teamOvr({ rot: F.rotation, line: F.lineup }), me: true, idx: -1 });
+  rows.push({ name: (F.logo ? F.logo + ' ' : '') + F.name, w: F.wins, l: F.losses, ovr: teamOvr({ rot: F.rotation, line: F.lineup }), me: true, idx: -1 });
   rows.sort((a, b) => (b.w - a.w) || (a.name < b.name ? -1 : 1));
   return rows;
 }
@@ -1118,7 +1162,9 @@ let tab = 'season';
 function renderHead() {
   if (!F || uiView !== 'game') { $('frHead').style.display = 'none'; $('frTabs').style.display = 'none'; return; }
   $('frHead').style.display = 'flex';
-  $('frName').textContent = F.name;
+  $('frName').textContent = (F.logo ? F.logo + ' ' : '') + F.name;
+  $('frName').style.borderBottom = F.colors ? `3px solid ${F.colors[0]}` : '';
+  $('frName').style.textShadow = F.colors ? `0 0 18px ${F.colors[0]}88` : '';
   $('frSeason').textContent = `Season ${F.season}`;
   $('frRec').textContent = (F.phase === 'season' || F.phase === 'playoffs') ? `${F.wins}–${F.losses}` : '';
   $('frBanners').innerHTML = (F.history || []).filter(h => h.result === 'CHAMPIONS')
@@ -1819,7 +1865,7 @@ function showLegacy() {
   const allL = hist.reduce((s, h) => s + h.l, 0) + (F.phase === 'season' || F.phase === 'playoffs' ? F.losses : 0);
   const titles = hist.filter(h => h.result === 'CHAMPIONS').length;
   const mvps = [...new Set(hist.filter(h => h.mvp).map(h => h.mvp.name))];
-  $('legacyName').textContent = F.name;
+  $('legacyName').textContent = (F.logo ? F.logo + ' ' : '') + F.name;
   $('legacyMeta').innerHTML = `${hist.length} completed season${hist.length === 1 ? '' : 's'} · all-time <b>${allW}–${allL}</b><br>
     ${titles ? `🏆 ${titles} title${titles === 1 ? '' : 's'}` : 'No titles · the almosts hurt the most'}
     ${mvps.length ? `<br>MVPs: ${mvps.slice(0, 4).map(escapeHTML).join(', ')}${mvps.length > 4 ? '…' : ''}` : ''}`;
@@ -1899,7 +1945,7 @@ function championship() {
   F.titles = (F.titles || 0) + 1;
   finishSeason('CHAMPIONS', 'CHAMPIONS!');
   try { if (window.XP) XP.award(150, 'soccer franchise title'); } catch (e) {}
-  $('champName').textContent = F.name;
+  $('champName').textContent = (F.logo ? F.logo + ' ' : '') + F.name;
   $('champMeta').innerHTML = `Season ${F.season} Champions · ${F.wins}–${F.losses} regular season<br>Title #${F.titles} for the franchise`;
   $('champOv').classList.add('show');
   confettiRain($('confettiHost'));
@@ -2096,8 +2142,132 @@ function renderFoundingOpts() {
   cr.querySelectorAll('[data-opt]').forEach(b => b.onclick = () => { newCreate = Number(b.dataset.opt); renderFoundingOpts(); });
   gr.querySelectorAll('[data-opt]').forEach(b => b.onclick = () => { newGames = Number(b.dataset.opt); renderFoundingOpts(); });
 }
+/* ---------- founding identity: name first, then the wheels pick logo + jerseys ---------- */
+const IDENT_LOGOS = ['🦅', '🐻', '⚡', '🔥', '🐺', '🦈', '👑', '🌪️', '💀', '🐂', '🐍', '🦂', '🚀', '⚔️', '🦍', '🌵'];
+const IDENT_JERSEYS = [
+  ['#16324f', '#ff7a18', 'Midnight & Orange'], ['#7a1622', '#ffd23f', 'Crimson & Gold'],
+  ['#0b4d3a', '#eae7dc', 'Forest & Cream'],    ['#3b1f6e', '#19c6ff', 'Royal & Ice'],
+  ['#101418', '#e2e6ec', 'Blackout'],          ['#003087', '#d50a0a', 'Patriot'],
+  ['#ce5c00', '#101418', 'Inferno'],           ['#0c6b8a', '#ffd23f', 'Ocean & Gold'],
+  ['#4d0f28', '#8fd4c1', 'Wine & Mint'],       ['#1b1f3a', '#e03a5e', 'Navy & Rose'],
+  ['#556b2f', '#f0e68c', 'Ranger'],            ['#8a1538', '#c0c0c8', 'Maroon & Steel'],
+];
+const ident = { step: 0, logo: null, jersey: null, respins: 1, spinning: false, spun: false, rot: 0 };
+const SEG_COLORS = ['#1b2a3f', '#131c2c'];
+function idwBuildWheel(items, colorOf) {
+  const wheel = $('idwWheel');
+  const n = items.length, seg = 360 / n;
+  const stops = items.map((it, i) => `${colorOf ? colorOf(it, i) : SEG_COLORS[i % 2]} ${i * seg}deg ${(i + 1) * seg}deg`).join(', ');
+  wheel.style.background = `conic-gradient(${stops})`;
+  wheel.innerHTML = items.map((it, i) => {
+    const a = i * seg + seg / 2;
+    const label = typeof it === 'string' ? it : '👕';
+    const r = 40;   // % of wheel radius where the label sits
+    return `<span class="idw-seg" style="transform:rotate(${a}deg) translate(-50%, -${r}%) translateY(-86px) rotate(${-a}deg)">${label}</span>`;
+  }).join('');
+  gsap.set(wheel, { rotation: 0 });
+  ident.rot = 0;
+}
+function idwSpin(items, onLand) {
+  if (ident.spinning) return;
+  ident.spinning = true;
+  $('idwSpin').disabled = true; $('idwRespin').disabled = true;
+  const n = items.length, seg = 360 / n;
+  const idx = Math.floor(Math.random() * n);
+  // land the CENTER of segment idx under the top pointer
+  const target = 360 * (4 + Math.floor(Math.random() * 2)) + (360 - (idx * seg + seg / 2));
+  ident.rot += target - (ident.rot % 360);
+  gsap.to($('idwWheel'), {
+    rotation: ident.rot, duration: 3.4, ease: 'power4.out',
+    onUpdate: function () {
+      const r = gsap.getProperty($('idwWheel'), 'rotation');
+      if (Math.floor(r / seg) !== Math.floor((this._lastR || 0) / seg)) { if (window.Sound && Sound.tick) Sound.tick(0.3); }
+      this._lastR = r;
+    },
+    onComplete: () => { ident.spinning = false; ident.spun = true; onLand(idx); },
+  });
+}
+function idwShowLogoResult(idx) {
+  ident.logo = IDENT_LOGOS[idx];
+  $('idwHub').textContent = ident.logo;
+  $('idwResult').innerHTML = `Your logo: <b style="font-size:24px">${ident.logo}</b>`;
+  gsap.fromTo($('idwHub'), { scale: 1.7 }, { scale: 1, duration: .5, ease: 'back.out(2.5)' });
+  $('idwSpin').style.display = 'none';
+  $('idwRespin').style.display = ident.respins > 0 ? 'block' : 'none';
+  $('idwRespin').disabled = false;
+  $('idwNext').style.display = 'block';
+  $('idwNext').textContent = 'Next · Jerseys ›';
+}
+function idwShowJerseyResult(idx) {
+  ident.jersey = IDENT_JERSEYS[idx];
+  const [p1, p2, label] = ident.jersey;
+  $('idwResult').innerHTML = `Your colors: <b>${label}</b>`;
+  const j = $('idwJersey');
+  j.style.display = 'grid';
+  j.style.background = p1;
+  j.querySelector('.vee').style.borderTop = `14px solid ${p2}`;
+  const st = document.createElement('style');
+  st.textContent = `#idwJersey::before, #idwJersey::after { background:${p2}; }`;
+  (window.__idwSt && window.__idwSt.remove(), window.__idwSt = st, document.head.appendChild(st));
+  $('idwJerseyNum').style.color = p2;
+  gsap.fromTo(j, { scale: .6, opacity: 0 }, { scale: 1, opacity: 1, duration: .5, ease: 'back.out(2)' });
+  $('idwSpin').style.display = 'none';
+  $('idwRespin').style.display = ident.respins > 0 ? 'block' : 'none';
+  $('idwRespin').disabled = false;
+  $('idwNext').style.display = 'block';
+  $('idwNext').textContent = '🏟️ Found the Franchise';
+}
+function idwStartStep(step) {
+  ident.step = step; ident.respins = 1; ident.spun = false;
+  $('idwSpin').style.display = 'block'; $('idwSpin').disabled = false;
+  $('idwRespin').style.display = 'none';
+  $('idwRespin').textContent = '🔁 Re-spin · 1 left';
+  $('idwNext').style.display = 'none';
+  $('idwResult').innerHTML = '&nbsp;';
+  $('idwJersey').style.display = 'none';
+  if (step === 0) {
+    $('idwStep').textContent = 'Founding · 1 of 2';
+    $('idwTitle').innerHTML = 'Spin for your <i>Logo</i>';
+    $('idwSub').textContent = 'The wheel decides. The wheel is never wrong.';
+    $('idwHub').textContent = '❓';
+    idwBuildWheel(IDENT_LOGOS);
+  } else {
+    $('idwStep').textContent = 'Founding · 2 of 2';
+    $('idwTitle').innerHTML = 'Spin for your <i>Jerseys</i>';
+    $('idwSub').textContent = 'Home threads, chosen by fate.';
+    $('idwHub').textContent = ident.logo || '❓';
+    idwBuildWheel(IDENT_JERSEYS, j => j[0]);
+  }
+}
+$('idwSpin').onclick = () => {
+  if (ident.step === 0) idwSpin(IDENT_LOGOS, idwShowLogoResult);
+  else idwSpin(IDENT_JERSEYS, idwShowJerseyResult);
+};
+$('idwRespin').onclick = () => {
+  if (ident.respins <= 0 || ident.spinning) return;
+  ident.respins--;
+  $('idwRespin').style.display = 'none';
+  $('idwNext').style.display = 'none';
+  $('idwResult').innerHTML = '&nbsp;';
+  if (ident.step === 0) idwSpin(IDENT_LOGOS, idwShowLogoResult);
+  else { $('idwJersey').style.display = 'none'; idwSpin(IDENT_JERSEYS, idwShowJerseyResult); }
+};
+$('idwNext').onclick = () => {
+  if (!ident.spun || ident.spinning) return;
+  if (ident.step === 0) idwStartStep(1);
+  else { closeOv('identOv'); foundFranchise(); }
+};
+$('idwCancel').onclick = () => closeOv('identOv');
+$('identOv').addEventListener('click', e => { if (e.target === $('identOv') && !ident.spinning) closeOv('identOv'); });
+
 $('newGo').onclick = () => {
   if (window.NameFilter && !NameFilter.isClean($('newName').value || '')) { toast("🚫 That team name isn't allowed — pick a different one."); return; }
+  ident.logo = null; ident.jersey = null;
+  idwStartStep(0);
+  $('identOv').classList.add('show');
+};
+
+function foundFranchise() {
   if (W.active == null) W.active = [0, 1, 2].find(i => !W.saves[i]) ?? 0;
   const name = ($('newName').value || '').trim().slice(0, 24) || 'The Underdogs';
   F = {
@@ -2109,11 +2279,13 @@ $('newGo').onclick = () => {
     wins: 0, losses: 0, day: 0, rivals: [], playoffs: null,
     tradesIn: 0, tradesUser: 0, tradeLog: [],
     history: [], titles: 0,
+    logo: ident.logo || '', colors: ident.jersey ? [ident.jersey[0], ident.jersey[1]] : null,
+    jerseyName: ident.jersey ? ident.jersey[2] : '',
   };
   F.rivals = mkRivals(F.id, 1, POOL);   // the league exists from day one · go scout it
   save(); render();
-  toast(`${name} founded. Now build that roster.`);
-};
+  toast(`${ident.logo || ''} ${name} founded · rocking the ${ident.jersey ? ident.jersey[2] : ''} jerseys. Now build that roster.`);
+}
 
 /* ---------- ⚙️ settings overlay (roster phase; season length applies at next first pitch) ---------- */
 let setDraft = null;
