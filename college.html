@@ -470,6 +470,17 @@
     .cc-top .cc-ovr { font-size:28px; }
     .cc-line b { font-size:16px; }
   }
+  /* Go Pro CTA - the one clear next step after the college verdict */
+  .gopro-cta { max-width:430px; margin:18px auto 4px; padding:18px 18px 14px; border-radius:16px; text-align:center;
+    border:1px solid rgba(255,122,24,.45); background:linear-gradient(165deg, rgba(255,122,24,.15), rgba(9,15,25,.65) 62%);
+    box-shadow:0 0 34px -10px rgba(255,122,24,.5); }
+  .gp-kick { font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:3px; text-transform:uppercase; color:var(--accent2); }
+  .gp-proj { font-family:'Oswald',sans-serif; font-size:15px; letter-spacing:.4px; color:var(--ink); margin:7px 0 13px; line-height:1.4; }
+  .gp-big { width:100%; font-size:16px; padding:14px 20px; animation:goProPulse 2s ease-in-out infinite; }
+  @keyframes goProPulse { 0%,100%{ box-shadow:0 6px 20px rgba(240,106,12,.45); } 50%{ box-shadow:0 6px 34px rgba(240,106,12,.9), 0 0 26px rgba(25,198,255,.28); } }
+  .gp-skip { display:block; margin:11px auto 0; padding:6px 10px; background:none; border:none; color:var(--muted);
+    font-family:'Oswald',sans-serif; font-size:11.5px; letter-spacing:1.2px; text-transform:uppercase; }
+  .gp-skip:hover { color:var(--ink); box-shadow:none; transform:none; border:none; background:none; }
   .submit-row { display:flex; gap:8px; justify-content:center; max-width:380px; margin:0 auto; }
   .submit-row input { flex:1; min-width:0; font:inherit; font-size:15px; color:var(--ink); padding:11px 14px;
     border-radius:9px; border:1px solid var(--line); background:rgba(255,255,255,.04); outline:none; }
@@ -879,7 +890,13 @@
 
       <div id="careerCard" class="career-card" style="display:none"></div>
 
-      <button id="goProBtn" class="primary" style="display:none;margin:14px auto 2px">🏈 Enter the NFL Draft</button>
+      <div id="goProCta" class="gopro-cta" style="display:none">
+        <div class="gp-kick">Next · The NFL is Calling</div>
+        <div class="gp-proj" id="goProProj"></div>
+        <button id="goProBtn" class="primary gp-big">🏈 Declare for the NFL Draft</button>
+        <button id="goProSkip" class="gp-skip">Stay a college legend · finish here</button>
+      </div>
+      <button id="goProGhost" class="ghost-btn" style="display:none">🏈 Changed your mind? Enter the NFL Draft</button>
       <div id="submitRow" class="submit-row" style="display:none">
         <button id="saveHofBtn" class="save-hof-btn">💾 Save to my Hall of Fame</button>
         <button id="submitBtn" class="primary">Submit to Leaderboard</button>
@@ -1264,7 +1281,7 @@ const SORT_OPTIONS = {
   striker: [{ key: 'ovr', label: 'OVR' }, { key: 'goals', label: 'Goals' }, { key: 'assists', label: 'Assists' }, { key: 'war', label: 'Rating' }, { key: 'rings', label: 'UCLs' }, { key: 'mvp', label: "Ballons d'Or" }],
   keeper: [{ key: 'ovr', label: 'OVR' }, { key: 'cs', label: 'Clean Sheets' }, { key: 'saves', label: 'Saves' }, { key: 'war', label: 'Rating' }, { key: 'rings', label: 'UCLs' }, { key: 'mvp', label: 'Yashin Trophies' }],
   hockey: [{ key: 'ovr', label: 'OVR' }, { key: 'g', label: 'Goals' }, { key: 'p', label: 'Points' }, { key: 'war', label: 'Point Shares' }, { key: 'rings', label: 'Cups' }, { key: 'mvp', label: 'Harts' }],
-  mon: [{ key: 'ovr', label: 'OVR' }, { key: 'w', label: 'Wins' }, { key: 'sweeps', label: 'Sweeps' }, { key: 'war', label: 'Battle Rating' }, { key: 'rings', label: 'Titles' }, { key: 'mvp', label: 'Worlds' }],
+  mon: [{ key: 'ovr', label: 'OVR' }, { key: 'w', label: 'Wins' }, { key: 'badges', label: 'Badges' }, { key: 'war', label: 'Battle Rating' }, { key: 'rings', label: 'Leagues' }, { key: 'mvp', label: 'Worlds' }],
 };
 function sortOptionsFor(game) { return SORT_OPTIONS[game] || SORT_OPTIONS.cfb; }
 function fmtStat(v) { return lbSort === 'war' ? Number(v).toFixed(1) : Math.round(v); }
@@ -1391,6 +1408,14 @@ async function init() {
   $('buildTab').onclick = () => Sound.click();
   $('simBtn').onclick = runCareerPlaythrough;
   $('goProBtn').onclick = runNflPlaythrough;
+  $('goProGhost').onclick = runNflPlaythrough;
+  $('goProSkip').onclick = () => {
+    Sound.click();
+    $('goProCta').style.display = 'none';
+    $('goProGhost').style.display = 'inline-block';
+    $('submitRow').style.display = 'flex';
+    gsap.fromTo($('submitRow'), { y: 8, opacity: 0 }, { y: 0, opacity: 1, duration: .4 });
+  };
   $('submitBtn').onclick = submitScore;
   $('nameInput').addEventListener('keydown', e => { if (e.key === 'Enter') runCareerPlaythrough(); });
   document.querySelectorAll('.lb-scope-tab').forEach(t => t.onclick = () => loadLeaderboard(t.dataset.scope, lbGame));
@@ -3496,13 +3521,19 @@ function finishPlaythrough(career) {
   setTimeout(() => {
     $('careerCard').style.display = 'block';
     gsap.fromTo($('careerCard'), { y: 14, opacity: 0, scale: .97 }, { y: 0, opacity: 1, scale: 1, duration: .55, ease: 'back.out(1.5)' });
-    $('submitRow').style.display = 'flex';
     const shb = $('saveHofBtn'); shb.disabled = false; shb.textContent = '💾 Save to my Hall of Fame';
-    gsap.fromTo($('submitRow'), { y: 8, opacity: 0 }, { y: 0, opacity: 1, duration: .4, delay: .2 });
     if (!career.nfl) {
-      const gp = $('goProBtn');
-      gp.style.display = 'inline-block';
-      gsap.fromTo(gp, { scale: .9, opacity: 0 }, { scale: 1, opacity: 1, duration: .4, delay: .35, ease: 'back.out(1.6)' });
+      // the one clear next step: declare for the draft (or explicitly stay). Save/Submit wait
+      // until the story is finished, so leaderboard entries carry the full arc.
+      $('submitRow').style.display = 'none';
+      $('goProGhost').style.display = 'none';
+      const cta = $('goProCta');
+      $('goProProj').textContent = draftProjection(career.totals, state.finalOvr) + ' — but nothing is guaranteed on Sundays.';
+      cta.style.display = 'block';
+      gsap.fromTo(cta, { y: 14, opacity: 0, scale: .96 }, { y: 0, opacity: 1, scale: 1, duration: .5, delay: .45, ease: 'back.out(1.5)' });
+    } else {
+      $('submitRow').style.display = 'flex';
+      gsap.fromTo($('submitRow'), { y: 8, opacity: 0 }, { y: 0, opacity: 1, duration: .4, delay: .2 });
     }
     updateResimBtn();
   }, 550);
@@ -3828,7 +3859,8 @@ function nflStripHTML(nfl) {
 function runNflPlaythrough() {
   if (!state.career || state.career.nfl || state.nflRunning) return;
   state.nflRunning = true;
-  $('goProBtn').style.display = 'none';
+  $('goProCta').style.display = 'none';
+  $('goProGhost').style.display = 'none';
   Sound.click();
   const nfl = simulateNflCareer(state.career, state.finalOvr);
   const P = state.simName || 'Your player';
@@ -3890,6 +3922,9 @@ function runNflPlaythrough() {
       buildCard(state.career, verdict, hofVoteLine(t, state.finalOvr).voteLine);
       const shb = $('saveHofBtn');
       if (shb && shb.textContent === '✓ Saved') { shb.disabled = false; shb.textContent = '💾 Save to my Hall of Fame'; }
+      $('submitRow').style.display = 'flex';
+      gsap.fromTo($('submitRow'), { y: 8, opacity: 0 }, { y: 0, opacity: 1, duration: .4, delay: .3 });
+      setTimeout(() => $('careerCard').scrollIntoView({ behavior: 'smooth', block: 'center' }), 700);
       state.nflRunning = false;
     }
   });
@@ -4302,7 +4337,8 @@ function reset() {
   state.strip = null;
   state.career = null;
   state.nflRunning = false;
-  if ($('goProBtn')) $('goProBtn').style.display = 'none';
+  if ($('goProCta')) $('goProCta').style.display = 'none';
+  if ($('goProGhost')) $('goProGhost').style.display = 'none';
   state.scoutTarget = null; state.resimSalt = ''; state.resimN = 0;
   updateScoutUI(); if ($('resimBtn')) $('resimBtn').style.display = 'none';
   state.draftTeamAb = null;
