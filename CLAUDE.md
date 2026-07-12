@@ -417,6 +417,83 @@ normal draft loop runs. Cloned from `build-a-baller.html` (build script pattern 
 
 ---
 
+## Hockey — "Rink Lab" (built 2026-07-12, NOT yet pushed) — `hockey.html` at `/hockey`, game key `hockey`
+Cloned from `build-a-baller.html` via anchored transform (CFB recipe; transform scripts were
+session-scratch, not committed). **9 slots**, single position ("Skater" — goalies excluded like
+RPs in the pitcher game).
+- **Data:** `node fetch-hockey.js` → `hockey.json` `{pool, prime, legends}`. Source = the **open
+  official NHL stats API** (`api.nhle.com/stats/rest` summary+realtime+bios, season constant
+  `SEASON` in the script — bump to 20262027 mid-next-season). There is NO public ratings DB (EA's
+  drop-api 204s on every slug incl. Madden), so ratings are **derived from real stats**: 8
+  attribute composites (goals+sh% → Sniping, assists → Playmaking, shots → Shot Power, hits+weight
+  → Physicality, blocks/+- → Defense, takeaway-giveaway → Hockey IQ, GWG+OTG → Clutch, TOI →
+  Motor), each rank-percentiled through `curve()` onto 40-99. **Card OVR = production composite**
+  (points + TOI + defensive value) through piecewise anchors tuned to sibling tier spreads
+  (median 73, ~14% diamond) — NOT the avg of attributes (that caps stars at 84). Pool = 693
+  skaters (25+ GP). 36 hand-authored retired **legends** (era-lore ratings, ids resolved via
+  `search.d3.nhle.com` → real mugs). Primes synthesized +6/slot. Headshots:
+  `assets.nhle.com/mugs/nhl/latest/<id>.png`.
+- **Slots/weights:** 1.2× Sniping/Playmaking/Defense · 1.1× Motor/Clutch/IQ · 1.0× Shot
+  Power/Physicality/Frame. Frame = height, `58+(in-73)*4.5` (6'9" Chara ≈ 94). Body map:
+  stick blade=Sniping, hands=Playmaking, shooting arm=Shot Power, shoulders=Physicality,
+  shin pads=Defense, helmet=IQ, legs=Motor, chest=Clutch, core=Frame.
+- **Figure:** AI-generated silhouette `_hockey-source.jpg` (committed) → `make-hockey-figure.py`
+  → `make-hockey-masks.py` (anchors in file). Stage aspect **1086/1063**.
+- **Career sim** (seed `|hockey-career-v1`, decision events = same engine, `|decisions-v1`
+  stream): ages 19→~40s, G/A/P seasons, Hart/Art Ross/Rocket/Selke/Calder/Conn Smythe/First
+  All-Star Team, Stanley Cups (💍 stays the rings emoji in badges/sorts), 895-goal +
+  2,858-point record-chase ticker milestones, NHL-scale salaries. **Tuned** (Node harness:
+  extract inline script, slice sim fns — see git history of this commit): 99 OVR = 100% HOF /
+  2.7 Harts / 778 avg career G / max 67-goal season; 90 = 100% HOF; 85 = 67%; 80 = 17%; ≤77 ≈ 0.
+  Maxed hot-boost-style all-105 builds avg 948 G (Gretzky's 894 is beatable by god-builds ON
+  PURPOSE; his 2,857 points and 92-goal season stay safe). `CAREER_MAX.hockey = {g:1060, p:2380}`.
+- **Server:** 'hockey' in both `gameOf`s, SLOT_MAX `{_default:108, Frame:96}`, OVR_W by label,
+  LEGEND_CAP 6, sort keys `g`/`p`. `collectionSync` GAMES now covers ALL games (was
+  pitcher/batter/baller only — striker/keeper/cfb binders weren't syncing; fixed in this commit).
+- **v1 scope:** CFB-style cuts — no ads (read `ads.md`), no versus/franchise/social/season-track/
+  switcher on-page. KEPT (unlike CFB v1): achievements + xp + collection + quests + share-card +
+  full daily challenge/streak (runs its own daily every day, keys `pl_dc_*_hockey`,
+  `pl_draft_hockey`, daily seed `pl-daily-<date>-hockey-v1`).
+
+## Monsters — "Monster Lab" (built 2026-07-12, NOT yet pushed) — `monster.html` at `/monster`, game key `mon`
+The Pokémon game. Same transform recipe. **7 slots** (HP/Attack/Defense/Sp. Attack/Sp.
+Defense/Speed + Frame=size).
+- **⚠️ IP posture (Matt's explicit call):** NO Nintendo sprites or official artwork anywhere —
+  cards render a **client-side SVG type badge** (dual-type gradient + type emoji, cached per type
+  pair in `headshot()`). Names + base stats are facts from the **open PokeAPI bulk CSVs**
+  (`fetch-pokemon.js`, 5 requests to raw.githubusercontent.com/PokeAPI). The figure is an
+  ORIGINAL AI-generated kaiju (`_mon-source.jpg`), deliberately not any real Pokémon. Footer
+  disclaims Nintendo/Game Freak/TPC. Don't add sprite URLs back.
+- **Data:** pool = 875 default forms (BST ≥ 280, legendaries excluded); **legends** = 48
+  legendary/mythical BST ≥ 600 (Arceus 99 · Mewtwo 94; sub-legendaries stay in the pool);
+  **Prime = real Mega/G-Max forms** (103 of them — Boost is literally Mega Evolution; incl. the
+  Legends Z-A megas) else synth +6. **Slot ratings = real base stats** `stat*0.68+12` capped 125
+  (Blissey's 255 HP pins the cap; over-99 like Judge). **Card OVR = BST percentile** through
+  anchors `[(0,45),(.5,68),(.9,82),(1,99)]` (diamonds = pseudo-legendaries/UBs/paradoxes).
+  `heightIn` = **decimeters**; Frame = `40+ln(dm/10)*18` log curve; the page's `parseHeightIn`
+  parses "1.7 m". Weights 1.2× Atk/SpA/Spe · 1.1× HP/SpD · 1.0× Def/Frame.
+- **Career sim** (seed `|mon-career-v1`): pro battle-circuit — seasons S1..S~18 (age = season
+  number; decision modal says "Season"), win rate from the whole statline, flawless **sweeps**,
+  the sim's "teams" are the ten **regional Leagues** (Kanto..Hisui; type colors + league colors
+  share one TEAM_COLORS map), 🏆 League titles (rings), **World Championships** (mvp), Rookie
+  Cup, Iron Wall, win-rate crowns, League Hall of Fame, Trainer Draft ceremony. Tuned: 99 OVR =
+  100% HOF / 1.3 Worlds; 90 = 84%; 85 = 36% (bands sit right of other games because mon OVRs
+  run past 99 — a maxed build is ~120). `CAREER_MAX.mon = {w:1410, sweeps:520}` (all-130 abuse
+  ceiling 1339). Sort keys `w`/`sweeps`.
+- **Server/site wiring:** same checklist as hockey (both `gameOf`s, SLOT_MAX `{_default:134,
+  Frame:100}`, OVR_W by label, LEGEND_CAP 5, legends from pokemon.json, hub chip, switcher,
+  binder tab, `/monster` rewrite, leaderboard rows in all sibling pages).
+- **v1 scope:** identical to hockey's.
+
+> **Adding-a-game checklist** (what hockey/mon touched — the next sport follows it): data script
+> → figure+masks scripts → page transform → sim harness verify → `api/score.js` (gameOf,
+> SLOT_MAX, OVR_W, LEGEND_CAP, legendSet, CAREER_MAX, SORT_FIELDS) → `api/account.js` (gameOf,
+> collectionSync GAMES) → `collection.js` GAMES → `switcher.js` (GAMES/ORDER/pageGame/dailyGame)
+> → `index.html` (GAME/SPORTS/copy) → `vercel.json` rewrite → every sibling page's SORT_OPTIONS/
+> LB_SPORTS/lbGame whitelist/GAME_LABEL/FIG_CONFIG/shared-path map.
+
+---
+
 ## 1v1 "Face Off" mode (LIVE) — `versus.html` + `api/match.js` + `api/ably-token.js`
 Live online PvP. Two real players match; one is randomly assigned **Pitcher**, the other **Batter**;
 each **quick-builds** their guy under a shot clock; a seeded GSAP **at-bat** plays on both screens;
