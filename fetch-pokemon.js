@@ -69,6 +69,7 @@ function formName(ident, baseName) {
     const dm = +p.height || 10;   // decimeters
     const c = {
       name, team: (t[0] || 'normal').toUpperCase(),
+      monId: +p.id,   // PokeAPI id -> sprite/artwork URLs in the page's headshot()
       types: t.filter(Boolean),
       pos: t.filter(Boolean).map(cap).join('/'),
       gen: +((speciesById[p.species_id] || {}).generation_id || 1),

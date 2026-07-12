@@ -109,7 +109,7 @@ const CAREER_MAX = {
   // Verified sim maxima (Node harness, 400 maxed hot-boosted all-105 builds: g 1009 · p 2262) + ~5%.
   hockey: { g: 1060, p: 2380 },
   // Verified sim maxima (500 all-130 abuse builds, above any legit draft: w 1339) + margin.
-  mon: { w: 1410, sweeps: 520 },
+  mon: { w: 1410, sweeps: 520, badges: 185 },   // badges hard bound: 8/season * 22-season ceiling
 };
 function stripInsaneCareer(game, build) {
   const caps = CAREER_MAX[game];
@@ -468,7 +468,7 @@ module.exports = async (req, res) => {
     const daily = scope === 'daily';
     const game = gameOf(req.query && req.query.game);
     // Optional sort by a career-total stat (trust-the-client, same as ovr). Whitelisted keys map to build.career.totals fields.
-    const SORT_FIELDS = { k: 'k', war: 'war', wins: 'wins', rings: 'rings', cyYoung: 'cyYoung', hr: 'hr', hits: 'h', mvp: 'mvp', pts: 'pts', reb: 'reb', ast: 'ast', goals: 'goals', assists: 'assists', cs: 'cs', saves: 'saves', yds: 'yds', td: 'td', heisman: 'heisman', natty: 'natty', g: 'g', p: 'p', w: 'w', sweeps: 'sweeps' };
+    const SORT_FIELDS = { k: 'k', war: 'war', wins: 'wins', rings: 'rings', cyYoung: 'cyYoung', hr: 'hr', hits: 'h', mvp: 'mvp', pts: 'pts', reb: 'reb', ast: 'ast', goals: 'goals', assists: 'assists', cs: 'cs', saves: 'saves', yds: 'yds', td: 'td', heisman: 'heisman', natty: 'natty', g: 'g', p: 'p', w: 'w', sweeps: 'sweeps', badges: 'badges' };
     const sortField = SORT_FIELDS[req.query && req.query.sort] || null;
     const asc = (req.query && req.query.dir) === 'asc';       // flip any stat sort to worst-first
     const worst = (req.query && req.query.sort) === 'ovrAsc'; // ascending OVR ("worst overall")
