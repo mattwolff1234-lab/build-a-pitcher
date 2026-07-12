@@ -912,6 +912,13 @@ const WEIGHTS_S = { finishing:1.2, pace:1.2, dribbling:1.1, power:1.1, passing:1
 const WEIGHTS_K = { reflexes:1.2, diving:1.2, positioning:1.1, handling:1.1, clutch:1.1, frame:1.1, command:1.0, distribution:1.0, agility:1.0 };
 function heightToRatingS(inches){ return inches ? (inches > 77 ? Math.min(99, 95+(inches-77)*2) : clamp(Math.round(95-(77-inches)*1.5),1,125)) : 65; }
 function heightToRatingK(inches){ return inches ? clamp(Math.round(38+(inches-64)*4.2),1,125) : 70; }
+// 2026-07-12 1v1 balance: EA GK stats run ~9-10 OVR below striker stats (live: strikers had won
+// 36 of 37 matches, avg OVR 92.5 vs 83.2). VERSUS ONLY - lift low keeper slot values toward the
+// striker scale: v + (110-v)*f converges near the hand-authored icon range, so legends stay on
+// top and nothing explodes. Sim-verified parity: striker 88.9 avg build OVR vs keeper 88.9
+// (p10/med/p90 within 1). If keepers overshoot in pvpMatchStats, shave the big factors first.
+const KP_LIFT = { agility:0.62, distribution:0.36, command:0.36, clutch:0.29, handling:0.22, diving:0.15, positioning:0.15, reflexes:0.08 };
+function curveKp(k,v){ const f=KP_LIFT[k]||0; return Math.round(v + Math.max(0,110-v)*f); }
 
 const ROLE = {
   striker: { data:'strikers.json', figure:'striker-figure.png', slots:STRIKER_SLOTS,
@@ -921,11 +928,13 @@ const ROLE = {
 };
 function slotNumeric(role,p,s){
   if(s.type==='height') return ROLE[role].h2r(p.heightIn);
-  return p[s.key]||0;
+  const v = p[s.key]||0;
+  return (role==='keeper' && v) ? curveKp(s.key, v) : v;
 }
 function slotDisplay(role,p,s){
   if(s.type==='height') return p.height||'-';
-  return p[s.key]||0;
+  const v = p[s.key]||0;
+  return (role==='keeper' && v) ? curveKp(s.key, v) : v;
 }
 function computeOvr(role, filled){
   let vs=0, ws=0;
