@@ -37,6 +37,50 @@
 
   var plugins = (cap && cap.Plugins) || {};
 
+  /* ---- native feel: no long-press text-selection on game UI, no tap flash,
+     no rubber-band overscroll; inputs stay selectable. Tab bar hides under the
+     keyboard (kb-open) so it doesn't ride up mid-screen while typing a name. */
+  var nativeCss = document.createElement('style');
+  nativeCss.textContent =
+    'body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;' +
+    '-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}' +
+    'input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:text}' +
+    'html.kb-open .gnav{display:none!important}';
+  (document.head || document.documentElement).appendChild(nativeCss);
+  if (plugins.Keyboard) {
+    plugins.Keyboard.addListener('keyboardWillShow', function () { document.documentElement.classList.add('kb-open'); });
+    plugins.Keyboard.addListener('keyboardWillHide', function () { document.documentElement.classList.remove('kb-open'); });
+  }
+
+  /* ---- splash: cut it the moment the page is actually ready (config keeps a
+     1.5s failsafe auto-hide in case this never runs) ---- */
+  window.addEventListener('DOMContentLoaded', function () {
+    setTimeout(function () { try { if (plugins.SplashScreen) plugins.SplashScreen.hide(); } catch (e) {} }, 120);
+  });
+
+  /* ---- rate-app prompt at a happy moment: right after finishing a career sim.
+     Asks after the 2nd and 6th career, once each; Apple further rate-limits. ---- */
+  function maybeAskReview() {
+    try {
+      var n = (parseInt(localStorage.getItem('pl_careers') || '0', 10) || 0) + 1;
+      localStorage.setItem('pl_careers', String(n));
+      if ((n === 2 || n === 6) && plugins.InAppReview) {
+        setTimeout(function () { try { plugins.InAppReview.requestReview(); } catch (e) {} }, 2500);
+      }
+    } catch (e) {}
+  }
+  var xpTries = 0;
+  (function wrapXp() {
+    var xp = window.XP;
+    if (xp && xp.award && !xp.__goatWrapped) {
+      var orig = xp.award.bind(xp);
+      xp.__goatWrapped = true;
+      xp.award = function (amt, reason) { if (reason === 'career') maybeAskReview(); return orig.apply(null, arguments); };
+    } else if (!xp || !xp.__goatWrapped) {
+      if (++xpTries < 40) setTimeout(wrapXp, 500);
+    }
+  })();
+
   /* ---- haptics: a light tick on real button taps ---- */
   var lastTap = 0;
   document.addEventListener('click', function (e) {

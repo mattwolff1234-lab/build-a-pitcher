@@ -14,13 +14,13 @@ const PAGES = [
   'index.html', 'pitcher.html', 'build-a-batter.html', 'build-a-baller.html',
   'build-a-striker.html', 'build-a-keeper.html', 'versus.html', 'versus-hoops.html',
   'versus-soccer.html', 'franchise.html', 'franchise-hoops.html', 'franchise-soccer.html',
-  'privacy.html',
+  'college.html', 'privacy.html',
 ];
 const SCRIPTS = [
   'switcher.js', 'social.js', 'xp.js', 'achievements.js', 'hotboard.js', 'quests.js',
   'season-track.js', 'streak-pop.js', 'share-card.js', 'collection.js', 'namefilter.js',
 ];
-const DATA = ['pitchers.json', 'batters.json', 'ballers.json', 'strikers.json', 'keepers.json'];
+const DATA = ['pitchers.json', 'batters.json', 'ballers.json', 'strikers.json', 'keepers.json', 'cfb.json'];
 const ASSET_DIRS = ['avatars', 'baseball-anim', 'hoops-anim', 'soccer-anim'];
 const ASSET_GLOBS = ['.png', '.webp', '.svg', '.webmanifest', '.ico'];
 
