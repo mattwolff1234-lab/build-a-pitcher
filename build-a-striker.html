@@ -1707,7 +1707,7 @@ function logPlay() {
   if (window.__plLogged) return;
   window.__plLogged = true;
   try { gtag('event', 'game_start', { game: 'striker' }); } catch (e) {}
-  fetch('/api/score', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'play', game: 'striker' }) }).catch(function(){});
+  fetch('/api/score', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'play', game: 'striker', guestId: (function(){try{return localStorage.getItem('pl_guestId')||''}catch(e){return ''}})() }) }).catch(function(){});
 }
 function spin() {
   if (state.spinning) return;

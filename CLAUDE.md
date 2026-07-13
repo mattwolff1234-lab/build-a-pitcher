@@ -235,8 +235,12 @@ Influencer/creator attribution for marketing pushes. Hand a creator a link like
   zero per-game code): `api/score.js` `refOf()` tags leaderboard submissions (`scores.ref`),
   daily-challenge runs (`daily_scores.ref`), and first-spin plays (table `ref_plays(ref, day, n)`).
   Columns/table auto-create in `ensure()`.
+- **Unique players:** the `play` POST from every game now sends the device `pl_guestId`, and the
+  server records distinct `(ref, uid)` in `ref_users` — so one person replaying 100× counts ONCE.
+  This `players` count is the creator-payout basis (raw `ref_plays.n` is kept as context only).
 - **Report:** token-gated `GET /api/score?action=refStats&token=<STATS_TOKEN>[&days=90]` →
-  per-code plays / builds (+ per-game split + avg OVR) / dailies / first–last seen.
+  per-code **players** (unique devices/accounts — the bonus basis) / plays (raw sessions) / builds
+  (+ per-game split + avg OVR) / dailies / first–last seen.
 - Campaign docs (creator target list, DM templates, plan) live in **`marketing/`**.
 
 ### Known caveat — anti-cheat

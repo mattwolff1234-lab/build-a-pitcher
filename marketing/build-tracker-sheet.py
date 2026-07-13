@@ -77,7 +77,7 @@ ws = wb.active
 ws.title = "Creators"
 
 info_cols = ["Priority", "Sport", "Segment", "Creator", "Platform & Handle", "Followers", "Style", "Why fit", "Est. rate"]
-track_cols = ["Ref code", "Outreach date", "Channel", "Replied?", "Posted?", "Post type", "New users", "Paid?", "Notes"]
+track_cols = ["Ref code", "Outreach date", "Channel", "Replied?", "Posted?", "Post type", "New players", "Paid?", "Notes"]
 cols = info_cols + track_cols
 widths = [9, 11, 22, 22, 30, 14, 26, 34, 16,  10, 13, 9, 9, 9, 12, 10, 8, 26]
 
@@ -157,7 +157,7 @@ sheet_block(pay, "Pay & Ground Rules", [
     ("b", "$50/week for the first two weeks — a trial run for both of us."),
     ("b", "$10 bonus every time a creator you reached out to posts a video/post."),
     ("b", "$25 bonus for a livestream."),
-    ("b", "$20 for every 1,000 new users your creators send us (tracked through the links — mostly YouTube, X, Twitch)."),
+    ("b", "$10 for every 1,000 new players your creators send us — each person counted once, not raw plays (tracked through the links — mostly YouTube, X, Twitch)."),
     ("b", "All bonuses capped at $500 total."),
     ("b", "Paid every Friday (Venmo/Zelle)."),
     ("b", "If it's clicking after two weeks, we keep going and bump the base."),
@@ -222,7 +222,7 @@ sheet_block(how, "How to use this sheet", [
     ("b", "Sort or filter by Priority (High first) or Sport using the filter arrows on the header row."),
     ("b", "For each creator you contact, fill: Ref code, Outreach date, Channel, then Replied?/Posted?/Paid? as it happens."),
     ("b", "Want real checkboxes? Select the Replied?/Posted?/Paid? columns, then Insert > Checkbox."),
-    ("b", "New users = the number from the tracking-link report (ask [owner] for it); it drives the $20/1,000 bonus."),
+    ("b", "New players = unique people from the tracking-link report, each counted once no matter how many times they play (ask [owner] for it); drives the $10/1,000 bonus."),
     ("b", "Add creators you source yourself to the bottom rows — handle, follower count, sport, and one line on why they fit."),
     ("p", ""),
     ("h", "Ref codes"),

@@ -188,6 +188,15 @@ function ensure() {
         n bigint NOT NULL DEFAULT 0,
         PRIMARY KEY (ref, day)
       )`;
+      // Distinct devices/accounts per ref code, so one person replaying 100 times counts ONCE.
+      // uid = device guestId (or signed-in sub). This is the "new players" number the creator
+      // bonus is paid on; ref_plays.n stays as the raw (inflatable) session count for context.
+      await sql`CREATE TABLE IF NOT EXISTS ref_users (
+        ref text NOT NULL,
+        uid text NOT NULL,
+        first_seen date NOT NULL DEFAULT CURRENT_DATE,
+        PRIMARY KEY (ref, uid)
+      )`;
     })().catch(e => { ready = null; throw e; });   // don't cache a transient failure forever
   }
   return ready;
@@ -288,8 +297,9 @@ module.exports = async (req, res) => {
     }
 
     // GET ?action=refStats&token=<STATS_TOKEN>[&days=90] · creator-referral report. Per ref code:
-    // plays (first spins), leaderboard builds (+ per-game split + avg OVR), daily-challenge runs,
-    // first/last seen. Token-gated like the other admin reads. Example:
+    // players (UNIQUE devices/accounts — the creator-bonus basis), plays (raw first-spin sessions,
+    // inflatable), leaderboard builds (+ per-game split + avg OVR), daily-challenge runs, first/last
+    // seen. Token-gated like the other admin reads. Example:
     //   curl -s 'https://goat-lab.app/api/score?action=refStats&token=<STATS_TOKEN>'
     if (req.method !== 'POST' && (req.query && req.query.action) === 'refStats') {
       if (String((req.query && req.query.token) || '') !== ADMIN_TOKEN) return res.status(403).json({ ok: false, error: 'Bad token' });
@@ -302,8 +312,12 @@ module.exports = async (req, res) => {
         WHERE ref IS NOT NULL AND created_at >= ${since} GROUP BY ref`;
       const plays = await sql`SELECT ref, sum(n)::bigint AS plays FROM ref_plays
         WHERE day >= ${since.slice(0, 10)}::date GROUP BY ref`;
+      // Unique players = distinct devices/accounts per ref (what the creator bonus is paid on).
+      const players = await sql`SELECT ref, count(*)::int AS players FROM ref_users
+        WHERE first_seen >= ${since.slice(0, 10)}::date GROUP BY ref`;
       const out = {};
-      const at = ref => (out[ref] = out[ref] || { ref, plays: 0, builds: 0, dailies: 0, games: {}, avgOvr: null, firstSeen: null, lastSeen: null });
+      const at = ref => (out[ref] = out[ref] || { ref, players: 0, plays: 0, builds: 0, dailies: 0, games: {}, avgOvr: null, firstSeen: null, lastSeen: null });
+      for (const r of players) at(r.ref).players = Number(r.players);
       for (const r of plays) at(r.ref).plays = Number(r.plays);
       for (const r of dailies) at(r.ref).dailies = r.dailies;
       const ovrSum = {};
@@ -316,8 +330,8 @@ module.exports = async (req, res) => {
         if (!o.lastSeen || r.last_seen > o.lastSeen) o.lastSeen = r.last_seen;
       }
       for (const ref of Object.keys(ovrSum)) out[ref].avgOvr = Math.round(ovrSum[ref] / out[ref].builds);
-      const refs = Object.values(out).sort((a, b) => (b.plays + b.builds + b.dailies) - (a.plays + a.builds + a.dailies));
-      return res.status(200).json({ ok: true, days, refs });
+      const refs = Object.values(out).sort((a, b) => (b.players + b.builds + b.dailies) - (a.players + a.builds + a.dailies));
+      return res.status(200).json({ ok: true, days, note: 'players = unique devices/accounts (bonus basis); plays = raw sessions', refs });
     }
 
     // redactCareers/redactHotCareers also answer GET (?action=…&token=…) so they can be
@@ -336,8 +350,14 @@ module.exports = async (req, res) => {
         const [{ n }] = await sql`INSERT INTO counters (key, n) VALUES ('plays', 1)
           ON CONFLICT (key) DO UPDATE SET n = counters.n + 1 RETURNING n`;
         const ref = refOf(req, body);
-        if (ref) await sql`INSERT INTO ref_plays (ref, day, n) VALUES (${ref}, CURRENT_DATE, 1)
-          ON CONFLICT (ref, day) DO UPDATE SET n = ref_plays.n + 1`;
+        if (ref) {
+          await sql`INSERT INTO ref_plays (ref, day, n) VALUES (${ref}, CURRENT_DATE, 1)
+            ON CONFLICT (ref, day) DO UPDATE SET n = ref_plays.n + 1`;
+          // Count this device/account once per ref (the payable "new players" number).
+          const uid = String((body && body.guestId) || (body && body.sub) || '').trim().slice(0, 80);
+          if (uid) await sql`INSERT INTO ref_users (ref, uid) VALUES (${ref}, ${uid})
+            ON CONFLICT (ref, uid) DO NOTHING`;
+        }
         return res.status(200).json({ ok: true, plays: Number(n) });
       }
 
