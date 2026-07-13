@@ -188,13 +188,14 @@ sheet_block(tpl, "Outreach Templates (personalize the [brackets])", [
           "to try out my game? You spin a wheel, land on a random [baseball] player, then build the GOAT using the "
           "best attributes from the guys you get, and you can sim their whole career after. It's free and takes "
           "like 2 min: goat-lab.app/?ref=[code]"),
-    ("p", "Lmk if you'd maybe be interested in making a video/post playing it! No pressure either way."),
+    ("p", "Lmk if you'd be interested in making a video/post playing it! Happy to pay for your time too, "
+          "just let me know your rate."),
     ("p", ""),
     ("h", "1b. Shorter version (DMs do better tight)"),
     ("p", "Hey [Name]! Big fan of your stuff, [that ___ video] was great. Made a free game I think you'd vibe with. "
           "You spin a wheel, land on a random [baseball] player, and build the GOAT from the best attributes, then "
           "sim the career. Takes 2 min: goat-lab.app/?ref=[code]"),
-    ("p", "Lmk if you'd wanna make a video/post on it!"),
+    ("p", "Lmk if you'd wanna make a video/post on it! Happy to pay, what's your rate?"),
     ("p", ""),
     ("h", "Follow-up (once, 5-7 days later, only if no reply)"),
     ("p", "One more nudge and I'll leave you alone! Today's Daily Challenge gives everyone the same cards, so "
