@@ -36,7 +36,7 @@ with open(MD, encoding="utf-8") as f:
                 cur = None
             continue
         if cur and line.startswith("|"):
-            cells = [c.strip().replace("**", "").replace("`", "").strip() for c in line.strip().strip("|").split("|")]
+            cells = [c.strip().replace("**", "").replace("`", "").replace("—", "-").strip() for c in line.strip().strip("|").split("|")]
             if len(cells) != 7:
                 continue
             if cells[0].lower() == "creator" or cells[6].lower() == "priority" or set(cells[0]) <= set("-: "):
@@ -83,7 +83,7 @@ widths = [9, 11, 22, 24, 30, 13, 26, 34,  10, 13, 10, 14, 9, 9, 12, 12, 8, 26]
 
 # title row
 ws.merge_cells("A1:R1")
-t = ws["A1"]; t.value = "GoatLab — Creator Outreach Tracker"
+t = ws["A1"]; t.value = "GoatLab: Creator Outreach Tracker"
 t.font = Font(color="FFFFFF", bold=True, size=15); t.fill = PatternFill("solid", fgColor=NAVY)
 t.alignment = Alignment(vertical="center", horizontal="left", indent=1)
 ws.row_dimensions[1].height = 30
@@ -154,25 +154,25 @@ def sheet_block(ws, title, blocks):
 pay = wb.create_sheet("Pay & Rules")
 sheet_block(pay, "Pay & Ground Rules", [
     ("h", "Pay"),
-    ("b", "$50/week for the first two weeks — a trial run for both of us."),
+    ("b", "$50/week for the first two weeks, a trial run for both of us."),
     ("b", "$10 bonus every time a creator you reached out to posts a video/post."),
     ("b", "$25 bonus for a livestream."),
-    ("b", "$10 for every 1,000 new players your creators send us — each person counted once, not raw plays (tracked through the links — mostly YouTube, X, Twitch)."),
+    ("b", "$10 for every 1,000 new players your creators send us, each person counted once (not raw plays), tracked through the links (mostly YouTube, X, Twitch)."),
     ("b", "All bonuses capped at $500 total."),
     ("b", "Paid every Friday (Venmo/Zelle)."),
     ("b", "If it's clicking after two weeks, we keep going and bump the base."),
     ("p", ""),
     ("h", "How a bonus counts"),
     ("p", "A post only counts once it's LIVE and has the tracking link in it. A shoutout with no link "
-          "doesn't count — we can't track it and it barely sends anyone."),
+          "doesn't count, since we can't track it and it barely sends anyone."),
     ("p", ""),
     ("h", "Ground rules"),
     ("b", "Don't quote a price to creators. Ask what their rate is, log it in the Rate column, and send it to [owner] to approve before committing to anything paid."),
     ("b", "Never say we're affiliated with MLB, MLB The Show, or EA. It's \"real MLB ratings,\" that's it."),
     ("b", "If anyone asks, be upfront you're reaching out on behalf of GoatLab."),
-    ("b", "Keep it human in the DMs — a real person who likes the game, not a bot."),
+    ("b", "Keep it human in the DMs, a real person who likes the game, not a bot."),
     ("b", "Max ~10-15 reach-outs a day per platform. One follow-up only if they ghost (5-7 days later)."),
-    ("b", "Personalize the first line every time — mention a recent post/video. No copy-paste blasts."),
+    ("b", "Personalize the first line every time, mention a recent post/video. No copy-paste blasts."),
     ("p", ""),
     ("h", "Who to target"),
     ("b", "All sports (baseball, basketball, soccer, football) are fair game; gaming creators are a secondary lane."),
@@ -183,19 +183,25 @@ sheet_block(pay, "Pay & Ground Rules", [
 # ============ TAB 3: Templates ============
 tpl = wb.create_sheet("Message Templates")
 sheet_block(tpl, "Outreach Templates (personalize the [brackets])", [
-    ("h", "1. Cold DM — TikTok / Instagram / X (free seeding)"),
-    ("p", "Hey [name] — [one specific line about a recent post of theirs]. I made a free browser game I think "
-          "your audience would eat up: spin a random real [sport] player, choose where each rating goes on his "
-          "body, then simulate his whole career. No download, takes 3 minutes: goat-lab.app/?ref=[code]"),
-    ("p", "No ask — just thought it was your kind of thing. If you ever want to post it, the funniest format we've "
-          "seen is \"building the worst player possible\" and reading the career verdict."),
+    ("h", "1. Cold DM (X / Instagram / TikTok) - the go-to"),
+    ("p", "Hey [Name]! Love your content, [that video/post about ___] was awesome. Was wondering if you'd be down "
+          "to try out my game? You spin a wheel, land on a random [baseball] player, then build the GOAT using the "
+          "best attributes from the guys you get, and you can sim their whole career after. It's free and takes "
+          "like 2 min: goat-lab.app/?ref=[code]"),
+    ("p", "Lmk if you'd maybe be interested in making a video/post playing it! No pressure either way."),
+    ("p", ""),
+    ("h", "1b. Shorter version (DMs do better tight)"),
+    ("p", "Hey [Name]! Big fan of your stuff, [that ___ video] was great. Made a free game I think you'd vibe with. "
+          "You spin a wheel, land on a random [baseball] player, and build the GOAT from the best attributes, then "
+          "sim the career. Takes 2 min: goat-lab.app/?ref=[code]"),
+    ("p", "Lmk if you'd wanna make a video/post on it!"),
     ("p", ""),
     ("h", "Follow-up (once, 5-7 days later, only if no reply)"),
-    ("p", "One more nudge and I'll leave you alone — today's Daily Challenge gives everyone the same cards, so "
+    ("p", "One more nudge and I'll leave you alone! Today's Daily Challenge gives everyone the same cards, so "
           "\"beat my score\" actually works on your audience: goat-lab.app/?ref=[code]"),
     ("p", ""),
-    ("h", "2. Email — YouTube / Twitch (paid)"),
-    ("p", "Subject: Sponsor idea — build-a-99 browser game your audience will get instantly"),
+    ("h", "2. Email (YouTube / Twitch, paid)"),
+    ("p", "Subject: Sponsor idea: build-a-99 browser game your audience will get instantly"),
     ("p", "Hi [name], I'm with GoatLab (goat-lab.app), a free browser game where you spin real players with real "
           "ratings, assign each to a body part, build a 99 OVR, and simulate the career. I'd love to sponsor a video."),
     ("p", "Formats that work: God Squad vs Cursed Squad (best vs worst build), a 1v1 vs a viewer, or \"Beat my "
@@ -203,7 +209,7 @@ sheet_block(tpl, "Outreach Templates (personalize the [brackets])", [
     ("p", "I'd love to sponsor a video. What's your rate for a dedicated video or an integration? You'd use "
           "your tracked link goat-lab.app/?ref=[code] and I'll share the click-to-play numbers. Creative is all "
           "yours; only ask is the link in the description and saying it's free. Interested?"),
-    ("p", "(Don't throw out a dollar number yourself — let them quote it, log it, and I'll approve.)"),
+    ("p", "(Don't throw out a dollar number yourself, let them quote it, log it, and I'll approve.)"),
     ("p", ""),
     ("h", "3. Paid-offer terms (after they say yes AND [owner] approves their rate)"),
     ("b", "Deliverable: [1 dedicated video / 2 posts a week apart / 1 stream segment 20+ min]"),
@@ -225,7 +231,7 @@ sheet_block(how, "How to use this sheet", [
     ("b", "For each creator you contact, fill: Ref code, Outreach date, Channel, then Replied?/Posted?/Paid? as it happens."),
     ("b", "Want real checkboxes? Select the Replied?/Posted?/Paid? columns, then Insert > Checkbox."),
     ("b", "New players = unique people from the tracking-link report, each counted once no matter how many times they play (ask [owner] for it); drives the $10/1,000 bonus."),
-    ("b", "Add creators you source yourself to the bottom rows — handle, follower count, sport, and one line on why they fit."),
+    ("b", "Add creators you source yourself to the bottom rows: handle, follower count, sport, and one line on why they fit."),
     ("p", ""),
     ("h", "Ref codes"),
     ("b", "Each creator gets a short lowercase code (e.g. koogs). [Owner] generates the link goat-lab.app/?ref=<code>."),
