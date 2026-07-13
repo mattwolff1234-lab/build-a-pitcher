@@ -31,6 +31,9 @@ better for creator replies anyway.
   email on their About page, so email those. Everyone else, DM on X.
 - Max ~10-15 reach-outs a day per platform. Only follow up **once** if they ghost (like
   5-7 days later), then move on.
+- **Don't quote a price.** If a creator's open to a paid post, ask what their rate is, drop
+  it in the Rate column of the sheet, and send it to me to approve before you commit to
+  anything. Plenty will do a free game for free, so let them name it first.
 
 ## Tracking
 Every creator gets their own **tracking link** so we can see exactly how many new players

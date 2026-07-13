@@ -44,10 +44,11 @@ Subject: **Sponsor idea: build-a-99 browser game your [Diamond Dynasty] audience
 > - **1v1 vs. a viewer or another creator** — higher OVR wins, instant stakes
 > - **"Beat my Daily"** — you post your score, your audience plays the same cards
 >
-> Offer: **$[X] for one dedicated video** (or $[Y] for an integration + a pinned-comment
-> Daily follow-up a week later). You'd use your tracked link — https://goat-lab.app/?ref=[code]
-> — and I'll share the raw click-to-play numbers with you, so if it converts we both know a
-> repeat deal is worth it.
+> I'd love to sponsor a video — **what's your rate for a dedicated video or an integration?**
+> You'd use your tracked link — https://goat-lab.app/?ref=[code] — and I'll share the raw
+> click-to-play numbers with you, so if it converts we both know a repeat deal is worth it.
+> (Intern note: let the creator name their price; don't quote one. Log it and get owner
+> approval before committing.)
 >
 > Creative is 100% yours; the only ask is the link in the description and saying it's free.
 > Interested?
@@ -79,7 +80,8 @@ Subject: **Sponsor idea: build-a-99 browser game your [Diamond Dynasty] audience
 
 > Awesome. Keeping it simple:
 > - **Deliverable:** [1 dedicated video / 2 TikToks 1 week apart / 1 stream segment ≥20 min]
-> - **Fee:** $[X], paid [50% upfront, 50% on posting / 100% on posting] via [PayPal/etc.]
+> - **Fee:** their quoted rate (they name it; owner approves before committing), paid
+>   [50% upfront, 50% on posting / 100% on posting] via [PayPal/etc.]
 > - **Required:** your tracked link https://goat-lab.app/?ref=[code] in [description/bio/
 >   pinned comment], mention that it's free and browser-based
 > - **Creative control:** fully yours — roast the game if you want, it plays better anyway
