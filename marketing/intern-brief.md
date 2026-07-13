@@ -35,6 +35,25 @@ better for creator replies anyway.
   it in the Rate column of the sheet, and send it to me to approve before you commit to
   anything. Plenty will do a free game for free, so let them name it first.
 
+## The message (your go-to DM)
+Personalize the [brackets] every time, and swap goat-lab.app for the creator's tracked link.
+
+**Main:**
+> Hey [Name]! Love your content, [that video/post about ___] was awesome. Was wondering if
+> you'd be down to try out my game? You spin a wheel, land on a random [baseball] player, then
+> build the GOAT using the best attributes from the guys you get, and you can sim their whole
+> career after. It's free and takes like 2 min: goat-lab.app/?ref=[code]
+>
+> Lmk if you'd be interested in making a video/post playing it! Happy to pay for your time too,
+> just let me know your rate.
+
+**Shorter (DMs do better tight):**
+> Hey [Name]! Big fan of your stuff, [that ___ video] was great. Made a free game I think you'd
+> vibe with. You spin a wheel, land on a random [baseball] player, and build the GOAT from the
+> best attributes, then sim the career. Takes 2 min: goat-lab.app/?ref=[code]
+>
+> Lmk if you'd wanna make a video/post on it! Happy to pay, what's your rate?
+
 ## Tracking
 Every creator gets their own **tracking link** so we can see exactly how many new players
 they send us. For **YouTube especially**, the creator drops the link in their description
