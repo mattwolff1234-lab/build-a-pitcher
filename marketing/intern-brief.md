@@ -45,7 +45,9 @@ link doesn't count — we can't track it and it barely sends anyone anyway.
 - Bonuses on top of that:
   - **$10** every time someone you reached out to actually posts a video/post
   - **$25** for a livestream
-  - Bonuses **capped at $500.**
+  - **$20 for every 1,000 new users** your creators send us — tracked through the
+    links (mostly YouTube, X, and Twitch, since those are the ones we can actually count)
+  - All bonuses **capped at $500** total.
 - Paid **every Friday** (Venmo/Zelle, whatever's easiest for you).
 - If it's clicking after the two weeks, we keep rolling and I'll bump up the base.
 
