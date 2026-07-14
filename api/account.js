@@ -1380,7 +1380,7 @@ module.exports = async (req, res) => {
       // blob (pre-sports) is treated as the baseball save.
       if (action === 'franchiseSync') {
         if (!(await authed(body.sub, body.sessionToken))) return res.status(401).json({ ok: false, error: 'Not signed in' });
-        const sport = (body.sport === 'hoops' || body.sport === 'soccer') ? body.sport : 'baseball';
+        const sport = (body.sport === 'hoops' || body.sport === 'soccer' || body.sport === 'cfb') ? body.sport : 'baseball';
         const inc = body.franchise;
         const [row] = await sql`SELECT franchise FROM users WHERE google_sub = ${body.sub}`;
         let all = (row && row.franchise && typeof row.franchise === 'object') ? row.franchise : {};
