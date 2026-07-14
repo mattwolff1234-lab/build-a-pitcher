@@ -2587,14 +2587,16 @@ async function finishDailyChallenge(ovr, name, build) {
   const mp = markPlayedToday();
   if (mp.firstToday) {
     frozeUsed = mp.frozeUsed;
-    checkStreakMilestone(streak.count);
-    if (window.StreakPop) StreakPop.show({ count: streak.count, frozeUsed: mp.frozeUsed });
+    // Reconcile with the server's authoritative streak (derived from the daily calendar) BEFORE the
+    // celebration, so the pop + milestone show the true streak, not a stale local counter (was "Day 1").
     if (account) {
       try {
         const r = await fetch('/api/account', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'updateStreak', sub: account.sub, sessionToken: account.sessionToken, count: streak.count }) });
         const j = await r.json(); if (j.ok) { streak.count = Math.max(j.streak, streak.count); streak.best = Math.max(j.best, streak.best, streak.count); saveStreak(); renderStreakChip(); }
       } catch (e) {}
     }
+    checkStreakMilestone(streak.count);
+    if (window.StreakPop) StreakPop.show({ count: streak.count, frozeUsed: mp.frozeUsed });
   }
   bumpDailyAch();
   return { ovr, rank, total, isPB, frozeUsed };
