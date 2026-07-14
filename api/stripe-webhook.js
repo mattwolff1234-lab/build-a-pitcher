@@ -25,6 +25,39 @@ function findConn() {
 const CONN = findConn();
 const sql = CONN ? neon(CONN) : null;
 const WHSEC = process.env.STRIPE_WEBHOOK_SECRET || '';
+const STRIPE_KEY = process.env.STRIPE_SECRET_KEY || '';   // needed to look up subscriptions on renewal
+
+// --- GoatLab Pro (subscription) entitlement — stored in users.entitlements jsonb, no new columns.
+async function stripeGet(path) {
+  if (!STRIPE_KEY) return null;
+  const r = await fetch('https://api.stripe.com/v1/' + path, { headers: { authorization: 'Bearer ' + STRIPE_KEY } });
+  return r.ok ? r.json() : null;
+}
+async function setPro(player, patch) {
+  await sql`UPDATE users SET entitlements = COALESCE(entitlements, '{}'::jsonb) || ${JSON.stringify(patch)}::jsonb
+    WHERE google_sub = ${player}`;
+}
+// Grant/extend Pro from a subscription id (checkout.session.completed + every paid invoice).
+async function grantPro(res, subId) {
+  const sub = await stripeGet('subscriptions/' + encodeURIComponent(String(subId || '')));
+  if (!sub || sub.error) return res.status(200).json({ ok: true, ignored: 'sub fetch' });
+  const player = String((sub.metadata && sub.metadata.player_key) || '').slice(0, 80);
+  const end = Number(sub.current_period_end) * 1000;
+  if (!player || !end) return res.status(200).json({ ok: true, ignored: 'no player/end' });
+  const untilISO = new Date(end).toISOString();
+  await setPro(player, { pro_until: untilISO, no_ads_until: untilISO,
+    pro_customer: String(sub.customer || '').slice(0, 80), pro_subscription: String(sub.id || '').slice(0, 80) });
+  return res.status(200).json({ ok: true, pro: player, until: untilISO });
+}
+// Cancel — let Pro lapse at the current period end (immediate cancels put that at ~now).
+async function revokePro(res, sub) {
+  const player = String((sub && sub.metadata && sub.metadata.player_key) || '').slice(0, 80);
+  const end = (Number(sub && sub.current_period_end) * 1000) || Date.now();
+  if (!player) return res.status(200).json({ ok: true, ignored: 'no player' });
+  const untilISO = new Date(end).toISOString();
+  await setPro(player, { pro_until: untilISO, no_ads_until: untilISO, pro_subscription: null });
+  return res.status(200).json({ ok: true, pro_revoked: player, until: untilISO });
+}
 
 // Signature verification needs the EXACT raw bytes Stripe signed — bodyParser stays off.
 module.exports.config = { api: { bodyParser: false } };
@@ -63,22 +96,37 @@ module.exports = async (req, res) => {
     const raw = await readRaw(req);
     if (!verify(raw, req.headers['stripe-signature'])) return res.status(400).json({ ok: false, error: 'bad signature' });
     const event = JSON.parse(raw.toString('utf8'));
-    if (event.type !== 'checkout.session.completed') return res.status(200).json({ ok: true, ignored: event.type });
-    const s = event.data && event.data.object;
-    const sub = s && s.metadata && String(s.metadata.player_key || '').slice(0, 80);
-    const pack = s && s.metadata && Catalog.PACKS[s.metadata.pack];
-    if (!sub || !pack) return res.status(200).json({ ok: true, ignored: 'no metadata' });
-    if (s.payment_status && s.payment_status !== 'paid') return res.status(200).json({ ok: true, ignored: s.payment_status });
-    // Defense-in-depth: the paid amount must match the pack's price (a tampered session
-    // can't buy the big pack for the small price).
-    if (Number(s.amount_total) !== pack.usd) return res.status(200).json({ ok: true, ignored: 'amount mismatch' });
-    const ins = await sql`INSERT INTO coin_ledger (player_key, delta, reason, ref)
-      VALUES (${sub}, ${pack.coins}, ${'buy:' + s.metadata.pack}, ${'stripe:' + String(s.id).slice(0, 100)})
-      ON CONFLICT (ref) DO NOTHING RETURNING id`;
-    if (ins.length) {
-      await sql`UPDATE users SET coins = GREATEST(0, COALESCE(coins, 0) + ${pack.coins}) WHERE google_sub = ${sub}`;
+    const type = event.type;
+    const obj = (event.data && event.data.object) || {};
+
+    // --- GoatLab Pro subscription lifecycle ---
+    if ((type === 'checkout.session.completed' && obj.mode === 'subscription') ||
+        ((type === 'invoice.paid' || type === 'invoice.payment_succeeded') && obj.subscription)) {
+      return await grantPro(res, obj.subscription);
     }
-    return res.status(200).json({ ok: true, credited: !!ins.length });
+    if (type === 'customer.subscription.deleted') {
+      return await revokePro(res, obj);   // obj = the subscription
+    }
+
+    // --- Coin packs (one-time payment) ---
+    if (type === 'checkout.session.completed') {
+      const s = obj;
+      const sub = s.metadata && String(s.metadata.player_key || '').slice(0, 80);
+      const pack = s.metadata && Catalog.PACKS[s.metadata.pack];
+      if (!sub || !pack) return res.status(200).json({ ok: true, ignored: 'no metadata' });
+      if (s.payment_status && s.payment_status !== 'paid') return res.status(200).json({ ok: true, ignored: s.payment_status });
+      // Defense-in-depth: the paid amount must match the pack's price (a tampered session
+      // can't buy the big pack for the small price).
+      if (Number(s.amount_total) !== pack.usd) return res.status(200).json({ ok: true, ignored: 'amount mismatch' });
+      const ins = await sql`INSERT INTO coin_ledger (player_key, delta, reason, ref)
+        VALUES (${sub}, ${pack.coins}, ${'buy:' + s.metadata.pack}, ${'stripe:' + String(s.id).slice(0, 100)})
+        ON CONFLICT (ref) DO NOTHING RETURNING id`;
+      if (ins.length) {
+        await sql`UPDATE users SET coins = GREATEST(0, COALESCE(coins, 0) + ${pack.coins}) WHERE google_sub = ${sub}`;
+      }
+      return res.status(200).json({ ok: true, credited: !!ins.length });
+    }
+    return res.status(200).json({ ok: true, ignored: type });
   } catch (e) {
     // 500 → Stripe retries (good: transient DB errors self-heal; the ledger ref stays idempotent)
     return res.status(500).json({ ok: false, error: 'Server error' });

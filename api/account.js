@@ -1156,7 +1156,8 @@ module.exports = async (req, res) => {
         const tier = tiers && tiers[i];
         if (!tier) return res.status(400).json({ ok: false, error: 'Unknown tier' });
         const ent = await getEnt(key);
-        if (lane === 'premium' && !(ent.pass && ent.pass[String(season)])) return res.status(200).json({ ok: false, error: 'Premium Pass needed' });
+        const proActive = ent.pro_until && Date.parse(ent.pro_until) > Date.now();
+        if (lane === 'premium' && !proActive && !(ent.pass && ent.pass[String(season)])) return res.status(200).json({ ok: false, error: 'GoatLab Pro needed' });
         const [urow] = await sql`SELECT cosmetics FROM users WHERE google_sub = ${key}`;
         const cos = (urow && urow.cosmetics && typeof urow.cosmetics === 'object') ? urow.cosmetics : {};
         const sxp = Number((cos.seasons || {})[String(season)]) || 0;
@@ -1169,11 +1170,30 @@ module.exports = async (req, res) => {
       // One-time Discord-join reward (large on purpose — it's the community hook). Honor-system
       // v1: one claim per Google account (ledger ref = the dedupe); the client opens the invite
       // first. Real Discord-OAuth membership verification is a roadmap item.
+      // Deprecated honor-system claim — the Discord reward now REQUIRES verified guild membership
+      // via api/discord.js (OAuth). Kept only so old cached clients get a clear message, never coins.
       if (action === 'discordClaim') {
+        return res.status(200).json({ ok: false, error: 'Verify with Discord to claim your coins.' });
+      }
+
+      // GoatLab Pro — open the Stripe billing portal so the member can manage / cancel. Uses the
+      // Stripe customer id stashed on entitlements by the webhook (pro_customer).
+      if (action === 'billingPortal') {
         if (!(await authed(body.sub, body.sessionToken))) return res.status(401).json({ ok: false, error: 'Not signed in' });
-        const bal = await grantCoins(body.sub, Catalog.EARN.discord, 'discord', 'discord:' + body.sub);
-        if (bal == null) return res.status(200).json({ ok: false, error: 'Already claimed' });
-        return res.status(200).json({ ok: true, coins: bal, granted: Catalog.EARN.discord });
+        const STRIPE_KEY = process.env.STRIPE_SECRET_KEY || '';
+        if (!STRIPE_KEY) return res.status(503).json({ ok: false, error: 'Billing not set up yet' });
+        const ent = await getEnt(body.sub);
+        const cust = ent && ent.pro_customer;
+        if (!cust) return res.status(200).json({ ok: false, error: 'No active subscription' });
+        const origin = 'https://' + String(req.headers.host || 'pitchinglab.pitchergami.com');
+        let returnTo = String(body.returnTo || '/');
+        if (!/^\/[^/]/.test(returnTo)) returnTo = '/';
+        const form = new URLSearchParams({ customer: String(cust), return_url: origin + returnTo });
+        const r = await fetch('https://api.stripe.com/v1/billing_portal/sessions', {
+          method: 'POST', headers: { authorization: 'Bearer ' + STRIPE_KEY, 'content-type': 'application/x-www-form-urlencoded' }, body: form.toString() });
+        const s = await r.json();
+        if (!r.ok || !s || !s.url) return res.status(502).json({ ok: false, error: (s && s.error && s.error.message) || 'Stripe error' });
+        return res.status(200).json({ ok: true, url: s.url });
       }
 
       if (action === 'trackSync') {

@@ -57,7 +57,9 @@
   }
   const coins = () => (wallet ? Number(wallet.coins) || 0 : 0);
   const ent = () => (wallet && wallet.entitlements) || {};
+  function proActive() { const u = ent().pro_until; return !!(u && Date.parse(u) > Date.now()); }
   function noAds() {
+    if (proActive()) return true;   // GoatLab Pro includes no-ads
     const until = ent().no_ads_until;
     return !!(until && Date.parse(until) > Date.now());
   }
@@ -94,6 +96,16 @@
   .gc-buy:hover { background:rgba(255,210,63,.22); }
   .gc-buy:disabled { opacity:.45; cursor:default; }
   .gc-buy.owned { border-color:rgba(57,217,138,.5); color:#39d98a; background:rgba(57,217,138,.08); }
+  .gc-pro { background:linear-gradient(160deg,rgba(255,210,63,.14),rgba(120,80,255,.10)); border:1px solid rgba(255,210,63,.4);
+    border-radius:13px; padding:13px 14px; margin-bottom:12px; }
+  .gc-pro.gc-pro-on { background:linear-gradient(160deg,rgba(57,217,138,.14),rgba(20,32,48,.6)); border-color:rgba(57,217,138,.45); }
+  .gc-pro-top { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .gc-pro-name { font-family:'Oswald',sans-serif; font-size:17px; font-weight:700; color:#fff; letter-spacing:.5px; }
+  .gc-pro-tag { font-family:'Oswald',sans-serif; font-size:14px; font-weight:700; color:#ffd23f; white-space:nowrap; }
+  .gc-pro-tag.on { color:#39d98a; }
+  .gc-pro-sub { font-size:12px; color:#c9d6e6; margin-top:3px; }
+  .gc-pro-perks { margin:8px 0 2px; padding-left:18px; color:#9fb4d0; font-size:12px; line-height:1.6; }
+  .gc-pro-btn { width:100%; margin-top:8px; padding:10px; font-size:14px; }
   .gc-note { font-size:11.5px; color:#8ea2bd; line-height:1.45; margin:8px 0; }
   .gc-err { font-size:12px; color:#ff7d8a; min-height:15px; margin-top:6px; }
   .gc-burst { position:fixed; z-index:600; pointer-events:none; font-size:20px; }
@@ -158,14 +170,37 @@
       <div class="who"><div class="nm">${s.name}</div><div class="ds">${s.desc || ''}</div>${extra}</div>${btn}</div>`;
   }
 
+  // GoatLab Pro — the real-money $5/mo subscription (NOT coins). Its own hero card atop the Shop.
+  function proCard() {
+    const P = C.PRO; const price = '$' + (P.usd / 100).toFixed(2);
+    if (proActive()) {
+      const until = new Date(ent().pro_until).toLocaleDateString();
+      return `<div class="gc-pro gc-pro-on">
+        <div class="gc-pro-top"><span class="gc-pro-name">${P.icon} ${P.name}</span><span class="gc-pro-tag on">ACTIVE</span></div>
+        <div class="gc-pro-sub">Renews ${until} · no ads + premium season pass</div>
+        <button class="gc-buy" id="gcProManage" style="margin-top:9px">Manage subscription</button>
+        <div class="gc-err" id="gcProMsg"></div></div>`;
+    }
+    const perks = (P.perks || []).map(x => `<li>${x}</li>`).join('');
+    if (inApp()) {
+      return `<div class="gc-pro"><div class="gc-pro-top"><span class="gc-pro-name">${P.icon} ${P.name}</span><span class="gc-pro-tag">${price}/mo</span></div>
+        <div class="gc-pro-sub">${P.tagline}</div><ul class="gc-pro-perks">${perks}</ul>
+        <div class="gc-note">Subscribe on the website: <b>goat-lab.app</b></div></div>`;
+    }
+    return `<div class="gc-pro">
+      <div class="gc-pro-top"><span class="gc-pro-name">${P.icon} ${P.name}</span><span class="gc-pro-tag">${price}/mo</span></div>
+      <div class="gc-pro-sub">${P.tagline}</div>
+      <ul class="gc-pro-perks">${perks}</ul>
+      <button class="gc-buy gc-pro-btn" id="gcProSubscribe">Get ${P.name} — ${price}/mo</button>
+      <div class="gc-err" id="gcProMsg"></div></div>`;
+  }
   function bodyShop() {
     const group = (title, ids) => ids.length ? `<div class="gc-sec">${title}</div>` + ids.map(skuRow).join('') : '';
     const byType = t => Object.keys(C.SKUS).filter(k => C.SKUS[k].type === t);
-    return group('Season Pass', byType('pass'))
+    return proCard()
       + group('Avatars', byType('cosmetic'))
       + group('Consumables', byType('item'))
       + group('Franchise', byType('entitlement').concat(byType('tokens')))
-      + group('Ad-Free', byType('noads'))
       + `<div class="gc-err" id="gcShopMsg"></div>`;
   }
   function bodyCoins() {
@@ -185,13 +220,13 @@
       ? `<div class="gc-row"><span class="ic">💬</span><div class="who"><div class="nm">GoatLab Discord</div>
           <div class="ds">Reward claimed — see you in there!</div></div><button class="gc-buy owned" disabled>Claimed ✓</button></div>`
       : `<div class="gc-row"><span class="ic">💬</span><div class="who"><div class="nm">Join the GoatLab Discord</div>
-          <div class="ds">One-time reward — hop in, say hi, claim your coins.</div></div>
-          <button class="gc-buy" id="gcDiscordJoin">Join → 🪙 ${C.EARN.discord}</button></div>
+          <div class="ds"><a href="${DISCORD_URL}" target="_blank" rel="noopener" style="color:#7aa7ff">Open the invite</a> &amp; join, then verify to claim 🪙 ${C.EARN.discord}.</div></div>
+          <button class="gc-buy" id="gcDiscordJoin">Verify &amp; claim</button></div>
         <div class="gc-err" id="gcDiscordMsg"></div>`;
     return discord + `<div class="gc-sec">Ways to earn</div>
       <div class="gc-note">🗓️ <b>Daily Challenge</b> — 🪙 ${C.EARN.daily} per game, every day (first valid run).<br>
       ⚔️ <b>Ranked 1v1 wins</b> — 🪙 ${C.EARN.pvpWin} each, up to ${C.EARN.pvpWinDailyCap} wins a day.<br>
-      🎟️ <b>Season Track</b> — coin tiers on the free lane, more on the Premium Pass lane.</div>`;
+      🎟️ <b>Season Track</b> — coin tiers on the free lane, more on the <b>GoatLab Pro</b> premium lane.</div>`;
   }
 
   function render() {
@@ -220,7 +255,9 @@
     overlay.querySelectorAll('[data-sku]').forEach(b => b.onclick = () => buySku(b));
     overlay.querySelectorAll('[data-pack]').forEach(b => b.onclick = () => buyPack(b.dataset.pack, b));
     const dj = overlay.querySelector('#gcDiscordJoin');
-    if (dj) dj.onclick = () => discordFlow(dj);
+    if (dj) dj.onclick = () => discordVerify(dj);
+    const ps = overlay.querySelector('#gcProSubscribe'); if (ps) ps.onclick = () => buyPro(ps);
+    const pm = overlay.querySelector('#gcProManage'); if (pm) pm.onclick = () => managePro(pm);
   }
 
   /* ---------- actions ---------- */
@@ -267,23 +304,46 @@
     btn.disabled = false; btn.textContent = '$' + (C.PACKS[packId].usd / 100).toFixed(2);
     busy = false;
   }
-  function discordFlow(btn) {
-    window.open(DISCORD_URL, '_blank');
-    btn.textContent = '✓ I joined — claim 🪙 ' + C.EARN.discord;
-    btn.onclick = async () => {
-      btn.disabled = true;
-      const r = await api('discordClaim');
-      const msg = overlay.querySelector('#gcDiscordMsg');
-      if (r && r.ok) {
-        ga('discord_claim');
-        wallet.coins = r.coins; saveWallet();
-        burst(btn); paintChips(); render();
-      } else {
-        if (msg) msg.textContent = (r && r.error) || 'Could not claim.';
-        if (r && r.error === 'Already claimed') render();
-        else btn.disabled = false;
-      }
-    };
+  async function buyPro(btn) {
+    if (busy) return; busy = true;
+    btn.disabled = true; btn.textContent = 'Opening…';
+    ga('pro_subscribe_checkout');
+    const a = acct(); let r = null;
+    try {
+      r = await fetch('/api/buy', { method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ action: 'checkout', plan: 'pro', sub: a.sub, sessionToken: a.sessionToken, returnTo: location.pathname }) }).then(x => x.json());
+    } catch (e) {}
+    if (r && r.ok && r.url) { location.href = r.url; return; }
+    const msg = overlay.querySelector('#gcProMsg');
+    if (msg) msg.textContent = (r && r.error) || 'Subscription checkout is unavailable right now.';
+    btn.disabled = false; btn.textContent = 'Get ' + C.PRO.name + ' — $' + (C.PRO.usd / 100).toFixed(2) + '/mo';
+    busy = false;
+  }
+  async function managePro(btn) {
+    if (busy) return; busy = true;
+    btn.disabled = true; btn.textContent = 'Opening…';
+    const r = await api('billingPortal', { returnTo: location.pathname });
+    if (r && r.ok && r.url) { location.href = r.url; return; }
+    const msg = overlay.querySelector('#gcProMsg');
+    if (msg) msg.textContent = (r && r.error) || 'Could not open billing.';
+    btn.disabled = false; btn.textContent = 'Manage subscription';
+    busy = false;
+  }
+  // Verified Discord reward — OAuth with Discord, server confirms guild membership, then grants.
+  async function discordVerify(btn) {
+    if (busy) return; busy = true;
+    btn.disabled = true; btn.textContent = 'Opening Discord…';
+    ga('discord_verify_start');
+    const a = acct(); let r = null;
+    try {
+      r = await fetch('/api/discord', { method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ action: 'start', sub: a.sub, sessionToken: a.sessionToken, returnTo: location.pathname }) }).then(x => x.json());
+    } catch (e) {}
+    if (r && r.ok && r.url) { location.href = r.url; return; }
+    const msg = overlay.querySelector('#gcDiscordMsg');
+    if (msg) msg.textContent = (r && r.error) || 'Discord verification is unavailable right now.';
+    btn.disabled = false; btn.textContent = 'Verify & claim';
+    busy = false;
   }
 
   /* ---------- coin burst (GSAP if present) ---------- */
@@ -306,21 +366,23 @@
     const q = new URLSearchParams(location.search);
     const state = q.get('purchase');
     if (!state) return;
+    const isPro = q.get('pro') === '1';
     // scrub the params so refreshes don't re-trigger
-    q.delete('purchase'); q.delete('session_id');
+    q.delete('purchase'); q.delete('session_id'); q.delete('pro');
     const qs = q.toString();
     try { history.replaceState(null, '', location.pathname + (qs ? '?' + qs : '') + location.hash); } catch (e) {}
     if (state !== 'success') return;
-    // the webhook credits asynchronously — poll briefly until the balance lands
-    const before = coins();
+    // the webhook grants asynchronously — poll briefly until it lands (coins for a pack, Pro for a sub)
+    const before = coins(); const wasPro = proActive();
     let tries = 0;
     const poll = async () => {
       await refresh();
-      if (coins() > before || tries++ >= 6) {
+      const landed = isPro ? (proActive() && !wasPro) : (coins() > before);
+      if (landed || tries++ >= 6) {
         open('shop');
         const chip = document.querySelector('.gc-chip');
         if (chip) burst(chip);
-        ga('coin_pack_landed', { landed: coins() > before ? 1 : 0 });
+        ga(isPro ? 'pro_landed' : 'coin_pack_landed', { landed: landed ? 1 : 0 });
         return;
       }
       setTimeout(poll, 1500);
@@ -328,12 +390,30 @@
     poll();
   }
 
+  /* ---------- Discord verify return bounce ---------- */
+  function checkDiscordReturn() {
+    const q = new URLSearchParams(location.search);
+    const d = q.get('discord');
+    if (!d) return;
+    q.delete('discord');
+    const qs = q.toString();
+    try { history.replaceState(null, '', location.pathname + (qs ? '?' + qs : '') + location.hash); } catch (e) {}
+    refresh().then(() => {
+      open('earn');
+      if (d === 'success' || d === 'claimed') { const chip = document.querySelector('.gc-chip'); if (chip) burst(chip); ga('discord_verified', { landed: d === 'success' ? 1 : 0 }); return; }
+      const msg = overlay && overlay.querySelector('#gcDiscordMsg');
+      if (msg) msg.textContent = d === 'notmember'
+        ? 'You’re not in the GoatLab Discord yet — join with the invite above, then verify.'
+        : 'Discord verification failed — please try again.';
+    });
+  }
+
   /* ---------- wiring ---------- */
   document.addEventListener('click', e => {
     const t = e.target.closest('#miStore, [data-store-open]');
     if (t) { e.preventDefault(); open(); }
   });
-  function boot() { paintChips(); refresh(); checkPurchaseReturn(); }
+  function boot() { paintChips(); refresh(); checkPurchaseReturn(); checkDiscordReturn(); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
 

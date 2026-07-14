@@ -28,18 +28,26 @@
   'use strict';
 
   // Real-money coin packs (usd in CENTS for Stripe; label is what the button shows).
+  // Keys are internal ids (kept stable so in-flight Stripe metadata resolves); coins = payout.
   const PACKS = {
-    c500:  { coins: 500,  usd: 499,  label: 'Handful of Coins',  icon: '🪙' },            // TUNE
-    c1200: { coins: 1200, usd: 999,  label: 'Bag of Coins',      icon: '💰', tag: 'Most popular' },  // TUNE
-    c2600: { coins: 2600, usd: 1999, label: 'Vault of Coins',    icon: '🏦', tag: 'Best value' },    // TUNE
+    c500:  { coins: 3000,  usd: 499,  label: 'Handful of Coins',  icon: '🪙' },            // TUNE
+    c1200: { coins: 7000,  usd: 999,  label: 'Bag of Coins',      icon: '💰', tag: 'Most popular' },  // TUNE
+    c2600: { coins: 16000, usd: 1999, label: 'Vault of Coins',    icon: '🏦', tag: 'Best value' },    // TUNE
   };
 
-  // Coin-priced store items.
-  const SKUS = {
-    // The flagship: unlocks the paid lane of the CURRENT Season Track (season-gated server-side).
-    pass_s2: { type: 'pass', season: 2, price: 950, name: 'Season 2 Premium Pass', icon: '🎫',   // TUNE
-      desc: 'Unlock the premium reward lane for Season 2 — exclusive cosmetics + coins back as you climb.' },
+  // GoatLab Pro — real-money MONTHLY SUBSCRIPTION (NOT coins). Auto-renews via Stripe; grants
+  // no-ads + the premium Season Track lane (+ room for more perks). api/buy.js creates a
+  // mode:'subscription' Checkout at PRO.usd/month; api/stripe-webhook.js sets entitlements
+  // .pro_until (= no_ads_until) on every paid invoice and lets it lapse on cancel.
+  const PRO = {
+    id: 'pro', usd: 500, interval: 'month', name: 'GoatLab Pro', icon: '⭐',   // TUNE ($5.00/mo)
+    tagline: 'No ads · Premium battle pass · more perks',
+    perks: ['Zero ads across every GoatLab game', 'Premium Season Track lane (exclusive rewards + coins back)', 'More Pro perks coming'],
+  };
 
+  // Coin-priced store items.  (Ad-free + the premium pass are NOT here anymore — they're part of
+  // GoatLab Pro, the real-money subscription above. Coins buy cosmetics + consumables.)
+  const SKUS = {
     // Cosmetics — ids live in social.js AVATARS (track:'future' art, already rendered + equippable).
     av_robot_ump:   { type: 'cosmetic', price: 350, name: 'Robo Ump Avatar', icon: '🤖', desc: 'Beep. Strike three.' },        // TUNE
     av_ghost_jersey:{ type: 'cosmetic', price: 350, name: 'Double Zero Avatar', icon: '👻', desc: 'The ghost in the lineup.' }, // TUNE
@@ -59,10 +67,6 @@
     //   desc: 'Permanent: extra scouting reports on every franchise draft class.' },
     // fr_mulligan_x2: { type: 'tokens', ent: 'fr_mulligan', qty: 2, price: 300, name: 'Playoff Mulligans ×2', icon: '⏪',
     //   desc: 'Replay a lost playoff series. 2 uses, any franchise.' },
-
-    // Ad-free window (the page skips ad tags while active).
-    no_ads_30: { type: 'noads', days: 30, price: 600, name: '30 Days Ad-Free', icon: '🧘',  // TUNE
-      desc: 'No ads on every GoatLab game for 30 days.' },
   };
 
   // Server-verified coin grants (client never picks amounts — these are read server-side).
@@ -70,7 +74,7 @@
     daily: 25,          // per validated Daily Challenge submission, per game, once per day  // TUNE
     pvpWin: 10,         // per RANKED 1v1 win settled from locked builds                     // TUNE
     pvpWinDailyCap: 5,  // max coin-paying wins per day                                      // TUNE
-    discord: 300,       // one-time: joining the GoatLab Discord (per account)               // TUNE
+    discord: 1000,      // one-time: joining the GoatLab Discord (per account)               // TUNE
     trackSeasonCap: 800, // max coins claimable from Season Track tiers per season           // TUNE
   };
 
@@ -79,6 +83,20 @@
   // lane needs the pass, one grant per tier per account). Per-season total must stay ≤
   // EARN.trackSeasonCap (free) — the premium lane's coins-back is the pass's value, not capped.
   const TRACK_COINS = {
+    // Season 1 "Opening Day" — premium lane is unlocked by GoatLab Pro (not a coin pass).
+    1: {
+      free: [
+        { req: 600,  coins: 100 },   // TUNE
+        { req: 2100, coins: 150 },   // TUNE
+        { req: 4500, coins: 200 },   // TUNE
+      ],
+      premium: [
+        { req: 200,  coins: 150 },   // TUNE
+        { req: 1200, coins: 200 },   // TUNE
+        { req: 2800, coins: 250 },   // TUNE
+        { req: 5000, coins: 400 },   // TUNE — ~1000 coins back over a season of Pro
+      ],
+    },
     2: {
       free: [
         { req: 600,  coins: 100 },   // TUNE
@@ -90,10 +108,10 @@
         { req: 1000, coins: 150 },   // TUNE
         { req: 2100, coins: 200 },   // TUNE
         { req: 3600, coins: 250 },   // TUNE
-        { req: 5500, coins: 300 },   // TUNE — totals ~1000 back on a 950 pass at full clear
+        { req: 5500, coins: 300 },   // TUNE
       ],
     },
   };
 
-  return { PACKS, SKUS, EARN, TRACK_COINS };
+  return { PACKS, PRO, SKUS, EARN, TRACK_COINS };
 });

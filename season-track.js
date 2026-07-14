@@ -64,6 +64,11 @@
     av_flame_ball:  { type: 'avatar', name: 'Heat Check Avatar',    icon: '🔥' },
     av_octo_keeper: { type: 'avatar', name: 'Octo Keeper Avatar',   icon: '🐙' },
     av_golden_goat: { type: 'avatar', name: 'Golden GOAT Avatar',   icon: '🐐' },
+    // ---- Season 1 PREMIUM lane (unlocked by GoatLab Pro subscription) ----
+    title_pro_charter: { type: 'title', name: 'Pro · Charter Member',    icon: '⭐' },
+    scout_s1p:         { type: 'item',  name: 'Scout Tokens ×3',         icon: '🔭', item: 'scout', qty: 3 },
+    resim_s1p:         { type: 'item',  name: 'Re-sim Tokens ×3',        icon: '🔁', item: 'resim', qty: 3 },
+    title_pro_elite:   { type: 'title', name: 'Pro · Opening Day Elite', icon: '🌟' },
     // ---- Season 2 "Dog Days" (free lane) ----
     title_dog_days: { type: 'title', name: 'Dog Days Grinder',      icon: '🌭' },
     av_bull_bat:    { type: 'avatar', name: 'Raging Bull Avatar',   icon: '🐂' },
@@ -103,6 +108,11 @@
       { req: 4500, id: 'scout_3' },
       { req: 5500, id: 'frame_holo' },
       { req: 6200, id: 'av_golden_goat' },
+    ], premium: [
+      { req: 200,  id: 'title_pro_charter' },
+      { req: 1200, id: 'scout_s1p' },
+      { req: 2800, id: 'resim_s1p' },
+      { req: 5000, id: 'title_pro_elite' },
     ] },
     // Season 2 (Aug): first season WITH a premium lane (Premium Pass SKU in the 🪙 Store).
     // Coin payout tiers live in catalog.js TRACK_COINS (server-validated claims) and render
@@ -506,12 +516,16 @@
   }
 
   // ---- progression ----------------------------------------------------------------
-  // Premium Pass ownership — store.js caches the server wallet in pl_wallet (entitlements.pass
-  // is granted by coinSpend server-side; reading the cache means no load-order dependency).
+  // Premium lane access — unlocked by an active GoatLab Pro subscription (entitlements.pro_until
+  // in the future), for whatever season is current. store.js caches the server wallet in pl_wallet
+  // (no load-order dependency). Legacy per-season coin passes (entitlements.pass) still honored.
   function hasPass(season) {
     try {
       const w = JSON.parse(localStorage.getItem('pl_wallet') || 'null');
-      return !!(w && w.entitlements && w.entitlements.pass && w.entitlements.pass[String(season)]);
+      const ent = w && w.entitlements;
+      if (!ent) return false;
+      if (ent.pro_until && Date.parse(ent.pro_until) > Date.now()) return true;   // GoatLab Pro
+      return !!(ent.pass && ent.pass[String(season)]);
     } catch (e) { return false; }
   }
   // Unlock every earned tier in a lane (idempotent — `unlocked` guards each id).
