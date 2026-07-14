@@ -332,23 +332,21 @@
   .ring span { position:relative; z-index:1; font-family:'Oswald',sans-serif; font-size:27px; font-weight:700; }
 
   /* ---------- figure stage ---------- */
-  .stage3d { perspective:1100px; margin:8px auto 0; max-width:600px; }
-  .stage { position:relative; width:100%; aspect-ratio:823/711; border-radius:16px; overflow:hidden;
+  .stage3d { perspective:1100px; margin:8px auto 0; max-width:620px; }
+  .stage { position:relative; width:100%; aspect-ratio:7/5; border-radius:16px; overflow:hidden;
     border:1px solid var(--line); transform-style:preserve-3d; will-change:transform;
     background:radial-gradient(120% 100% at 50% 30%, #122236 0%, #060a12 76%);
     box-shadow:inset 0 0 70px rgba(0,0,0,.6), 0 14px 50px rgba(0,0,0,.5); }
   .stage::before, .stage::after { content:''; position:absolute; width:26px; height:26px; z-index:6; pointer-events:none; opacity:.7; }
   .stage::before { top:10px; left:10px; border-top:2px solid var(--accent2); border-left:2px solid var(--accent2); }
   .stage::after { bottom:10px; right:10px; border-bottom:2px solid var(--accent2); border-right:2px solid var(--accent2); }
-  .stage .figure { position:absolute; inset:0; background:#39414c;
-    -webkit-mask:url(pitcher-figure.png) center/contain no-repeat; mask:url(pitcher-figure.png) center/contain no-repeat;
-    pointer-events:none; }
-  .seg { position:absolute; inset:0; background:transparent; transition:background .25s;
+  #figbox { position:absolute; top:0; bottom:0; left:50%; transform:translateX(-50%); height:100%; aspect-ratio:900/1205; }
+  .stage #figure { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; pointer-events:none; }
+  .seg { position:absolute; inset:0; background:transparent; transition:background .25s; mix-blend-mode:multiply;
     -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat; -webkit-mask-position:center; mask-position:center;
     -webkit-mask-size:contain; mask-size:contain; pointer-events:none; }
-  .stage .shade { position:absolute; inset:0; pointer-events:none; mix-blend-mode:soft-light;
-    background:linear-gradient(158deg,rgba(255,255,255,.30),rgba(255,255,255,0) 42%,rgba(0,0,0,.40));
-    -webkit-mask:url(pitcher-figure.png) center/contain no-repeat; mask:url(pitcher-figure.png) center/contain no-repeat; }
+  #capLogo { position:absolute; height:auto; z-index:5; pointer-events:none; display:none;
+    filter:drop-shadow(0 1px 2px rgba(0,0,0,.55)); }
   .burst { position:absolute; inset:0; pointer-events:none; z-index:4; opacity:0;
     background:radial-gradient(circle at 50% 40%,rgba(163,102,255,.85),rgba(163,102,255,0) 60%); }
   .wires { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:3; }
@@ -828,9 +826,11 @@
 
     <div class="stage3d">
       <div class="stage" id="stage">
-        <div class="figure" id="figure"></div>
-        <div id="segments"></div>
-        <div class="shade"></div>
+        <div id="figbox">
+          <img id="figure" alt="">
+          <div id="segments"></div>
+          <img id="capLogo" alt="">
+        </div>
         <div class="burst" id="burst"></div>
         <svg class="wires" id="wires" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
         <div id="nodes"></div>
@@ -1114,15 +1114,15 @@
 // Each slot maps an attribute to a body part. ax/ay = anchor point on the figure (%),
 // lx/ly = where the label node floats (%). A wire connects the two.
 const SLOTS = [
-  { key: 'hr_per_bf',           label: 'Ground Ball', part: 'Ball',     ax: 30, ay: 5,  lx: 13, ly: 9 },
-  { key: 'pitch_movement',      label: 'Break',       part: 'Wrist',    ax: 29, ay: 11, lx: 10, ly: 27 },
-  { key: 'k_per_bf',            label: 'Strikeout',   part: 'Forearm',  ax: 28, ay: 18, lx: 10, ly: 45 },
-  { key: 'pitch_velocity',      label: 'Velocity',    part: 'Bicep',    ax: 38, ay: 23, lx: 13, ly: 63 },
-  { key: 'pitch_control',       label: 'Command',     part: 'Shoulder', ax: 48, ay: 19, lx: 90, ly: 24 },
-  { key: 'pitching_clutch',     label: 'Clutch',      part: 'Head',     ax: 53, ay: 11, lx: 90, ly: 7 },
-  { key: 'fielding_ability',    label: 'Defense',     part: 'Glove',    ax: 77, ay: 33, lx: 92, ly: 41 },
-  { key: 'frame',               label: 'Frame',       part: 'Body',     ax: 50, ay: 37, lx: 92, ly: 58, type: 'height' },
-  { key: 'stamina',             label: 'Stamina',     part: 'Legs',     ax: 47, ay: 67, lx: 86, ly: 80 },
+  { key: 'hr_per_bf',           label: 'Ground Ball', part: 'Ball',     ax: 31, ay: 24, lx: 12, ly: 18 },
+  { key: 'pitch_movement',      label: 'Break',       part: 'Wrist',    ax: 34, ay: 26, lx: 11, ly: 34 },
+  { key: 'k_per_bf',            label: 'Strikeout',   part: 'Forearm',  ax: 38, ay: 27, lx: 11, ly: 50 },
+  { key: 'pitch_velocity',      label: 'Velocity',    part: 'Bicep',    ax: 41, ay: 28, lx: 12, ly: 66 },
+  { key: 'pitch_control',       label: 'Command',     part: 'Shoulder', ax: 57, ay: 28, lx: 88, ly: 31 },
+  { key: 'pitching_clutch',     label: 'Clutch',      part: 'Head',     ax: 48, ay: 13, lx: 88, ly: 15 },
+  { key: 'fielding_ability',    label: 'Defense',     part: 'Glove',    ax: 64, ay: 40, lx: 89, ly: 47 },
+  { key: 'frame',               label: 'Frame',       part: 'Body',     ax: 49, ay: 37, lx: 89, ly: 63, type: 'height' },
+  { key: 'stamina',             label: 'Stamina',     part: 'Legs',     ax: 43, ay: 65, lx: 14, ly: 84 },
 ];
 
 // MLB team primary colors (jersey tint). FA / unknown -> neutral steel.
@@ -1246,7 +1246,7 @@ const SORT_OPTIONS = {
   striker: [{ key: 'ovr', label: 'OVR' }, { key: 'goals', label: 'Goals' }, { key: 'assists', label: 'Assists' }, { key: 'war', label: 'Rating' }, { key: 'rings', label: 'UCLs' }, { key: 'mvp', label: "Ballons d'Or" }],
   keeper: [{ key: 'ovr', label: 'OVR' }, { key: 'cs', label: 'Clean Sheets' }, { key: 'saves', label: 'Saves' }, { key: 'war', label: 'Rating' }, { key: 'rings', label: 'UCLs' }, { key: 'mvp', label: 'Yashin Trophies' }],
   hockey: [{ key: 'ovr', label: 'OVR' }, { key: 'g', label: 'Goals' }, { key: 'p', label: 'Points' }, { key: 'war', label: 'Point Shares' }, { key: 'rings', label: 'Cups' }, { key: 'mvp', label: 'Harts' }],
-  mon: [{ key: 'ovr', label: 'OVR' }, { key: 'w', label: 'Wins' }, { key: 'sweeps', label: 'Sweeps' }, { key: 'war', label: 'Battle Rating' }, { key: 'rings', label: 'Titles' }, { key: 'mvp', label: 'Worlds' }],
+  mon: [{ key: 'ovr', label: 'OVR' }, { key: 'w', label: 'Wins' }, { key: 'badges', label: 'Badges' }, { key: 'war', label: 'Battle Rating' }, { key: 'rings', label: 'Leagues' }, { key: 'mvp', label: 'Worlds' }],
 };
 function sortOptionsFor(game) { return SORT_OPTIONS[game] || SORT_OPTIONS.pitcher; }
 function fmtStat(v) { return lbSort === 'war' ? Number(v).toFixed(1) : Math.round(v); }
@@ -2046,13 +2046,18 @@ async function finishDailyChallenge(ovr, name, build) {
   const tagEl = document.querySelector('header .tag');
   if (tagEl) { tagEl.textContent = 'Draft Mode'; tagEl.classList.remove('dc-header-tag'); }
   const reel = document.querySelector('.reel-frame'); if (reel) reel.classList.remove('lucky');
-  let rank = 1, total = 1;
+  let rank = 1, total = 1, recorded = false;
   try {
     const body = { action: 'challengeSubmit', game: LEADERBOARD_GAME, ovr, name, build, date: todayUTC() };
     if (account) body.sub = account.sub; else body.guestId = getOrCreateGuestId();
     const r = await fetch('/api/score', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    const j = await r.json(); if (j.ok) { rank = j.rank; total = j.total; }
+    const j = await r.json(); if (j.ok) { rank = j.rank; total = j.total; recorded = true; }
   } catch (e) {}
+  if (!recorded) {
+    // Server never confirmed the daily — don't burn the player's one attempt, lock the day, or
+    // advance the streak on a bogus 1-of-1 result. Leave it replayable so they can try again.
+    return { ovr, rank: null, total: null, isPB: false, frozeUsed: false, recorded: false };
+  }
   setDailyDone({ ovr, rank, total });
   draftClear();
   _playedTodayCache = null;
@@ -2072,7 +2077,7 @@ async function finishDailyChallenge(ovr, name, build) {
     }
   }
   bumpDailyAch();
-  return { ovr, rank, total, isPB, frozeUsed };
+  return { ovr, rank, total, isPB, frozeUsed, recorded: true };
 }
 
 // The best weighted OVR achievable by re-assigning the player's own dealt cards to the 9 slots.
@@ -2119,6 +2124,15 @@ async function showDailyResults() {
     if (window.NameFilter && !NameFilter.isClean(name)) name = 'Anonymous';
     if (name !== 'Anonymous') { try { localStorage.setItem('pl_lastName', name); } catch (e) {} }
     const res = (await finishDailyChallenge(state.finalOvr, name, { slots: state.build, career: null })) || { ovr: state.finalOvr, rank: 1, total: 1, isPB: false, frozeUsed: false };
+    if (res && res.recorded === false) {
+      // Couldn't reach the leaderboard — the day is still replayable. Tell the player instead of
+      // showing a fake rank/streak.
+      $('dResOvr').textContent = res.ovr;
+      $('dResRank').textContent = '—'; $('dResPct').textContent = '0';
+      $('dResField').textContent = "Couldn't reach the leaderboard — not recorded. Try the daily again.";
+      toast("Daily not recorded — check your connection and try again.");
+      return;
+    }
     let best = null;
     try { best = bestPossibleOvr(state.dealtCards); } catch (e) { console.warn('[DAILY] bestPossibleOvr failed', e); }
     let rows = [];
@@ -2418,32 +2432,49 @@ function land(p) {
   draftSave();   // every landing persists the run (also covers re-spin / boost / snag - they all land)
 }
 
+// New illustrated jersey figure: 7 garment regions, each colored by an assigned slot's team.
+// Break (pitch_movement) & Strikeout (k_per_bf) have no color region (garment-mapping call).
+const FIG_REGIONS = ['cap', 'jersey', 'lsleeve', 'rsleeve', 'lpant', 'rpant', 'glove'];
+const REGION_SLOT = { cap: 'pitching_clutch', jersey: 'frame', lsleeve: 'pitch_velocity',
+  rsleeve: 'pitch_control', lpant: 'stamina', rpant: 'hr_per_bf', glove: 'fielding_ability' };
+const SLOT_REGION = Object.fromEntries(Object.entries(REGION_SLOT).map(([r, k]) => [k, r]));
+const CAP_LOGO = { left: 47.3, top: 10.6, width: 4.8, rot: -13 };   // from the placement tool
+const SKIN_TONES = ['', '-tan', '-brown', '-dark'];   // '' = light; a random tone per build
+let figSkin = SKIN_TONES[Math.floor(Math.random() * SKIN_TONES.length)];
 let segEls = {};
 function buildSegments() {
+  const fig = $('figure'); if (fig) fig.src = `jersey-pitcher${figSkin}-base.png`;
+  const cl = $('capLogo');
+  if (cl) {
+    cl.style.left = CAP_LOGO.left + '%'; cl.style.top = CAP_LOGO.top + '%';
+    cl.style.width = CAP_LOGO.width + '%'; cl.style.transform = `translate(-50%,-50%) rotate(${CAP_LOGO.rot}deg)`;
+  }
   const wrap = $('segments');
   wrap.innerHTML = '';
   segEls = {};
-  for (const s of SLOTS) {
+  for (const region of FIG_REGIONS) {
     const d = document.createElement('div');
     d.className = 'seg';
-    d.style.webkitMaskImage = `url(seg-${s.key}.png)`;
-    d.style.maskImage = `url(seg-${s.key}.png)`;
+    d.style.webkitMaskImage = `url(jersey-pitcher-${region}.png)`;
+    d.style.maskImage = `url(jersey-pitcher-${region}.png)`;
     wrap.appendChild(d);
-    segEls[s.key] = d;
+    segEls[region] = d;
   }
 }
 function updateFigure() {
-  for (const s of SLOTS) {
-    const f = state.filled[s.key];
-    const el = segEls[s.key];
+  for (const region of FIG_REGIONS) {
+    const f = state.filled[REGION_SLOT[region]];
+    const el = segEls[region];
     if (!el) continue;
-    if (f) {
-      el.style.background = `url(jersey-fabric.png), ${teamColor(f.team)}`;
-      el.style.backgroundSize = '150px, auto';
-      el.style.backgroundBlendMode = 'overlay';
-    } else {
-      el.style.background = 'transparent';
-    }
+    el.style.background = f ? teamColor(f.team) : 'transparent';
+  }
+  const capF = state.filled['pitching_clutch'];
+  const cl = $('capLogo');
+  if (cl) {
+    if (capF && TEAM_IDS[capF.team]) {
+      cl.style.display = 'block';
+      cl.src = `https://www.mlbstatic.com/team-logos/team-cap-on-dark/${TEAM_IDS[capF.team]}.svg`;
+    } else { cl.style.display = 'none'; cl.removeAttribute('src'); }
   }
 }
 
@@ -2541,6 +2572,7 @@ function boostedCard(base, prime) {
     const primeVal = Number(c[s.key]);
     c[s.key] = Math.max(isNaN(primeVal) ? -Infinity : primeVal, baseVal + 5);
   }
+  c.prime = true;   // a Boosted card IS a Prime — mark it so assign()/collection/quests track it
   return c;
 }
 
@@ -2596,7 +2628,7 @@ function assign(slotKey) {
   const node = document.querySelector(`.node[data-key="${slotKey}"]`);
   const faceEl = node && node.querySelector('.face');
   if (faceEl) flyHeadshot(originRect, faceEl, headshot(p));
-  const seg = segEls[slotKey];
+  const seg = segEls[SLOT_REGION[slotKey]];
   if (seg) gsap.fromTo(seg, { opacity: 0 }, { opacity: 1, duration: .55, ease: 'power2.out' });
   if (node) gsap.fromTo(node, { scale: .85 }, { scale: 1, duration: .4, ease: 'back.out(1.8)', delay: .12 });
 
@@ -2679,6 +2711,12 @@ function renderNodes() {
           <div class="who">tap to set</div>
         </div>`;
       div.onclick = () => assign(s.key);
+      // Keyboard/AT access: make the assignable card a real button so the core loop is playable
+      // without a pointer (Enter/Space assigns, exactly like tapping it).
+      div.tabIndex = 0;
+      div.setAttribute('role', 'button');
+      div.setAttribute('aria-label', `Assign ${landing.name || 'this player'} to ${s.label}${prev && prev !== '?' ? ', ' + prev : ''}`);
+      div.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); assign(s.key); } });
     } else {
       div.innerHTML = `<div class="accent"></div>
         <div class="body">
@@ -4032,7 +4070,6 @@ function openBuildDetails(entryId) {
 }
 async function loadChallengeBoard() {
   const list = $('lbList');
-  $('lbSortTabs').innerHTML = '';   // daily board has no sort options
   list.innerHTML = '<div class="lb-empty">Loading…</div>';
   try {
     const res = await fetch(`/api/score?action=challengeLeaderboard&game=${lbGame}&limit=200&date=${todayUTC()}`);
@@ -4054,6 +4091,10 @@ async function loadLeaderboard(scope = lbScope, game = lbGame, sort = lbSort, di
   lbDir = dir === 'asc' ? 'asc' : 'desc';
   document.querySelectorAll('.lb-scope-tab').forEach(t => t.classList.toggle('active', t.dataset.scope === lbScope));
   renderLbNav();
+  // The daily/challenge board has no sort options — hide the sort controls (shown for global/daily).
+  const _sortSel = $('lbSortSel'), _dirBtn = $('lbDirBtn');
+  if (_sortSel) _sortSel.style.display = lbScope === 'challenge' ? 'none' : '';
+  if (_dirBtn) _dirBtn.style.display = lbScope === 'challenge' ? 'none' : '';
   if (lbScope === 'challenge') return loadChallengeBoard();
   renderSortTabs(lbGame);
   const list = $('lbList');

@@ -246,22 +246,20 @@
 
   /* ---------- figure stage ---------- */
   .stage3d { perspective:1100px; margin:8px auto 0; max-width:600px; }
-  .stage { position:relative; width:100%; aspect-ratio:823/711; border-radius:16px; overflow:hidden;
+  .stage { position:relative; width:100%; aspect-ratio:7/5; border-radius:16px; overflow:hidden;
     border:1px solid var(--line); transform-style:preserve-3d; will-change:transform;
     background:radial-gradient(120% 100% at 50% 30%, #122236 0%, #060a12 76%);
     box-shadow:inset 0 0 70px rgba(0,0,0,.6), 0 14px 50px rgba(0,0,0,.5); }
   .stage::before, .stage::after { content:''; position:absolute; width:26px; height:26px; z-index:6; pointer-events:none; opacity:.7; }
   .stage::before { top:10px; left:10px; border-top:2px solid var(--accent2); border-left:2px solid var(--accent2); }
   .stage::after { bottom:10px; right:10px; border-bottom:2px solid var(--accent2); border-right:2px solid var(--accent2); }
-  .stage .figure { position:absolute; inset:0; background:#39414c;
-    -webkit-mask:url(batter-figure.png) center/contain no-repeat; mask:url(batter-figure.png) center/contain no-repeat;
-    pointer-events:none; }
-  .seg { position:absolute; inset:0; background:transparent; transition:background .25s;
+  #figbox { position:absolute; top:0; bottom:0; left:50%; transform:translateX(-50%); height:100%; aspect-ratio:900/1205; }
+  .stage #figure { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; pointer-events:none; }
+  .seg { position:absolute; inset:0; background:transparent; transition:background .25s; mix-blend-mode:multiply;
     -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat; -webkit-mask-position:center; mask-position:center;
     -webkit-mask-size:contain; mask-size:contain; pointer-events:none; }
-  .stage .shade { position:absolute; inset:0; pointer-events:none; mix-blend-mode:soft-light;
-    background:linear-gradient(158deg,rgba(255,255,255,.30),rgba(255,255,255,0) 42%,rgba(0,0,0,.40));
-    -webkit-mask:url(batter-figure.png) center/contain no-repeat; mask:url(batter-figure.png) center/contain no-repeat; }
+  #capLogo { position:absolute; height:auto; z-index:5; pointer-events:none; display:none;
+    filter:drop-shadow(0 1px 2px rgba(0,0,0,.55)); }
   .burst { position:absolute; inset:0; pointer-events:none; z-index:4; opacity:0;
     background:radial-gradient(circle at 50% 40%,rgba(163,102,255,.85),rgba(163,102,255,0) 60%); }
   .wires { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:3; }
@@ -817,9 +815,11 @@
 
     <div class="stage3d">
       <div class="stage" id="stage">
-        <div class="figure" id="figure"></div>
-        <div id="segments"></div>
-        <div class="shade"></div>
+        <div id="figbox">
+          <img id="figure" alt="">
+          <div id="segments"></div>
+          <img id="capLogo" alt="">
+        </div>
         <div class="burst" id="burst"></div>
         <svg class="wires" id="wires" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
         <div id="nodes"></div>
@@ -1102,14 +1102,14 @@
 // Each slot maps an attribute to a body part. ax/ay = anchor point on the figure (%),
 // lx/ly = where the label node floats (%). A wire connects the two.
 const SLOTS = [
-  { key: 'plate_vision',     label: 'Vision',     part: 'Eyes',   mask: 'bat-seg-plate_vision.png',     ax: 52, ay: 20, lx: 12, ly: 13 },
-  { key: 'power',            label: 'Power',      part: 'Bat',    mask: 'bat-seg-power.png',            ax: 39, ay: 30, lx: 10, ly: 35 },
-  { key: 'contact',          label: 'Contact',    part: 'Hands',  mask: 'bat-seg-contact.png',          ax: 44, ay: 31, lx: 10, ly: 57 },
-  { key: 'speed',            label: 'Speed',      part: 'Feet',   mask: 'bat-seg-speed.png',            ax: 35, ay: 88, lx: 14, ly: 80 },
-  { key: 'batting_clutch',   label: 'Clutch',     part: 'Helmet', mask: 'bat-seg-batting_clutch.png',   ax: 53, ay: 21, lx: 90, ly: 12 },
-  { key: 'plate_discipline', label: 'Discipline', part: 'Head',   mask: 'bat-seg-plate_discipline.png', ax: 58, ay: 30, lx: 90, ly: 37 },
-  { key: 'frame',            label: 'Frame',      part: 'Body',   mask: 'bat-seg-frame.png',            ax: 54, ay: 49, lx: 90, ly: 58, type: 'height' },
-  { key: 'fielding_ability', label: 'Defense',    part: 'Thigh',  mask: 'bat-seg-fielding_ability.svg', ax: 58, ay: 66, lx: 90, ly: 78 },
+  { key: 'plate_vision',     label: 'Vision',     part: 'Eyes',   mask: 'bat-seg-plate_vision.png',     ax: 53.4, ay: 28.3, lx: 12, ly: 13 },
+  { key: 'power',            label: 'Power',      part: 'Bat',    mask: 'bat-seg-power.png',            ax: 40.5, ay: 33.5, lx: 10, ly: 35 },
+  { key: 'contact',          label: 'Contact',    part: 'Hands',  mask: 'bat-seg-contact.png',          ax: 38.2, ay: 26.2, lx: 10, ly: 57 },
+  { key: 'speed',            label: 'Speed',      part: 'Feet',   mask: 'bat-seg-speed.png',            ax: 43.7, ay: 61.0, lx: 14, ly: 80 },
+  { key: 'batting_clutch',   label: 'Clutch',     part: 'Helmet', mask: 'bat-seg-batting_clutch.png',   ax: 47.9, ay: 13.6, lx: 90, ly: 12 },
+  { key: 'plate_discipline', label: 'Discipline', part: 'Head',   mask: 'bat-seg-plate_discipline.png', ax: 56, ay: 20, lx: 90, ly: 37 },
+  { key: 'frame',            label: 'Frame',      part: 'Body',   mask: 'bat-seg-frame.png',            ax: 50.3, ay: 40.3, lx: 90, ly: 58, type: 'height' },
+  { key: 'fielding_ability', label: 'Defense',    part: 'Thigh',  mask: 'bat-seg-fielding_ability.svg', ax: 57.1, ay: 58.3, lx: 90, ly: 78 },
 ];
 
 // MLB team primary colors (jersey tint). FA / unknown -> neutral steel.
@@ -1232,7 +1232,7 @@ const SORT_OPTIONS = {
   striker: [{ key: 'ovr', label: 'OVR' }, { key: 'goals', label: 'Goals' }, { key: 'assists', label: 'Assists' }, { key: 'war', label: 'Rating' }, { key: 'rings', label: 'UCLs' }, { key: 'mvp', label: "Ballons d'Or" }],
   keeper: [{ key: 'ovr', label: 'OVR' }, { key: 'cs', label: 'Clean Sheets' }, { key: 'saves', label: 'Saves' }, { key: 'war', label: 'Rating' }, { key: 'rings', label: 'UCLs' }, { key: 'mvp', label: 'Yashin Trophies' }],
   hockey: [{ key: 'ovr', label: 'OVR' }, { key: 'g', label: 'Goals' }, { key: 'p', label: 'Points' }, { key: 'war', label: 'Point Shares' }, { key: 'rings', label: 'Cups' }, { key: 'mvp', label: 'Harts' }],
-  mon: [{ key: 'ovr', label: 'OVR' }, { key: 'w', label: 'Wins' }, { key: 'sweeps', label: 'Sweeps' }, { key: 'war', label: 'Battle Rating' }, { key: 'rings', label: 'Titles' }, { key: 'mvp', label: 'Worlds' }],
+  mon: [{ key: 'ovr', label: 'OVR' }, { key: 'w', label: 'Wins' }, { key: 'badges', label: 'Badges' }, { key: 'war', label: 'Battle Rating' }, { key: 'rings', label: 'Leagues' }, { key: 'mvp', label: 'Worlds' }],
 };
 function sortOptionsFor(game) { return SORT_OPTIONS[game] || SORT_OPTIONS.pitcher; }
 function fmtStat(v) { return lbSort === 'war' ? Number(v).toFixed(1) : Math.round(v); }
@@ -1867,32 +1867,48 @@ function land(p) {
   draftSave();   // every landing persists the run (also covers re-spin / boost / snag - they all land)
 }
 
+// New illustrated jersey figure: 7 garment regions, each colored by an assigned slot's team.
+const FIG_REGIONS = ['helmet', 'jersey', 'lsleeve', 'rsleeve', 'lpant', 'rpant', 'gloves'];
+const REGION_SLOT = { helmet: 'batting_clutch', jersey: 'frame', lsleeve: 'power',
+  rsleeve: 'plate_vision', lpant: 'speed', rpant: 'fielding_ability', gloves: 'contact' };
+const SLOT_REGION = Object.fromEntries(Object.entries(REGION_SLOT).map(([r, k]) => [k, r]));
+const CAP_LOGO = { left: 48.19, top: 11.5, width: 6, rot: -8 };   // from the placement tool
+const SKIN_TONES = ['', '-tan', '-brown', '-dark'];   // '' = light; a random tone per build
+let figSkin = SKIN_TONES[Math.floor(Math.random() * SKIN_TONES.length)];
 let segEls = {};
 function buildSegments() {
+  const fig = $('figure'); if (fig) fig.src = `jersey-batter${figSkin}-base.png`;
+  const cl = $('capLogo');
+  if (cl) {
+    cl.style.left = CAP_LOGO.left + '%'; cl.style.top = CAP_LOGO.top + '%';
+    cl.style.width = CAP_LOGO.width + '%'; cl.style.transform = `translate(-50%,-50%) rotate(${CAP_LOGO.rot}deg)`;
+  }
   const wrap = $('segments');
   wrap.innerHTML = '';
   segEls = {};
-  for (const s of SLOTS) {
+  for (const region of FIG_REGIONS) {
     const d = document.createElement('div');
     d.className = 'seg';
-    d.style.webkitMaskImage = `url(${s.mask})`;
-    d.style.maskImage = `url(${s.mask})`;
+    d.style.webkitMaskImage = `url(jersey-batter-${region}.png)`;
+    d.style.maskImage = `url(jersey-batter-${region}.png)`;
     wrap.appendChild(d);
-    segEls[s.key] = d;
+    segEls[region] = d;
   }
 }
 function updateFigure() {
-  for (const s of SLOTS) {
-    const f = state.filled[s.key];
-    const el = segEls[s.key];
+  for (const region of FIG_REGIONS) {
+    const f = state.filled[REGION_SLOT[region]];
+    const el = segEls[region];
     if (!el) continue;
-    if (f) {
-      el.style.background = `url(jersey-fabric.png), ${teamColor(f.team)}`;
-      el.style.backgroundSize = '150px, auto';
-      el.style.backgroundBlendMode = 'overlay';
-    } else {
-      el.style.background = 'transparent';
-    }
+    el.style.background = f ? teamColor(f.team) : 'transparent';
+  }
+  const capF = state.filled['batting_clutch'];
+  const cl = $('capLogo');
+  if (cl) {
+    if (capF && TEAM_IDS[capF.team]) {
+      cl.style.display = 'block';
+      cl.src = `https://www.mlbstatic.com/team-logos/team-cap-on-dark/${TEAM_IDS[capF.team]}.svg`;
+    } else { cl.style.display = 'none'; cl.removeAttribute('src'); }
   }
 }
 
@@ -2029,7 +2045,7 @@ function assign(slotKey) {
   const node = document.querySelector(`.node[data-key="${slotKey}"]`);
   const faceEl = node && node.querySelector('.face');
   if (faceEl) flyHeadshot(originRect, faceEl, headshot(p));
-  const seg = segEls[slotKey];
+  const seg = segEls[SLOT_REGION[slotKey]];
   if (seg) gsap.fromTo(seg, { opacity: 0 }, { opacity: 1, duration: .55, ease: 'power2.out' });
   if (node) gsap.fromTo(node, { scale: .85 }, { scale: 1, duration: .4, ease: 'back.out(1.8)', delay: .12 });
 

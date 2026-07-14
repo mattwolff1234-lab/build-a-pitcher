@@ -1,0 +1,328 @@
+{
+  "_note": "WIP jersey-recolor prototype assets. Each figure = an illustrated base (blank white uniform) + a seg-map (flat colors tracing each garment) + skin-tone variants. The sandbox derives per-region masks from the seg-map at load. colorScheme = which flat seg color maps to which recolorable region; skin(magenta) is NOT recolored (use the skin variants instead), black = misc (belt/ball/shoes/stick).",
+  "colorScheme": {
+    "red": "headwear",
+    "green": "torso",
+    "blue": "lsleeve",
+    "yellow": "rsleeve",
+    "orange": "lleg/shorts",
+    "purple": "rleg/socks",
+    "cyan": "gloves/shoes",
+    "magenta": "skin",
+    "black": "misc"
+  },
+  "figures": {
+    "pitcher": {
+      "base": "proto-pitcher.jpg",
+      "segmap": "proto-segmap.jpg",
+      "skins": {
+        "tan": "proto-pitcher-tan.jpg",
+        "brown": "proto-pitcher-brown.jpg",
+        "dark": "proto-pitcher-dark.jpg"
+      },
+      "regions": {
+        "red": "cap",
+        "green": "jersey",
+        "blue": "lsleeve",
+        "yellow": "rsleeve",
+        "orange": "lpant",
+        "purple": "rpant",
+        "cyan": "glove"
+      },
+      "headwear": "cap",
+      "done": true,
+      "logo": {
+        "left": 47.3,
+        "top": 10.6,
+        "width": 4.8,
+        "rot": -13,
+        "url": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/121.svg"
+      }
+    },
+    "batter": {
+      "base": "proto-batter.jpg",
+      "segmap": "proto-segmap-batter.jpg",
+      "regions": {
+        "red": "helmet",
+        "green": "jersey",
+        "blue": "lsleeve",
+        "yellow": "rsleeve",
+        "orange": "lpant",
+        "purple": "rpant",
+        "cyan": "gloves"
+      },
+      "headwear": "helmet",
+      "skins": {
+        "tan": "proto-batter-tan.jpg",
+        "brown": "proto-batter-brown.jpg",
+        "dark": "proto-batter-dark.jpg"
+      },
+      "logo": {
+        "left": 48.19,
+        "top": 11.5,
+        "width": 6,
+        "rot": -8,
+        "url": "https://www.mlbstatic.com/team-logos/team-cap-on-dark/121.svg"
+      }
+    },
+    "basketball": {
+      "base": "proto-basketball.jpg",
+      "segmap": "proto-segmap-basketball.jpg",
+      "regions": {
+        "green": "jersey",
+        "orange": "lshort",
+        "purple": "rshort",
+        "cyan": "shoes"
+      },
+      "headwear": null,
+      "skins": {
+        "tan": "proto-basketball-tan.jpg",
+        "brown": "proto-basketball-brown.jpg",
+        "dark": "proto-basketball-dark.jpg"
+      }
+    },
+    "striker": {
+      "base": "proto-striker.jpg",
+      "segmap": "proto-segmap-striker.jpg",
+      "regions": {
+        "green": "jersey",
+        "blue": "lsleeve",
+        "yellow": "rsleeve",
+        "orange": "shorts",
+        "cyan": "socks"
+      },
+      "headwear": null,
+      "skins": {
+        "tan": "proto-striker-tan.jpg",
+        "brown": "proto-striker-brown.jpg",
+        "dark": "proto-striker-dark.jpg"
+      }
+    },
+    "keeper": {
+      "base": "proto-keeper.jpg",
+      "segmap": "proto-segmap-keeper.jpg",
+      "regions": {
+        "green": "jersey",
+        "cyan": "gloves",
+        "orange": "shorts",
+        "purple": "socks"
+      },
+      "headwear": null,
+      "skins": {
+        "tan": "proto-keeper-tan.jpg",
+        "brown": "proto-keeper-brown.jpg",
+        "dark": "proto-keeper-dark.jpg"
+      }
+    },
+    "hockey": {
+      "base": "proto-hockey.jpg",
+      "segmap": "proto-segmap-hockey.jpg",
+      "regions": {
+        "red": "helmet",
+        "green": "jersey",
+        "blue": "lsleeve",
+        "yellow": "rsleeve",
+        "orange": "pants",
+        "purple": "socks",
+        "cyan": "gloves"
+      },
+      "headwear": "helmet",
+      "skins": {
+        "tan": "proto-hockey-tan.jpg",
+        "brown": "proto-hockey-brown.jpg",
+        "dark": "proto-hockey-dark.jpg"
+      },
+      "logo": {
+        "left": 53.62,
+        "top": 12,
+        "width": 7,
+        "rot": 0,
+        "url": "https://a.espncdn.com/i/teamlogos/nhl/500/bos.png"
+      }
+    },
+    "hockeygoalie": {
+      "base": "proto-hockeygoalie.jpg",
+      "segmap": "proto-segmap-hockeygoalie.jpg",
+      "regions": {
+        "red": "mask",
+        "green": "jersey",
+        "orange": "lpad",
+        "purple": "rpad",
+        "blue": "blocker",
+        "cyan": "trapper"
+      },
+      "headwear": "mask",
+      "skins": {
+        "tan": "proto-hockeygoalie-tan.jpg",
+        "brown": "proto-hockeygoalie-brown.jpg",
+        "dark": "proto-hockeygoalie-dark.jpg"
+      },
+      "logo": {
+        "left": 50.9,
+        "top": 12.85,
+        "width": 6.6,
+        "rot": 0,
+        "url": "https://a.espncdn.com/i/teamlogos/nhl/500/bos.png"
+      }
+    },
+    "footballqb": {
+      "base": "proto-footballqb.jpg",
+      "segmap": "proto-segmap-footballqb.jpg",
+      "regions": {
+        "red": "helmet",
+        "green": "jersey",
+        "blue": "lsleeve",
+        "yellow": "rsleeve",
+        "orange": "lpant",
+        "purple": "rpant"
+      },
+      "headwear": "helmet",
+      "skins": {
+        "tan": "proto-footballqb-tan.jpg",
+        "brown": "proto-footballqb-brown.jpg",
+        "dark": "proto-footballqb-dark.jpg"
+      },
+      "logo": {
+        "left": 43.67,
+        "top": 12.52,
+        "width": 7.1,
+        "rot": 0,
+        "url": "https://a.espncdn.com/i/teamlogos/nfl/500/dal.png"
+      }
+    },
+    "footballwr": {
+      "base": "proto-footballwr.jpg",
+      "segmap": "proto-segmap-footballwr.jpg",
+      "regions": {
+        "red": "helmet",
+        "green": "jersey",
+        "blue": "lsleeve",
+        "yellow": "rsleeve",
+        "orange": "lpant",
+        "purple": "rpant",
+        "cyan": "gloves"
+      },
+      "headwear": "helmet",
+      "skins": {
+        "tan": "proto-footballwr-tan.jpg",
+        "brown": "proto-footballwr-brown.jpg",
+        "dark": "proto-footballwr-dark.jpg"
+      },
+      "logo": {
+        "left": 49.77,
+        "top": 13.02,
+        "width": 7,
+        "rot": 0,
+        "url": "https://a.espncdn.com/i/teamlogos/nfl/500/dal.png"
+      }
+    },
+    "footballrb": {
+      "base": "proto-footballrb.jpg",
+      "segmap": "proto-segmap-footballrb.jpg",
+      "regions": {
+        "red": "helmet",
+        "green": "jersey",
+        "blue": "lsleeve",
+        "yellow": "rsleeve",
+        "orange": "lpant",
+        "purple": "rpant",
+        "cyan": "gloves"
+      },
+      "headwear": "helmet",
+      "skins": {
+        "tan": "proto-footballrb-tan.jpg",
+        "brown": "proto-footballrb-brown.jpg",
+        "dark": "proto-footballrb-dark.jpg"
+      },
+      "logo": {
+        "left": 48.19,
+        "top": 14.54,
+        "width": 7,
+        "rot": 0,
+        "url": "https://a.espncdn.com/i/teamlogos/nfl/500/dal.png"
+      }
+    },
+    "ufc": {
+      "base": "proto-ufc.jpg",
+      "segmap": "proto-segmap-ufc.jpg",
+      "regions": {
+        "green": "shorts",
+        "cyan": "gloves"
+      },
+      "headwear": null,
+      "skins": {
+        "tan": "proto-ufc-tan.jpg",
+        "brown": "proto-ufc-brown.jpg",
+        "dark": "proto-ufc-dark.jpg"
+      }
+    },
+    "wwe": {
+      "base": "proto-wwe.jpg",
+      "segmap": "proto-segmap-wwe.jpg",
+      "regions": {
+        "green": "trunks",
+        "orange": "kneepads",
+        "cyan": "boots"
+      },
+      "headwear": null,
+      "skins": {
+        "tan": "proto-wwe-tan.jpg",
+        "brown": "proto-wwe-brown.jpg",
+        "dark": "proto-wwe-dark.jpg"
+      }
+    },
+    "boxer": {
+      "base": "proto-boxer.jpg",
+      "segmap": "proto-segmap-boxer.jpg",
+      "regions": {
+        "green": "shorts",
+        "cyan": "gloves",
+        "orange": "boots"
+      },
+      "headwear": null,
+      "skins": {
+        "tan": "proto-boxer-tan.jpg",
+        "brown": "proto-boxer-brown.jpg",
+        "dark": "proto-boxer-dark.jpg"
+      }
+    },
+    "racing": {
+      "base": "proto-racing.jpg",
+      "segmap": "proto-segmap-racing.jpg",
+      "regions": {
+        "red": "helmet",
+        "green": "suit",
+        "blue": "lsleeve",
+        "yellow": "rsleeve",
+        "orange": "lleg",
+        "purple": "rleg",
+        "cyan": "gloves"
+      },
+      "headwear": "helmet",
+      "skins": {
+        "tan": "proto-racing-tan.jpg",
+        "brown": "proto-racing-brown.jpg",
+        "dark": "proto-racing-dark.jpg"
+      }
+    },
+    "golfer": {
+      "base": "proto-golfer.jpg",
+      "segmap": "proto-segmap-golfer.jpg",
+      "regions": {
+        "red": "cap",
+        "green": "polo",
+        "blue": "lsleeve",
+        "yellow": "rsleeve",
+        "orange": "lpant",
+        "purple": "rpant",
+        "cyan": "glove"
+      },
+      "headwear": "cap",
+      "skins": {
+        "tan": "proto-golfer-tan.jpg",
+        "brown": "proto-golfer-brown.jpg",
+        "dark": "proto-golfer-dark.jpg"
+      }
+    }
+  }
+}

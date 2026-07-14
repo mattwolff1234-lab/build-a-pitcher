@@ -244,22 +244,20 @@
 
   /* ---------- figure stage ---------- */
   .stage3d { perspective:1100px; margin:8px auto 0; max-width:600px; }
-  .stage { position:relative; width:100%; aspect-ratio:1086/944; max-width:520px; margin:0 auto; border-radius:16px; overflow:hidden;
+  .stage { position:relative; width:100%; aspect-ratio:7/5; max-width:520px; margin:0 auto; border-radius:16px; overflow:hidden;
     border:1px solid var(--line); transform-style:preserve-3d; will-change:transform;
     background:radial-gradient(120% 100% at 50% 30%, #122236 0%, #060a12 76%);
     box-shadow:inset 0 0 70px rgba(0,0,0,.6), 0 14px 50px rgba(0,0,0,.5); }
   .stage::before, .stage::after { content:''; position:absolute; width:26px; height:26px; z-index:6; pointer-events:none; opacity:.7; }
   .stage::before { top:10px; left:10px; border-top:2px solid var(--accent2); border-left:2px solid var(--accent2); }
   .stage::after { bottom:10px; right:10px; border-bottom:2px solid var(--accent2); border-right:2px solid var(--accent2); }
-  .stage .figure { position:absolute; inset:0; background:#39414c;
-    -webkit-mask:url(keeper-figure.png) center/contain no-repeat; mask:url(keeper-figure.png) center/contain no-repeat;
-    pointer-events:none; }
-  .seg { position:absolute; inset:0; background:transparent; transition:background .25s;
+  #figbox { position:absolute; top:0; bottom:0; left:50%; transform:translateX(-50%); height:100%; aspect-ratio:900/1205; }
+  .stage #figure { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; pointer-events:none; }
+  .seg { position:absolute; inset:0; background:transparent; transition:background .25s; mix-blend-mode:multiply;
     -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat; -webkit-mask-position:center; mask-position:center;
     -webkit-mask-size:contain; mask-size:contain; pointer-events:none; }
-  .stage .shade { position:absolute; inset:0; pointer-events:none; mix-blend-mode:soft-light;
-    background:linear-gradient(158deg,rgba(255,255,255,.30),rgba(255,255,255,0) 42%,rgba(0,0,0,.40));
-    -webkit-mask:url(keeper-figure.png) center/contain no-repeat; mask:url(keeper-figure.png) center/contain no-repeat; }
+  #capLogo { position:absolute; height:auto; z-index:5; pointer-events:none; display:none;
+    filter:drop-shadow(0 1px 2px rgba(0,0,0,.55)); }
   .burst { position:absolute; inset:0; pointer-events:none; z-index:4; opacity:0;
     background:radial-gradient(circle at 50% 40%,rgba(163,102,255,.85),rgba(163,102,255,0) 60%); }
   .wires { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:3; }
@@ -820,9 +818,11 @@
 
     <div class="stage3d">
       <div class="stage" id="stage">
-        <div class="figure" id="figure"></div>
-        <div id="segments"></div>
-        <div class="shade"></div>
+        <div id="figbox">
+          <img id="figure" alt="">
+          <div id="segments"></div>
+          <img id="capLogo" alt="">
+        </div>
         <div class="burst" id="burst"></div>
         <svg class="wires" id="wires" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
         <div id="nodes"></div>
@@ -1102,15 +1102,15 @@
 // Each slot maps an attribute to a body part. ax/ay = anchor point on the figure (%),
 // lx/ly = where the label node floats (%). A wire connects the two.
 const SLOTS = [
-  { key: 'diving',       label: 'Diving',       part: 'Arms',        mask: 'kp-seg-diving.png',       ax: 21, ay: 36, lx: 8,  ly: 26 },
-  { key: 'reflexes',     label: 'Reflexes',     part: 'Left Glove',  mask: 'kp-seg-reflexes.png',     ax: 9,  ay: 44, lx: 8,  ly: 62 },
-  { key: 'handling',     label: 'Handling',     part: 'Right Glove', mask: 'kp-seg-handling.png',     ax: 91, ay: 43, lx: 92, ly: 62 },
-  { key: 'distribution', label: 'Distribution', part: 'Boots',       mask: 'kp-seg-distribution.png', ax: 78, ay: 88, lx: 50, ly: 90 },
-  { key: 'positioning',  label: 'Positioning',  part: 'Head',        mask: 'kp-seg-positioning.png',  ax: 52, ay: 9,  lx: 86, ly: 6 },
-  { key: 'agility',      label: 'Agility',      part: 'Legs',        mask: 'kp-seg-agility.png',      ax: 28, ay: 74, lx: 10, ly: 80 },
-  { key: 'command',      label: 'Command',      part: 'The Box',     mask: 'kp-seg-command.png',      ax: 52, ay: 38, lx: 92, ly: 26 },
-  { key: 'clutch',       label: 'Clutch',       part: 'Heart',       mask: 'kp-seg-clutch.png',       ax: 52, ay: 25, lx: 14, ly: 7 },
-  { key: 'frame',        label: 'Frame',        part: 'Height',      mask: 'kp-seg-frame.png',        ax: 51, ay: 54, lx: 50, ly: 72, type: 'height' },
+  { key: 'diving',       label: 'Diving',       part: 'Arms',        mask: 'kp-seg-diving.png',       ax: 30,   ay: 36,   lx: 8,  ly: 26 },
+  { key: 'reflexes',     label: 'Reflexes',     part: 'Left Glove',  mask: 'kp-seg-reflexes.png',     ax: 70,   ay: 44,   lx: 8,  ly: 62 },
+  { key: 'handling',     label: 'Handling',     part: 'Right Glove', mask: 'kp-seg-handling.png',     ax: 29.9, ay: 44.0, lx: 92, ly: 62 },
+  { key: 'distribution', label: 'Distribution', part: 'Boots',       mask: 'kp-seg-distribution.png', ax: 50,   ay: 90,   lx: 50, ly: 90 },
+  { key: 'positioning',  label: 'Positioning',  part: 'Head',        mask: 'kp-seg-positioning.png',  ax: 50,   ay: 10,   lx: 86, ly: 6 },
+  { key: 'agility',      label: 'Agility',      part: 'Legs',        mask: 'kp-seg-agility.png',      ax: 64.6, ay: 76.1, lx: 10, ly: 80 },
+  { key: 'command',      label: 'Command',      part: 'The Box',     mask: 'kp-seg-command.png',      ax: 51.2, ay: 55.9, lx: 92, ly: 26 },
+  { key: 'clutch',       label: 'Clutch',       part: 'Heart',       mask: 'kp-seg-clutch.png',       ax: 50,   ay: 26,   lx: 14, ly: 7 },
+  { key: 'frame',        label: 'Frame',        part: 'Height',      mask: 'kp-seg-frame.png',        ax: 50.7, ay: 35.4, lx: 50, ly: 72, type: 'height' },
 ];
 
 // Career clubs (Signing Day, transfers): 30 famous sides. color = kit primary; tid = EA club id -
@@ -1270,7 +1270,7 @@ const SORT_OPTIONS = {
   striker: [{ key: 'ovr', label: 'OVR' }, { key: 'goals', label: 'Goals' }, { key: 'assists', label: 'Assists' }, { key: 'war', label: 'Rating' }, { key: 'rings', label: 'UCLs' }, { key: 'mvp', label: "Ballons d'Or" }],
   keeper: [{ key: 'ovr', label: 'OVR' }, { key: 'cs', label: 'Clean Sheets' }, { key: 'saves', label: 'Saves' }, { key: 'war', label: 'Rating' }, { key: 'rings', label: 'UCLs' }, { key: 'mvp', label: 'Yashin Trophies' }],
   hockey: [{ key: 'ovr', label: 'OVR' }, { key: 'g', label: 'Goals' }, { key: 'p', label: 'Points' }, { key: 'war', label: 'Point Shares' }, { key: 'rings', label: 'Cups' }, { key: 'mvp', label: 'Harts' }],
-  mon: [{ key: 'ovr', label: 'OVR' }, { key: 'w', label: 'Wins' }, { key: 'sweeps', label: 'Sweeps' }, { key: 'war', label: 'Battle Rating' }, { key: 'rings', label: 'Titles' }, { key: 'mvp', label: 'Worlds' }],
+  mon: [{ key: 'ovr', label: 'OVR' }, { key: 'w', label: 'Wins' }, { key: 'badges', label: 'Badges' }, { key: 'war', label: 'Battle Rating' }, { key: 'rings', label: 'Leagues' }, { key: 'mvp', label: 'Worlds' }],
 };
 function sortOptionsFor(game) { return SORT_OPTIONS[game] || SORT_OPTIONS.keeper; }
 function fmtStat(v) { return lbSort === 'war' ? Number(v).toFixed(1) : Math.round(v); }
@@ -1856,32 +1856,33 @@ function land(p) {
   }
 }
 
+// illustrated jersey figure — garment regions colored by mapped slots' teams
+const FIG_REGIONS = ['jersey', 'gloves', 'shorts', 'socks'];
+const REGION_SLOT = { jersey: 'frame', gloves: 'handling', shorts: 'command', socks: 'agility' };
+const SLOT_REGION = Object.fromEntries(Object.entries(REGION_SLOT).map(([r, k]) => [k, r]));
+const SKIN_TONES = ['', '-tan', '-brown', '-dark'];   // '' = light; a random tone per build
+let figSkin = SKIN_TONES[Math.floor(Math.random() * SKIN_TONES.length)];
 let segEls = {};
 function buildSegments() {
+  const fig = $('figure'); if (fig) fig.src = `jersey-keeper${figSkin}-base.png`;
   const wrap = $('segments');
   wrap.innerHTML = '';
   segEls = {};
-  for (const s of SLOTS) {
+  for (const region of FIG_REGIONS) {
     const d = document.createElement('div');
     d.className = 'seg';
-    d.style.webkitMaskImage = `url(${s.mask})`;
-    d.style.maskImage = `url(${s.mask})`;
+    d.style.webkitMaskImage = `url(jersey-keeper-${region}.png)`;
+    d.style.maskImage = `url(jersey-keeper-${region}.png)`;
     wrap.appendChild(d);
-    segEls[s.key] = d;
+    segEls[region] = d;
   }
 }
 function updateFigure() {
-  for (const s of SLOTS) {
-    const f = state.filled[s.key];
-    const el = segEls[s.key];
+  for (const region of FIG_REGIONS) {
+    const f = state.filled[REGION_SLOT[region]];
+    const el = segEls[region];
     if (!el) continue;
-    if (f) {
-      el.style.background = `url(jersey-fabric.png), ${teamColor(f.team)}`;
-      el.style.backgroundSize = '150px, auto';
-      el.style.backgroundBlendMode = 'overlay';
-    } else {
-      el.style.background = 'transparent';
-    }
+    el.style.background = f ? teamColor(f.team) : 'transparent';
   }
 }
 
@@ -2015,7 +2016,7 @@ function assign(slotKey) {
   const node = document.querySelector(`.node[data-key="${slotKey}"]`);
   const faceEl = node && node.querySelector('.face');
   if (faceEl) flyHeadshot(originRect, faceEl, headshot(p));
-  const seg = segEls[slotKey];
+  const seg = segEls[SLOT_REGION[slotKey]];
   if (seg) gsap.fromTo(seg, { opacity: 0 }, { opacity: 1, duration: .55, ease: 'power2.out' });
   if (node) gsap.fromTo(node, { scale: .85 }, { scale: 1, duration: .4, ease: 'back.out(1.8)', delay: .12 });
 

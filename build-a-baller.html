@@ -240,22 +240,20 @@
 
   /* ---------- figure stage ---------- */
   .stage3d { perspective:1100px; margin:8px auto 0; max-width:600px; }
-  .stage { position:relative; width:100%; aspect-ratio:1086/1275; max-width:520px; margin:0 auto; border-radius:16px; overflow:hidden;
+  .stage { position:relative; width:100%; aspect-ratio:7/5; max-width:520px; margin:0 auto; border-radius:16px; overflow:hidden;
     border:1px solid var(--line); transform-style:preserve-3d; will-change:transform;
     background:radial-gradient(120% 100% at 50% 30%, #122236 0%, #060a12 76%);
     box-shadow:inset 0 0 70px rgba(0,0,0,.6), 0 14px 50px rgba(0,0,0,.5); }
   .stage::before, .stage::after { content:''; position:absolute; width:26px; height:26px; z-index:6; pointer-events:none; opacity:.7; }
   .stage::before { top:10px; left:10px; border-top:2px solid var(--accent2); border-left:2px solid var(--accent2); }
   .stage::after { bottom:10px; right:10px; border-bottom:2px solid var(--accent2); border-right:2px solid var(--accent2); }
-  .stage .figure { position:absolute; inset:0; background:#39414c;
-    -webkit-mask:url(baller-figure.png) center/contain no-repeat; mask:url(baller-figure.png) center/contain no-repeat;
-    pointer-events:none; }
-  .seg { position:absolute; inset:0; background:transparent; transition:background .25s;
+  #figbox { position:absolute; top:0; bottom:0; left:50%; transform:translateX(-50%); height:100%; aspect-ratio:900/1205; }
+  .stage #figure { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; pointer-events:none; }
+  .seg { position:absolute; inset:0; background:transparent; transition:background .25s; mix-blend-mode:multiply;
     -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat; -webkit-mask-position:center; mask-position:center;
     -webkit-mask-size:contain; mask-size:contain; pointer-events:none; }
-  .stage .shade { position:absolute; inset:0; pointer-events:none; mix-blend-mode:soft-light;
-    background:linear-gradient(158deg,rgba(255,255,255,.30),rgba(255,255,255,0) 42%,rgba(0,0,0,.40));
-    -webkit-mask:url(baller-figure.png) center/contain no-repeat; mask:url(baller-figure.png) center/contain no-repeat; }
+  #capLogo { position:absolute; height:auto; z-index:5; pointer-events:none; display:none;
+    filter:drop-shadow(0 1px 2px rgba(0,0,0,.55)); }
   .burst { position:absolute; inset:0; pointer-events:none; z-index:4; opacity:0;
     background:radial-gradient(circle at 50% 40%,rgba(163,102,255,.85),rgba(163,102,255,0) 60%); }
   .wires { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:3; }
@@ -816,9 +814,11 @@
 
     <div class="stage3d">
       <div class="stage" id="stage">
-        <div class="figure" id="figure"></div>
-        <div id="segments"></div>
-        <div class="shade"></div>
+        <div id="figbox">
+          <img id="figure" alt="">
+          <div id="segments"></div>
+          <img id="capLogo" alt="">
+        </div>
         <div class="burst" id="burst"></div>
         <svg class="wires" id="wires" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
         <div id="nodes"></div>
@@ -1100,15 +1100,15 @@
 // Each slot maps an attribute to a body part. ax/ay = anchor point on the figure (%),
 // lx/ly = where the label node floats (%). A wire connects the two.
 const SLOTS = [
-  { key: 'threept',    label: '3-Pointer',  part: 'Shooting Hand', mask: 'hoop-seg-threept.png',    ax: 16, ay: 50, lx: 7,  ly: 56 },
-  { key: 'finishing',  label: 'Finishing',  part: 'Thighs',        mask: 'hoop-seg-finishing.png',  ax: 40, ay: 61, lx: 11, ly: 74 },
-  { key: 'dribble',    label: 'Dribble',    part: 'Forearms',      mask: 'hoop-seg-dribble.png',    ax: 27, ay: 40, lx: 8,  ly: 38 },
-  { key: 'playmaking', label: 'Playmaking', part: 'Off Hand',      mask: 'hoop-seg-playmaking.png', ax: 85, ay: 55, lx: 93, ly: 60 },
-  { key: 'defense',    label: 'Defense',    part: 'Shoulders',     mask: 'hoop-seg-defense.png',    ax: 70, ay: 25, lx: 92, ly: 22 },
-  { key: 'rebounding', label: 'Rebounding', part: 'Core',          mask: 'hoop-seg-rebounding.png', ax: 53, ay: 46, lx: 9,  ly: 20 },
-  { key: 'speed',      label: 'Speed',      part: 'Legs',          mask: 'hoop-seg-speed.png',      ax: 80, ay: 76, lx: 90, ly: 82 },
-  { key: 'clutch',     label: 'Clutch',     part: 'Head',          mask: 'hoop-seg-clutch.png',     ax: 58, ay: 12, lx: 86, ly: 8 },
-  { key: 'frame',      label: 'Frame',      part: 'Height',        mask: 'hoop-seg-frame.png',      ax: 54, ay: 30, lx: 93, ly: 40, type: 'height' },
+  { key: 'threept',    label: '3-Pointer',  part: 'Shooting Hand', mask: 'hoop-seg-threept.png',    ax: 34, ay: 42, lx: 7,  ly: 56 },
+  { key: 'finishing',  label: 'Finishing',  part: 'Thighs',        mask: 'hoop-seg-finishing.png',  ax: 46.4, ay: 55.7, lx: 11, ly: 74 },
+  { key: 'dribble',    label: 'Dribble',    part: 'Forearms',      mask: 'hoop-seg-dribble.png',    ax: 38, ay: 44, lx: 8,  ly: 38 },
+  { key: 'playmaking', label: 'Playmaking', part: 'Off Hand',      mask: 'hoop-seg-playmaking.png', ax: 66, ay: 52, lx: 93, ly: 60 },
+  { key: 'defense',    label: 'Defense',    part: 'Shoulders',     mask: 'hoop-seg-defense.png',    ax: 60, ay: 26, lx: 92, ly: 22 },
+  { key: 'rebounding', label: 'Rebounding', part: 'Core',          mask: 'hoop-seg-rebounding.png', ax: 53.6, ay: 56.0, lx: 9,  ly: 20 },
+  { key: 'speed',      label: 'Speed',      part: 'Legs',          mask: 'hoop-seg-speed.png',      ax: 57.4, ay: 89.1, lx: 90, ly: 82 },
+  { key: 'clutch',     label: 'Clutch',     part: 'Head',          mask: 'hoop-seg-clutch.png',     ax: 50, ay: 12, lx: 86, ly: 8 },
+  { key: 'frame',      label: 'Frame',      part: 'Height',        mask: 'hoop-seg-frame.png',      ax: 50.1, ay: 33.2, lx: 93, ly: 40, type: 'height' },
 ];
 
 // NBA team primary colors (jersey tint). FA / unknown -> neutral steel.
@@ -1234,7 +1234,7 @@ const SORT_OPTIONS = {
   striker: [{ key: 'ovr', label: 'OVR' }, { key: 'goals', label: 'Goals' }, { key: 'assists', label: 'Assists' }, { key: 'war', label: 'Rating' }, { key: 'rings', label: 'UCLs' }, { key: 'mvp', label: "Ballons d'Or" }],
   keeper: [{ key: 'ovr', label: 'OVR' }, { key: 'cs', label: 'Clean Sheets' }, { key: 'saves', label: 'Saves' }, { key: 'war', label: 'Rating' }, { key: 'rings', label: 'UCLs' }, { key: 'mvp', label: 'Yashin Trophies' }],
   hockey: [{ key: 'ovr', label: 'OVR' }, { key: 'g', label: 'Goals' }, { key: 'p', label: 'Points' }, { key: 'war', label: 'Point Shares' }, { key: 'rings', label: 'Cups' }, { key: 'mvp', label: 'Harts' }],
-  mon: [{ key: 'ovr', label: 'OVR' }, { key: 'w', label: 'Wins' }, { key: 'sweeps', label: 'Sweeps' }, { key: 'war', label: 'Battle Rating' }, { key: 'rings', label: 'Titles' }, { key: 'mvp', label: 'Worlds' }],
+  mon: [{ key: 'ovr', label: 'OVR' }, { key: 'w', label: 'Wins' }, { key: 'badges', label: 'Badges' }, { key: 'war', label: 'Battle Rating' }, { key: 'rings', label: 'Leagues' }, { key: 'mvp', label: 'Worlds' }],
 };
 function sortOptionsFor(game) { return SORT_OPTIONS[game] || SORT_OPTIONS.baller; }
 function fmtStat(v) { return lbSort === 'war' ? Number(v).toFixed(1) : Math.round(v); }
@@ -1817,32 +1817,33 @@ function land(p) {
   }
 }
 
+// illustrated jersey figure — garment regions colored by mapped slots' teams
+const FIG_REGIONS = ['jersey', 'lshort', 'rshort', 'shoes'];
+const REGION_SLOT = { jersey: 'frame', lshort: 'finishing', rshort: 'rebounding', shoes: 'speed' };
+const SLOT_REGION = Object.fromEntries(Object.entries(REGION_SLOT).map(([r, k]) => [k, r]));
+const SKIN_TONES = ['', '-tan', '-brown', '-dark'];
+let figSkin = SKIN_TONES[Math.floor(Math.random() * SKIN_TONES.length)];
 let segEls = {};
 function buildSegments() {
+  const fig = $('figure'); if (fig) fig.src = `jersey-basketball${figSkin}-base.png`;
   const wrap = $('segments');
   wrap.innerHTML = '';
   segEls = {};
-  for (const s of SLOTS) {
+  for (const region of FIG_REGIONS) {
     const d = document.createElement('div');
     d.className = 'seg';
-    d.style.webkitMaskImage = `url(${s.mask})`;
-    d.style.maskImage = `url(${s.mask})`;
+    d.style.webkitMaskImage = `url(jersey-basketball-${region}.png)`;
+    d.style.maskImage = `url(jersey-basketball-${region}.png)`;
     wrap.appendChild(d);
-    segEls[s.key] = d;
+    segEls[region] = d;
   }
 }
 function updateFigure() {
-  for (const s of SLOTS) {
-    const f = state.filled[s.key];
-    const el = segEls[s.key];
+  for (const region of FIG_REGIONS) {
+    const f = state.filled[REGION_SLOT[region]];
+    const el = segEls[region];
     if (!el) continue;
-    if (f) {
-      el.style.background = `url(jersey-fabric.png), ${teamColor(f.team)}`;
-      el.style.backgroundSize = '150px, auto';
-      el.style.backgroundBlendMode = 'overlay';
-    } else {
-      el.style.background = 'transparent';
-    }
+    el.style.background = f ? teamColor(f.team) : 'transparent';
   }
 }
 
@@ -1976,7 +1977,7 @@ function assign(slotKey) {
   const node = document.querySelector(`.node[data-key="${slotKey}"]`);
   const faceEl = node && node.querySelector('.face');
   if (faceEl) flyHeadshot(originRect, faceEl, headshot(p));
-  const seg = segEls[slotKey];
+  const seg = segEls[SLOT_REGION[slotKey]];
   if (seg) gsap.fromTo(seg, { opacity: 0 }, { opacity: 1, duration: .55, ease: 'power2.out' });
   if (node) gsap.fromTo(node, { scale: .85 }, { scale: 1, duration: .4, ease: 'back.out(1.8)', delay: .12 });
 
