@@ -29,6 +29,10 @@
   // Launch gate: while true the store sells ONLY GoatLab Pro — coin packs (Get Coins tab) and
   // coin-spend items (avatars/consumables) are hidden. Flip to false to reopen the coin economy.
   const PRO_ONLY = true;
+  // Real-money go-live gate. FALSE = Pro shows "Coming soon" (can't subscribe) — use while Stripe is
+  // still in test mode / the account isn't activated. Flip TRUE (and swap Vercel to LIVE Stripe
+  // keys + a LIVE-mode webhook — see GO-LIVE.md) to actually start charging. One switch, that's it.
+  const PRO_LIVE = false;
 
   /* ---------- identity + api ---------- */
   function acct() { try { return JSON.parse(localStorage.getItem('pl_account') || 'null'); } catch (e) { return null; } }
@@ -112,6 +116,12 @@
   .gc-note { font-size:11.5px; color:#8ea2bd; line-height:1.45; margin:8px 0; }
   .gc-err { font-size:12px; color:#ff7d8a; min-height:15px; margin-top:6px; }
   .gc-burst { position:fixed; z-index:600; pointer-events:none; font-size:20px; }
+  .gc-celebrate { position:fixed; left:50%; top:36%; transform:translate(-50%,-50%); z-index:620; text-align:center;
+    background:linear-gradient(160deg,#182a1e,#0b1119); border:1px solid rgba(57,217,138,.55); border-radius:16px;
+    padding:20px 28px; box-shadow:0 22px 64px rgba(0,0,0,.6); pointer-events:none; }
+  .gc-celebrate .ce-ic { font-size:44px; line-height:1; }
+  .gc-celebrate .ce-title { font-family:'Oswald',sans-serif; font-size:23px; color:#39d98a; margin-top:8px; letter-spacing:.5px; }
+  .gc-celebrate .ce-sub { font-size:13px; color:#c9d6e6; margin-top:3px; }
   @media (max-width:480px){ .gc-panel { padding:14px; } .gc-title { font-size:20px; } }`;
   let cssIn = false;
   function injectCss() { if (cssIn) return; cssIn = true; const s = document.createElement('style'); s.textContent = css; document.head.appendChild(s); }
@@ -185,16 +195,13 @@
         <div class="gc-err" id="gcProMsg"></div></div>`;
     }
     const perks = (P.perks || []).map(x => `<li>${x}</li>`).join('');
-    if (inApp()) {
-      return `<div class="gc-pro"><div class="gc-pro-top"><span class="gc-pro-name">${P.icon} ${P.name}</span><span class="gc-pro-tag">${price}/mo</span></div>
-        <div class="gc-pro-sub">${P.tagline}</div><ul class="gc-pro-perks">${perks}</ul>
-        <div class="gc-note">Subscribe on the website: <b>goat-lab.app</b></div></div>`;
-    }
-    return `<div class="gc-pro">
+    const pitch = `<div class="gc-pro">
       <div class="gc-pro-top"><span class="gc-pro-name">${P.icon} ${P.name}</span><span class="gc-pro-tag">${price}/mo</span></div>
       <div class="gc-pro-sub">${P.tagline}</div>
-      <ul class="gc-pro-perks">${perks}</ul>
-      <button class="gc-buy gc-pro-btn" id="gcProSubscribe">Get ${P.name} — ${price}/mo</button>
+      <ul class="gc-pro-perks">${perks}</ul>`;
+    if (!PRO_LIVE) return pitch + `<button class="gc-buy gc-pro-btn" disabled>Coming soon</button></div>`;
+    if (inApp()) return pitch + `<div class="gc-note">Subscribe on the website: <b>goat-lab.app</b></div></div>`;
+    return pitch + `<button class="gc-buy gc-pro-btn" id="gcProSubscribe">Get ${P.name} — ${price}/mo</button>
       <div class="gc-err" id="gcProMsg"></div></div>`;
   }
   function bodyShop() {
@@ -368,6 +375,28 @@
     }
   }
 
+  /* ---------- satisfying purchase celebration ---------- */
+  function celebrate(icon, title, sub) {
+    injectCss();
+    const el = document.createElement('div');
+    el.className = 'gc-celebrate';
+    el.innerHTML = `<div class="ce-ic">${icon}</div><div class="ce-title">${title}</div><div class="ce-sub">${sub || ''}</div>`;
+    document.body.appendChild(el);
+    const chip = document.querySelector('.gc-chip'); if (chip) burst(chip);
+    if (window.gsap) {
+      gsap.fromTo(el, { scale: .6, opacity: 0, y: 16 }, { scale: 1, opacity: 1, y: 0, duration: .5, ease: 'back.out(1.9)' });
+      gsap.to(el, { opacity: 0, y: -22, duration: .5, delay: 2.2, ease: 'power2.in', onComplete: () => el.remove() });
+    } else { setTimeout(() => el.remove(), 2600); }
+  }
+  function countUpChip(from, to) {
+    const chip = document.querySelector('.gc-chip');
+    if (!chip || !window.gsap || to <= from) { paintChips(); return; }
+    const o = { v: from };
+    gsap.to(o, { v: to, duration: 1.0, ease: 'power2.out',
+      onUpdate: () => { chip.textContent = '🪙 ' + Math.round(o.v).toLocaleString('en-US'); },
+      onComplete: () => paintChips() });
+  }
+
   /* ---------- Stripe return bounce ---------- */
   function checkPurchaseReturn() {
     const q = new URLSearchParams(location.search);
@@ -387,8 +416,9 @@
       const landed = isPro ? (proActive() && !wasPro) : (coins() > before);
       if (landed || tries++ >= 6) {
         open('shop');
-        const chip = document.querySelector('.gc-chip');
-        if (chip) burst(chip);
+        if (landed && isPro) celebrate('⭐', 'GoatLab Pro is live!', 'Ads gone · premium lane unlocked');
+        else if (landed) { celebrate('🪙', '+' + (coins() - before).toLocaleString('en-US') + ' coins!', 'Loaded into your wallet'); countUpChip(before, coins()); }
+        else { const chip = document.querySelector('.gc-chip'); if (chip) burst(chip); }
         ga(isPro ? 'pro_landed' : 'coin_pack_landed', { landed: landed ? 1 : 0 });
         return;
       }

@@ -38,12 +38,14 @@ function makeState(sub, ret) {
   return payload + '.' + sign(payload);
 }
 function readState(state) {
-  const [payload, sig] = String(state || '').split('.');
-  if (!payload || !sig) return null;
-  const good = crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(sign(payload)));
-  if (!good) return null;
-  try { const o = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')); return (o.e > Date.now()) ? o : null; }
-  catch (e) { return null; }
+  try {
+    const [payload, sig] = String(state || '').split('.');
+    if (!payload || !sig) return null;
+    const expect = sign(payload);
+    if (sig.length !== expect.length || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expect))) return null;
+    const o = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+    return (o && o.e > Date.now()) ? o : null;
+  } catch (e) { return null; }
 }
 async function authed(sub, sessionToken) {
   if (!sub || !sessionToken) return false;
