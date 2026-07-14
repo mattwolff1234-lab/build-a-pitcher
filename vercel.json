@@ -36,6 +36,7 @@
     { "source": "/keeper", "destination": "/build-a-keeper.html" },
     { "source": "/versus-hoops", "destination": "/versus-hoops.html" },
     { "source": "/versus-soccer", "destination": "/versus-soccer.html" },
+    { "source": "/versus-cfb", "destination": "/versus-cfb.html" },
     { "source": "/franchise", "destination": "/franchise.html" },
     { "source": "/franchise-hoops", "destination": "/franchise-hoops.html" },
     { "source": "/franchise-soccer", "destination": "/franchise-soccer.html" },

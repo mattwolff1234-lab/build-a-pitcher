@@ -1,0 +1,2871 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>College Football Face Off · GoatLab 1v1</title>
+<meta name="theme-color" content="#0a1320">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="/namefilter.js"></script>
+<script src="/switcher.js?v=15" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/MotionPathPlugin.min.js"></script>
+<script src="/achievements.js" defer></script>
+<script src="/xp.js" defer></script>
+<script src="/social.js" defer></script>
+<script src="/catalog.js" defer></script>
+<script src="/store.js" defer></script>
+<script src="/quests.js" defer></script>
+<script src="/season-track.js" defer></script>
+<script src="https://cdn.ably.com/lib/ably.min-2.js"></script>
+<script src="https://accounts.google.com/gsi/client" async></script>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-TVL2XEQ2Q7"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-TVL2XEQ2Q7');
+</script>
+
+<!-- Playwire Ramp - PUB 1025880 / SITE 77906 -->
+<script>
+  window.ramp = window.ramp || {};
+  window.ramp.que = window.ramp.que || [];
+  window.ramp.passiveMode = true;
+  document.addEventListener('DOMContentLoaded', function () {
+    window.ramp.que.push(function () { window.ramp.spaNewPage(window.location.pathname); });
+  });
+</script>
+<script>
+  // Goat Coins '30 Days Ad-Free' entitlement — skip loading Playwire entirely while active
+  // (pl_wallet is the server wallet cached by store.js; the expiry is a server-set timestamp).
+  // Everything else in the ads contract (window.ramp setup, spacing CSS) stays put — see ads.md.
+  (function () {
+    try {
+      var w = JSON.parse(localStorage.getItem('pl_wallet') || 'null');
+      if (w && w.entitlements && w.entitlements.no_ads_until && Date.parse(w.entitlements.no_ads_until) > Date.now()) return;
+    } catch (e) {}
+    var s = document.createElement('script');
+    s.async = true; s.src = '//cdn.intergient.com/1025880/77906/ramp.js';
+    document.head.appendChild(s);
+  })();
+</script>
+<style>
+/* Ad-safe mobile spacing: keep fixed-bottom UI above the Playwire anchor ad (see ads.md) */
+@media (max-width:900px){
+  body{ padding-bottom:60px; }
+  body .toast, body .day-toast{ bottom:92px; }
+  body .xp-hud{ bottom:calc(8vh + 56px); }
+  body #challengeNotif{ bottom:120px !important; }
+  body .overlay, body .draft-overlay, body .daily-reveal, body .hotb-overlay,
+  body .dq-ov, body .col-ov, body .ach-ov, body .st-ov{ padding-bottom:72px; }
+}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg0:#04070d; --bg1:#0a1320;
+    --panel-a: rgba(20,31,48,.72); --panel-b: rgba(9,15,25,.86);
+    --ink:#eaf2fb; --muted:#7e8da3; --dim:#56627a;
+    --line: rgba(120,160,210,.16);
+    --accent:#ff7a18; --accent2:#19c6ff;
+    --gold:#ffce3a; --diamond:#54c7ff; --legend:#a366ff;
+    --pitch:#ff7a18; --bat:#19c6ff;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; scrollbar-width: thin; scrollbar-color: rgba(120,160,210,.32) transparent; }
+  ::-webkit-scrollbar { width: 7px; height: 7px; }
+  ::-webkit-scrollbar-thumb { background: rgba(120,160,210,.28); border-radius: 8px; }
+  html,body { height:100%; margin:0; }
+  body {
+    background:var(--bg0); color:var(--ink); overflow-x:hidden;
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+    min-height:100vh; display:flex; flex-direction:column; align-items:center;
+  }
+  .disp { font-family:'Oswald',sans-serif; }
+  .bg { position:fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden; background:
+     radial-gradient(120% 90% at 50% -10%, #14253c 0%, var(--bg1) 38%, var(--bg0) 80%); }
+  .bg .glow { position:absolute; width:60vw; height:60vw; border-radius:50%; filter:blur(90px); opacity:.45; }
+  .bg .g1 { background:radial-gradient(circle,#ff7a1855,transparent 60%); top:-12%; left:-10%; animation:drift1 26s ease-in-out infinite; }
+  .bg .g2 { background:radial-gradient(circle,#19c6ff44,transparent 60%); bottom:-18%; right:-12%; animation:drift2 32s ease-in-out infinite; }
+  @keyframes drift1 { 0%,100%{ transform:translate(-6%,-4%);} 50%{ transform:translate(8%,6%);} }
+  @keyframes drift2 { 0%,100%{ transform:translate(6%,4%);} 50%{ transform:translate(-8%,-6%);} }
+  /* Battery/heat: animating a 90px blur (scale) + the scrolling grid pegs the mobile GPU. Drop the
+     scale (above) and go fully static on phones / reduced-motion so backdrop-filters composite once. */
+  @media (prefers-reduced-motion: reduce){ .bg .glow, .bg .grid{ animation:none!important; } }
+  @media (max-width:820px){ .bg .glow, .bg .grid{ animation:none; } .bg .glow{ filter:none; } }
+
+  header { position:relative; z-index:3; width:100%; max-width:920px; display:flex; align-items:center;
+    justify-content:space-between; padding:16px 18px 0; }
+  header .brand { font-family:'Oswald',sans-serif; font-weight:700; letter-spacing:3px; text-transform:uppercase;
+    font-size:18px; display:flex; align-items:center; gap:9px; }
+  header .brand i { color:var(--accent); font-style:normal; }
+  header a.back { color:var(--dim); font-size:12px; text-decoration:none; letter-spacing:.5px;
+    border:1px solid var(--line); padding:7px 13px; border-radius:8px; }
+  header a.back:hover { color:var(--ink); border-color:var(--accent2); }
+
+  .stage { position:relative; z-index:2; width:100%; max-width:920px; padding:18px 16px 50px;
+    display:flex; flex-direction:column; align-items:center; flex:1; }
+  .screen { display:none; width:100%; flex-direction:column; align-items:center; }
+  .screen.on { display:flex; }
+
+  /* ---------- matchmaking ---------- */
+  .hero { text-align:center; margin:30px 0 26px; }
+  .hero .kick { font-family:'Oswald',sans-serif; font-size:12px; letter-spacing:5px; text-transform:uppercase;
+    color:var(--accent2); border:1px solid rgba(25,198,255,.4); background:rgba(25,198,255,.07);
+    padding:5px 13px 4px; border-radius:5px; display:inline-block; margin-bottom:16px; }
+  .hero h1 { font-family:'Oswald',sans-serif; font-weight:700; letter-spacing:4px; text-transform:uppercase;
+    margin:0; font-size:clamp(38px,9vw,70px); line-height:.95;
+    background:linear-gradient(180deg,#fff,#aebfd6); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .hero h1 i { color:var(--accent); font-style:normal; }
+  .hero p { color:var(--muted); font-size:clamp(14px,2.4vw,16px); margin:14px auto 0; max-width:520px; line-height:1.5; }
+  .vs-card { width:100%; max-width:440px; border:1px solid var(--line); border-radius:18px; padding:26px 22px;
+    background:linear-gradient(180deg,var(--panel-a),var(--panel-b)); backdrop-filter:blur(6px);
+    box-shadow:0 16px 50px rgba(0,0,0,.5); text-align:center; }
+  .btn { font-family:'Oswald',sans-serif; font-size:16px; letter-spacing:2px; text-transform:uppercase;
+    padding:14px 30px; border-radius:11px; color:#06121d; font-weight:700; border:0; cursor:pointer;
+    background:linear-gradient(180deg,#ffd23f,#e0640c); box-shadow:0 10px 24px rgba(255,122,24,.35); }
+  .btn:disabled { opacity:.5; cursor:default; }
+  .btn.ghost { background:rgba(255,255,255,.05); color:var(--ink); border:1px solid var(--line); box-shadow:none; }
+  .status { color:var(--muted); font-size:14px; margin-top:18px; min-height:20px; letter-spacing:.4px; }
+  .live-ticker { display:inline-flex; align-items:center; gap:8px; margin:0 auto 20px; padding:7px 15px; border-radius:20px;
+    border:1px solid rgba(124,227,139,.3); background:rgba(124,227,139,.07); font-family:'Oswald',sans-serif; font-size:13px; letter-spacing:.6px; color:var(--ink); }
+  .live-ticker .lt-dot { width:8px; height:8px; border-radius:50%; background:#7CE38B; box-shadow:0 0 9px #7CE38B; animation:ltpulse 1.6s ease-in-out infinite; }
+  @keyframes ltpulse { 0%,100%{ opacity:1; } 50%{ opacity:.3; } }
+  .rating-chip { margin-bottom:18px; display:flex; flex-direction:column; align-items:center; gap:8px; }
+  .rating-chip .elo { font-family:'Oswald',sans-serif; font-size:15px; letter-spacing:1px; text-transform:uppercase; color:var(--ink);
+    border:1px solid rgba(255,206,58,.4); background:rgba(255,206,58,.08); border-radius:20px; padding:7px 16px; }
+  .rating-chip .elo b { color:var(--gold); font-size:18px; margin:0 4px; }
+  .rating-chip .rec { color:var(--muted); font-weight:400; margin-left:6px; }
+  .rating-chip .elo input { width:108px; font-family:'Oswald',sans-serif; font-size:14px; letter-spacing:.5px; color:var(--ink);
+    background:rgba(0,0,0,.25); border:1px solid var(--line); border-radius:7px; padding:3px 8px; margin:0 4px; text-align:center; text-transform:none; }
+  .rating-chip .elo input:focus { outline:none; border-color:var(--accent2); }
+  .rating-chip .guest { color:var(--dim); font-size:12.5px; }
+  .rating-result { margin-top:16px; display:flex; flex-direction:column; align-items:center; gap:10px; }
+  .rating-result .delta { font-family:'Oswald',sans-serif; font-size:17px; letter-spacing:.5px; }
+  .rating-result .delta b { font-size:26px; margin:0 5px; }
+  .rating-result .up { color:#7CE38B; } .rating-result .down { color:#ff6b6b; }
+  .rating-result .prompt { color:var(--muted); font-size:13px; line-height:1.4; }
+  .spinner { width:34px; height:34px; border-radius:50%; border:3px solid rgba(255,255,255,.12);
+    border-top-color:var(--accent); margin:18px auto 0; animation:spin 0.8s linear infinite; display:none; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  /* ---------- challenge lobby ---------- */
+  .lobby-modes { display:grid; grid-template-columns:repeat(3,1fr); gap:9px; margin-bottom:20px; }
+  .lmode { background:rgba(255,255,255,.04); border:1.5px solid var(--line); border-radius:13px;
+    padding:14px 8px 12px; cursor:pointer; text-align:center; transition:all .18s; color:var(--ink); }
+  .lmode.active { border-color:var(--accent2); background:rgba(25,198,255,.1); }
+  .lmode:hover:not(.active){ border-color:rgba(120,160,210,.38); background:rgba(255,255,255,.06); }
+  .lmode .lm-icon { font-size:22px; margin-bottom:6px; }
+  .lmode .lm-name { font-family:'Oswald',sans-serif; font-size:13px; font-weight:700; letter-spacing:1.5px;
+    text-transform:uppercase; margin-bottom:3px; }
+  .lmode .lm-desc { font-size:10.5px; color:var(--muted); letter-spacing:.2px; line-height:1.3; }
+  .lmode.active .lm-desc { color:rgba(25,198,255,.8); }
+  .lobby-link-box { border:1px solid var(--line); border-radius:11px; background:rgba(0,0,0,.3);
+    padding:13px 14px; margin-bottom:18px; }
+  .lobby-link-url { font-size:11.5px; color:var(--dim); word-break:break-all; line-height:1.5;
+    font-family:monospace; margin-bottom:10px; }
+
+  /* ---------- stats ---------- */
+  .stat-top { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
+    border-bottom:1px solid var(--line); padding-bottom:16px; margin-bottom:16px; }
+  .stat-top .stat-name { font-family:'Oswald',sans-serif; font-size:18px; letter-spacing:1px; }
+  .stat-top .stat-elo { font-family:'Oswald',sans-serif; text-align:center; }
+  .stat-top .stat-elo b { display:block; font-size:38px; line-height:1; color:var(--gold); }
+  .stat-top .stat-elo span { font-size:10px; letter-spacing:2px; color:var(--muted); }
+  .stat-top .stat-rank { font-family:'Oswald',sans-serif; font-size:24px; font-weight:700; color:var(--accent2); }
+  .stat-top .stat-rank span { font-size:10px; letter-spacing:1px; color:var(--muted); display:block; text-transform:uppercase; }
+  .stat-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+  .stat-grid .sbox { border:1px solid var(--line); border-radius:11px; padding:12px 6px; text-align:center; background:rgba(255,255,255,.02); }
+  .stat-grid .sbox b { font-family:'Oswald',sans-serif; font-size:24px; display:block; }
+  .stat-grid .sbox span { font-size:10px; letter-spacing:1px; color:var(--muted); text-transform:uppercase; }
+  .lb-head { font-family:'Oswald',sans-serif; font-size:13px; letter-spacing:2px; text-transform:uppercase; color:var(--muted);
+    margin:22px 0 10px; }
+  .lb-rows { display:flex; flex-direction:column; gap:4px; max-height:300px; overflow-y:auto; }
+  .lb-row { display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:9px; font-size:14px; }
+  .lb-row:nth-child(odd) { background:rgba(255,255,255,.025); }
+  .lb-row.mine { background:rgba(255,206,58,.12); border:1px solid rgba(255,206,58,.4); }
+  .lb-row .lr-rank { font-family:'Oswald',sans-serif; font-weight:700; color:var(--muted); width:30px; }
+  .lb-row .lr-name { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .lb-row .lr-rec { color:var(--muted); font-size:12px; }
+  .lb-row .lr-elo { font-family:'Oswald',sans-serif; font-weight:700; font-size:17px; width:68px; text-align:right; }
+  .prompt { color:var(--muted); font-size:13px; line-height:1.5; }
+  .tier-badge { display:inline-flex; align-items:center; gap:6px; }
+  .tier-name { font-family:'Oswald',sans-serif; font-weight:700; text-transform:uppercase; }
+  .lb-row .lr-elo { display:inline-flex; align-items:center; justify-content:flex-end; gap:5px; }
+  .stats-tabs { display:flex; gap:0; border-bottom:2px solid var(--line); margin-bottom:20px; }
+  .stab { font-family:'Oswald',sans-serif; font-size:13px; letter-spacing:1.5px; text-transform:uppercase;
+    padding:9px 20px; background:none; border:none; border-bottom:2px solid transparent; margin-bottom:-2px;
+    color:var(--muted); cursor:pointer; transition:color .15s; }
+  .stab.active { color:var(--accent2); border-bottom-color:var(--accent2); }
+  .stab:hover:not(.active) { color:var(--ink); }
+
+  /* ---------- role reveal ---------- */
+  #roleScreen { justify-content:center; align-items:center; min-height:74vh; text-align:center; }
+  .role-card { width:320px; border-radius:22px; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:18px; padding:34px 22px; border:2px solid; box-shadow:0 24px 70px rgba(0,0,0,.55);
+    background:radial-gradient(120% 80% at 50% 0%, color-mix(in srgb, var(--rc) 14%, transparent), transparent 60%), linear-gradient(180deg,var(--panel-a),var(--panel-b)); }
+  .role-card .role-fig { width:130px; height:180px; mask-size:contain; mask-repeat:no-repeat; mask-position:center bottom;
+    -webkit-mask-size:contain; -webkit-mask-repeat:no-repeat; -webkit-mask-position:center bottom;
+    background:var(--rc); animation:figGlow 2s ease-in-out infinite; }
+  @keyframes figGlow {
+    0%,100% { filter:drop-shadow(0 0 10px var(--rc)) drop-shadow(0 0 4px var(--rc)); }
+    50%     { filter:drop-shadow(0 0 26px var(--rc)) drop-shadow(0 0 46px var(--rc)); }
+  }
+  .role-card .rl { font-family:'Oswald',sans-serif; font-size:30px; font-weight:700; letter-spacing:2.5px; text-transform:uppercase; color:var(--rc); line-height:1.05; }
+  .role-card.pitcher { --rc:var(--pitch); border-color:var(--pitch); }
+  .role-card.pitcher .role-fig { /* mask set per-position in beginRoleReveal */ }
+  .role-card.batter { --rc:var(--bat); border-color:var(--bat); }
+  .role-card.batter .role-fig { /* mask set per-position in beginRoleReveal */ }
+  .role-sub { color:var(--muted); margin-top:18px; font-size:14px; max-width:340px; }
+  .hist-head { font-family:'Oswald',sans-serif; font-size:13px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin:22px 0 8px; }
+  .hist-row { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--line); }
+  .hist-row:last-child { border-bottom:none; }
+  .hist-wl { font-family:'Oswald',sans-serif; font-weight:700; font-size:15px; width:16px; flex-shrink:0; }
+  .hist-wl.w { color:#4ade80; } .hist-wl.l { color:#ff6b6b; }
+  .hist-role { font-size:15px; flex-shrink:0; }
+  .hist-info { flex:1; min-width:0; }
+  .hist-vs { font-size:13px; font-weight:600; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .hist-sub { font-size:11px; color:var(--muted); margin-top:1px; }
+  .hist-delta { font-family:'Oswald',sans-serif; font-size:15px; font-weight:700; flex-shrink:0; }
+  .hist-delta.pos { color:#4ade80; } .hist-delta.neg { color:#ff6b6b; }
+  .opp-chip { margin-top:20px; display:flex; flex-direction:column; align-items:center; gap:4px; }
+  .opp-chip .oc-vs { font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:4px; text-transform:uppercase; color:var(--accent2); }
+  .opp-chip .oc-name { font-family:'Oswald',sans-serif; font-size:22px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:#fff; }
+  .opp-chip .oc-elo { font-size:12px; color:var(--muted); letter-spacing:.5px; margin-top:1px; }
+
+  /* ---------- challenge ---------- */
+  .chal-notif { background:linear-gradient(180deg,var(--panel-a),var(--panel-b));
+    border:2px solid var(--accent2); border-radius:16px; padding:20px 22px;
+    box-shadow:0 16px 50px rgba(0,0,0,.6); text-align:center; }
+  .chal-notif .cn-tag { font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:3px;
+    text-transform:uppercase; color:var(--accent2); margin-bottom:8px; }
+  .chal-notif .cn-name { font-family:'Oswald',sans-serif; font-size:22px; font-weight:700;
+    letter-spacing:1.5px; color:#fff; margin-bottom:4px; }
+  .chal-notif .cn-sub { font-size:13px; color:var(--muted); margin-bottom:18px; }
+  .chal-notif .cn-btns { display:flex; gap:10px; justify-content:center; }
+  .chal-notif .cn-btns .btn { font-size:13px; padding:10px 22px; }
+
+  /* ---------- build screen ---------- */
+  /* desktop: figure on the left, controls (clock, reel, slots) stacked on the right */
+  #buildScreen.on { display:grid; grid-template-columns:390px minmax(0,1fr); column-gap:22px; row-gap:10px;
+    grid-template-areas:"fig top" "fig reel" "fig slots"; align-items:start; max-width:980px; width:100%; }
+  #buildScreen .figwrap { grid-area:fig; }
+  #buildScreen .build-top { grid-area:top; min-width:0; }
+  #buildScreen .reel-wrap { grid-area:reel; min-width:0; }
+  #buildScreen .slots { grid-area:slots; min-width:0; }
+  .build-top { width:100%; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .clock { font-family:'Oswald',sans-serif; font-size:30px; font-weight:700; letter-spacing:1px; }
+  .clock.warn { color:#ff5a5a; }
+  .pill { font-size:12px; color:var(--muted); border:1px solid var(--line); border-radius:20px; padding:6px 12px; letter-spacing:.4px; }
+  .ovr-badge { font-family:'Oswald',sans-serif; font-size:14px; color:var(--muted); }
+  .ovr-badge b { font-size:26px; color:var(--ink); margin-left:6px; }
+  .figwrap { position:relative; width:100%; aspect-ratio:823/711; border:1px solid var(--line); border-radius:16px; overflow:hidden;
+    background:radial-gradient(120% 100% at 50% 30%, #122236 0%, #060a12 76%);
+    box-shadow:inset 0 0 60px rgba(0,0,0,.58), 0 14px 44px rgba(0,0,0,.44); }
+  .figwrap::before, .figwrap::after { content:''; position:absolute; width:22px; height:22px; z-index:8; pointer-events:none; opacity:.68; }
+  .figwrap::before { top:10px; left:10px; border-top:2px solid var(--accent2); border-left:2px solid var(--accent2); }
+  .figwrap::after { bottom:10px; right:10px; border-bottom:2px solid var(--accent2); border-right:2px solid var(--accent2); }
+  .figwrap .base { position:absolute; inset:0; background-position:center; background-size:contain; background-repeat:no-repeat; opacity:.32; pointer-events:none; }
+  .figwrap .seg { position:absolute; inset:0; z-index:1; mask-position:center; mask-size:contain; mask-repeat:no-repeat;
+    -webkit-mask-position:center; -webkit-mask-size:contain; -webkit-mask-repeat:no-repeat; background:transparent; pointer-events:none; transition:background .25s; }
+  .figwrap .shade { position:absolute; inset:0; z-index:2; pointer-events:none; mix-blend-mode:soft-light;
+    background:linear-gradient(158deg,rgba(255,255,255,.30),rgba(255,255,255,0) 42%,rgba(0,0,0,.40)); }
+  .wires { position:absolute; inset:0; z-index:4; width:100%; height:100%; pointer-events:none; }
+  .wires line { stroke:rgba(120,160,210,.4); stroke-width:1; }
+  .wires line.hot { stroke:var(--accent2); stroke-width:1.6; filter:drop-shadow(0 0 3px rgba(25,198,255,.7)); }
+  .wires line.set { stroke:rgba(255,255,255,.4); }
+  .nodes { position:absolute; inset:0; z-index:5; }
+  .anchor { position:absolute; width:8px; height:8px; border-radius:50%; transform:translate(-50%,-50%);
+    background:var(--muted); border:2px solid #0a0f15; pointer-events:none; }
+  .anchor.hot { background:var(--accent2); box-shadow:0 0 9px var(--accent2); }
+  .anchor.set { background:#fff; }
+  .node { position:absolute; transform:translate(-50%,-50%); width:102px; padding:0 0 6px; border-radius:10px; overflow:hidden;
+    background:linear-gradient(180deg,rgba(18,27,41,.96),rgba(8,13,21,.96)); border:1px solid var(--line);
+    text-align:center; box-shadow:0 8px 18px rgba(0,0,0,.5); backdrop-filter:blur(3px); }
+  .node .accent { height:4px; background:var(--muted); }
+  .node .body { padding:5px 6px 0; }
+  .node .label { font-family:'Oswald',sans-serif; font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.8px; line-height:1.1; }
+  .node .part { font-size:9px; color:var(--dim); margin-top:2px; }
+  .node .row { display:flex; align-items:center; justify-content:center; gap:6px; margin-top:4px; }
+  .node .face { width:28px; height:28px; border-radius:50%; flex:0 0 auto; background:#0c131e center/cover no-repeat; border:1.5px solid var(--line); }
+  .node .val { font-family:'Oswald',sans-serif; font-size:22px; font-weight:700; line-height:1; }
+  .node .who { font-size:9px; color:var(--muted); line-height:1.15; word-break:break-word; margin-top:3px; }
+  .node .preview { font-family:'Oswald',sans-serif; font-size:19px; font-weight:700; color:var(--accent); line-height:1; margin-top:3px; }
+  .node.assignable { border-color:var(--accent); cursor:pointer; box-shadow:0 0 14px rgba(255,122,24,.45); }
+  .node.assignable .accent { background:var(--accent); }
+  .node.assignable:hover { background:linear-gradient(180deg,#1d2a3d,#101824); }
+  .fly { position:fixed; z-index:100; border-radius:50%; background-size:cover; background-position:center top; pointer-events:none;
+    box-shadow:0 10px 24px rgba(0,0,0,.45), 0 0 18px rgba(25,198,255,.35); }
+  .slots { display:flex; flex-direction:column; gap:8px; }
+  .slot { display:flex; align-items:center; gap:10px; border:1px solid var(--line); border-radius:11px; padding:9px 11px;
+    background:rgba(255,255,255,.02); transition:border-color .15s, background .15s; }
+  .slot.open.armed { cursor:pointer; border-color:var(--accent2); box-shadow:0 0 0 1px rgba(25,198,255,.4), 0 0 18px rgba(25,198,255,.25); }
+  .slot.open.armed:hover { background:rgba(25,198,255,.08); }
+  .slot .sname { font-family:'Oswald',sans-serif; font-size:13px; letter-spacing:1px; text-transform:uppercase; flex:1; color:var(--muted); }
+  .slot.filled .sname { color:var(--ink); }
+  .slot .spart { font-size:11px; color:var(--dim); }
+  .slot .sval { font-family:'Oswald',sans-serif; font-size:20px; font-weight:700; min-width:34px; text-align:right; }
+  .slot .shot { width:26px; height:26px; border-radius:6px; object-fit:cover; background:#11161d; }
+
+  .reel-wrap { width:100%; }
+  /* full-size reel - identical layout to the Build a Pitcher game */
+  .reel { position:relative; height:226px; overflow:hidden; border-radius:14px; margin-top:6px; }
+  .reel .pointer { position:absolute; top:0; left:50%; transform:translateX(-50%); width:0; height:0;
+    border-left:9px solid transparent; border-right:9px solid transparent; border-top:13px solid var(--accent);
+    z-index:5; filter:drop-shadow(0 0 6px rgba(255,122,24,.8)); pointer-events:none; }
+  .reel .pointer.bottom { top:auto; bottom:0; border-top:none; border-bottom:13px solid var(--accent); }
+  .reel-fade { position:absolute; top:0; bottom:0; width:80px; z-index:3; pointer-events:none; }
+  .reel-fade.l { left:0; background:linear-gradient(90deg,#0a121e,transparent); }
+  .reel-fade.r { right:0; background:linear-gradient(270deg,#0a121e,transparent); }
+  .sweep { position:absolute; top:0; bottom:0; left:30%; width:42%; z-index:4; pointer-events:none; opacity:0;
+    background:linear-gradient(100deg,transparent,rgba(255,255,255,.4),transparent); mix-blend-mode:screen; }
+  .track { display:flex; gap:12px; padding:16px 14px; will-change:transform; }
+  .rcard { flex:0 0 150px; height:194px; border-radius:10px; border:2px solid #9aa6b8;
+    background:linear-gradient(180deg,#0c1420,#070b12); overflow:hidden; display:flex; flex-direction:column;
+    align-items:center; box-shadow:0 6px 16px rgba(0,0,0,.4); }
+  .rcard img { width:100%; height:108px; object-fit:cover; object-position:top center; background:#0c131e; }
+  .rcard .nm { font-size:12px; font-weight:600; margin-top:6px; text-align:center; padding:0 6px; line-height:1.15;
+    max-width:100%; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .rcard .ov { font-family:'Oswald',sans-serif; font-size:24px; font-weight:700; margin-top:2px; line-height:1; color:var(--tc,#c8d0da); }
+  .rcard .pos { font-size:10px; color:var(--muted); margin-top:2px; letter-spacing:.5px; }
+  .rcard .yr { font-family:'Oswald',sans-serif; font-size:11px; color:var(--accent); font-weight:600; }
+  .rcard .legend-tag { font-family:'Oswald',sans-serif; font-size:11px; font-weight:600; color:var(--legend); letter-spacing:1px; }
+  .rcard .prime-tag { font-family:'Oswald',sans-serif; font-size:11px; font-weight:700; color:#ffb02e; letter-spacing:1px; text-shadow:0 0 8px rgba(255,176,46,.45); }
+  .rcard.win { border-color:#fff; box-shadow:0 0 0 2px rgba(255,255,255,.5),0 0 26px rgba(25,198,255,.55); }
+  /* tier coloring - border + OVR + a faint glow, like the main game */
+  .rcard.t-grey    { --tc:#9aa6b8; border-color:#9aa6b8; }
+  .rcard.t-bronze  { --tc:#d28b4e; border-color:#d08a3e; box-shadow:0 0 12px rgba(208,138,62,.4); }
+  .rcard.t-silver  { --tc:#cdd6e2; border-color:#c8d0da; box-shadow:0 0 12px rgba(200,208,218,.4); }
+  .rcard.t-gold    { --tc:var(--gold); border-color:var(--gold); box-shadow:0 0 14px rgba(255,206,58,.5); }
+  .rcard.t-diamond { --tc:var(--diamond); border-color:var(--diamond); box-shadow:0 0 16px rgba(84,199,255,.6); }
+  .rcard.t-legend  { --tc:var(--legend); border-color:var(--legend);
+    box-shadow:0 0 18px rgba(163,102,255,.8), inset 0 0 14px rgba(163,102,255,.28);
+    background:linear-gradient(180deg,#281842,#0c1420); animation:legendPulse 1.8s ease-in-out infinite; }
+  @keyframes legendPulse{0%,100%{box-shadow:0 0 12px rgba(163,102,255,.65),inset 0 0 10px rgba(163,102,255,.22);}
+    50%{box-shadow:0 0 24px rgba(163,102,255,1),inset 0 0 16px rgba(163,102,255,.4);}}
+  .landed-bar { display:flex; align-items:center; gap:12px; margin-top:14px; flex-wrap:wrap; justify-content:center; }
+  .landed-bar .li { display:none; align-items:center; gap:10px; border:1px solid var(--line); border-radius:12px; padding:8px 12px; }
+  .landed-bar .li.show { display:flex; }
+  .landed-bar .li img { width:40px; height:40px; border-radius:8px; object-fit:cover; }
+  .landed-bar .li .lnm { font-size:13px; } .landed-bar .li .lov { font-family:'Oswald',sans-serif; font-weight:700; font-size:22px; }
+  .powerups { display:none; gap:8px; justify-content:center; margin-top:12px; flex-wrap:wrap; }
+  .powerups.show { display:flex; }
+  .pu { font-family:'Oswald',sans-serif; font-size:12px; letter-spacing:1px; text-transform:uppercase; color:var(--ink);
+    background:rgba(255,255,255,.05); border:1px solid var(--line); border-radius:9px; padding:8px 13px; cursor:pointer; transition:border-color .15s, background .15s; }
+  .pu:hover:not(:disabled) { border-color:var(--accent2); background:rgba(25,198,255,.1); }
+  .pu#boostBtn:hover:not(:disabled) { border-color:var(--legend); background:rgba(163,102,255,.12); }
+  .pu:disabled { opacity:.32; cursor:default; }
+  .hint { color:var(--dim); font-size:12px; margin-top:8px; text-align:center; }
+  .mini-spin { display:inline-block; width:12px; height:12px; border-radius:50%; border:2px solid rgba(255,255,255,.18);
+    border-top-color:var(--accent); animation:spin .8s linear infinite; vertical-align:-1px; margin-right:6px; }
+
+  /* ---------- the 1v1 game (half-court-to-11 on a full court) ---------- */
+  #atbatScreen { min-height:70vh; justify-content:center; }
+  .hv-sb { display:flex; align-items:center; gap:14px; margin-bottom:10px;
+    font-family:'Oswald',sans-serif; user-select:none; }
+  .hv-sb b { font-size:30px; line-height:1; min-width:38px; text-align:center; }
+  .hv-sb .hv-tag { display:flex; flex-direction:column; align-items:center; gap:1px;
+    font-size:10px; letter-spacing:2.5px; color:var(--muted); text-transform:uppercase; }
+  .hv-sb .hv-tag i { font-style:normal; font-size:13px; }
+  #hvCourt .hv-baseline, #hvCourt .hv-mid, #hvCourt .hv-circle, #hvCourt .hv-arc3, #hvCourt .hv-key,
+  #hvCourt .hv-hoop, #hvCourt .hv-figwrap, #hvCourt #hvBall, #hvCourt #hvNetFlash { display:none !important; }
+  .hv-court { position:relative; width:100%; max-width:680px; aspect-ratio:980/500; border-radius:16px; overflow:hidden;
+    border:1px solid var(--line); background:
+      radial-gradient(120% 100% at 50% 0%, rgba(8,14,26,.42), transparent 44%),
+      radial-gradient(130% 90% at 50% 112%, rgba(0,0,0,.38), transparent 60%),
+      repeating-linear-gradient(90deg,#c99b63 0 44px,#c1924f 44px 88px);
+    box-shadow:inset 0 0 0 3px rgba(255,255,255,.08); }
+  .hv-baseline { position:absolute; left:0; right:0; bottom:13%; height:3px; background:rgba(255,255,255,.20); }
+  .hv-mid { position:absolute; left:50%; top:6%; bottom:6%; width:3px; margin-left:-1.5px; background:rgba(255,255,255,.16); }
+  .hv-circle { position:absolute; left:50%; top:50%; width:20%; aspect-ratio:1; transform:translate(-50%,-50%);
+    border:3px solid rgba(255,255,255,.16); border-radius:50%; }
+  .hv-key { position:absolute; bottom:13%; width:20%; height:52%; border:3px solid rgba(255,255,255,.22);
+    border-bottom:none; background:rgba(210,120,60,.14); }
+  .hv-key.l { left:0; border-left:none; } .hv-key.r { right:0; border-right:none; }
+  .hv-arc3 { position:absolute; bottom:13%; width:38%; height:76%; border:3px solid rgba(255,255,255,.13); }
+  .hv-arc3.l { left:-12%; border-left:none; border-radius:0 50% 50% 0 / 0 50% 50% 0; }
+  .hv-arc3.r { right:-12%; border-right:none; border-radius:50% 0 0 50% / 50% 0 0 50%; }
+  .hv-figwrap { position:absolute; bottom:13%; left:0; height:56%; aspect-ratio:543/724; will-change:transform; z-index:8; }
+  #hvOffW { z-index:9; }   /* the ball-handler always reads in front of the defender */
+  .hv-fig { width:100%; height:100%;
+    -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat;
+    -webkit-mask-size:contain; mask-size:contain;
+    -webkit-mask-position:center bottom; mask-position:center bottom;
+    filter:drop-shadow(0 6px 6px rgba(0,0,0,.4)); }
+  .hv-fig.dim { opacity:.18; filter:grayscale(1); }
+  /* name tag rides under the figure: sibling of .hv-fig inside the moving wrapper, so it
+     translates with the player but never inherits the fig's scaleX(-1) mirror */
+  .hv-name { position:absolute; left:50%; top:100%; transform:translate(-50%,3px); z-index:2;
+    font-family:'Oswald',sans-serif; font-size:10px; font-weight:600; letter-spacing:1.2px;
+    text-transform:uppercase; color:#eaf1fa; background:rgba(8,14,24,.78);
+    border:1px solid rgba(255,255,255,.22); border-radius:999px; padding:2px 9px;
+    white-space:nowrap; max-width:150%; overflow:hidden; text-overflow:ellipsis; pointer-events:none; }
+  #hvSkipBtn { margin-top:12px; }
+  .hv-hoop { position:absolute; bottom:13%; height:60%; aspect-ratio:543/724; pointer-events:none; z-index:12; }
+  .hv-hoop.l { left:-2%; transform:scaleX(-1); } .hv-hoop.r { right:-2%; }
+  #hvBall { position:absolute; left:0; top:0; width:22px; height:22px; border-radius:50%; z-index:20;
+    background:radial-gradient(circle at 35% 30%,#ffbb74,#e8792a 68%,#b8551a);
+    box-shadow:0 2px 6px rgba(0,0,0,.5); opacity:0; will-change:transform; }
+  #hvSeam { position:absolute; inset:0; border-radius:50%; overflow:hidden; display:block; }
+  #hvSeam::before { content:''; position:absolute; left:0; right:0; top:46%; height:8%; background:rgba(70,25,6,.5); }
+  #hvSeam::after { content:''; position:absolute; top:0; bottom:0; left:46%; width:8%; background:rgba(70,25,6,.35); }
+  .hv-tr { position:absolute; width:9px; height:9px; border-radius:50%; z-index:19; pointer-events:none;
+    background:radial-gradient(circle,#ffc27a,#e8792a 70%); }
+  #hvNetFlash { position:absolute; width:40px; height:40px; border-radius:50%; z-index:13; opacity:0; pointer-events:none;
+    border:3px solid rgba(255,255,255,.95); box-shadow:0 0 18px rgba(255,220,150,.9), inset 0 0 12px rgba(255,220,150,.7); }
+  .hv-pop { position:absolute; left:50%; top:20%; transform:translateX(-50%); z-index:30;
+    font-family:'Oswald',sans-serif; font-size:clamp(26px,5.4vw,44px); font-weight:700; letter-spacing:3px;
+    color:#ffd34d; text-shadow:0 3px 0 rgba(0,0,0,.4),0 0 22px rgba(255,180,60,.8); opacity:0; pointer-events:none; white-space:nowrap; }
+  .hv-call { position:absolute; left:50%; bottom:6%; transform:translateX(-50%); z-index:30; pointer-events:none; }
+  .hv-call span { font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:2px; text-transform:uppercase;
+    padding:4px 13px; border-radius:999px; background:rgba(10,18,30,.72); border:1px solid rgba(25,198,255,.35); color:#9fdcff; display:inline-block; }
+  /* waiting-for-opponent overlay (shown on the arena before the at-bat) */
+  .wait-arena { position:absolute; left:0; right:0; bottom:18px; display:none; flex-direction:column; align-items:center; gap:9px; z-index:6; }
+  .wait-arena.show { display:flex; }
+  .wait-arena .wa-spin { width:26px; height:26px; border-radius:50%; border:3px solid rgba(255,255,255,.16); border-top-color:var(--accent); animation:spin .8s linear infinite; }
+  .wait-arena .wa-title { font-family:'Oswald',sans-serif; font-weight:600; letter-spacing:1.5px; text-transform:uppercase; font-size:16px; text-shadow:0 3px 12px rgba(0,0,0,.6); }
+  .wait-arena .wa-bar { width:min(70%,300px); height:8px; border-radius:6px; background:rgba(255,255,255,.12); overflow:hidden; }
+  .wait-arena .wa-fill { height:100%; width:0%; border-radius:6px; background:linear-gradient(90deg,var(--accent),var(--accent2)); transition:width .35s ease; }
+  .wait-arena .wa-count { font-family:'Oswald',sans-serif; font-size:12px; letter-spacing:1px; color:var(--muted); }
+  .matchup { width:100%; max-width:680px; display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  .matchup .side { display:flex; flex-direction:column; align-items:center; gap:2px; }
+  .matchup .side .who { font-family:'Oswald',sans-serif; font-size:13px; letter-spacing:1px; text-transform:uppercase; }
+  .matchup .side .o { font-family:'Oswald',sans-serif; font-size:30px; font-weight:700; }
+  .matchup .mid { font-family:'Oswald',sans-serif; font-size:22px; color:var(--muted); }
+
+  /* ---------- result ---------- */
+  #resultScreen { justify-content:center; min-height:60vh; }
+  .result-card { width:100%; max-width:460px; text-align:center; border:2px solid var(--line); border-radius:20px; padding:30px 24px;
+    background:linear-gradient(180deg,var(--panel-a),var(--panel-b)); box-shadow:0 20px 60px rgba(0,0,0,.55); }
+  .result-card.win { border-color:var(--gold); box-shadow:0 0 50px rgba(255,206,58,.3); }
+  .result-card.lose { border-color:#56627a; }
+  .result-card .rh { font-family:'Oswald',sans-serif; font-size:46px; font-weight:700; letter-spacing:3px; text-transform:uppercase; }
+  .result-card.win .rh { color:var(--gold); } .result-card.lose .rh { color:var(--muted); }
+  .result-card .rline { color:var(--ink); margin:14px 0 6px; font-size:16px; }
+  .result-card .rsub { color:var(--muted); font-size:13px; }
+  .result-actions { display:flex; flex-direction:column; align-items:center; gap:10px; margin-top:20px; }
+  .result-actions .ra-primary { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; width:100%; }
+  .result-actions .ra-secondary { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
+  .result-actions .ra-primary .btn { flex:1; min-width:130px; max-width:200px; font-size:14px; }
+  .result-actions .ra-secondary .btn, .result-actions .ra-secondary a.btn { font-size:12px; padding:10px 16px; }
+  #rematchStatus { min-height:20px; margin:10px 0 -4px; font-family:'Oswald',sans-serif;
+    font-size:13px; color:var(--muted); text-align:center; letter-spacing:.5px; }
+  #rematchStatus .rs-count { color:var(--accent); font-weight:700; font-size:15px; }
+  #rematchStatus .rs-want { color:var(--bat); }
+  @keyframes rmatch-pulse {
+    0%,100%{ box-shadow:0 4px 26px rgba(25,198,255,0), inset 0 1px 0 rgba(255,255,255,.08); }
+    50%   { box-shadow:0 4px 26px rgba(25,198,255,.55), inset 0 1px 0 rgba(255,255,255,.08); }
+  }
+  .btn.rmatch-glow { animation:rmatch-pulse .9s ease-in-out infinite; }
+
+  @media (min-width: 681px) {
+    .slot.open:not(.armed) { display:none; }
+  }
+
+  @media (max-width: 680px) {
+    .stage { padding:14px 11px 40px; }
+    /* mobile: single column - reel sits above the silhouette */
+    #buildScreen.on { display:flex; flex-direction:column; align-items:stretch; }
+    .reel-wrap, .build-top, .slots { width:100%; }
+    .figwrap { max-width:430px; margin:0 auto; }
+    .node { width:80px; padding:0 0 5px; border-radius:8px; }
+    .node .accent { height:3px; }
+    .node .body { padding:4px 5px 0; }
+    .node .label { font-size:8.5px; letter-spacing:.4px; }
+    .node .part { font-size:8px; }
+    .node .face { width:22px; height:22px; }
+    .node .val { font-size:18px; }
+    .node .who { display:none; }
+    .node .preview { font-size:17px; }
+    .hv-pop { font-size:26px; }
+    /* build header: let it wrap and shrink so the clock/OVR/opponent pill always fit */
+    .build-top { flex-wrap:wrap; gap:8px 12px; justify-content:space-between; }
+    .clock { font-size:24px; }
+    .ovr-badge b { font-size:22px; }
+    .pill { font-size:11px; padding:5px 10px; }
+    .build-top .pill { order:3; flex:1 1 100%; text-align:center; }
+    /* power-ups: 2 per row, full-width tap targets */
+    .powerups { gap:7px; }
+    .pu { flex:1 1 44%; font-size:11px; padding:9px 6px; }
+    .landed-bar { gap:8px; }
+    /* matchmaking handle pill: stack the name input so it never overflows a narrow screen */
+    .rating-chip .elo { display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:4px 6px; font-size:13px; }
+    .rating-chip .elo input { width:120px; }
+    .rating-chip .rec { flex:1 1 100%; text-align:center; margin:2px 0 0; }
+    /* matchup header + result */
+    .matchup .side .o { font-size:24px; }
+    .matchup .side .who { font-size:11px; }
+    .result-card .rh { font-size:36px; }
+    /* stats: 2-up boxes, name/elo/rank wrap cleanly */
+    .stat-grid { grid-template-columns:repeat(2,1fr); }
+    .stat-top { justify-content:center; text-align:center; }
+    .stat-top .stat-name { flex:1 1 100%; }
+    .lb-rows { max-height:260px; }
+  }
+  @media (max-width: 380px) {
+    .pu { font-size:10px; padding:8px 5px; }
+    .clock { font-size:21px; }
+  }
+</style>
+</head>
+<body>
+<div class="bg"><div class="glow g1"></div><div class="glow g2"></div></div>
+
+<header>
+  <div class="brand">🏈 College Football <i>Face Off</i></div>
+  <a class="back" href="/">‹ Home</a>
+</header>
+
+<div class="stage">
+
+  <!-- 1. Matchmaking -->
+  <div class="screen on" id="mmScreen">
+    <div class="hero">
+      <div class="kick">🏈 College FB · Live 1v1</div>
+      <h1>College Football <i>Face Off</i></h1>
+      <p>Match up with a real player online. Build your QB, RB or WR fast - highest Overall wins the 1-on-1.</p>
+    </div>
+    <div class="live-ticker" id="liveTicker" style="display:none"><span class="lt-dot"></span><span id="ltText">…</span></div>
+    <div class="vs-card">
+      <div id="ratingChip" class="rating-chip"></div>
+      <button class="btn" id="findBtn">⚔️ Find Match</button>
+      <div style="display:flex;align-items:center;gap:10px;margin:18px 0 14px;">
+        <div style="flex:1;height:1px;background:var(--line)"></div>
+        <span style="font-size:11px;letter-spacing:1.5px;color:var(--dim);text-transform:uppercase;white-space:nowrap">or play a friend</span>
+        <div style="flex:1;height:1px;background:var(--line)"></div>
+      </div>
+      <button class="btn ghost" id="mmChalBtn" style="width:100%;font-size:13px;padding:11px 20px;letter-spacing:1.5px;">🔗 Challenge a Friend</button>
+      <div style="color:var(--dim);font-size:11.5px;margin-top:7px;letter-spacing:.2px;text-align:center;">Pick a mode · Share a link · No Elo change</div>
+      <button class="btn ghost" id="miFriends" style="width:100%;font-size:13px;padding:11px 20px;letter-spacing:1.5px;margin-top:10px;">👥 Friends<span data-social-badge style="margin-left:6px"></span></button>
+      <div style="margin-top:10px;text-align:center"><span data-coin-chip></span></div>
+      <div class="spinner" id="mmSpin"></div>
+      <div class="status" id="mmStatus"></div>
+      <div style="margin-top:18px; display:none;" id="cancelWrap">
+        <button class="btn ghost" id="cancelBtn" style="font-size:13px; padding:9px 18px;">Cancel</button>
+      </div>
+      <div style="margin-top:16px; display:none;" id="ghostOffer">
+        <div style="font-size:12.5px;color:var(--muted);margin-bottom:9px;">Nobody's around right now.</div>
+        <button class="btn" id="ghostBtn" style="font-size:13px;padding:11px 22px;">👻 Face a Ghost</button>
+        <div style="color:var(--dim);font-size:11px;margin-top:7px;letter-spacing:.2px;">a real recent build · Elo still counts</div>
+      </div>
+      <div style="margin-top:16px;" id="statsWrap">
+        <button class="btn ghost" id="statsBtn" style="font-size:13px; padding:9px 18px;">📊 My Stats</button>
+        <button class="btn ghost" id="achBtn" style="font-size:13px; padding:9px 18px;">🏅 Achievements</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Challenge Lobby -->
+  <div class="screen" id="lobbyScreen">
+    <div class="hero" style="margin:24px 0 20px">
+      <div class="kick">Private Match</div>
+      <h1>Challenge <i>Lobby</i></h1>
+      <p>Pick a mode, copy the link, and wait for your friend to join.</p>
+    </div>
+    <div class="vs-card" style="max-width:460px">
+      <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;text-align:center;">Select Mode</div>
+      <div class="lobby-modes" id="lobbyModePicker">
+        <button class="lmode active" data-mode="classic">
+          <div class="lm-icon">⚔️</div>
+          <div class="lm-name">Classic</div>
+          <div class="lm-desc">Standard draft · all tiers</div>
+        </button>
+        <button class="lmode" data-mode="legends">
+          <div class="lm-icon">🟣</div>
+          <div class="lm-name">Legends</div>
+          <div class="lm-desc">Purple legends only</div>
+        </button>
+        <button class="lmode" data-mode="hard">
+          <div class="lm-icon">🔒</div>
+          <div class="lm-name">Hard</div>
+          <div class="lm-desc">Ratings hidden</div>
+        </button>
+      </div>
+      <div class="lobby-link-box">
+        <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Challenge Link</div>
+        <div class="lobby-link-url" id="lobbyLinkUrl">-</div>
+        <button class="btn" id="lobbyCopyBtn" style="width:100%;font-size:13px;padding:10px 20px;letter-spacing:1.5px;">🔗 Copy Link</button>
+        <div id="lobbyCopied" style="display:none;color:var(--accent2);font-size:12px;margin-top:8px;text-align:center;letter-spacing:.3px;">✓ Copied! Share it with your friend.</div>
+      </div>
+      <div id="lobbyWaitState" style="text-align:center;padding:4px 0 6px;">
+        <div class="spinner" style="display:block;width:26px;height:26px;border-width:3px;margin:0 auto 12px;"></div>
+        <div style="color:var(--muted);font-size:13px;line-height:1.5;">Waiting for your friend to open the link and accept…<br><span style="font-size:11.5px;color:var(--dim);">The match starts automatically when they join.</span></div>
+      </div>
+      <div style="text-align:center;margin-top:20px;">
+        <button class="btn ghost" id="lobbyCancelBtn" style="font-size:13px;padding:10px 22px;">‹ Back</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="screen" id="statsScreen">
+    <div class="hero" style="margin:22px 0 14px"><h1 style="font-size:clamp(30px,7vw,48px)">My <i>Stats</i></h1></div>
+    <div class="vs-card" style="max-width:520px; text-align:left">
+      <div class="stats-tabs" id="statsSportToggle" style="margin-bottom:9px">
+        <button class="stab active" data-sport="cfb">🏈 College FB</button>
+      </div>
+      <div class="stats-tabs">
+        <button class="stab active" id="tabStats">My Stats</button>
+        <button class="stab" id="tabHistory">History</button>
+      </div>
+      <div data-xp-bar style="margin:10px 0"></div>
+      <div id="statsPanel">
+        <div id="statsPersonal"></div>
+        <div id="statsBoard"></div>
+      </div>
+      <div id="historyPanel" style="display:none">
+        <div id="statsHistory"></div>
+      </div>
+      <div id="challengeLinkWrap" style="text-align:center;margin-top:18px">
+        <button class="btn ghost" id="challengeLinkBtn" style="font-size:13px;padding:10px 20px;">🔗 Copy Challenge Link</button>
+        <div id="chalCopied" style="display:none;color:var(--accent2);font-size:12px;margin-top:6px;letter-spacing:.3px">✓ Link copied! Share it with a friend for a friendly match.</div>
+      </div>
+      <div style="text-align:center"><button class="btn ghost" id="statsBack" style="margin-top:14px; font-size:13px; padding:10px 22px;">‹ Back</button></div>
+    </div>
+  </div>
+
+  <!-- 2. Role reveal -->
+  <div class="screen" id="roleScreen">
+    <div class="role-card" id="roleCard"><div class="role-fig" id="roleFig"></div><div class="rl" id="roleLabel">-</div></div>
+    <div class="role-sub" id="roleSub">Get ready…</div>
+    <div class="opp-chip" id="oppChip" style="opacity:0">
+      <div class="oc-vs">vs.</div>
+      <div class="oc-name" id="oppChipName">Opponent</div>
+      <div class="oc-elo" id="oppChipElo"></div>
+    </div>
+  </div>
+
+  <!-- 3. Quick build -->
+  <div class="screen" id="buildScreen">
+    <div class="build-top">
+      <div class="clock" id="clock">60</div>
+      <div class="ovr-badge">OVR<b id="ovrNum">-</b></div>
+      <div class="pill" id="oppPill">Opponent: connecting…</div>
+    </div>
+    <div class="reel-wrap">
+      <div class="reel">
+        <div class="pointer"></div>
+        <div class="pointer bottom"></div>
+        <div class="reel-fade l"></div>
+        <div class="reel-fade r"></div>
+        <div class="sweep" id="sweep"></div>
+        <div class="track" id="track"></div>
+      </div>
+      <div class="landed-bar">
+        <button class="btn" id="spinBtn" style="font-size:14px; padding:11px 22px;">🎰 Spin</button>
+        <div class="li" id="landedLi"><img id="landedImg" alt=""><div><div class="lnm" id="landedName">-</div></div><div class="lov" id="landedOvr">-</div></div>
+      </div>
+      <div class="powerups" id="powerups">
+        <button class="pu" id="snagLeftBtn" title="Take the card to the left">◄ Snag</button>
+        <button class="pu" id="respinBtn" title="Discard and spin again">🔄 Re-spin</button>
+        <button class="pu" id="boostBtn" title="Upgrade to their Prime card">⚡ Boost</button>
+        <button class="pu" id="snagRightBtn" title="Take the card to the right">Snag ►</button>
+      </div>
+      <div class="hint" id="buildHint">Spin the reel, then tap a glowing body part to assign the player.</div>
+    </div>
+    <div class="figwrap" id="figwrap">
+      <div class="base"></div>
+      <div class="shade" id="figureShade"></div>
+      <svg class="wires" id="wires" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+      <div class="nodes" id="nodes"></div>
+    </div>
+    <div class="slots" id="slots"></div>
+  </div>
+
+  <!-- 4. The game (first to 11) -->
+  <div class="screen" id="atbatScreen">
+    <div class="matchup" id="matchup"></div>
+    <div class="hv-sb" id="hvSb" style="display:none">
+      <b id="hvSA">0</b>
+      <span class="hv-tag">FINAL<i id="hvPoss">·</i></span>
+      <b id="hvSB">0</b>
+    </div>
+    <div class="hv-court" id="hvCourt">
+      <div class="hv-baseline"></div><div class="hv-mid"></div><div class="hv-circle"></div>
+      <div class="hv-arc3 l"></div><div class="hv-arc3 r"></div>
+      <div class="hv-key l"></div><div class="hv-key r"></div>
+
+      <div class="hv-figwrap" id="hvOffW"><div class="hv-fig" id="hvOff"></div><div class="hv-name" id="hvOffName"></div></div>
+      <div class="hv-figwrap" id="hvDefW"><div class="hv-fig" id="hvDef"></div><div class="hv-name" id="hvDefName"></div></div>
+      <div id="hvBall"><i id="hvSeam"></i></div>
+      <div id="hvNetFlash"></div>
+      <div class="hv-pop" id="hvPop"></div>
+      <div class="hv-call" id="hvCall"></div>
+      <div class="wait-arena" id="waitArena">
+        <div class="wa-spin"></div>
+        <div class="wa-title" id="waTitle">Waiting for your opponent…</div>
+        <div class="wa-bar"><div class="wa-fill" id="waFill"></div></div>
+        <div class="wa-count" id="waCount">building…</div>
+      </div>
+    </div>
+    <button class="btn ghost" id="hvSkipBtn" style="display:none" onclick="hvSkipSim()">⏩ Skip to result</button>
+  </div>
+
+  <!-- Challenge screen (opened via a shared challenge link) -->
+  <div class="screen" id="challengeScreen">
+    <div class="hero" style="margin:30px 0 20px">
+      <div class="kick">Friendly Match</div>
+      <h1>You've Been <i>Challenged!</i></h1>
+    </div>
+    <div class="vs-card" style="text-align:center">
+      <div style="font-size:13px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">challenged by</div>
+      <div id="chalChallengerName" style="font-family:'Oswald',sans-serif;font-size:28px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#fff;margin-bottom:10px"></div>
+      <div id="chalModeTag" style="display:none;margin-bottom:10px;"><span id="chalModeTagInner" style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent2);border:1px solid rgba(25,198,255,.4);background:rgba(25,198,255,.07);border-radius:20px;padding:5px 13px 4px;"></span></div>
+      <div id="chalModeLine" style="font-size:13px;color:var(--muted);margin-bottom:24px">Friendly match · no Elo change · just bragging rights</div>
+      <button class="btn" id="chalAcceptBtn" style="width:100%;max-width:280px;margin:0 auto;display:block;">⚔️ Accept Challenge</button>
+      <div class="status" id="chalStatus" style="margin-top:14px;min-height:20px"></div>
+      <div style="margin-top:12px"><button class="btn ghost" id="chalDeclineBtn" style="font-size:13px;padding:9px 18px;">Decline</button></div>
+    </div>
+  </div>
+
+  <!-- 5. Result -->
+  <div class="screen" id="resultScreen">
+    <div class="result-card" id="resultCard">
+      <div class="rh" id="resultHead">-</div>
+      <div class="rline" id="resultLine"></div>
+      <div class="rsub" id="resultSub"></div>
+      <div id="ratingResult" class="rating-result"></div>
+      <div id="rematchStatus"></div>
+      <div class="result-actions">
+        <div class="ra-primary">
+          <button class="btn" id="rematchBtn">⚔️ Rematch?</button>
+          <button class="btn ghost" id="newMatchBtn">🔄 New Match</button>
+        </div>
+        <div class="ra-secondary">
+          <button class="btn ghost" id="resultStatsBtn">📊 Stats</button>
+          <a class="btn ghost" href="/" style="text-decoration:none;">🏠 Home</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Floating challenge notification (shown when someone accepts your shared link) -->
+<div id="challengeNotif" style="display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:50;max-width:380px;width:calc(100% - 32px)">
+  <div class="chal-notif">
+    <div class="cn-tag">Friendly Challenge</div>
+    <div class="cn-name" id="chalNotifName"></div>
+    <div class="cn-sub">wants a friendly 1v1 · no Elo change</div>
+    <div class="cn-btns">
+      <button class="btn" id="chalNotifAccept">⚔️ Accept</button>
+      <button class="btn ghost" id="chalNotifDecline">Decline</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+function showScreen(id) { document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === id)); }
+function escapeHTML(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+
+/* ---------- shared data: slots / weights / OVR per role ---------- */
+let CFB = null;   // full cfb.json { positions, legends, teams } · loaded once by loadData()
+const IDLE_JERSEY = '#aeb6c2';
+// School colors come baked in cfb.json; anything unmapped gets a stable hash color (like college.html).
+const HASH_PALETTE = ['#7a1f1f', '#1f3d7a', '#1f6e3d', '#6e1f7a', '#7a5a1f', '#1f6e6e', '#4a1f7a', '#7a1f4a', '#2d5a1f', '#1f2d5a', '#5a411f', '#0f4d64'];
+function hashColor(name){ let h = 0; const str = String(name || '');
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
+  return HASH_PALETTE[h % HASH_PALETTE.length]; }
+function teamColor(team){ if(!team) return IDLE_JERSEY; const t = CFB && CFB.teams && CFB.teams[team]; return (t && t.color) || hashColor(team); }
+function teamLogoUrl(team){ const t = CFB && CFB.teams && CFB.teams[team]; return (t && t.img) || ''; }
+function brightTeam(t){ // lighten dark team colors so the silhouette reads on the dark field
+  const hex = teamColor(t); const n = parseInt(hex.slice(1),16);
+  let r=n>>16, g=(n>>8)&255, b=n&255; const luma=0.299*r+0.587*g+0.114*b;
+  if (luma>=90) return hex; const k=(90-luma)/(255-luma+1);
+  r=Math.round(r+k*(255-r)); g=Math.round(g+k*(255-g)); b=Math.round(b+k*(255-b));
+  return '#'+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1);
+}
+const SILHOUETTE = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="%2311161d"/><circle cx="50" cy="38" r="20" fill="%23394150"/><path d="M50 62c-20 0-34 14-34 34h68c0-20-14-34-34-34z" fill="%23394150"/></svg>'
+);
+function headshot(p){ if(p.img) return p.img; return teamLogoUrl(p.team) || SILHOUETTE; }
+function tier(ovr){ return ovr>=85?'diamond':ovr>=80?'gold':ovr>=75?'silver':ovr>=65?'bronze':'grey'; }
+function borderTier(p){ return p.legend?'legend':tier(p.ovr); }
+
+/* ---------- elo tiers ---------- */
+const ELO_TIERS = [
+  { name:'Bronze',   min:0,    color:'#cd7f32', glow:'rgba(205,127,50,.85)'   },
+  { name:'Silver',   min:900,  color:'#bfc9d4', glow:'rgba(191,201,212,.85)'  },
+  { name:'Gold',     min:1000, color:'#ffd700', glow:'rgba(255,215,0,.85)'    },
+  { name:'Platinum', min:1100, color:'#4de8e0', glow:'rgba(77,232,224,.85)'   },
+  { name:'Diamond',  min:1200, color:'#5eb8ff', glow:'rgba(94,184,255,.85)'   },
+];
+const TOP10_TIER = { name:'Top 10', color:'#cc44ff', glow:'rgba(204,68,255,.85)' };
+function getEloTier(elo, rank){
+  if (rank && rank <= 10) return TOP10_TIER;
+  for (let i = ELO_TIERS.length - 1; i >= 0; i--){
+    if (elo >= ELO_TIERS[i].min) return ELO_TIERS[i];
+  }
+  return ELO_TIERS[0];
+}
+function batSVG(color, glow, size=22){
+  // barrel (circle, upper-right) + handle (rotated rect) + knob (circle, lower-left)
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="${size}" height="${size}" `
+    + `style="display:inline-block;vertical-align:middle;flex-shrink:0;filter:drop-shadow(0 0 5px ${glow}) drop-shadow(0 0 2px ${glow})">`
+    + `<g fill="${color}">`
+    + `<circle cx="17" cy="7" r="5"/>`
+    + `<rect x="10.5" y="7" width="3" height="13" rx="1.5" transform="rotate(45 12 12)"/>`
+    + `<circle cx="5" cy="19" r="2.5"/>`
+    + `</g></svg>`;
+}
+function tierBadgeHTML(elo, rank, size=20){
+  const t = getEloTier(elo, rank);
+  const fs = Math.round(size * 0.65);
+  return `<span class="tier-badge">${batSVG(t.color, t.glow, size)}<span class="tier-name" style="color:${t.color};font-size:${fs}px;letter-spacing:1.5px">${t.name}</span></span>`;
+}
+
+// Both players build the same 9-slot hooper. The two ROLE keys (pitcher/batter) are kept only as
+// vestigial A/B side labels so the matchmaking/figure code needs no changes · both point at hoopers.
+// (config block replaced by gen-versus-cfb.js)
+// SAME-POSITION MIRROR: both players build the SAME college position (QB/RB/WR), chosen from the
+// shared match seed. The pitcher/batter ROLE keys are vestigial A/B side labels · both point at one
+// position config so the matchmaking/figure/showdown code needs no changes. (POSITIONS is pasted
+// verbatim from college.html so the slots/weights/figures match the single-player CFB game exactly.)
+const POSITIONS = {
+  qb: {
+    key: 'qb', label: 'Quarterback', short: 'QB', figure: 'cfb-qb-figure.png', aspect: '7/5',
+    slots: [
+      { key: 'shortAcc', label: 'Short Accuracy', part: 'Throwing Hand', mask: 'cfb-qb-seg-shortAcc.png', ax: 30, ay: 20, lx: 7,  ly: 6 },
+      { key: 'armPower', label: 'Arm Power',      part: 'Throwing Arm',  mask: 'cfb-qb-seg-armPower.png', ax: 40.8, ay: 29, lx: 8,  ly: 30 },
+      { key: 'iq',       label: 'Football IQ',    part: 'Helmet',        mask: 'cfb-qb-seg-iq.png',       ax: 49.1, ay: 15.4, lx: 88, ly: 7 },
+      { key: 'poise',    label: 'Poise',          part: 'Chest',         mask: 'cfb-qb-seg-poise.png',    ax: 49.8, ay: 30, lx: 90, ly: 21 },
+      { key: 'deepAcc',  label: 'Deep Ball',      part: 'Off Arm',       mask: 'cfb-qb-seg-deepAcc.png',  ax: 58, ay: 26.7, lx: 92, ly: 37 },
+      { key: 'midAcc',   label: 'Mid Accuracy',   part: 'Core',          mask: 'cfb-qb-seg-midAcc.png',   ax: 49.8, ay: 45, lx: 10, ly: 48 },
+      { key: 'frame',    label: 'Frame',          part: 'Height',        mask: 'cfb-qb-seg-frame.png',    ax: 49.8, ay: 34, lx: 90, ly: 56, type: 'height' },
+      { key: 'onRun',    label: 'On the Run',     part: 'Plant Leg',     mask: 'cfb-qb-seg-onRun.png',    ax: 58.7, ay: 62.2, lx: 91, ly: 79 },
+      { key: 'wheels',   label: 'Wheels',         part: 'Back Leg',      mask: 'cfb-qb-seg-wheels.png',   ax: 42.2, ay: 63.8, lx: 9,  ly: 81 },
+    ],
+    weights: { shortAcc: 1.2, midAcc: 1.2, deepAcc: 1.2, armPower: 1.1, poise: 1.1, iq: 1.1, onRun: 1.0, wheels: 1.0, frame: 1.0 },
+  },
+  rb: {
+    key: 'rb', label: 'Running Back', short: 'RB', figure: 'cfb-rb-figure.png', aspect: '7/5',
+    slots: [
+      { key: 'vision',  label: 'Vision',        part: 'Eyes',       mask: 'cfb-rb-seg-vision.png',  ax: 51.9, ay: 17.5, lx: 85, ly: 5 },
+      { key: 'power',   label: 'Power',         part: 'Stiff Arm',  mask: 'cfb-rb-seg-power.png',   ax: 42.4, ay: 29.3, lx: 92, ly: 13 },
+      { key: 'breakTk', label: 'Break Tackle',  part: 'Pads',       mask: 'cfb-rb-seg-breakTk.png', ax: 62.3, ay: 28.4, lx: 8,  ly: 9 },
+      { key: 'ballSec', label: 'Ball Security', part: 'The Rock',   mask: 'cfb-rb-seg-ballSec.png', ax: 40, ay: 40, lx: 7,  ly: 23 },
+      { key: 'hands',   label: 'Catching',      part: 'Soft Hands', mask: 'cfb-rb-seg-hands.png',   ax: 59.4, ay: 44.1, lx: 8,  ly: 44 },
+      { key: 'frame',   label: 'Frame',         part: 'Height',     mask: 'cfb-rb-seg-frame.png',   ax: 52.4, ay: 33.4, lx: 90, ly: 40, type: 'height' },
+      { key: 'elusive', label: 'Elusiveness',   part: 'Hips',       mask: 'cfb-rb-seg-elusive.png', ax: 49, ay: 50, lx: 9,  ly: 60 },
+      { key: 'burst',   label: 'Burst',         part: 'Drive Knee', mask: 'cfb-rb-seg-burst.png',   ax: 55.8, ay: 64.1, lx: 91, ly: 62 },
+      { key: 'speed',   label: 'Speed',         part: 'Stride Leg', mask: 'cfb-rb-seg-speed.png',   ax: 45.3, ay: 59.7, lx: 12, ly: 86 },
+    ],
+    weights: { speed: 1.2, breakTk: 1.2, vision: 1.2, burst: 1.1, elusive: 1.1, power: 1.1, ballSec: 1.0, hands: 1.0, frame: 1.0 },
+  },
+  wr: {
+    key: 'wr', label: 'Wide Receiver', short: 'WR', figure: 'cfb-wr-figure.png', aspect: '7/5',
+    slots: [
+      { key: 'routes',  label: 'Routes',      part: 'Helmet',         mask: 'cfb-wr-seg-routes.png',  ax: 52.4, ay: 16.4, lx: 10, ly: 9 },
+      { key: 'hands',   label: 'Hands',       part: 'Gloves',         mask: 'cfb-wr-seg-hands.png',   ax: 36.7, ay: 54.8, lx: 90, ly: 5 },
+      { key: 'spectac', label: 'Spectacular', part: 'Full Extension', mask: 'cfb-wr-seg-spectac.png', ax: 61.2, ay: 28.9, lx: 91, ly: 22 },
+      { key: 'release', label: 'Release',     part: 'Shoulders',      mask: 'cfb-wr-seg-release.png', ax: 42.5, ay: 28.5, lx: 9,  ly: 28 },
+      { key: 'traffic', label: 'In Traffic',  part: 'Chest',          mask: 'cfb-wr-seg-traffic.png', ax: 51, ay: 40, lx: 8,  ly: 45 },
+      { key: 'frame',   label: 'Frame',       part: 'Height',         mask: 'cfb-wr-seg-frame.png',   ax: 51.4, ay: 34.5, lx: 90, ly: 41, type: 'height' },
+      { key: 'leap',    label: 'Leaping',     part: 'Hips',           mask: 'cfb-wr-seg-leap.png',    ax: 49, ay: 50, lx: 9,  ly: 59 },
+      { key: 'agility', label: 'Agility',     part: 'Lead Leg',       mask: 'cfb-wr-seg-agility.png', ax: 58.2, ay: 59.2, lx: 92, ly: 72 },
+      { key: 'speed',   label: 'Speed',       part: 'Trail Leg',      mask: 'cfb-wr-seg-speed.png',   ax: 44.7, ay: 58.9, lx: 10, ly: 85 },
+    ],
+    weights: { hands: 1.2, speed: 1.2, routes: 1.2, release: 1.1, traffic: 1.1, spectac: 1.1, agility: 1.0, leap: 1.0, frame: 1.0 },
+  },
+};
+function heightToRatingCfb(inches){ if(!inches) return 60; return clamp(Math.round(48+(inches-66)*3.4),1,110); }
+function CFB_CFG(posKey){ const P = POSITIONS[posKey];
+  return { posKey, data:'cfb.json', figure:P.figure, slots:P.slots,
+    h2r:heightToRatingCfb, slotWeight:(k,v)=>P.weights[k]||1 }; }
+let ROLE = { pitcher:null, batter:null };
+// Picked from the shared match seed so BOTH players land on the same position (no negotiation).
+function selectVersusPosition(posKey){ const cfg = CFB_CFG(posKey); ROLE = { pitcher:cfg, batter:cfg }; DATA = {}; _poolCache = {}; }
+function slotNumeric(role,p,s){
+  if(s.type==='height') return ROLE[role].h2r(p.heightIn);
+  return p[s.key]||0;
+}
+function slotDisplay(role,p,s){
+  if(s.type==='height') return p.height||'-';
+  return p[s.key]||0;
+}
+function computeOvr(role, filled){
+  let vs=0, ws=0;
+  for(const s of ROLE[role].slots){ const v=filled[s.key].value; const w=ROLE[role].slotWeight(s.key,v); vs+=v*w; ws+=w; }
+  return Math.round(vs/ws);
+}
+function modalTeam(slots){ const c={}; slots.forEach(x=>{ if(x.team) c[x.team]=(c[x.team]||0)+1; }); let best='FA',n=0; for(const k in c) if(c[k]>n){n=c[k];best=k;} return best; }
+
+/* ---------- seeded RNG (shared so both phones show the same at-bat) ---------- */
+function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+let rng = Math.random;
+
+/* ---------- minimal sound ---------- */
+const Sound = (() => {
+  let ac, master;
+  function ctx(){ if(!ac){ const AC=window.AudioContext||window.webkitAudioContext; if(!AC)return null; ac=new AC(); master=ac.createGain(); master.gain.value=0.5; master.connect(ac.destination);} if(ac.state==='suspended')ac.resume(); return ac; }
+  function note(f,when,dur,o={}){ const c=ctx(); if(!c)return; const{type='triangle',vol=0.18,glide=null,attack=0.005}=o; const t=c.currentTime+when; const osc=c.createOscillator(),g=c.createGain(); osc.type=type; osc.frequency.setValueAtTime(f,t); if(glide)osc.frequency.exponentialRampToValueAtTime(glide,t+dur); g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(vol,t+attack); g.gain.exponentialRampToValueAtTime(0.0001,t+dur); osc.connect(g).connect(master); osc.start(t); osc.stop(t+dur+0.03); }
+  const arp = (freqs, step, o={}) => freqs.forEach((f,i)=>note(f, i*step, o.dur||step*1.6, o));
+  return {
+    tick(sp=0.5){ const f=210+Math.min(1,sp)*280; note(f,0,0.05,{type:'square',vol:0.05,glide:f*0.55}); },
+    click(){ note(620,0,0.06,{type:'square',vol:0.12,glide:470}); },
+    assign(){ note(520,0,0.06,{type:'square',vol:0.14}); note(780,0.05,0.1,{vol:0.16}); },
+    // landing chimes - same as the Build a Pitcher game, scaled by tier
+    land(){ note(440,0,0.1,{vol:0.12}); note(660,0.04,0.12,{vol:0.1}); },
+    gold(){ arp([660,880],0.09,{vol:0.2,dur:0.18}); },
+    diamond(){ arp([660,990,1320],0.08,{vol:0.2,dur:0.2}); note(1980,0.24,0.25,{type:'sine',vol:0.12}); },
+    legend(){ arp([523,659,784,1046,1319],0.1,{vol:0.22,dur:0.4}); arp([262,330,392,523],0.1,{type:'sine',vol:0.12,dur:0.5}); },
+    whoosh(){ note(900,0,0.18,{type:'sine',vol:0.1,glide:300}); },
+    prime(){ note(300,0,0.35,{type:'sawtooth',vol:0.16,glide:1200}); note(900,0.18,0.25,{vol:0.14}); note(1350,0.3,0.3,{type:'sine',vol:0.12}); },
+    crack(){ note(180,0,0.12,{type:'square',vol:0.25,glide:90}); note(1200,0,0.05,{type:'sine',vol:0.18}); },
+    catch(){ note(300,0,0.08,{type:'triangle',vol:0.16,glide:140}); },
+    win(){ [523,659,784,1046].forEach((f,i)=>note(f,i*0.11,0.4,{vol:0.2})); },
+    lose(){ [400,330,260].forEach((f,i)=>note(f,i*0.13,0.4,{type:'sine',vol:0.16})); },
+  };
+})();
+
+/* ---------- match state ---------- */
+let ably=null, clientId=null;
+let myRole=null, oppRole=null, matchId=null, seed=0, oppId=null, wasClaimer=false;
+let inviteCh=null, matchCh=null;
+let rematchOffered=false, rematchOppOffer=null, rematchCountdown=null, rematchSec=10;
+let oppPresenceName='', oppPresenceElo=0, oppPresenceAvatar=null;
+// ---- avatar flair: `avatar` rides ADDITIVELY on the presence/build/forfeit messages (old
+// clients ignore extra fields). Render via Social.avatarMeta (social.js registry); falls
+// back to an initial-letter circle when there's no avatar or social.js didn't load. ----
+function myAvatarId(){ try{ return localStorage.getItem('pl_avatar') || null; }catch(e){ return null; } }
+function oppAvatarId(){ return oppPresenceAvatar || (oppBuild && oppBuild.avatar) || null; }
+function avatarChipHTML(av, name, size){
+  const s = size || 24;
+  const meta = (window.Social && Social.avatarMeta) ? Social.avatarMeta(av) : null;
+  const st = 'display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;overflow:hidden;position:relative;'+
+    `width:${s}px;height:${s}px;border-radius:50%;vertical-align:${-Math.round(s*.28)}px;border:2px solid rgba(120,170,220,.35);`+
+    `background:${meta?meta.bg:'#182334'};font-family:'Oswald',sans-serif;font-weight:700;color:#3bd1ff;font-size:${Math.round(s*.5)}px;line-height:1;`;
+  const inner = meta
+    ? `<span style="font-size:${Math.round(s*.58)}px;line-height:1">${meta.emoji}</span><img src="${meta.src}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.remove()">`
+    : escapeHTML(String(name||'P').trim().charAt(0).toUpperCase()||'P');
+  return `<span style="${st}">${inner}</span>`;
+}
+let friendlyMode=false;
+let gameMode='classic'; // 'classic' | 'legends' | 'hard'
+let lobbyWaiting=false;
+let _incomingChalMode='classic';
+const MODE_LABEL={ classic:'⚔️ Classic', legends:'🟣 Legends Only', hard:'🔒 Hard Mode' };
+const MODE_DESC={ classic:'Standard draft · all tiers', legends:'Legends only · purple tier cards', hard:'Standard draft · ratings hidden' };
+let challengeInboxCh=null, _incomingChalId=null, _incomingChalName=null;
+let pendingChallenge=null; // {replyId, replyClientId, name} - incoming challenge waiting on the notif
+let chalWaitTimeout=null;
+let DATA={};               // role -> data json
+let myBuild=null, oppBuild=null, atBatStarted=false, matchResolved=false;
+let claimTimeout=null, waitTimeout=null;
+let isGhost=false, ghostTimer=null;   // Ghost = async match vs a real recent build when the lobby is empty
+let ghostFixed=null;                  // set when the ghost is a SPECIFIC Hall of Fame save (?gb= build challenge)
+
+/* ---------- account + Elo rating ----------
+   Two ways to have a rating:
+   - Device guest: a random guestId + a chosen name, stored on this device. Rating persists
+     server-side (no password). Nudged to sign in to back it up / play on other devices.
+   - Google account: shared sign-in with the other games via localStorage 'pl_account'.
+   Either way the rating lives on the server; the client just sends a "principal" identifying who. */
+const GOOGLE_CLIENT_ID = '349698720898-t9bpb8fp7ks6scf8ci8mmoeec1lpm3d3.apps.googleusercontent.com';
+let account=null; try { account = JSON.parse(localStorage.getItem('pl_account') || 'null'); } catch(e){}
+let myStats=null;            // {elo,wins,losses} - set for guests AND signed-in users
+let pendingResult=null;      // {matchId, won, oppElo} captured at game end
+function myElo(){ return myStats ? myStats.elo : 1000; }
+function saveAccount(a){ account=a; try{ localStorage.setItem('pl_account', JSON.stringify(a)); }catch(e){} if(window.Ach) Ach.sync(); if(window.XP) XP.sync(); }
+
+// device-guest identity
+let guestId, guestName;
+try { guestId = localStorage.getItem('pl_guestId'); } catch(e){}
+if (!guestId){ guestId = 'g_' + Math.random().toString(36).slice(2) + Date.now().toString(36); try{ localStorage.setItem('pl_guestId', guestId); }catch(e){} }
+try { guestName = localStorage.getItem('pl_guestName'); } catch(e){}
+if (!guestName){ guestName = 'Player' + Math.floor(1000 + Math.random()*9000); try{ localStorage.setItem('pl_guestName', guestName); }catch(e){} }
+function setGuestName(n){ let v = String(n||'').trim().slice(0,20);
+  if (v && window.NameFilter && !NameFilter.isClean(v)) v = '';   // slur gate · server rejects these too
+  guestName = v || guestName; try{ localStorage.setItem('pl_guestName', guestName); }catch(e){} }
+
+// who the server should treat this request as. `name` is the player's chosen 1v1 handle (NOT their
+// Google full name) - sent for guests AND signed-in users so the leaderboard shows the handle.
+function principal(){ return account
+  ? { sub:account.sub, sessionToken:account.sessionToken, name:guestName }
+  : { guestId, name:guestName }; }
+function isGuest(){ return !account; }
+function displayName(){ return guestName; }
+// stable per-person id used to avoid matching yourself on a second tab/device
+function personId(){ return account ? ('acct:' + account.sub) : ('guest:' + guestId); }
+
+function initGoogle(tries=0){
+  if (!window.google || !google.accounts || !google.accounts.id){ if (tries<40) setTimeout(()=>initGoogle(tries+1), 250); return; }
+  try { google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleCredential, auto_select: true }); } catch(e){}
+  gsiReady=true; updateRatingChip();
+}
+let gsiReady=false;
+async function onGoogleCredential(resp){
+  try {
+    const j = await fetch('/api/account', { method:'POST', headers:{'content-type':'application/json'},
+      body: JSON.stringify({ action:'login', idToken: resp.credential, guestId }) }).then(x=>x.json());
+    if (j.ok){
+      saveAccount({ sub:j.sub, email:j.email, name:j.name, picture:j.picture, sessionToken:j.sessionToken });
+      try { gtag('event', j.isNew ? 'sign_up' : 'login', { method:'Google' }); } catch(e){}
+      // give a friendlier default handle from the Google first name (never the full name),
+      // but only if they're still on the auto-generated "Player####" placeholder.
+      if (/^Player\d+$/.test(guestName) && j.name){ setGuestName(String(j.name).trim().split(/\s+/)[0]); }
+      // merge this device's guest rating/record into the account
+      try { await fetch('/api/account', { method:'POST', headers:{'content-type':'application/json'},
+        body: JSON.stringify({ action:'pvpClaim', sub:j.sub, sessionToken:j.sessionToken, guestId }) }); } catch(e){}
+      await refreshStats(); updateRatingChip();
+      if (pendingResult) applyResult();
+    }
+  } catch(e){}
+}
+async function refreshStats(){
+  try {
+    const r = await fetch('/api/account', { method:'POST', headers:{'content-type':'application/json'},
+      body: JSON.stringify(Object.assign({ action:'pvpStats', sport:'cfb' }, principal())) }).then(x=>x.json());
+    if (r.ok) myStats = { elo:r.elo, wins:r.wins, losses:r.losses, streak:r.streak||0 };
+    else if (account && r.error === 'Not signed in'){ account=null; try{ localStorage.removeItem('pl_account'); }catch(e){} return refreshStats(); }
+  } catch(e){}
+}
+function updateRatingChip(){
+  const el = $('ratingChip'); if (!el) return; el.innerHTML='';
+  const elo = myStats ? myStats.elo : 1000, w = myStats ? myStats.wins : 0, l = myStats ? myStats.losses : 0;
+  const streak = myStats ? (myStats.streak || 0) : 0;
+  const streakTag = streak >= 2 ? ` · 🔥${streak}` : '';
+  // editable handle + rating, always (signed in or guest)
+  const row = document.createElement('div'); row.className='elo';
+  row.innerHTML = `⚔️ <input id="guestNameInput" maxlength="20" value="${escapeHTML(guestName)}"> Rating<b>${elo}</b><span class="rec">${w}W · ${l}L${streakTag}</span>`;
+  el.appendChild(row);
+  const tierRow = document.createElement('div');
+  tierRow.style.cssText = 'display:flex;align-items:center;justify-content:center;margin:4px 0 2px';
+  tierRow.innerHTML = tierBadgeHTML(elo, null, 22);
+  el.appendChild(tierRow);
+  if (account){
+    const note = document.createElement('div'); note.className='guest'; note.textContent='✓ Signed in · rating saved to your account';
+    el.appendChild(note);
+  } else {
+    const note = document.createElement('div'); note.className='guest'; note.textContent='Sign in to save your rating & play on other devices';
+    const wrap = document.createElement('div'); wrap.id='gsiChip';
+    el.appendChild(note); el.appendChild(wrap);
+    if (gsiReady){ try { google.accounts.id.renderButton(wrap, { theme:'filled_black', size:'medium', shape:'pill', text:'signin_with' }); } catch(e){} }
+  }
+  const inp = $('guestNameInput');
+  inp.onchange = () => {
+    if (inp.value.trim() && window.NameFilter && !NameFilter.isClean(inp.value)) {
+      inp.value = guestName; inp.placeholder = "That name isn't allowed";
+      return;
+    }
+    setGuestName(inp.value); refreshStats().then(updateRatingChip);
+  };
+  inp.onkeydown = e => { if (e.key==='Enter') inp.blur(); };
+}
+async function applyResult(){
+  if (!pendingResult) return;
+  const pr = pendingResult; pendingResult=null;
+  try {
+    const r = await fetch('/api/account', { method:'POST', headers:{'content-type':'application/json'},
+      body: JSON.stringify(Object.assign({ action:'pvpResult', sport:'cfb', matchId: pr.matchId, won: pr.won, oppElo: pr.oppElo,
+        role: pr.role, ovr: pr.ovr, oppOvr: pr.oppOvr, oppName: pr.oppName || '', oppKey: pr.oppKey || '', decided: pr.decided !== false }, principal())) }).then(x=>x.json());
+    if (r.ok){
+      myStats = { elo:r.elo, wins:r.wins, losses:r.losses, streak:r.streak||0 };
+      // Server is authoritative: reconcile the headline to the recorded outcome so a rare
+      // forfeit / both-claim-win race never shows "YOU WIN" above a rating drop.
+      if (typeof r.won === 'boolean' && r.won !== pr.won) reconcileResultDisplay(r.won, pr.oppName);
+      renderRatingResult(r);
+    }
+  } catch(e){}
+}
+function reconcileResultDisplay(won, oppName){
+  const nm = oppName || 'your opponent';
+  const card=$('resultCard'); if(card) card.className='result-card '+(won?'win':'lose');
+  const head=$('resultHead'); if(head) head.textContent = won ? 'YOU WIN' : 'YOU LOSE';
+  const sub=$('resultSub'); if(sub) sub.textContent = won
+    ? `You beat ${nm}. Run it back?`
+    : `${nm} settled this one first. Rating adjusted to match.`;
+}
+function renderRatingResult(r){
+  const el = $('ratingResult'); if (!el) return;
+  const prev = r.elo - r.delta;
+  const dir = r.delta >= 0 ? 'up' : 'down';
+  const sign = r.delta >= 0 ? '+' : '';
+  const streakLine = (r.bonus > 0)
+    ? `<div class="prompt" style="color:#ffb13a">🔥 ${r.streak}-win streak · +${r.bonus} streak bonus${r.streak >= 5 ? ' (max)' : ''}</div>` : '';
+  const oldTier = getEloTier(prev, null);
+  const newTier = getEloTier(r.elo, null);
+  const tierChanged = oldTier.name !== newTier.name;
+  const tierUp = tierChanged && (ELO_TIERS.indexOf(newTier) > ELO_TIERS.indexOf(oldTier) || newTier === TOP10_TIER);
+
+  el.innerHTML = `<div class="delta">Rating ${prev} → <b class="${dir}">${r.elo}</b> <span class="${dir}">(${sign}${r.delta})</span></div>`
+    + `<div class="tier-result" style="display:flex;align-items:center;justify-content:center;margin:5px 0 3px">${tierBadgeHTML(r.elo, null, 22)}</div>`
+    + streakLine
+    + `<div class="prompt">${r.wins}W · ${r.losses}L${isGuest() ? ' · saved on this device' : ''}</div>`;
+  gsap.fromTo(el.querySelector('.delta'), { y:8, opacity:0 }, { y:0, opacity:1, duration:.5, ease:'power2.out' });
+
+  if (window.Ach) {
+    if (r.elo >= 1200) Ach.unlock('elo1');
+    if (r.elo >= 1400) Ach.unlock('elo2');
+    if (r.elo >= 1600) Ach.unlock('elo3');
+    const st = r.streak || 0;
+    if (st >= 3) Ach.unlock('streak1');
+    if (st >= 5) Ach.unlock('streak2');
+    if (st >= 10) Ach.unlock('streak3');
+  }
+
+  // tier change animations
+  if (tierChanged) {
+    const tierResultEl = el.querySelector('.tier-result');
+    const badgeEl = el.querySelector('.tier-badge');
+    if (tierUp) {
+      // inject TIER UP label
+      const label = document.createElement('div');
+      label.style.cssText = `font-family:'Oswald',sans-serif;font-size:19px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:${newTier.color};text-align:center;opacity:0;margin-top:2px`;
+      label.textContent = '⬆ TIER UP!';
+      tierResultEl.after(label);
+      // badge pop + label burst
+      const tl = gsap.timeline({ delay: 0.45 });
+      tl.fromTo(badgeEl, { scale:1 }, { scale:1.8, duration:0.25, ease:'power3.out' })
+        .to(badgeEl, { scale:1, duration:0.55, ease:'elastic.out(1.2, 0.45)' });
+      gsap.fromTo(label, { y:10, opacity:0, scale:0.7 }, { y:0, opacity:1, scale:1, duration:0.4, delay:0.55, ease:'back.out(2)' });
+      // card glow pulse
+      const card = $('resultCard');
+      gsap.fromTo(card, { filter:'brightness(1)' }, { filter:'brightness(1.35)', duration:0.2, delay:0.45, yoyo:true, repeat:3, ease:'power2.inOut',
+        onComplete(){ card.style.filter=''; } });
+    } else {
+      // tier down: label drop + shake
+      const label = document.createElement('div');
+      label.style.cssText = `font-family:'Oswald',sans-serif;font-size:19px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:${newTier.color};text-align:center;opacity:0;margin-top:2px`;
+      label.textContent = '⬇ TIER DOWN';
+      tierResultEl.after(label);
+      gsap.fromTo(label, { y:-10, opacity:0, scale:0.8 }, { y:0, opacity:1, scale:1, duration:0.35, delay:0.5, ease:'power2.out' });
+      gsap.to(badgeEl, { x:-6, duration:0.07, delay:0.45, yoyo:true, repeat:7, ease:'none', onComplete(){ gsap.set(badgeEl, { x:0 }); } });
+      const card = $('resultCard');
+      gsap.fromTo(card, { filter:'brightness(1)' }, { filter:'brightness(0.75)', duration:0.18, delay:0.45, yoyo:true, repeat:3, ease:'power2.inOut',
+        onComplete(){ card.style.filter=''; } });
+    }
+  }
+  // guests: offer to back the rating up to a Google account
+  if (isGuest()){
+    const p = document.createElement('div'); p.className='prompt'; p.style.marginTop='4px';
+    p.textContent='Sign in to save it & play on other devices →';
+    const wrap = document.createElement('div'); wrap.id='gsiResult';
+    el.appendChild(p); el.appendChild(wrap);
+    if (gsiReady){ try { google.accounts.id.renderButton(wrap, { theme:'filled_black', size:'large', shape:'pill', text:'signin_with' }); } catch(e){} }
+  }
+}
+
+function rid(){ return Math.random().toString(36).slice(2) + Date.now().toString(36); }
+
+async function loadData(role){
+  if (DATA[role]) return DATA[role];
+  if (!CFB){ CFB = await (await fetch('cfb.json')).json(); }
+  const k = ROLE[role].posKey;
+  DATA[role] = { pool: CFB.positions[k].pool, prime: CFB.positions[k].prime,
+                 legends: (CFB.legends && CFB.legends[k]) || [], eraPrimes: [] };
+  return DATA[role];
+}
+
+let ablyPromise = null;
+function connectAbly(){
+  // single shared connection (reused by the on-load presence ticker AND matchmaking)
+  if (ablyPromise) return ablyPromise;
+  ablyPromise = new Promise((resolve, reject) => {
+    clientId = rid();
+    // echoMessages:false → don't receive our OWN published messages (otherwise our build would
+    // come back to us and get treated as the opponent's = "you vs you").
+    ably = new Ably.Realtime({ authUrl: '/api/ably-token?clientId=' + clientId, clientId, echoMessages: false });
+    ably.connection.once('connected', () => resolve());
+    ably.connection.once('failed', e => { ablyPromise = null; reject(e); });
+  });
+  return ablyPromise;
+}
+
+/* ---------- live "who's online" ticker (cheap DB heartbeat · NOT Ably) ---------- */
+// The old ticker used Ably presence; fanning presence out to every idle viewer was ~90% of the Ably
+// bill. Now each viewer heartbeats /api/live every ~45s (only while the tab is visible) and the same
+// response returns the live counts. Linear cost, plain DB queries, zero Ably.
+const LIVE_GAME = 'cfb';
+let myOnlineStatus = 'idle', liveId = null, liveTimer = null;
+async function goOnline(){
+  // Start the live heartbeat; connect Ably + wire the friend-challenge inbox (unrelated to the ticker).
+  startLiveTicker();
+  try { await connectAbly(); } catch(e){ return; }
+  subscribeChallengeInbox();
+}
+async function liveHeartbeat(){
+  if (!liveId) liveId = rid();
+  try {
+    const r = await fetch('/api/live', { method:'POST', headers:{'content-type':'application/json'},
+      body: JSON.stringify({ id: liveId, game: LIVE_GAME, status: myOnlineStatus }) });
+    renderTicker(await r.json());
+  } catch(e){}
+}
+function startLiveTicker(){
+  if (liveTimer) return;
+  liveHeartbeat();
+  liveTimer = setInterval(() => { if (document.visibilityState === 'visible') liveHeartbeat(); }, 45000);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') liveHeartbeat(); });
+  window.addEventListener('pagehide', () => {
+    try { navigator.sendBeacon('/api/live', new Blob([JSON.stringify({ id: liveId, action:'leave', game: LIVE_GAME })], { type:'application/json' })); } catch(e){}
+  });
+}
+function renderTicker(d){
+  const el = $('liveTicker'), t = $('ltText'); if (!el || !t) return;
+  if (!d || !d.ok){ el.style.display = 'none'; return; }
+  const online = Math.max(0, d.online|0), searching = d.searching|0, playing = d.playing|0;
+  if (online <= 0){ el.style.display = 'none'; return; }
+  el.style.display = 'inline-flex';
+  const extra = []; if (playing > 0) extra.push(`${playing} in a match`); if (searching > 0) extra.push(`${searching} searching`);
+  t.textContent = (online === 1 && !extra.length)
+    ? 'Live · be the first to find a match'
+    : (extra.length ? `${online} online · ${extra.join(' · ')}` : `${online} online now`);
+}
+
+/* ---------- friend challenge ---------- */
+function subscribeChallengeInbox(){
+  if (challengeInboxCh) return;
+  try {
+    challengeInboxCh = ably.channels.get('cfb:challenge:' + personId());
+    challengeInboxCh.subscribe('m', msg => handleChallengeMsg(msg));
+  } catch(e){}
+}
+
+function handleChallengeMsg(msg){
+  const d = msg.data; if (!d || !d.type) return;
+  if (d.type === 'request'){
+    // someone opened your challenge link and clicked Accept
+    if (atBatStarted && !matchResolved) return; // mid-match, ignore
+    pendingChallenge = { replyId: d.replyId, replyClientId: d.clientId, name: d.name || 'Challenger' };
+    if (lobbyWaiting){
+      lobbyWaiting = false;
+      acceptChallengeNotif();
+    } else {
+      showChallengeNotif(d.name || 'Challenger');
+    }
+  } else if (d.type === 'accept'){
+    // challenger accepted our request - start the friendly match
+    if (chalWaitTimeout){ clearTimeout(chalWaitTimeout); chalWaitTimeout=null; }
+    gameMode = d.mode || 'classic';
+    startMatch(d.matchId, d.yourRole, d.seed, d.chalClientId || '', false, true);
+  } else if (d.type === 'decline'){
+    pendingChallenge = null;
+    hideChallengeNotif();
+  }
+}
+
+function checkChallengeURL(){
+  const params = new URLSearchParams(location.search);
+  const ch = params.get('ch'), cn = params.get('cn'), md = params.get('mode');
+  if (!ch) return;
+  _incomingChalId = ch;
+  _incomingChalName = cn ? decodeURIComponent(cn) : 'Challenger';
+  try { gtag('event', 'challenge_opened', { game: 'versus_cfb' }); } catch(e){}
+  _incomingChalMode = (md && MODE_LABEL[md]) ? md : 'classic';
+  $('chalChallengerName').textContent = _incomingChalName;
+  const tag = $('chalModeTag'), tagInner = $('chalModeTagInner');
+  if (_incomingChalMode !== 'classic' && tag && tagInner){
+    tagInner.textContent = MODE_LABEL[_incomingChalMode];
+    tag.style.display = '';
+  }
+  const modeLine = $('chalModeLine');
+  if (modeLine && _incomingChalMode !== 'classic'){
+    modeLine.innerHTML = `Friendly match · no Elo change · <span style="color:var(--accent2)">${MODE_LABEL[_incomingChalMode]}</span>`;
+  }
+  showScreen('challengeScreen');
+}
+
+async function sendChallengeRequest(){
+  if (!_incomingChalId) return;
+  try { gtag('event', 'challenge_accepted', { game: 'versus_cfb' }); } catch(e){}
+  $('chalAcceptBtn').disabled = true;
+  $('chalStatus').textContent = 'Connecting…';
+  try { await connectAbly(); } catch(e){
+    $('chalStatus').textContent = 'Connection error - check your network.';
+    $('chalAcceptBtn').disabled = false; return;
+  }
+
+  const MAX_TRIES = 5, RETRY_MS = 12000;
+  let tries = 0, chalGaveUp = false;
+
+  function setChalStatus(txt){
+    $('chalStatus').innerHTML = txt + ' <span id="chalCancelTxt" style="cursor:pointer;color:var(--accent2);font-size:11px;letter-spacing:.3px;text-decoration:underline;margin-left:4px">cancel</span>';
+    const c = $('chalCancelTxt');
+    if (c) c.onclick = () => { chalGaveUp=true; if(chalWaitTimeout){clearTimeout(chalWaitTimeout);chalWaitTimeout=null;} showScreen('mmScreen'); updateRatingChip(); };
+  }
+
+  async function attempt(){
+    if (chalGaveUp) return;
+    tries++;
+    setChalStatus(tries === 1 ? 'Contacting challenger…' : `Pinging… (attempt ${tries}/${MAX_TRIES})`);
+    try {
+      const ch = ably.channels.get('cfb:challenge:' + _incomingChalId);
+      await ch.publish('m', { type:'request', replyId: personId(), clientId, name: displayName() });
+    } catch(e){}
+    if (chalGaveUp) return;
+    if (tries < MAX_TRIES){
+      chalWaitTimeout = setTimeout(attempt, RETRY_MS);
+    } else {
+      chalWaitTimeout = setTimeout(() => {
+        if (chalGaveUp) return;
+        $('chalStatus').innerHTML = 'No response - they may be offline. <span id="chalCancelTxt" style="cursor:pointer;color:var(--accent2);font-size:11px;text-decoration:underline;margin-left:4px">go back</span>';
+        const c=$('chalCancelTxt'); if(c) c.onclick=()=>{ showScreen('mmScreen'); updateRatingChip(); };
+        $('chalAcceptBtn').disabled = false;
+      }, RETRY_MS);
+    }
+  }
+  await attempt();
+}
+
+async function acceptChallengeNotif(){
+  if (!pendingChallenge || !ably) return;
+  hideChallengeNotif();
+  const pr = pendingChallenge; pendingChallenge = null;
+  const newId = rid(), newSeed = (Math.random() * 0xFFFFFFFF)|0;
+  const myNewRole = Math.random() < 0.5 ? 'pitcher' : 'batter';
+  const theirRole = myNewRole === 'pitcher' ? 'batter' : 'pitcher';
+  // Retry the accept publish up to 3 times - if this fails silently, the acceptor
+  // never gets the green light and times out even though the challenger is ready.
+  const ch = ably.channels.get('cfb:challenge:' + pr.replyId);
+  const payload = { type:'accept', matchId:newId, seed:newSeed, yourRole:theirRole, chalClientId:clientId, mode:gameMode };
+  for (let i = 0; i < 3; i++){
+    try { await ch.publish('m', payload); break; } catch(e){ if (i < 2) await new Promise(r => setTimeout(r, 800)); }
+  }
+  startMatch(newId, myNewRole, newSeed, pr.replyClientId, false, true);
+}
+
+function declineChallengeNotif(){
+  const pr = pendingChallenge; pendingChallenge = null;
+  hideChallengeNotif();
+  if (pr && ably) {
+    try { ably.channels.get('cfb:challenge:' + pr.replyId).publish('m', { type:'decline' }); } catch(e){}
+  }
+}
+
+function showChallengeNotif(name){
+  $('chalNotifName').textContent = name;
+  const el = $('challengeNotif'); el.style.display = 'block';
+  gsap.fromTo(el, { y:40, opacity:0 }, { y:0, opacity:1, duration:.4, ease:'back.out(1.8)' });
+}
+
+function hideChallengeNotif(){
+  const el = $('challengeNotif'); if (!el || el.style.display === 'none') return;
+  gsap.to(el, { y:20, opacity:0, duration:.25, ease:'power2.in', onComplete(){ el.style.display='none'; } });
+}
+
+function copyChallengeLinkFn(){
+  const link = location.origin + '/versus-cfb?ch=' + encodeURIComponent(personId()) + '&cn=' + encodeURIComponent(displayName()) + '&mode=' + gameMode;
+  try { gtag('event', 'challenge_sent', { game: 'versus_cfb', source: 'stats' }); } catch(e){}
+  const done = () => { const c=$('chalCopied'); if(c){ c.style.display=''; setTimeout(()=>{ if(c) c.style.display='none'; },3000); } };
+  if (navigator.clipboard) { navigator.clipboard.writeText(link).then(done).catch(()=>{ prompt('Copy this link:', link); }); }
+  else { try { prompt('Copy this link:', link); done(); } catch(e){} }
+}
+function challengeLink(){
+  return location.origin + '/versus-cfb?ch=' + encodeURIComponent(personId()) + '&cn=' + encodeURIComponent(displayName()) + '&mode=' + gameMode;
+}
+function updateLobbyLink(){
+  const link = challengeLink();
+  const el = $('lobbyLinkUrl'); if (el) el.textContent = link;
+  document.querySelectorAll('#lobbyModePicker .lmode').forEach(b => b.classList.toggle('active', b.dataset.mode === gameMode));
+  return link;
+}
+function openLobby(){
+  lobbyWaiting = true;
+  gameMode = 'classic'; // reset to default each time
+  updateLobbyLink();
+  const copied=$('lobbyCopied'); if(copied) copied.style.display='none';
+  showScreen('lobbyScreen');
+}
+function cancelLobby(){
+  lobbyWaiting = false;
+  showScreen('mmScreen');
+  updateRatingChip();
+}
+
+/* ---------- meet lobby (social-tab challenges) ----------
+   Both sides of a friends-panel challenge come here with ?meet=<challengeId>&side=from|to.
+   Presence on the shared channel pairs them NO MATTER who arrives first (the old ?ch= flow
+   needed the challenger already camping in the arena): when both are present, the 'from'
+   side generates the match and publishes 'start'; both start the same friendly match. */
+let meetCh=null, meetTimeout=null, meetStarted=false;
+function checkMeetURL(){
+  const q = new URLSearchParams(location.search);
+  const id = q.get('meet');
+  if (!id) return false;
+  const side = q.get('side') === 'to' ? 'to' : 'from';
+  const name = q.get('cn') ? decodeURIComponent(q.get('cn')) : 'your opponent';
+  setTimeout(() => startMeet(String(id).slice(0, 48), side, name), 200);
+  return true;
+}
+async function startMeet(meetId, side, oppName){
+  resetMatch();
+  gameMode = 'classic';
+  showScreen('mmScreen'); updateRatingChip();
+  $('findBtn').style.display='none'; $('mmSpin').style.display='block'; $('cancelWrap').style.display='block'; $('statsWrap').style.display='none';
+  setStatus('Connecting…');
+  try { await connectAbly(); } catch(e){ setStatus('Could not connect · check your network and retry.'); failBack(); return; }
+  setOnlineStatus('searching');
+  setStatus(`⚔️ Waiting for ${oppName} — they've been pinged…`);
+  try { gtag('event', 'meet_lobby', { game: 'versus_cfb', side }); } catch(e){}
+  meetStarted = false;
+  meetCh = ably.channels.get('cfb:meet:' + meetId);
+  meetCh.subscribe('start', m => {
+    if (m.clientId === clientId || meetStarted) return;
+    meetStarted = true;
+    const d = m.data || {};
+    leaveMeet(false);
+    gameMode = d.mode || 'classic';
+    startMatch(d.matchId, d.otherRole, d.seed, d.fromClientId, false, true);
+  });
+  // only the 'from' side generates the match — deterministic, so a double-start is impossible
+  const maybeStart = async () => {
+    if (meetStarted || side !== 'from' || !meetCh) return;
+    let members = [];
+    try { members = await meetCh.presence.get(); } catch(e){ return; }
+    const others = members.filter(mm => mm.clientId !== clientId);
+    if (!others.length || meetStarted) return;
+    meetStarted = true;
+    const newId = rid(), newSeed = (Math.random() * 0xFFFFFFFF) >>> 0;
+    const myNewRole = Math.random() < 0.5 ? 'pitcher' : 'batter';
+    const theirRole = myNewRole === 'pitcher' ? 'batter' : 'pitcher';
+    const payload = { matchId: newId, seed: newSeed, otherRole: theirRole, fromClientId: clientId, mode: gameMode };
+    for (let i = 0; i < 3; i++){
+      try { await meetCh.publish('start', payload); break; } catch(e){ if (i < 2) await new Promise(r => setTimeout(r, 700)); }
+    }
+    leaveMeet(false);
+    startMatch(newId, myNewRole, newSeed, others[0].clientId, false, true);
+  };
+  meetCh.presence.subscribe('enter', maybeStart);
+  meetCh.presence.subscribe('present', maybeStart);
+  try { await meetCh.presence.enter({ name: displayName() }); } catch(e){}
+  maybeStart();
+  // generous no-show window · the other side may still be reading the notification
+  meetTimeout = setTimeout(() => {
+    if (meetStarted) return;
+    leaveMeet(true);
+    setStatus(`${oppName} hasn't shown up yet · they'll still see the challenge in 👥 Friends. Try again from there, or find a live match.`);
+    failBack();
+    setOnlineStatus('idle');
+  }, 180000);
+}
+function leaveMeet(detach){
+  if (meetTimeout){ clearTimeout(meetTimeout); meetTimeout=null; }
+  if (meetCh){
+    try{ meetCh.presence.leave(); }catch(e){}
+    try{ meetCh.presence.unsubscribe(); }catch(e){}
+    meetCh.unsubscribe();
+    if (detach){ try{ meetCh.detach(); }catch(e){} }
+    meetCh = null;
+  }
+}
+function setOnlineStatus(s){
+  myOnlineStatus = s;
+  liveHeartbeat();   // reflect the new status in the live count right away
+}
+
+let searching=false, retryTimer=null;
+async function findMatch(){
+  resetMatch();
+  gameMode = 'classic';   // ranked is always Classic · clear any leftover friendly (Legends/Hard) mode
+  showScreen('mmScreen');
+  updateRatingChip();
+  $('findBtn').style.display='none'; $('mmSpin').style.display='block'; $('cancelWrap').style.display='block'; $('statsWrap').style.display='none';
+  setStatus('Connecting…');
+  try {
+    if (!ably || ably.connection.state !== 'connected') await connectAbly();
+  } catch(e){ setStatus('Could not connect. Check Ably is configured, then retry.'); failBack(); return; }
+  setStatus('Searching for an opponent…');
+  setOnlineStatus('searching');
+  try { gtag('event', 'versus_search', { game: 'versus_cfb' }); } catch(e){}
+
+  searching = true;
+  // after ~20s alone, offer a Ghost match (a real recent build) so an empty lobby isn't a dead end
+  if (ghostTimer) clearTimeout(ghostTimer);
+  ghostTimer = setTimeout(() => { if (searching) { $('ghostOffer').style.display = 'block'; Sound.whoosh(); } }, 20000);
+  // subscribe to my invite channel BEFORE asking the server (so I can't miss a hand-off)
+  inviteCh = ably.channels.get('cfb:invite:' + clientId);
+  inviteCh.subscribe('match', msg => {
+    const d = msg.data;
+    stopSearch();
+    startMatch(d.matchId, d.role, d.seed, d.oppId, false);
+  });
+  attemptMatch();
+}
+
+// Try to claim a waiting opponent; if none, we're enqueued - retry every few seconds so two
+// people who clicked at the same instant (both enqueued, neither claimed) still pair up.
+async function attemptMatch(){
+  if (!searching) return;
+  let r;
+  try {
+    r = await fetch('/api/match-cfb', { method:'POST', headers:{'content-type':'application/json'},
+      body: JSON.stringify({ action:'find', id: clientId, pid: personId() }) }).then(x=>x.json());
+  } catch(e){ if (searching) retryTimer = setTimeout(attemptMatch, 3000); return; }
+  if (!searching) return;
+
+  if (r && r.matched){
+    stopSearch();
+    const theirRole = r.role === 'pitcher' ? 'batter' : 'pitcher';
+    try {
+      await ably.channels.get('cfb:invite:' + r.oppId).publish('match',
+        { matchId: r.matchId, role: theirRole, seed: r.seed, oppId: clientId });
+    } catch(e){}
+    startMatch(r.matchId, r.role, r.seed, r.oppId, true);
+    return;
+  }
+  // still waiting - the invite handler may fire first; otherwise we retry.
+  retryTimer = setTimeout(attemptMatch, 3000);
+}
+
+function stopSearch(){ searching=false; if (retryTimer){ clearTimeout(retryTimer); retryTimer=null; } if (ghostTimer){ clearTimeout(ghostTimer); ghostTimer=null; } if ($('ghostOffer')) $('ghostOffer').style.display='none'; }
+function setStatus(t){ $('mmStatus').textContent = t; }
+function failBack(){ $('findBtn').style.display='inline-block'; $('mmSpin').style.display='none'; $('cancelWrap').style.display='none'; $('statsWrap').style.display='block'; }
+
+async function cancelSearch(){
+  stopSearch();
+  leaveMeet(true);   // also covers backing out of a meet lobby (same Cancel button)
+  setOnlineStatus('idle');
+  if (clientId) { try { await fetch('/api/match-cfb',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'leave',id:clientId})}); } catch(e){} }
+  if (inviteCh) { inviteCh.unsubscribe(); try{ inviteCh.detach(); }catch(e){} inviteCh=null; }
+  failBack(); setStatus('');
+}
+
+/* ---------- Ghost match (async vs a real recent build) ---------- */
+const GHOST_NAMES = ['The Phantom', 'Anonymous', 'A Challenger', 'Ghost Runner', 'The Stranger', 'Nobody', 'Mystery Build', 'The Visitor'];
+async function fetchGhostBuild(){
+  try {
+    const r = await fetch(`/api/score?action=ghost&game=cfb&min=80&max=99`).then(x=>x.json());
+    return (r && r.ghost) ? r.ghost : null;
+  } catch(e){ return null; }
+}
+// `fixed` (optional) = a SPECIFIC Hall of Fame save to take on ({saveId, myRole, slots, ovr,
+// name} from the ?gb= flow) · fixed matches are FRIENDLY (a targeted build could be farmed
+// for Elo otherwise) and report a buildDefenseResult so the owner gets notified.
+async function startGhostMatch(fixed){
+  resetMatch();                       // clears any prior match/timers (and isGhost)
+  gameMode = 'classic';
+  isGhost = true; ghostFixed = fixed || null;
+  friendlyMode = !!fixed;             // random ghost = a real build → Elo counts · targeted = friendly
+  try { gtag('event', fixed ? 'versus_build_challenge' : 'versus_ghost_start', { game: 'versus_cfb' }); } catch(e){}
+  if (clientId) { try { fetch('/api/match-cfb',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'leave',id:clientId})}); } catch(e){} }
+  if (inviteCh) { inviteCh.unsubscribe(); try{ inviteCh.detach(); }catch(e){} inviteCh=null; }
+  setOnlineStatus('playing');
+  myRole = Math.random() < 0.5 ? 'pitcher' : 'batter';   // vestigial label; both build hoopers
+  oppRole = myRole === 'pitcher' ? 'batter' : 'pitcher';
+  matchId = 'ghost:' + Math.random().toString(16).slice(2, 10);
+  seed = (Math.random() * 0xffffffff) >>> 0;
+  rng = mulberry32(seed || 1);
+  selectVersusPosition(['qb','rb','wr'][(seed>>>0) % 3]);
+  oppId = 'ghost';
+  let g = null, slots, ovr, name;
+  if (fixed){
+    slots = Array.isArray(fixed.slots) ? fixed.slots : [];
+    ovr = fixed.ovr; name = fixed.name;
+  } else {
+    g = await fetchGhostBuild();
+    slots = (g && g.build && Array.isArray(g.build.slots)) ? g.build.slots : [];
+    ovr = g ? Math.round(Number(g.ovr) || 90) : (87 + Math.floor(Math.random() * 9));
+    name = g ? String(g.name || 'A Challenger') : GHOST_NAMES[Math.floor(Math.random() * GHOST_NAMES.length)];
+  }
+  oppBuild = { role: oppRole, ovr, name, team: slots.length ? modalTeam(slots) : '', slots,
+    elo: myElo(), key: fixed ? ('save:' + fixed.saveId) : 'ghost:' + (g ? g.id : seed), ghost: true };
+  oppPresent = true; oppPresenceName = name; oppPresenceElo = 0;
+  await loadData(myRole);
+  beginRoleReveal();
+}
+
+function resetMatch(){
+  stopSearch();
+  leaveMeet(true);
+  lobbyWaiting=false; _poolCache={}; isGhost=false;
+  friendlyMode=false; pendingChallenge=null;
+  if ($('challengeNotif')) { gsap.killTweensOf($('challengeNotif')); $('challengeNotif').style.display='none'; }
+  myBuild=null; oppBuild=null; atBatStarted=false; matchResolved=false; oppPresent=false; waitingArena=false;
+  oppProg={filled:0,total:9}; oppPresenceName=''; oppPresenceElo=0; oppPresenceAvatar=null;
+  if ($('waitArena')) $('waitArena').classList.remove('show');
+  stopWaitClock();
+  if (clockTimer){ clearInterval(clockTimer); clockTimer=null; }
+  if (claimTimeout){ clearTimeout(claimTimeout); claimTimeout=null; }
+  if (waitTimeout){ clearTimeout(waitTimeout); waitTimeout=null; }
+  cancelOppQuit();
+  if (buildRepub){ clearInterval(buildRepub); buildRepub=null; }
+  if (matchCh){ try{ matchCh.presence.leave(); }catch(e){} matchCh.unsubscribe(); matchCh.presence.unsubscribe(); try{ matchCh.detach(); }catch(e){} matchCh=null; }
+}
+
+let oppPresent=false;
+async function startMatch(mId, role, sd, opp, claimer, friendly=false){
+  friendlyMode = !!friendly;
+  try { gtag('event', 'versus_match_found', { game: 'versus_cfb', friendly: friendlyMode ? 1 : 0 }); } catch(e){}
+  setOnlineStatus('playing');
+  if (inviteCh){ inviteCh.unsubscribe(); try{ inviteCh.detach(); }catch(e){} inviteCh=null; }
+  matchId=mId; myRole=role; oppRole=role==='pitcher'?'batter':'pitcher'; seed=(sd>>>0); oppId=opp; wasClaimer=!!claimer;
+  selectVersusPosition(['qb','rb','wr'][(seed>>>0) % 3]);
+  rng = mulberry32(seed || 1);
+
+  matchCh = ably.channels.get('cfb:match:' + matchId);
+  // ignore our own messages (belt-and-suspenders alongside echoMessages:false)
+  matchCh.subscribe('build',    m => { if (m.clientId === clientId) return; oppBuild = m.data; updateOppPill(); if (myBuild && !atBatStarted && !matchResolved){ try{ matchCh.publish('build', myBuild); }catch(e){} } maybeStartAtBat(); });
+  matchCh.subscribe('progress', m => { if (m.clientId === clientId) return; updateOppProgress(m.data); });
+  matchCh.subscribe('forfeit',  m => { if (m.clientId === clientId) return; handleOpponentForfeit(m.data || {}); });
+  matchCh.subscribe('quitwin',  m => { if (m.clientId === clientId) return; handleOpponentQuitWin(); });
+  matchCh.subscribe('rematch',  m => { if (m.clientId === clientId) return; handleRematchMsg(m.data); });
+  matchCh.presence.subscribe('enter', m => { if (m.clientId === clientId) return; oppPresent=true; cancelOppQuit(); captureOppPresence(m.data); updateOppPill(); });
+  matchCh.presence.subscribe('present', m => { if (m.clientId === clientId) return; oppPresent=true; cancelOppQuit(); captureOppPresence(m.data); updateOppPill(); });
+  matchCh.presence.subscribe('leave', m => { if (m.clientId === clientId) return; onOppLeave(); });
+  await matchCh.presence.enter({ role: myRole, name: displayName(), elo: myElo(), avatar: myAvatarId() });
+  try { const members = await matchCh.presence.get(); const opp = members.find(m => m.clientId !== clientId); if (opp){ oppPresent=true; captureOppPresence(opp.data); } } catch(e){}
+
+  // Dead-waiter guard: if I claimed someone who never shows up, re-queue.
+  if (wasClaimer){
+    claimTimeout = setTimeout(() => { if (!oppPresent){ Sound.whoosh(); findMatch(); } }, 8000);
+    matchCh.presence.subscribe('enter', () => { if (claimTimeout){ clearTimeout(claimTimeout); claimTimeout=null; } });
+  }
+
+  await loadData(myRole);
+  beginRoleReveal();
+}
+
+/* ---------- role reveal ---------- */
+function captureOppPresence(data){
+  if (!data) return;
+  if (data.name) oppPresenceName = data.name;
+  if (data.elo)  oppPresenceElo  = data.elo;
+  if (data.avatar) oppPresenceAvatar = data.avatar;
+  updateOppChip();
+}
+function updateOppChip(){
+  const nm = $('oppChipName'); if (!nm) return;
+  nm.style.display='flex'; nm.style.alignItems='center'; nm.style.justifyContent='center'; nm.style.gap='7px';
+  nm.innerHTML = isGhost
+    ? '👻 ' + escapeHTML(oppPresenceName || 'Opponent')
+    : avatarChipHTML(oppAvatarId(), oppPresenceName, 26) + '<span>' + escapeHTML(oppPresenceName || 'Opponent') + '</span>';
+  const el = $('oppChipElo');
+  el.textContent = isGhost ? (ghostFixed ? 'Hall of Fame build · friendly challenge' : 'Ghost · a real recent build')
+    : (oppPresenceElo ? ('⚡ ' + oppPresenceElo + ' Rating') : '');
+}
+function beginRoleReveal(){
+  showScreen('roleScreen');
+  const card = $('roleCard');
+  card.className = 'role-card ' + myRole;
+  const _posCfg = ROLE[myRole], _posLabel = (_posCfg && POSITIONS[_posCfg.posKey]) ? POSITIONS[_posCfg.posKey].label : 'Player';
+  if (_posCfg) $('roleFig').style.webkitMaskImage = $('roleFig').style.maskImage = 'url(' + _posCfg.figure + ')';
+  $('roleLabel').textContent = "You're up! Build your " + _posLabel + "!";
+  $('roleSub').textContent = 'Same position, same cards for both of you. Highest Overall wins the matchup.';
+  updateOppChip();
+  gsap.set('#oppChip', { opacity:0, y:18 });
+  gsap.fromTo(card, { opacity: 0, scale: .82, y: 16 }, { opacity: 1, scale: 1, y: 0, duration: .55, ease: 'back.out(1.6)' });
+  gsap.fromTo('#roleFig', { opacity: 0, y: 26, scale: .9 }, { opacity: 1, y: 0, scale: 1, duration: .6, delay: .12, ease: 'power3.out' });
+  gsap.fromTo('#roleLabel', { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: .4, delay: .28, ease: 'power2.out' });
+  gsap.to('#oppChip', { opacity:1, y:0, duration:.45, delay:.52, ease:'back.out(1.8)' });
+  Sound.whoosh();
+  setTimeout(beginBuild, 2600);
+}
+
+/* ---------- quick build ---------- */
+const REEL_GAP = 12, REEL_PAD_L = 14, CARD_W = 162; // rcard width(150) + gap(12) - fallback; liveCardW() reads actual rendered size
+function liveCardW(){ const el=document.querySelector('#track .rcard'); return el ? Math.round(el.getBoundingClientRect().width)+REEL_GAP : CARD_W; }
+const buildState = { filled:{}, used:new Set(), landed:null, spinning:false, finished:false,
+  respinUsed:false, boostUsed:false, snagUsed:false, boostedThisLand:false, strip:null, targetIndex:0 };
+let clockLeft = 120, clockTimer = null;
+
+// In 1v1, drop grey-tier cards - only players rated 65+ show up in the reel.
+const MIN_VERSUS_OVR = 65;
+let _poolCache = {};
+function pool(){
+  const cacheKey = myRole + ':' + gameMode;
+  if (!_poolCache[cacheKey]){
+    // Legends are a SEPARATE array (DATA[role].legends), not in the regular pool - so Legends mode
+    // must draw from there, otherwise the reel pool is empty and the spin throws.
+    let f = (gameMode === 'legends')
+      ? (DATA[myRole].legends || []).slice()
+      : DATA[myRole].pool.filter(p => p.ovr >= MIN_VERSUS_OVR);
+    if (f.length < 4) f = DATA[myRole].pool.filter(p => p.ovr >= MIN_VERSUS_OVR);   // safety: never an empty reel
+    _poolCache[cacheKey] = f;
+  }
+  return _poolCache[cacheKey];
+}
+function randPlayer(){
+  const p = pool(), legs = DATA[myRole].legends || [];
+  if (legs.length && rng() < 0.03){ const a = legs.filter(x=>!buildState.used.has(x.name)); if (a.length) return a[Math.floor(rng()*a.length)]; }
+  // era "Prime" cards - same odds for both players (not in Legends-only mode)
+  const eps = DATA[myRole].eraPrimes || [];
+  if (gameMode !== 'legends' && eps.length && rng() < 0.05){ const a = eps.filter(x=>!buildState.used.has(x.name)); if (a.length) return a[Math.floor(rng()*a.length)]; }
+  // best-of-2 lifts the average so builds feel good; symmetric for both players
+  let best=null;
+  for (let i=0;i<2;i++){ let q,t=0; do{ q=p[Math.floor(rng()*p.length)]; }while(buildState.used.has(q.name)&&++t<40); if(!best||q.ovr>best.ovr)best=q; }
+  return best;
+}
+function rcardHTML(p){ const t=borderTier(p);
+  const meta = p.legend ? `<div class="legend-tag">★ LEGEND</div>`
+    : p.prime ? `<div class="prime-tag">🔥 PRIME ${escapeHTML(p.year||'')}</div>`
+    : `<div class="yr">${escapeHTML(p.year||'')}</div>`;
+  return `<div class="rcard t-${t}">
+    <img src="${headshot(p)}" loading="lazy" onerror="this.onerror=null;this.src='${SILHOUETTE}'">
+    <div class="nm">${escapeHTML(p.name)}</div>
+    <div class="ov">${p.ovr}</div>
+    ${meta}
+    <div class="pos">${escapeHTML(p.pos||'')} · ${escapeHTML(p.team||'')}</div>
+  </div>`; }
+
+function beginBuild(){
+  showScreen('buildScreen');
+  // hard reset any leftover timer/animation from a previous match so clocks can't stack up
+  if(clockTimer){ clearInterval(clockTimer); clockTimer=null; }
+  if(idleTween){ idleTween.kill(); idleTween=null; }
+  gsap.killTweensOf($('track'));
+  buildState.filled={}; buildState.used=new Set(); buildState.landed=null; buildState.finished=false; buildState.spinning=false;
+  buildState.respinUsed=false; buildState.boostUsed=false; buildState.snagUsed=false; buildState.boostedThisLand=false; buildState.strip=null;
+  $('powerups').classList.remove('show');
+  $('respinBtn').onclick = respin; $('boostBtn').onclick = boost;
+  $('snagLeftBtn').onclick = () => snag(-1); $('snagRightBtn').onclick = () => snag(1);
+  // figure base + segments for my role
+  $('figwrap').querySelector('.base').style.background = `url(${ROLE[myRole].figure}) center/contain no-repeat`;
+  $('figureShade').style.webkitMaskImage = `url(${ROLE[myRole].figure})`;
+  $('figureShade').style.maskImage = `url(${ROLE[myRole].figure})`;
+  $('figureShade').style.webkitMaskPosition = $('figureShade').style.maskPosition = 'center';
+  $('figureShade').style.webkitMaskSize = $('figureShade').style.maskSize = 'contain';
+  $('figureShade').style.webkitMaskRepeat = $('figureShade').style.maskRepeat = 'no-repeat';
+  const fw=$('figwrap'); fw.querySelectorAll('.seg').forEach(e=>e.remove());
+  segEls={};
+  for (const s of ROLE[myRole].slots){ const d=document.createElement('div'); d.className='seg'; d.style.webkitMaskImage=`url(${s.mask})`; d.style.maskImage=`url(${s.mask})`; fw.appendChild(d); segEls[s.key]=d; }
+  renderSlots(); renderNodes(); updateFigure(); updateOvr(); idleReel();
+  $('spinBtn').onclick = spin; $('spinBtn').disabled = false;  // re-enable after a previous match left it disabled
+  $('landedLi').classList.remove('show'); $('powerups').classList.remove('show');
+  $('buildHint').textContent = 'Spin the reel, then tap a glowing body part to assign the player.';
+  clockLeft=120; $('clock').textContent=fmtClock(clockLeft); $('clock').classList.remove('warn');
+  clockTimer = setInterval(tickClock, 1000);
+  updateOppPill();
+  publishProgress();
+}
+
+let segEls={};
+function renderSlots(){
+  const wrap=$('slots'); wrap.innerHTML='';
+  for (const s of ROLE[myRole].slots){
+    const f = buildState.filled[s.key];
+    const armed = !!buildState.landed && !f;
+    const d=document.createElement('div');
+    d.className='slot ' + (f?'filled':'open') + (armed?' armed':'');
+    // when a player is landed, preview the exact rating they'd give each open slot (so you can strategize)
+    const preview = armed ? slotNumeric(myRole, buildState.landed, s) : null;
+    const previewTxt = gameMode === 'hard' ? '?' : `+${preview}`;
+    d.innerHTML = `<div style="flex:1"><div class="sname">${s.label}</div><div class="spart">${s.part}</div></div>` +
+      (f ? `<img class="shot" src="${f.img}" onerror="this.style.visibility='hidden'"><div class="sval">${f.display}</div>`
+         : (armed ? `<div class="sval" style="color:var(--accent2)">${previewTxt}</div>`
+                  : `<div class="sval" style="color:#3a445a">·</div>`));
+    if (armed) d.onclick = () => assign(s.key);
+    wrap.appendChild(d);
+  }
+}
+function renderNodes(){
+  const nodes=$('nodes'), wires=$('wires');
+  nodes.innerHTML=''; wires.innerHTML='';
+  const landing = buildState.landed;
+  for (const s of ROLE[myRole].slots){
+    const f = buildState.filled[s.key];
+    const mode = f ? 'set' : (landing ? 'hot' : 'open');
+
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', s.lx); line.setAttribute('y1', s.ly);
+    line.setAttribute('x2', s.ax); line.setAttribute('y2', s.ay);
+    line.setAttribute('vector-effect', 'non-scaling-stroke');
+    if(mode === 'hot') line.classList.add('hot');
+    if(mode === 'set') line.classList.add('set');
+    wires.appendChild(line);
+
+    const dot = document.createElement('div');
+    dot.className = 'anchor' + (mode === 'hot' ? ' hot' : mode === 'set' ? ' set' : '');
+    dot.style.left = s.ax + '%'; dot.style.top = s.ay + '%';
+    nodes.appendChild(dot);
+
+    const div = document.createElement('div');
+    div.className = 'node' + (mode === 'hot' ? ' assignable' : '');
+    div.dataset.key = s.key;
+    div.style.left = s.lx + '%'; div.style.top = s.ly + '%';
+    if(f){
+      const accent = f.legend ? 'var(--legend)' : teamColor(f.team);
+      div.innerHTML = `<div class="accent" style="background:${accent}"></div>
+        <div class="body">
+          <div class="label">${s.label}</div>
+          <div class="row">
+            <div class="face" style="background-image:url('${f.img}')"></div>
+            <div class="val" style="color:${accent}">${f.display}</div>
+          </div>
+          <div class="who">${f.legend ? '★ ' : ''}${escapeHTML(f.player)}</div>
+        </div>`;
+    } else if(landing){
+      const prev = s.type === 'height' ? slotDisplay(myRole, landing, s) : '+' + slotNumeric(myRole, landing, s);
+      div.innerHTML = `<div class="accent"></div>
+        <div class="body">
+          <div class="label">${s.label}</div>
+          <div class="preview">${prev}</div>
+          <div class="who">tap to set</div>
+        </div>`;
+      div.onclick = () => assign(s.key);
+    } else {
+      div.innerHTML = `<div class="accent"></div>
+        <div class="body">
+          <div class="label">${s.label}</div>
+          <div class="part">${s.part}</div>
+        </div>`;
+    }
+    nodes.appendChild(div);
+  }
+}
+function updateFigure(){
+  for (const s of ROLE[myRole].slots){ const f=buildState.filled[s.key], el=segEls[s.key]; if(!el)continue;
+    if(f){ el.style.background = `url(jersey-fabric.png), ${teamColor(f.team)}`; el.style.backgroundSize='150px, auto'; el.style.backgroundBlendMode='overlay'; }
+    else el.style.background='transparent';
+  }
+}
+function updateOvr(){
+  const keys = ROLE[myRole].slots.filter(s=>buildState.filled[s.key]).map(s=>s.key);
+  if(!keys.length){ $('ovrNum').textContent='-'; return; }
+  const partial={}; keys.forEach(k=>partial[k]=buildState.filled[k]);
+  let vs=0,ws=0; for(const k of keys){ const v=partial[k].value; const w=ROLE[myRole].slotWeight(k,v); vs+=v*w; ws+=w; }
+  $('ovrNum').textContent = Math.round(vs/ws);
+}
+
+let idleTween=null;
+function idleReel(){
+  if(idleTween)idleTween.kill();
+  const track=$('track'); const N=18; const cards=[];
+  for(let i=0;i<N;i++)cards.push(pool()[Math.floor(rng()*pool().length)]);
+  track.innerHTML = cards.concat(cards).map(rcardHTML).join('');
+  gsap.set(track,{x:0,filter:'none'});
+  const cw0=liveCardW(); idleTween = gsap.to(track,{x:-(N*cw0),duration:N*0.9,ease:'none',repeat:-1});
+}
+function spin(){
+  if(buildState.spinning || buildState.finished) return;
+  if(openSlots().length===0) return;
+  buildState.spinning=true; buildState.boostedThisLand=false; Sound.click(); if(idleTween)idleTween.kill();
+  $('spinBtn').disabled=true; $('landedLi').classList.remove('show'); $('powerups').classList.remove('show');
+  const target=randPlayer(); const LEN=40, ti=LEN-5; const strip=[];
+  for(let i=0;i<LEN;i++)strip.push(i===ti?target:randPlayer());
+  buildState.strip=strip; buildState.targetIndex=ti;
+  const track=$('track'); gsap.set(track,{x:0,filter:'none'}); track.innerHTML=strip.map(rcardHTML).join('');
+  animateReel(ti, 2.6, 'power4.out', () => land(target));
+}
+function animateReel(index, dur, ease, onDone){
+  const track=$('track'); const el=document.querySelector('#track .rcard');
+  const cardW = el ? el.getBoundingClientRect().width : 150; const cw = cardW + REEL_GAP;
+  const frameW=track.parentElement.clientWidth; const offset=index*cw-(frameW/2)+cardW/2+REEL_PAD_L;
+  let prevX=gsap.getProperty(track,'x'),prevT=performance.now(),lastTick=prevX;
+  gsap.to(track,{ x:-offset, duration:dur, ease,
+    onUpdate:()=>{ const x=gsap.getProperty(track,'x'),t=performance.now(),dt=Math.max(8,t-prevT),sp=Math.abs(x-prevX)/dt; prevX=x;prevT=t;
+      const b=Math.min(6,sp*0.7); track.style.filter=b>0.4?`blur(${b.toFixed(1)}px)`:'none';
+      if(Math.abs(x-lastTick)>=cw){ Sound.tick(sp/7); lastTick=x; } },
+    onComplete:()=>{ track.style.filter='none'; buildState.spinning=false; onDone(); }
+  });
+}
+const TIER_COL = { grey:'#9aa6b8', bronze:'#d28b4e', silver:'#cdd6e2', gold:'#ffce3a', diamond:'#54c7ff', legend:'#a366ff' };
+function land(p){
+  buildState.landed=p;
+  $('landedImg').src=headshot(p); $('landedImg').onerror=function(){this.onerror=null;this.src=SILHOUETTE;};
+  const pn = (p.prime ? `🔥 ${p.year ? p.year + ' ' : ''}` : '') + p.name;
+  $('landedName').textContent = gameMode==='hard' ? pn : `${pn} · ${p.ovr} OVR`;
+  $('landedOvr').textContent = gameMode==='hard' ? '?' : p.ovr; $('landedLi').classList.add('show');
+  const tcol = TIER_COL[borderTier(p)] || '#c8d0da';
+  $('landedOvr').style.color = tcol; $('landedImg').style.boxShadow = `0 0 14px ${tcol}66`;
+  $('landedImg').style.border = `2px solid ${tcol}`;
+  $('spinBtn').disabled=true;
+  // power-ups (one use each per match)
+  const hasPrime = !p.legend && !p.prime && DATA[myRole].prime && !!DATA[myRole].prime[p.name] && !buildState.boostedThisLand;
+  $('powerups').classList.add('show');
+  $('respinBtn').disabled = buildState.respinUsed;
+  $('boostBtn').disabled = buildState.boostUsed || !hasPrime;
+  $('boostBtn').textContent = buildState.boostedThisLand ? '⚡ Primed' : '⚡ Boost';
+  const canSnag = !buildState.snagUsed && buildState.strip;
+  $('snagLeftBtn').disabled = !canSnag || !buildState.strip[buildState.targetIndex-1];
+  $('snagRightBtn').disabled = !canSnag || !buildState.strip[buildState.targetIndex+1];
+  renderSlots(); renderNodes();
+  revealWin(p);
+  // landing sound by rarity - same chimes as the Build a Pitcher game
+  if (p.legend) Sound.legend();
+  else { const tt = tier(p.ovr); if (tt === 'diamond') Sound.diamond(); else if (tt === 'gold') Sound.gold(); else Sound.land(); }
+  $('buildHint').textContent='Tap a glowing body part to assign ' + p.name + ' - or use a power-up.';
+}
+// Cinematic reveal: light sweep + the winning card pops; legend pulls shake the board.
+function revealWin(p){
+  const track=$('track');
+  const card=track.children[buildState.targetIndex];
+  const sweep=$('sweep');
+  if(sweep) gsap.fromTo(sweep,{xPercent:-160,opacity:.9},{xPercent:160,opacity:0,duration:.55,ease:'power2.inOut'});
+  if(card){ card.classList.add('win'); gsap.fromTo(card,{scale:1},{scale:1.14,duration:.5,ease:'back.out(2.2)'}); }
+  gsap.fromTo('.reel .pointer',{scale:1},{scale:1.35,duration:.25,yoyo:true,repeat:1,ease:'power2.out',transformOrigin:'center'});
+  if(p.legend) gsap.fromTo($('buildScreen'),{x:-7},{x:0,duration:.6,ease:'elastic.out(1,0.3)'});
+}
+function respin(){
+  if(buildState.respinUsed || buildState.spinning) return;
+  buildState.respinUsed=true; Sound.whoosh(); spin();
+}
+function boost(){
+  if(buildState.boostUsed || !buildState.landed) return;
+  const base = buildState.landed;
+  const primeCard = DATA[myRole].prime && DATA[myRole].prime[base.name];
+  if(!primeCard) return;
+  buildState.boostUsed=true; buildState.boostedThisLand=true; Sound.prime();
+  land(boostedCard(base, primeCard));
+}
+// Guarantee every rating attribute is at least +5 over the landed card (Frame/height unchanged).
+function boostedCard(base, prime){
+  const c = Object.assign({}, prime);
+  for(const s of ROLE[myRole].slots){
+    if(s.type==='height') continue;
+    const baseVal = Number(base[s.key]);
+    if(isNaN(baseVal)) continue;
+    const primeVal = Number(c[s.key]);
+    c[s.key] = Math.max(isNaN(primeVal) ? -Infinity : primeVal, baseVal + 5);
+  }
+  return c;
+}
+function snag(dir){
+  if(buildState.snagUsed || buildState.spinning || !buildState.strip) return;
+  const idx=buildState.targetIndex+dir, neighbor=buildState.strip[idx];
+  if(!neighbor) return;
+  buildState.snagUsed=true; buildState.targetIndex=idx; buildState.boostedThisLand=false; buildState.spinning=true;
+  Sound.whoosh(); $('landedLi').classList.remove('show'); $('powerups').classList.remove('show');
+  animateReel(idx, 0.5, 'power3.out', () => land(neighbor));
+}
+function openSlots(){ return ROLE[myRole].slots.filter(s=>!buildState.filled[s.key]); }
+function assign(key){
+  if(!buildState.landed || buildState.filled[key]) return;
+  const p=buildState.landed, s=ROLE[myRole].slots.find(x=>x.key===key);
+  const originRect = $('landedImg').getBoundingClientRect();
+  buildState.filled[key]={ slot:s.label, value:slotNumeric(myRole,p,s), display:String(slotDisplay(myRole,p,s)),
+    player:p.name, team:p.team, legend:!!p.legend, img:headshot(p), ovr:p.ovr };
+  buildState.used.add(p.name); buildState.landed=null; Sound.assign();
+  $('landedLi').classList.remove('show'); $('powerups').classList.remove('show'); $('spinBtn').disabled=false;
+  renderSlots(); renderNodes(); updateFigure(); updateOvr(); publishProgress();
+  const node = document.querySelector(`.node[data-key="${key}"]`);
+  const faceEl = node && node.querySelector('.face');
+  if(faceEl) flyHeadshot(originRect, faceEl, headshot(p));
+  const seg = segEls[key];
+  if(seg) gsap.fromTo(seg, { opacity:0 }, { opacity:1, duration:.55, ease:'power2.out' });
+  if(node) gsap.fromTo(node, { scale:.85 }, { scale:1, duration:.4, ease:'back.out(1.8)', delay:.12 });
+  $('buildHint').textContent = openSlots().length ? 'Spin again to fill the next slot.' : 'All slots filled! Locking in…';
+  if(openSlots().length===0) finishBuild();
+  else { if(idleTween)idleTween.kill(); idleReel(); }
+}
+function flyHeadshot(fromRect, targetEl, img){
+  const to = targetEl.getBoundingClientRect();
+  const fly = document.createElement('div');
+  fly.className = 'fly';
+  fly.style.backgroundImage = `url("${img}")`;
+  Object.assign(fly.style, {
+    left: fromRect.left + 'px', top: fromRect.top + 'px',
+    width: fromRect.width + 'px', height: fromRect.height + 'px',
+  });
+  document.body.appendChild(fly);
+  targetEl.style.visibility = 'hidden';
+  gsap.to(fly, {
+    left: to.left + 'px', top: to.top + 'px', width: to.width + 'px', height: to.height + 'px',
+    duration:.55, ease:'power3.inOut',
+    onComplete: () => { targetEl.style.visibility = 'visible'; fly.remove(); },
+  });
+}
+function fmtClock(s){ s=Math.max(0,s); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
+function tickClock(){
+  clockLeft--; $('clock').textContent=fmtClock(clockLeft);
+  if(clockLeft<=15)$('clock').classList.add('warn');
+  // AFK guard: barely built (<=1 slot) with a minute to go and the opponent is already ready ->
+  // concede now so they get their win instead of waiting out the clock.
+  const filledCount = ROLE[myRole].slots.filter(s=>buildState.filled[s.key]).length;
+  if(clockLeft<=60 && filledCount<=1 && oppBuild && !buildState.finished && !matchResolved){ forfeitMatch(filledCount); return; }
+  if(clockLeft<=0){ clearInterval(clockTimer); clockTimer=null; autoFill(); }
+}
+function autoFill(){
+  const filledCount = ROLE[myRole].slots.filter(s=>buildState.filled[s.key]).length;
+  if(filledCount <= 3){ forfeitMatch(filledCount); return; }
+  // time's up: fill remaining slots with quick random spins
+  const empties=openSlots();
+  for(const s of empties){ const p=randPlayer(); buildState.used.add(p.name);
+    buildState.filled[s.key]={ slot:s.label, value:slotNumeric(myRole,p,s), display:String(slotDisplay(myRole,p,s)),
+      player:p.name, team:p.team, legend:!!p.legend, img:headshot(p), ovr:p.ovr }; }
+  buildState.landed=null; renderSlots(); renderNodes(); updateFigure(); updateOvr();
+  finishBuild();
+}
+function finishBuild(){
+  if(buildState.finished || matchResolved) return; buildState.finished=true;
+  if(clockTimer){ clearInterval(clockTimer); clockTimer=null; }
+  if(idleTween)idleTween.kill();
+  $('powerups').classList.remove('show'); $('landedLi').classList.remove('show'); $('spinBtn').disabled=true;
+  const slots = ROLE[myRole].slots.map(s=>buildState.filled[s.key]);
+  const ovr = computeOvr(myRole, buildState.filled);
+  const team = modalTeam(slots);
+  myBuild = { role:myRole, ovr, team, slots, elo: myElo(), name: displayName(), key: personId(), avatar: myAvatarId() };
+  // Ranked matches also LOCK the build server-side (validated against real card data +
+  // Elo-stamped) — pvpResult settles both-locked matches from those rows, so a doctored
+  // client can't lie its way up the ladder. Friendly/ghost matches never lock.
+  if (!friendlyMode && !isGhost) {
+    const lockBody = JSON.stringify(Object.assign({ action:'pvpLock', matchId, game: 'cfb', role: 'cfb',
+      build: { ovr, slots } }, principal()));
+    (async () => { for (let i=0;i<3;i++){ try { await fetch('/api/account',{method:'POST',headers:{'content-type':'application/json'},body:lockBody}); return; } catch(e){ await new Promise(r=>setTimeout(r,700*(i+1))); } } })();
+  }
+  publishBuild();
+  updateOppPill();
+  // Safety net: if the opponent never delivers a build (left/closed), don't hang forever.
+  // Both shot clocks froze together, so their build-or-autofill MUST arrive within the time
+  // they have left (+slack). Silence past that means they're gone → forfeit WIN, never
+  // "No Contest" · quitting must always count as a loss for the quitter.
+  if (waitTimeout) clearTimeout(waitTimeout);
+  waitTimeout = setTimeout(() => {
+    if (!oppBuild && !atBatStarted && !matchResolved) claimQuitWin();
+  }, Math.max(0, clockLeft) * 1000 + 30000);
+  if (oppBuild) maybeStartAtBat();   // opponent already finished → straight to the at-bat
+  else showWaitArena();              // otherwise wait IN the arena, watching their progress
+}
+
+let waitingArena=false, waClockTimer=null, waClockLeft=0;
+function stopWaitClock(){ if(waClockTimer){ clearInterval(waClockTimer); waClockTimer=null; } }
+// You finished first → sit in the arena (your fighter ready, opponent's spot greyed out) and
+// watch how close the opponent is to finishing.
+function showWaitArena(){
+  waitingArena=true;
+  showScreen('atbatScreen');
+  const minePitcher = myRole==='pitcher';
+  const meSide  = `<div class="who" style="color:var(--pitch)">🏀 ${escapeHTML(displayName())} (You)</div><div class="o" style="color:var(--pitch)">${myBuild.ovr}</div>`;
+  const oppSide = `<div class="who" style="color:var(--bat)">🏀 Opponent</div><div class="o" style="color:var(--bat)">?</div>`;
+  const pitcherSide = minePitcher ? meSide : oppSide;
+  const batterSide  = minePitcher ? oppSide : meSide;
+  $('matchup').innerHTML = `<div class="side">${pitcherSide}</div><div class="mid">VS</div><div class="side">${batterSide}</div>`;
+  // your fighter ready on your side of the court, opponent's slot greyed out
+  const W = $('hvCourt').getBoundingClientRect().width;
+  hvPose($('hvOff'),'dribble3'); hvPose($('hvDef'),'def2');
+  hvFace($('hvOff'),1); hvFace($('hvDef'),-1);
+  $('hvOff').style.background = brightTeam(minePitcher ? myBuild.team : 'FA');
+  $('hvDef').style.background = brightTeam(!minePitcher ? myBuild.team : 'FA');
+  $('hvOff').classList.toggle('dim', !minePitcher);
+  $('hvDef').classList.toggle('dim', minePitcher);
+  gsap.set('#hvOffW',{ x:W*0.24, y:0 }); gsap.set('#hvDefW',{ x:W*0.62, y:0 });
+  $('hvOffName').textContent = minePitcher ? (displayName()||'You').slice(0,14) : 'Opponent';
+  $('hvDefName').textContent = minePitcher ? 'Opponent' : (displayName()||'You').slice(0,14);
+  $('hvOffName').style.borderColor=''; $('hvDefName').style.borderColor='';
+  gsap.set('#hvBall',{ opacity:0 }); gsap.set('#hvNetFlash',{ opacity:0 });
+  $('hvPop').style.opacity=0; $('hvCall').innerHTML=''; $('hvSb').style.display='none';
+  $('hvSkipBtn').style.display='none';
+  $('waTitle').innerHTML = avatarChipHTML(oppAvatarId(), oppPresenceName, 22) + ' Waiting for ' +
+    (oppPresenceName ? escapeHTML(String(oppPresenceName).slice(0,16)) : 'your opponent') + '…';
+  $('waitArena').classList.add('show');
+  waClockLeft = Math.max(0, clockLeft);   // shared shot clock was frozen at finish; count it down for display
+  stopWaitClock();
+  waClockTimer = setInterval(()=>{ waClockLeft=Math.max(0,waClockLeft-1); updateWaitArena(); if(waClockLeft<=0) stopWaitClock(); }, 1000);
+  updateWaitArena();
+}
+function updateWaitArena(){
+  if (!waitingArena) return;
+  const total = oppProg.total || 9;
+  const filled = Math.min(oppProg.filled || 0, total);
+  $('waFill').style.width = Math.round(100 * filled / total) + '%';
+  const clk = waClockLeft>0 ? ' · ' + fmtClock(waClockLeft) + ' left' : ' · time’s up';
+  $('waCount').textContent = oppPresent
+    ? 'Opponent building · ' + filled + '/' + total + ' slots' + clk
+    : 'Connecting to opponent…';
+}
+function showNoContest(){
+  waitingArena=false; stopWaitClock(); $('waitArena').classList.remove('show');
+  setOnlineStatus('idle');
+  if (atBatStarted || oppBuild || matchResolved) return;
+  matchResolved=true;
+  showScreen('resultScreen');
+  resetRematchUI();
+  $('resultCard').className = 'result-card';
+  $('resultHead').textContent = 'NO CONTEST';
+  paintResultOpp('');
+  $('resultLine').textContent = "Your opponent didn’t finish their build in time.";
+  $('resultSub').textContent = 'No rating change - try another match.';
+  $('ratingResult').innerHTML = '';
+}
+function forfeitMatch(filled){
+  if(matchResolved) return;
+  matchResolved=true; buildState.finished=true;
+  if(clockTimer){ clearInterval(clockTimer); clockTimer=null; }
+  if(idleTween)idleTween.kill();
+  $('powerups').classList.remove('show'); $('landedLi').classList.remove('show'); $('spinBtn').disabled=true;
+  publishForfeit(filled);
+  showForfeitResult(false, filled);
+}
+function handleOpponentForfeit(data){
+  if(matchResolved || atBatStarted) return;
+  if(waitTimeout){ clearTimeout(waitTimeout); waitTimeout=null; }
+  showForfeitResult(true, data.filled || 0, data);
+}
+// Rage-quit guard: the opponent left the match channel mid-build and didn't come back within
+// the grace window → forfeit win for the stayer. The quitter's loss settles server-side via
+// the recorded match participants, so closing the tab can never dodge a loss.
+let oppQuitTimer=null;
+function cancelOppQuit(){ if(oppQuitTimer){ clearTimeout(oppQuitTimer); oppQuitTimer=null; } }
+function onOppLeave(){
+  oppPresent=false; updateOppPill();
+  if(matchResolved || atBatStarted || oppBuild) return;   // their build is in → match resolves normally
+  cancelOppQuit();
+  oppQuitTimer = setTimeout(()=>{
+    oppQuitTimer=null;
+    if(matchResolved || atBatStarted || oppBuild) return;
+    claimQuitWin();
+  }, 15000);   // grace for flaky connections · an Ably re-enter cancels this
+}
+function claimQuitWin(){
+  if(matchCh){ try{ matchCh.publish('quitwin', { role:myRole }); }catch(e){} }   // if they're secretly alive, they take the loss
+  const filled = Math.min(oppProg.filled || 0, oppProg.total || 9);
+  showForfeitResult(true, filled, { quit:true, name:oppPresenceName, elo:(oppPresenceElo > 0 ? oppPresenceElo : undefined) });
+}
+function handleOpponentQuitWin(){
+  if(matchResolved || atBatStarted) return;
+  const filled = ROLE[myRole].slots.filter(s=>buildState.filled[s.key]).length;
+  showForfeitResult(false, filled, { quit:true });
+}
+function showForfeitResult(iWon, filled, data={}){
+  matchResolved=true; waitingArena=false; stopWaitClock();
+  if(clockTimer){ clearInterval(clockTimer); clockTimer=null; }
+  if(idleTween)idleTween.kill();
+  if(waitTimeout){ clearTimeout(waitTimeout); waitTimeout=null; }
+  $('waitArena').classList.remove('show');
+  setOnlineStatus('idle');
+  showScreen('resultScreen');
+  resetRematchUI();
+  const card=$('resultCard'); card.className='result-card '+(iWon?'win':'lose');
+  $('resultHead').textContent = iWon ? 'YOU WIN' : 'YOU LOSE';
+  const oppName = data.name || ((oppBuild && oppBuild.name) ? oppBuild.name : 'your opponent');
+  paintResultOpp(data.name || (oppBuild && oppBuild.name) || oppPresenceName || '', data.avatar || oppAvatarId());
+  $('resultLine').textContent = iWon
+    ? (data.quit ? `${oppName} left the match.` : `${oppName} forfeited after ${filled} slot${filled===1?'':'s'} filled.`)
+    : (data.quit ? 'You disconnected mid-match.' : `You forfeited after ${filled} slot${filled===1?'':'s'} filled.`);
+  $('resultSub').textContent = iWon
+    ? (data.quit ? 'Win by forfeit. Quitting still counts as a loss for them.' : 'Timeout win. Run it back?')
+    : (data.quit ? 'An abandoned match counts as a forfeit loss.' : 'Fill at least 4 slots before time expires.');
+  if (window.Ach) Ach.unlock('versus_root');                       // played a 1v1 (forfeit result)
+  if (window.XP) XP.award(iWon ? 55 : 18, iWon ? '1v1 win' : '1v1');
+  if (window.Quests) Quests.event('versus', { won: !!iWon });
+  iWon ? Sound.win() : Sound.lose();
+  gsap.fromTo(card,{ y:24, opacity:0, scale:.92 },{ y:0, opacity:1, scale:1, duration:.5, ease:'back.out(1.5)' });
+
+  const oppElo = typeof data.elo === 'number' ? data.elo : ((oppBuild && typeof oppBuild.elo === 'number') ? oppBuild.elo : 1000);
+  const oppForfeitName = data.name || (oppBuild && oppBuild.name ? oppBuild.name : '');
+  if (friendlyMode) {
+    // friends head-to-head: fire-and-forget · the server only counts the winner's report,
+    // once per match, and only if the two players are accepted friends (social layer).
+    if (!isGhost && oppBuild && oppBuild.key) {
+      try { fetch('/api/account', { method:'POST', headers:{'content-type':'application/json'},
+        body: JSON.stringify(Object.assign({ action:'friendlyResult', matchId, won: !!iWon, oppKey: oppBuild.key }, principal())) }); } catch(e){}
+    }
+    $('ratingResult').innerHTML = '<div class="prompt" style="color:var(--accent2);font-size:14px;margin-top:4px">⚔️ Friendly Match · No Elo Change</div>';
+  } else {
+    pendingResult = { matchId, won:iWon, oppElo, role:myRole, ovr:(myBuild ? myBuild.ovr : 0), oppOvr:(oppBuild ? oppBuild.ovr : 0), oppName:oppForfeitName, oppKey:(oppBuild && oppBuild.key ? oppBuild.key : ''), decided: false };
+    $('ratingResult').innerHTML = '';
+    applyResult();
+  }
+}
+
+/* ---------- opponent status + messaging ---------- */
+function publishProgress(){ if(matchCh){ const n=ROLE[myRole].slots.filter(s=>buildState.filled[s.key]).length; try{ matchCh.publish('progress',{ filled:n, total:ROLE[myRole].slots.length }); }catch(e){} } }
+let buildRepub=null;
+async function publishBuild(){
+  if(!matchCh) return;
+  for(let i=0;i<3;i++){
+    try{ await matchCh.publish('build', myBuild); break; }catch(e){ if(i<2) await new Promise(r=>setTimeout(r,600*(i+1))); }
+  }
+  if(buildRepub) clearInterval(buildRepub);
+  buildRepub = setInterval(()=>{
+    if(!myBuild||oppBuild||atBatStarted||matchResolved){ clearInterval(buildRepub); buildRepub=null; return; }
+    try{ matchCh.publish('build', myBuild); }catch(e){}
+  }, 5000);
+}
+function publishForfeit(filled){ if(matchCh){ try{ matchCh.publish('forfeit',{ role:myRole, filled, total:ROLE[myRole].slots.length, elo:myElo(), name:displayName(), avatar: myAvatarId() }); }catch(e){} } }
+let oppProg={filled:0,total:9};
+function updateOppProgress(d){ oppProg=d; updateOppPill(); updateWaitArena(); }
+function updateOppPill(){
+  const pill=$('oppPill');
+  const oppNm = escapeHTML(String(oppPresenceName || (oppBuild && oppBuild.name) || 'Opponent').slice(0, 14));
+  const chip = avatarChipHTML(oppAvatarId(), oppPresenceName || (oppBuild && oppBuild.name), 16) + ' ';
+  if(oppBuild){ pill.innerHTML = isGhost ? '👻 Ghost: ready ✓' : chip + oppNm + ': ready ✓'; pill.style.color='#7CE38B'; }
+  else if(oppPresent){ pill.innerHTML = chip + oppNm + `: building ${oppProg.filled}/${oppProg.total}`; pill.style.color='var(--muted)'; }
+  else { pill.textContent='Opponent: connecting…'; pill.style.color='var(--muted)'; }
+  updateWaitArena();
+}
+// "vs 🐐 Name" strip on the result card (works for wins, losses, and forfeits)
+function paintResultOpp(name, av){
+  const rl = $('resultLine'); if (!rl) return;
+  let el = document.getElementById('resultOppRow');
+  if (!name){ if (el) el.style.display='none'; return; }
+  if (!el){
+    el = document.createElement('div'); el.id = 'resultOppRow';
+    el.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:8px;margin:2px 0 8px;'+
+      "font-family:'Oswald',sans-serif;font-size:13px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)";
+    rl.parentNode.insertBefore(el, rl);
+  }
+  el.style.display='flex';
+  el.innerHTML = '<span style="opacity:.7">vs</span> ' + avatarChipHTML(av, name, 24) +
+    ' <span style="color:#eaf2fb">' + escapeHTML(String(name).slice(0, 18)) + '</span>';
+}
+
+/* ---------- at-bat ---------- */
+function maybeStartAtBat(){
+  if(matchResolved || atBatStarted || !myBuild || !oppBuild) return;
+  atBatStarted=true;
+  if (waitTimeout){ clearTimeout(waitTimeout); waitTimeout=null; }
+  setTimeout(playAtBat, 700);
+}
+// Football score line, seeded from the build (identical on both phones). Winner's total is the
+// higher; the margin scales with the OVR gap. Pure flavor — the OUTCOME is decided by OVR above.
+function cfbGameScript(A, B, winnerRole, rr){
+  const gap = Math.abs((A.ovr||0)-(B.ovr||0));
+  const winScore = 21 + Math.floor(rr()*21);   // 21-41
+  let margin = gap<=1 ? 1+Math.floor(rr()*6) : gap<=3 ? 3+Math.floor(rr()*8)
+    : gap<=6 ? 7+Math.floor(rr()*10) : gap<=10 ? 10+Math.floor(rr()*15) : 17+Math.floor(rr()*22);
+  const loseScore = Math.max(0, winScore - margin);
+  const winnerName = (winnerRole==='pitcher' ? A.name : B.name) || 'The winner';
+  const closeness = margin<=3 ? ' in a nail-biter' : margin>=24 ? ' in a rout' : '';
+  return { winScore, loseScore, summary: winnerName + ' wins ' + winScore + '–' + loseScore + closeness };
+}
+function playAtBat(){
+  if(matchResolved) return;
+  showScreen('atbatScreen');
+  waitingArena=false; stopWaitClock(); $('waitArena').classList.remove('show');
+  const pitcher = myRole==='pitcher' ? myBuild : oppBuild;   // side A
+  const batter  = myRole==='pitcher' ? oppBuild : myBuild;   // side B
+  const abRng = atBatRng(pitcher, batter);
+  // winner: higher OVR; tie -> seeded coin (identical on both phones)
+  let winnerRole;
+  if(batter.ovr>pitcher.ovr)winnerRole='batter';
+  else if(pitcher.ovr>batter.ovr)winnerRole='pitcher';
+  else winnerRole = abRng()<0.5?'pitcher':'batter';
+  const iWon = winnerRole===myRole;
+  const script = cfbGameScript(pitcher, batter, winnerRole, abRng);
+
+  // NOTE: var names here are deliberately distinct from the dead legacy body below (nmA/colA…) so
+  // there is no duplicate-const in this function scope.
+  const nmA = escapeHTML(pitcher.name || 'Player A') + (myRole==='pitcher'?' (You)':(isGhost?' 👻':''));
+  const nmB = escapeHTML(batter.name || 'Player B') + (myRole==='batter'?' (You)':(isGhost?' 👻':''));
+  const colA = brightTeam(pitcher.team);
+  const colB = hvDistinct(colA, brightTeam(batter.team));
+  $('matchup').innerHTML =
+    '<div class="side"><div class="who" style="color:'+colA+'">🏈 '+nmA+'</div><div class="o" style="color:'+colA+'">'+pitcher.ovr+'</div></div>'+
+    '<div class="mid">VS</div>'+
+    '<div class="side"><div class="who" style="color:'+colB+'">🏈 '+nmB+'</div><div class="o" style="color:'+colB+'">'+batter.ovr+'</div></div>';
+
+  const scA = winnerRole==='pitcher' ? script.winScore : script.loseScore;
+  const scB = winnerRole==='pitcher' ? script.loseScore : script.winScore;
+  $('hvSb').style.display='flex';
+  $('hvSA').textContent='0'; $('hvSB').textContent='0';
+  $('hvSA').style.color=colA; $('hvSB').style.color=colB;
+  $('hvPop').style.opacity=0; $('hvCall').innerHTML='';
+  $('hvSkipBtn').style.display='none';
+  const cnt = { a:0, b:0 };
+  gsap.to(cnt, { a:scA, b:scB, duration:1.7, ease:'power1.inOut',
+    onUpdate:()=>{ if(matchResolved) return; $('hvSA').textContent=Math.round(cnt.a); $('hvSB').textContent=Math.round(cnt.b); },
+    onComplete:()=>{
+      if(matchResolved) return;
+      $('hvSA').textContent=scA; $('hvSB').textContent=scB;
+      hvFlash('FINAL · '+script.winScore+'–'+script.loseScore, winnerRole==='pitcher'?colA:colB);
+      setTimeout(()=>showResult(iWon, pitcher, batter, winnerRole, script), 1400);
+    }
+  });
+  return;
+  /* --- legacy basketball possession playback (unused dead code below; skipped by the return) --- */
+
+  // matchup header (with each player's name)
+  const pName = escapeHTML(pitcher.name || 'Player A') + (myRole==='pitcher'?' (You)':(isGhost?' 👻':''));
+  const bName = escapeHTML(batter.name || 'Player B') + (myRole==='batter'?' (You)':(isGhost?' 👻':''));
+  const pc = brightTeam(pitcher.team);
+  const bc = hvDistinct(pc, brightTeam(batter.team));   // same/similar team colors → shift side B's hue
+  $('matchup').innerHTML =
+    `<div class="side"><div class="who" style="color:${pc}">🏀 ${pName}</div><div class="o" style="color:${pc}">${pitcher.ovr}</div></div>`+
+    `<div class="mid">VS</div>`+
+    `<div class="side"><div class="who" style="color:${bc}">🏀 ${bName}</div><div class="o" style="color:${bc}">${batter.ovr}</div></div>`;
+
+  // live scoreboard (side A left, side B right); long thrillers play a touch faster to stay ≤20s
+  hvGame = { pc, bc, pitcher, batter, scoreA:0, scoreB:0, script, iWon, winnerRole,
+             speed: script.poss.length>9 ? 3.0 : HV_SPEED };
+  $('hvSb').style.display='flex';
+  $('hvSA').textContent='0'; $('hvSB').textContent='0';
+  $('hvSA').style.color=pc; $('hvSB').style.color=bc;
+  gsap.set('#hvBall',{ opacity:0 }); $('hvPop').style.opacity=0; $('hvCall').innerHTML='';
+  $('hvSkipBtn').style.display='inline-block';   // skip is LOCAL-only: your opponent keeps watching
+
+  // play the possessions back to back; the last one is always the winner's game-winner
+  let i=0;
+  const next = ()=>{
+    if(matchResolved) return;                       // a forfeit/disconnect/skip path resolved it mid-game
+    if(i>=script.poss.length){
+      $('hvSkipBtn').style.display='none';
+      hvFlash(`GAME · ${script.winScore}–${script.loseScore}`, winnerRole==='pitcher'?pc:bc);
+      setTimeout(()=>showResult(iWon, pitcher, batter, winnerRole, script), 1500);
+      return;
+    }
+    hvRunPossession(script.poss[i++], next);
+  };
+  setTimeout(next, 500);
+}
+// Both team colors run through brightTeam, but two builds can pick the same (or similar) teams -
+// nudge side B's hue ~150° so the two silhouettes are always tellable apart.
+function hvDistinct(pcHex, bcHex){
+  const rgb = c => { const m=/^#([0-9a-f]{6})$/i.exec(c||''); if(!m) return null;
+    const n=parseInt(m[1],16); return [n>>16&255, n>>8&255, n&255]; };
+  const a=rgb(pcHex), b=rgb(bcHex);
+  if(!a || !b) return bcHex;
+  if(Math.abs(a[0]-b[0])+Math.abs(a[1]-b[1])+Math.abs(a[2]-b[2]) >= 120) return bcHex;
+  const [r,g,bl]=b.map(v=>v/255), mx=Math.max(r,g,bl), mn=Math.min(r,g,bl), d=mx-mn;
+  let h=0;
+  if(d>0){ h = mx===r ? ((g-bl)/d+(g<bl?6:0)) : mx===g ? (bl-r)/d+2 : (r-g)/d+4; h/=6; }
+  return `hsl(${Math.round(((h+0.42)%1)*360)} 75% 60%)`;
+}
+// ⏩ Skip the sim (this side only · the animation is a local playback of the seeded result, so
+// skipping here never affects what the opponent sees). Jump straight to the final score + result.
+function hvSkipSim(){
+  if(!hvGame || !hvGame.script || matchResolved) return;
+  const g = hvGame;
+  if(g.activeTl){ try{ g.activeTl.kill(); }catch(e){} }
+  gsap.killTweensOf('#hvOffW,#hvDefW,#hvBall,#hvSeam,#hvNetFlash,#hvCourt,#hvPop,#hvSA,#hvSB');
+  gsap.set('#hvBall',{ opacity:0 }); gsap.set('#hvNetFlash',{ opacity:0 });
+  gsap.set('#hvOffW',{ y:0, scaleY:1, scale:1, rotation:0 });
+  gsap.set('#hvDefW',{ y:0, scaleY:1, scale:1, rotation:0 });
+  gsap.set('#hvCourt',{ x:0 });
+  $('hvPop').style.opacity=0; $('hvCall').innerHTML='';
+  const aFinal = g.winnerRole==='pitcher' ? g.script.winScore : g.script.loseScore;
+  const bFinal = g.winnerRole==='pitcher' ? g.script.loseScore : g.script.winScore;
+  $('hvSA').textContent=aFinal; $('hvSB').textContent=bFinal;
+  $('hvSkipBtn').style.display='none';
+  showResult(g.iWon, g.pitcher, g.batter, g.winnerRole, g.script);   // sets matchResolved → pending timeouts bail
+}
+function atBatRng(pitcher, batter){
+  const n = ((seed || 1) ^ Math.imul(pitcher.ovr || 0, 2654435761) ^ Math.imul(batter.ovr || 0, 1597334677)) >>> 0;
+  return mulberry32(n || 1);
+}
+/* ---------- first-to-11 game engine (seeded · identical on both phones) ---------- */
+if (window.MotionPathPlugin) gsap.registerPlugin(MotionPathPlugin);
+let hvGame = null;
+const HV_SPEED = 2.6;                      // timeScale: whole game fits in ~15-18s
+const HV_DRIVES = ['drive1','drive2','drive3','drive4'];
+const HV_MOVES = [
+  {n:'Crossover',       poses:['cross1','cross2'],        juke:0.045, bite:0.075},
+  {n:'Hesi pull',       poses:['lowdribble1','dribble1'], juke:0.020, bite:0.035},
+  {n:'Behind-the-back', poses:['dribble2','dribble3'],    juke:0.035, bite:0.060},
+  {n:'Spin move',       poses:['lowdribble2','drive4'],   juke:0.040, bite:0.065},
+];
+const HV_FINISHES = {
+  pullup:  {n:'Pull-up jumper',  pose:'shoot2', pts:2, dist:0.20, rise:50},
+  three:   {n:'Step-back THREE', pose:'three1', pts:3, dist:0.26, rise:42},
+  floater: {n:'Silky floater',   pose:'shoot1', pts:2, dist:0.13, rise:58},
+  dunk:    {n:'POSTER dunk',     pose:'dunk1',  pts:2, dist:0.05, rise:104},
+};
+// Native art direction of each pose: +1 the figure faces image-right, -1 image-left.
+// hvPose() combines this with the attack direction so the player ALWAYS faces where the ball goes.
+const HV_FACING = { drive1:1,drive2:1,drive3:1,drive4:1, dribble1:1,dribble2:1,dribble3:1,
+  lowdribble1:1, lowdribble2:-1, cross1:-1, cross2:-1,
+  shoot1:1, shoot2:1, shoot3:1, three1:-1, dunk1:-1, sprint1:-1,
+  def1:1, def2:1, def3:1, idle1:1, pass1:1, pass2:1 };
+function hvApplyFlip(el){ const d=+(el.dataset.dir||1), f=HV_FACING[el.dataset.pose]||1;
+  el.style.transform=`scaleX(${d*f})`; }
+function hvPose(el,name){ el.dataset.pose=name;
+  el.style.webkitMaskImage=`url(hoops-anim/${name}.png)`; el.style.maskImage=`url(hoops-anim/${name}.png)`;
+  hvApplyFlip(el); }
+function hvFace(el,dir){ el.dataset.dir=dir; hvApplyFlip(el); }
+
+// The box score: winner reaches 11; loser's total shrinks with the OVR gap. We only ANIMATE the
+// makes (+ a miss or two for drama) · skipped empty possessions don't change the score, so the
+// on-screen progression is still the true game. Every random pick uses the seeded rng.
+function buildGameScript(pitcher, batter, winnerRole, rr){
+  const rpick = arr => arr[Math.floor(rr()*arr.length)];
+  const gap = Math.abs((pitcher.ovr||0)-(batter.ovr||0));
+  let loserPts = gap<=1?9 : gap<=3?8 : gap<=6?6 : gap<=9?4 : gap<=14?2 : 0;
+  if(loserPts>0 && rr()<0.35) loserPts = Math.max(0, loserPts-1);
+  const mkPts = target => { const out=[]; let s=0;
+    while(s<target){ const three = (target-s)>=3 && rr()<0.5; const p = three?3:2; out.push(p); s+=p; }
+    return out; };
+  const winPts = mkPts(11), losePts = mkPts(loserPts);
+  const fin2 = () => { const r=rr(); return r<0.34?'dunk':r<0.7?'pullup':'floater'; };
+  const mkPoss = (side, pts) => ({ side, made:true, pts, finKey: pts===3?'three':fin2(),
+    nMoves: rr()<0.35?2:1, mvs:null });
+  const wSide = winnerRole==='pitcher'?'p':'b', lSide = wSide==='p'?'b':'p';
+  const wPoss = winPts.map(p=>mkPoss(wSide,p)), lPoss = losePts.map(p=>mkPoss(lSide,p));
+  // interleave: spread the loser's buckets among the winner's; winner always gets the last one
+  const poss=[]; let wi=0, li=0;
+  while(wi<wPoss.length || li<lPoss.length){
+    const wLeft=wPoss.length-wi, lLeft=lPoss.length-li;
+    if(wi>=wPoss.length){ poss.push(lPoss[li++]); continue; }
+    if(li>=lPoss.length || wLeft<=1 && lLeft>0){          // save the winner's last make for the end
+      if(lLeft>0){ poss.push(lPoss[li++]); continue; }
+    }
+    if(lLeft>0 && rr()<lLeft/(wLeft+lLeft)) poss.push(lPoss[li++]);
+    else poss.push(wPoss[wi++]);
+  }
+  // sprinkle 1-2 misses (not in the final slot) if the reel has room
+  const missBudget = poss.length>=8 ? 1 : 2;
+  for(let m=0;m<missBudget;m++){
+    const at = 1+Math.floor(rr()*Math.max(1,poss.length-2));
+    poss.splice(at,0,{ side: rr()<0.5?'p':'b', made:false, pts:0,
+      finKey: rr()<0.4?'three':'pullup', nMoves:1, missType: rr()<0.5?'rattle':'clank' });
+  }
+  poss.forEach(p=>{ p.mvs = Array.from({length:p.nMoves},()=>rpick(HV_MOVES)); });
+  // the possession list is the source of truth · mkPts can overshoot its target by a bucket,
+  // so the banner/summary must use the REAL sums or they'd disagree with the animated scoreboard
+  const winScore = winPts.reduce((a,b)=>a+b,0), loseScore = losePts.reduce((a,b)=>a+b,0);
+  const winnerName = (winnerRole==='pitcher' ? pitcher.name : batter.name) || 'The winner';
+  const closeness = loseScore>=8 ? ' in a thriller' : loseScore<=2 ? ' in a blowout' : '';
+  return { poss, winScore, loseScore, summary:`${winnerName} takes it ${winScore}–${loseScore}${closeness}` };
+}
+
+/* ---------- possession choreography (GSAP, runs at HV_SPEED) ---------- */
+function hvCourtPx(){ const c=$('hvCourt').getBoundingClientRect(); return {W:c.width,H:c.height}; }
+function hvRectIn(el){ const c=$('hvCourt').getBoundingClientRect(), r=el.getBoundingClientRect();
+  return {x:r.left-c.left, y:r.top-c.top, w:r.width, h:r.height}; }
+function hvFlash(txt,color){ const p=$('hvPop'); p.textContent=txt; p.style.color=color||'#ffd34d';
+  gsap.fromTo(p,{opacity:0,scale:.45,y:12},{opacity:1,scale:1,y:0,duration:.3,ease:'back.out(2.4)'});
+  gsap.to(p,{opacity:0,y:-8,duration:.35,delay:.7,ease:'power2.in'}); }
+function hvCallout(txt){ const c=$('hvCall'); c.innerHTML=`<span>${txt}</span>`;
+  gsap.fromTo(c.firstChild,{opacity:0,y:6},{opacity:1,y:0,duration:.22,ease:'back.out(2)'}); }
+function hvSpawnTrail(x,y){ const d=document.createElement('div'); d.className='hv-tr';
+  d.style.left=(x+3)+'px'; d.style.top=(y+3)+'px'; $('hvCourt').appendChild(d);
+  gsap.to(d,{opacity:0,scale:.3,duration:.4,ease:'power1.out',onComplete(){ d.remove(); }}); }
+function hvFloorBounce(dir, floorY){
+  const fb=gsap.timeline();
+  fb.to('#hvBall',{y:floorY,duration:.4,ease:'power1.in'})
+    .to('#hvBall',{scaleY:.62,scaleX:1.25,duration:.06,ease:'power1.out'})
+    .to('#hvBall',{scaleY:1,scaleX:1,duration:.08})
+    .to('#hvBall',{y:floorY-46,x:`+=${dir*40}`,duration:.24,ease:'power1.out'},'<')
+    .to('#hvBall',{y:floorY,duration:.24,ease:'power1.in'})
+    .to('#hvBall',{scaleY:.74,scaleX:1.15,duration:.05},'-=.02')
+    .to('#hvBall',{scaleY:1,scaleX:1,duration:.07})
+    .to('#hvBall',{y:floorY-16,x:`+=${dir*26}`,duration:.16,ease:'power1.out'},'<')
+    .to('#hvBall',{y:floorY,duration:.16,ease:'power1.in'})
+    .to('#hvBall',{x:`+=${dir*44}`,duration:.4,ease:'power1.out'})
+    .to('#hvBall',{opacity:0,duration:.25},'-=.25');
+  return fb;
+}
+function hvRunPossession(p, done){
+  gsap.killTweensOf('#hvOffW,#hvDefW,#hvBall,#hvSeam,#hvNetFlash,#hvCourt');
+  const {W,H}=hvCourtPx();
+  const figW=H*0.56*(543/724);
+  const dir = p.side==='p' ? 1 : -1;                 // side A (pitcher slot) attacks right
+  const offCol = p.side==='p' ? hvGame.pc : hvGame.bc;
+  const defCol = p.side==='p' ? hvGame.bc : hvGame.pc;
+  $('hvOff').style.background=offCol; $('hvDef').style.background=defCol;
+  // name tags: whoever has the ball is in the hvOff wrapper this possession
+  const offPl = p.side==='p' ? hvGame.pitcher : hvGame.batter;
+  const defPl = p.side==='p' ? hvGame.batter  : hvGame.pitcher;
+  $('hvOffName').textContent = (offPl.name||'Player').slice(0,14);
+  $('hvDefName').textContent = (defPl.name||'Player').slice(0,14);
+  $('hvOffName').style.borderColor = offCol; $('hvDefName').style.borderColor = defCol;
+  const poss=$('hvPoss'); poss.textContent = dir>0 ? '▶' : '◀'; poss.style.color = offCol;
+  const cToX=c=>c-figW/2;
+  const guardGap=W*0.15;
+  const rimAbsX = dir>0 ? W*0.82 : W*0.18;
+  const fin = HV_FINISHES[p.finKey];
+  const isDunk = p.finKey==='dunk';
+  let shooterC = rimAbsX - dir*W*fin.dist;
+  const lo=figW/2+W*0.03, hi=W-figW/2-W*0.03;
+  shooterC=Math.max(lo,Math.min(hi,shooterC));
+  const startC = Math.max(lo,Math.min(hi, rimAbsX - dir*W*0.45));
+
+  // hard reset (positions + every transform + layering)
+  hvFace($('hvOff'),dir); hvFace($('hvDef'),-dir);
+  hvPose($('hvOff'),'dribble3'); hvPose($('hvDef'),'def2');
+  gsap.set('#hvOffW',{ x:cToX(startC), y:0, scale:1, rotation:0, scaleY:1 });
+  gsap.set('#hvDefW',{ x:cToX(startC+dir*guardGap), y:0, scale:1, rotation:0 });
+  gsap.set('#hvBall',{ opacity:0, scale:1, scaleX:1, scaleY:1, zIndex:20 });
+  gsap.set('#hvSeam',{ rotation:0 });
+  gsap.set('#hvNetFlash',{ opacity:0 });
+
+  const trackDef=()=>gsap.set('#hvDefW',{ x: gsap.getProperty('#hvOffW','x') + dir*guardGap });
+  const tl=gsap.timeline({ onComplete(){ if(done) setTimeout(done,220); }});
+  tl.timeScale((hvGame && hvGame.speed) || HV_SPEED);
+  if(hvGame) hvGame.activeTl = tl;   // so Skip can kill the running possession cleanly
+
+  // check-up beat → drive (steady pose cycle) → moves → blow-by → rise
+  tl.to('#hvOffW',{ y:-5, duration:.16, yoyo:true, repeat:1, ease:'sine.inOut' })
+    .to('#hvDefW',{ y:-4, duration:.16, yoyo:true, repeat:1, ease:'sine.inOut' },'<.05');
+  const driveTo = shooterC - dir*W*0.05;
+  tl.add(()=>hvPose($('hvOff'),'drive1'))
+    .to('#hvOffW',{ x:cToX(driveTo), duration:.95, ease:'power1.inOut',
+      onUpdate(){ hvPose($('hvOff'),HV_DRIVES[Math.floor(this.time()*9)%HV_DRIVES.length]); trackDef(); }})
+    .to('#hvOffW',{ y:-8, duration:.14, yoyo:true, repeat:5, ease:'sine.inOut' },'<')
+    .to('#hvDefW',{ y:-5, duration:.155, yoyo:true, repeat:5, ease:'sine.inOut' },'<');
+  p.mvs.forEach(mv=>{
+    tl.add(()=>{ hvPose($('hvOff'),mv.poses[0]); hvCallout(mv.n); })
+      .to('#hvDefW',{ x:`-=${dir*W*mv.bite}`, rotation:-dir*12, duration:.18, ease:'power3.out' })
+      .to('#hvOffW',{ x:`+=${dir*W*mv.juke}`, y:-4, duration:.16, ease:'power2.out' },'<')
+      .add(()=>hvPose($('hvOff'),mv.poses[1]))
+      .to('#hvOffW',{ y:0, duration:.14, ease:'power2.in' })
+      .to('#hvDefW',{ x:()=>gsap.getProperty('#hvOffW','x')+dir*guardGap, rotation:0, duration:.26, ease:'power2.inOut' },'<');
+  });
+  tl.add(()=>hvPose($('hvOff'),'drive3'))
+    .to('#hvOffW',{ x:cToX(shooterC), duration:.3, ease:'power2.in' })
+    .to('#hvDefW',{ x:()=>gsap.getProperty('#hvOffW','x')-dir*W*0.085, rotation:dir*8, duration:.32, ease:'power2.out' },'<');
+  tl.add(()=>{ hvPose($('hvOff'),fin.pose); hvCallout(fin.n); })
+    .to('#hvOffW',{ scaleY:.94, y:2, duration:.11, ease:'power2.out' })
+    .to('#hvOffW',{ scaleY:1.02, y:-fin.rise, duration:.3, ease:'power2.out' })
+    .to('#hvOffW',{ scaleY:1, y:-fin.rise-6, duration:.16, ease:'sine.out' })
+    .to('#hvDefW',{ y:-fin.rise*0.55, rotation:0, duration:.28, ease:'power2.out' },'<.05')
+    .add(()=>{ isDunk ? hvDunk(p,dir,tl) : hvShot(p,dir,fin,tl); });
+
+  const hoopEl = dir>0 ? document.querySelector('.hv-hoop.r') : document.querySelector('.hv-hoop.l');
+  function rimPoint(){ const tr=hvRectIn(hoopEl);
+    return { x:tr.x+tr.w*(dir>0?0.30:0.70), y:tr.y+tr.h*0.30, net:tr.h*0.17 }; }
+  function landPlayers(sub, at){
+    sub.to('#hvOffW',{ y:0, scaleY:1, scale:1, duration:.32, ease:'power2.inOut' }, at || '+=.35')
+       .to('#hvOffW',{ scaleY:.965, duration:.07, yoyo:true, repeat:1 },'>-.08')
+       .to('#hvDefW',{ y:0, rotation:0, duration:.32, ease:'power2.inOut' },'<')
+       .add(()=>hvPose($('hvOff'),'idle1'));
+  }
+  function scoreIt(){
+    if(p.side==='p'){ hvGame.scoreA+=fin.pts; $('hvSA').textContent=hvGame.scoreA; gsap.fromTo('#hvSA',{scale:1.7},{scale:1,duration:.5,ease:'back.out(2.2)'}); }
+    else            { hvGame.scoreB+=fin.pts; $('hvSB').textContent=hvGame.scoreB; gsap.fromTo('#hvSB',{scale:1.7},{scale:1,duration:.5,ease:'back.out(2.2)'}); }
+    hvFlash(fin.pts===3?'SPLASH · 3':(isDunk?'POSTER!':'BUCKET · '+fin.pts), offCol);
+    Sound.crack();
+  }
+  function netSplash(r){
+    gsap.set('#hvNetFlash',{ left:(r.x-20+11)+'px', top:(r.y-20+11)+'px' });
+    gsap.fromTo('#hvNetFlash',{opacity:.95,scale:.3},{opacity:0,scale:1.5,duration:.5,ease:'power2.out'});
+  }
+  function hvShot(p,dir,fin,tl){
+    const o=hvRectIn($('hvOffW')), r=rimPoint(), H2=hvCourtPx().H;
+    const relX=o.x+o.w*(dir>0?0.64:0.36), relY=o.y+o.h*0.10;
+    const apexX=(relX+r.x)/2, apexY=Math.min(relY,r.y)-Math.abs(r.x-relX)*0.30-40;
+    const floorY=H2*0.87-11;
+    hvPose($('hvOff'),'def1');                       // follow-through (ball-less pose)
+    gsap.set('#hvBall',{opacity:1,x:relX,y:relY,zIndex:20});
+    gsap.to('#hvSeam',{ rotation:dir*720, duration:.6, ease:'none' });
+    const flight=.62 + fin.dist*.5;
+    const shot=gsap.timeline();
+    shot.to('#hvBall',{duration:flight, ease:'none',
+      motionPath:{ path:[{x:relX,y:relY},{x:apexX,y:apexY},{x:r.x,y:r.y-6}], curviness:1.35 },
+      onUpdate: fin.pts===3 ? function(){ if((this.progress()*100|0)%7===0) hvSpawnTrail(gsap.getProperty('#hvBall','x'), gsap.getProperty('#hvBall','y')); } : null });
+    if(p.made){
+      shot.set('#hvBall',{zIndex:11})
+          .to('#hvBall',{y:r.y+r.net*0.9, x:r.x+dir*3, scale:.86, duration:.18, ease:'power2.in'})
+          .add(()=>{ netSplash(r); scoreIt(); },'-=.12')
+          .to('#hvBall',{y:r.y+r.net*1.35, opacity:0, duration:.2, ease:'power1.in'});
+      landPlayers(shot);
+    } else if(p.missType==='rattle'){
+      shot.set('#hvBall',{zIndex:11})
+          .to('#hvBall',{y:r.y+r.net*0.45, x:r.x-dir*4, scale:.86, duration:.13, ease:'power2.in'})
+          .to('#hvBall',{x:r.x+dir*7, duration:.09, ease:'power1.inOut'})
+          .to('#hvBall',{x:r.x-dir*5, duration:.08, ease:'power1.inOut'})
+          .set('#hvBall',{zIndex:20})
+          .to('#hvBall',{y:r.y-30, x:r.x-dir*26, scale:1, duration:.24, ease:'power2.out'})
+          .add(()=>{ hvFlash('IN AND OUT!','#c9d3e0'); Sound.catch(); },'-=.1')
+          .add(hvFloorBounce(-dir, floorY));
+      landPlayers(shot, '<.2');
+    } else {
+      shot.to('#hvBall',{x:r.x-dir*30, y:r.y-36, duration:.16, ease:'power2.out'})
+          .add(()=>{ hvFlash('CLANK','#c9d3e0'); Sound.catch();
+            gsap.fromTo(hoopEl,{x:0},{x:dir*4,duration:.06,yoyo:true,repeat:3,ease:'none',onComplete(){gsap.set(hoopEl,{x:0});}}); },'-=.12')
+          .add(hvFloorBounce(-dir, floorY));
+      landPlayers(shot, '<.2');
+    }
+    tl.add(shot);
+  }
+  function hvDunk(p,dir,tl){
+    const r=rimPoint();
+    const dunkX=cToX(r.x - dir*figW*0.18);
+    const slam=gsap.timeline();
+    slam.to('#hvOffW',{ x:dunkX, duration:.26, ease:'power1.inOut' })
+        .add(()=>{ gsap.set('#hvBall',{opacity:1,x:r.x,y:r.y-12,scale:.9,zIndex:11}); })
+        .to('#hvBall',{ y:r.y+r.net*1.6, duration:.13, ease:'power3.in' })
+        .add(()=>{
+          netSplash(r); scoreIt();
+          gsap.fromTo(hoopEl,{y:0},{y:5,duration:.07,yoyo:true,repeat:5,ease:'none',onComplete(){gsap.set(hoopEl,{y:0});}});
+          gsap.fromTo('#hvCourt',{x:0},{x:-5,duration:.05,yoyo:true,repeat:5,ease:'none',onComplete(){gsap.set('#hvCourt',{x:0});}});
+        })
+        .to('#hvBall',{ y:r.y+r.net*2.2, opacity:0, duration:.2, ease:'power1.in' });
+    landPlayers(slam);
+    tl.add(slam);
+  }
+}
+// (basketball pose-mask warm-loop removed for CFB — the football reveal uses no pose art)
+
+/* ---------- rematch ---------- */
+function resetRematchUI(){
+  if (rematchCountdown){ clearInterval(rematchCountdown); rematchCountdown=null; }
+  rematchOffered=false; rematchOppOffer=null;
+  const rs=$('rematchStatus'); if(rs) rs.innerHTML='';
+  const rb=$('rematchBtn'); if(rb){ rb.textContent='⚔️ Rematch?'; rb.classList.remove('rmatch-glow'); }
+}
+function handleRematchMsg(data){
+  if (!matchResolved) return;
+  if (data.type === 'offer'){
+    rematchOppOffer = data;
+    if (rematchOffered){
+      // tiebreaker: lower clientId is the authority who generates the new matchId
+      if (clientId < oppId) acceptOppRematch();
+      // else: wait for opponent's 'start' message
+    } else {
+      const oppName = escapeHTML(oppBuild && oppBuild.name ? oppBuild.name : 'Opponent');
+      $('rematchStatus').innerHTML = `<span class="rs-want">⚔️ ${oppName} wants a rematch!</span>`;
+      const rb = $('rematchBtn'); rb.textContent = '✅ Accept!'; rb.classList.add('rmatch-glow');
+    }
+  } else if (data.type === 'start'){
+    doRematch(data.matchId, data.yourRole, data.seed);
+  }
+}
+function offerRematch(){
+  if (!matchCh || rematchOffered) return;
+  rematchOffered = true;
+  try { matchCh.publish('rematch', { type:'offer' }); } catch(e){}
+  const oppName = escapeHTML(oppBuild && oppBuild.name ? oppBuild.name : 'opponent');
+  $('rematchBtn').textContent = 'Cancel';
+  $('rematchBtn').classList.remove('rmatch-glow');
+  rematchSec = 10;
+  $('rematchStatus').innerHTML = `Waiting for ${oppName} to accept… <span class="rs-count">${rematchSec}</span>`;
+  rematchCountdown = setInterval(() => {
+    rematchSec--;
+    const c = $('rematchStatus') && $('rematchStatus').querySelector('.rs-count');
+    if (c) c.textContent = rematchSec;
+    if (rematchSec <= 0){ resetRematchUI(); }
+  }, 1000);
+}
+async function acceptOppRematch(){
+  if (rematchCountdown){ clearInterval(rematchCountdown); rematchCountdown=null; }
+  const newId = rid();
+  const newSeed = (Math.random() * 0xFFFFFFFF) | 0;
+  const myNewRole  = myRole === 'pitcher' ? 'batter' : 'pitcher';
+  const oppNewRole = myRole; // roles swap
+  try { await matchCh.publish('rematch', { type:'start', matchId:newId, seed:newSeed, yourRole:oppNewRole }); } catch(e){}
+  doRematch(newId, myNewRole, newSeed);
+}
+function doRematch(newMatchId, newRole, newSeed){
+  if (rematchCountdown){ clearInterval(rematchCountdown); rematchCountdown=null; }
+  rematchOffered=false; rematchOppOffer=null;
+  const savedOppId = oppId, savedFriendly = friendlyMode;
+  resetMatch();
+  startMatch(newMatchId, newRole, newSeed, savedOppId, false, savedFriendly);
+}
+
+/* ---------- result ---------- */
+function showResult(iWon, pitcher, batter, winnerRole, script){
+  if(matchResolved) return;
+  matchResolved=true;
+  try { gtag('event', 'versus_result', { game: 'versus_cfb', won: iWon ? 1 : 0, role: myRole, friendly: friendlyMode ? 1 : 0 }); } catch(e){}
+  showScreen('resultScreen');
+  setOnlineStatus('idle');
+  resetRematchUI();
+  const card=$('resultCard'); card.className='result-card '+(iWon?'win':'lose');
+  $('resultHead').textContent = iWon ? 'YOU WIN' : 'YOU LOSE';
+  const winName = (winnerRole==='pitcher' ? pitcher.name : batter.name) || 'The higher build';
+  const sequenceLine = script && script.summary ? script.summary : `${winName} wins`;
+  $('resultLine').textContent = `${sequenceLine} · ${pitcher.ovr} OVR vs ${batter.ovr} OVR`;
+  const oppName = (oppBuild && oppBuild.name) ? oppBuild.name : 'your opponent';
+  paintResultOpp((oppBuild && oppBuild.name) || oppPresenceName || '', oppAvatarId());
+  const oppTag = isGhost ? ' (Ghost)' : '';
+  $('resultSub').textContent = iWon ? `You beat ${oppName}${oppTag}. Run it back?` : `${oppName}${oppTag} got you. Build a better one.`;
+  iWon ? Sound.win() : Sound.lose();
+  gsap.fromTo(card,{ y:24, opacity:0, scale:.92 },{ y:0, opacity:1, scale:1, duration:.5, ease:'back.out(1.5)' });
+
+  if (window.Ach) {
+    Ach.unlock('versus_root');                                    // played a 1v1
+    if (window.XP) XP.award(iWon ? 55 : 18, iWon ? '1v1 win' : '1v1');
+    if (window.Quests) Quests.event('versus', { won: !!iWon });
+    const myOvr = myBuild ? myBuild.ovr : 0, opp = oppBuild ? oppBuild.ovr : 0;
+    if (iWon && myOvr) {
+      const diff = myOvr - opp;
+      if (diff >= 10) Ach.unlock('mismatch1');
+      if (diff >= 15) Ach.unlock('mismatch2');
+      if (diff >= 20) Ach.unlock('mismatch3');
+      if (myOvr < opp) Ach.unlock('underdog');
+    }
+  }
+
+  const oppElo = (oppBuild && typeof oppBuild.elo === 'number') ? oppBuild.elo : 1000;
+  if (friendlyMode) {
+    // friends head-to-head: fire-and-forget · the server only counts the winner's report,
+    // once per match, and only if the two players are accepted friends (social layer).
+    if (!isGhost && oppBuild && oppBuild.key) {
+      try { fetch('/api/account', { method:'POST', headers:{'content-type':'application/json'},
+        body: JSON.stringify(Object.assign({ action:'friendlyResult', matchId, won: !!iWon, oppKey: oppBuild.key }, principal())) }); } catch(e){}
+    }
+    // build challenge (?gb=): tell the build's owner it held or fell (server dedupes per day)
+    if (isGhost && ghostFixed && ghostFixed.saveId) {
+      try { fetch('/api/account', { method:'POST', headers:{'content-type':'application/json'},
+        body: JSON.stringify(Object.assign({ action:'buildDefenseResult', saveId: ghostFixed.saveId, won: !!iWon }, principal())) }); } catch(e){}
+    }
+    $('ratingResult').innerHTML = '<div class="prompt" style="color:var(--accent2);font-size:14px;margin-top:4px">⚔️ Friendly Match · No Elo Change</div>';
+  } else {
+    pendingResult = { matchId, won: iWon, oppElo, role: 'cfb', ovr: (myBuild ? myBuild.ovr : 0), oppOvr: (oppBuild ? oppBuild.ovr : 0), oppName: oppName, oppKey: (oppBuild && oppBuild.key ? oppBuild.key : ''), decided: true };
+    $('ratingResult').innerHTML = '';
+    applyResult();
+  }
+}
+
+/* ---------- stats page ---------- */
+function switchStatsTab(tab){
+  const isStats = tab !== 'history';
+  $('tabStats').classList.toggle('active', isStats);
+  $('tabHistory').classList.toggle('active', !isStats);
+  $('statsPanel').style.display = isStats ? '' : 'none';
+  $('historyPanel').style.display = isStats ? 'none' : '';
+  if ($('challengeLinkWrap')) $('challengeLinkWrap').style.display = isStats ? '' : 'none';
+}
+function openStats(tab='stats'){
+  showScreen('statsScreen');
+  $('statsPersonal').innerHTML = '<div class="prompt">Loading…</div>';
+  $('statsHistory').innerHTML = '<div class="prompt">Loading…</div>';
+  $('statsBoard').innerHTML = '';
+  switchStatsTab(tab);
+  loadStats();
+}
+let statsView = 'cfb';   // which sport's 1v1 board the stats screen is showing (toggle below)
+async function loadStats(){
+  let data, hist;
+  try {
+    [data, hist] = await Promise.all([
+      fetch('/api/account', { method:'POST', headers:{'content-type':'application/json'},
+        body: JSON.stringify(Object.assign({ action:'pvpLeaderboard', limit:50, sport:statsView }, principal())) }).then(x=>x.json()),
+      fetch('/api/account', { method:'POST', headers:{'content-type':'application/json'},
+        body: JSON.stringify(Object.assign({ action:'pvpHistory', sport:statsView }, principal())) }).then(x=>x.json()).catch(()=>null)
+    ]);
+  } catch(e){ $('statsPersonal').innerHTML = '<div class="prompt">Could not load stats. Try again.</div>'; return; }
+  if (!data || !data.ok){ $('statsPersonal').innerHTML = '<div class="prompt">Could not load stats.</div>'; return; }
+  const histRows = (hist && hist.ok && hist.history) ? hist.history : [];
+  if (histRows.length) {
+    const rows = histRows.map(r => {
+      const delta = (r.elo_after != null && r.elo_before != null) ? (r.elo_after - r.elo_before) : null;
+      const sign = delta >= 0 ? '+' : '';
+      const roleIcon = r.my_role === 'pitcher' ? '⚾' : r.my_role === 'batter' ? '🏏' : '🏀';
+      const sub = [r.my_ovr ? `${r.my_ovr} OVR` : null, r.opp_ovr ? `opp ${r.opp_ovr}` : null].filter(Boolean).join(' · ');
+      return `<div class="hist-row">
+        <div class="hist-wl ${r.won?'w':'l'}">${r.won?'W':'L'}</div>
+        <div class="hist-role">${roleIcon}</div>
+        <div class="hist-info">
+          <div class="hist-vs">vs. ${escapeHTML(r.opp_name || 'Opponent')}</div>
+          ${sub ? `<div class="hist-sub">${sub}</div>` : ''}
+        </div>
+        ${delta != null ? `<div class="hist-delta ${delta>=0?'pos':'neg'}">${sign}${delta}</div>` : ''}
+      </div>`;
+    }).join('');
+    $('statsHistory').innerHTML = `<div class="hist-head">Recent Matches</div><div>${rows}</div>`;
+  } else {
+    $('statsHistory').innerHTML = `<div class="hist-head">Recent Matches</div><div class="prompt" style="margin:6px 0 0">No matches logged yet - play a 1v1 to start tracking history.</div>`;
+  }
+
+  const me = data.me;
+  if (me){
+    const games = me.wins + me.losses, wr = games ? Math.round(me.wins/games*100) : 0;
+    $('statsPersonal').innerHTML =
+      `<div class="stat-top">
+         <div class="stat-name">${escapeHTML(me.name || displayName())}${isGuest()?' · guest':''}</div>
+         <div class="stat-elo"><b>${me.elo}</b><span>RATING</span><div style="display:flex;align-items:center;justify-content:center;margin-top:7px">${tierBadgeHTML(me.elo, me.rank, 24)}</div></div>
+         ${me.rank ? `<div class="stat-rank">#${me.rank}<span>worldwide</span></div>` : ''}
+       </div>
+       <div class="stat-grid">
+         <div class="sbox"><b style="color:#7CE38B">${me.wins}</b><span>Wins</span></div>
+         <div class="sbox"><b style="color:#ff6b6b">${me.losses}</b><span>Losses</span></div>
+         <div class="sbox"><b>${wr}%</b><span>Win Rate</span></div>
+         <div class="sbox"><b>${games}</b><span>Games</span></div>
+       </div>`;
+  } else {
+    $('statsPersonal').innerHTML = `<div class="prompt">No games yet - you start at rating <b>1000</b>. Play a 1v1 to get on the board!</div>`;
+  }
+
+  if (data.rows && data.rows.length){
+    const rowsHtml = data.rows.map((r,i) => {
+      const mine = me && me.rank && (i === me.rank - 1);
+      const rt = getEloTier(r.elo, i + 1);
+      return `<div class="lb-row${mine?' mine':''}"><span class="lr-rank">${i+1}</span><span class="lr-name">${escapeHTML(r.name||'Player')}</span><span class="lr-rec">${r.wins}-${r.losses}</span><span class="lr-elo">${batSVG(rt.color, rt.glow, 14)}<span style="color:${rt.color}">${r.elo}</span></span></div>`;
+    }).join('');
+    $('statsBoard').innerHTML = `<div class="lb-head">${'🏈 College FB'} · Top Players</div><div class="lb-rows">${rowsHtml}</div>`;
+  } else {
+    $('statsBoard').innerHTML = `<div class="prompt" style="margin-top:16px">No ranked players yet - be the first!</div>`;
+  }
+}
+
+/* ---------- wiring ---------- */
+$('findBtn').onclick = () => { Sound.click(); findMatch(); };
+$('ghostBtn').onclick = () => { Sound.click(); startGhostMatch(); };
+$('cancelBtn').onclick = () => cancelSearch();
+$('statsBtn').onclick = () => { Sound.click(); openStats(); };
+$('achBtn').onclick = () => { Sound.click(); window.Ach && Ach.open(); };
+if ($('resultStatsBtn')) { /* result-screen achievements shortcut added below */ }
+$('resultStatsBtn').onclick = () => { Sound.click(); openStats(); };
+$('statsBack').onclick = () => { showScreen('mmScreen'); updateRatingChip(); };
+$('tabStats').onclick = () => switchStatsTab('stats');
+$('tabHistory').onclick = () => { switchStatsTab('history'); };
+document.querySelectorAll('#statsSportToggle .stab').forEach(b => {
+  b.onclick = () => {
+    if (b.dataset.sport === statsView) return;
+    statsView = b.dataset.sport;
+    document.querySelectorAll('#statsSportToggle .stab').forEach(x => x.classList.toggle('active', x === b));
+    $('statsPersonal').innerHTML = '<div class="prompt">Loading…</div>';
+    $('statsHistory').innerHTML = '<div class="prompt">Loading…</div>';
+    $('statsBoard').innerHTML = '';
+    loadStats();
+  };
+});
+// deep-link: /versus#stats opens the stats page straight away (from the hamburger menus)
+if (location.hash === '#stats') openStats();
+if (location.hash === '#achievements' || location.hash === '#ach') { const o = () => (window.Ach ? Ach.open() : setTimeout(o, 120)); o(); }
+$('newMatchBtn').onclick = () => { Sound.click(); if (isGhost) startGhostMatch(ghostFixed); else findMatch(); };
+$('rematchBtn').onclick = () => {
+  Sound.click();
+  if (isGhost){ startGhostMatch(); return; }   // run another ghost immediately (no live channel to rematch on)
+  if (matchResolved && matchId && matchCh){
+    if (rematchOppOffer && !rematchOffered){ acceptOppRematch(); }
+    else if (rematchOffered){ resetRematchUI(); }   // cancel pending offer
+    else { offerRematch(); }
+  } else { findMatch(); }
+};
+// challenge feature wiring
+$('chalAcceptBtn').onclick = () => { Sound.click(); sendChallengeRequest(); };
+$('chalDeclineBtn').onclick = () => { showScreen('mmScreen'); _incomingChalId=null; updateRatingChip(); };
+$('chalNotifAccept').onclick = () => { Sound.click(); acceptChallengeNotif(); };
+$('chalNotifDecline').onclick = () => { Sound.click(); declineChallengeNotif(); };
+$('challengeLinkBtn').onclick = () => { Sound.click(); copyChallengeLinkFn(); };
+$('mmChalBtn').onclick = () => { Sound.click(); openLobby(); };
+$('lobbyCancelBtn').onclick = () => { Sound.click(); cancelLobby(); };
+$('lobbyCopyBtn').onclick = () => {
+  Sound.click();
+  const link = updateLobbyLink();
+  try { gtag('event', 'challenge_sent', { game: 'versus_cfb', source: 'lobby' }); } catch(e){}
+  const done = () => { const c=$('lobbyCopied'); if(c){ c.style.display=''; setTimeout(()=>{ if(c)c.style.display='none'; },3000); } };
+  if (navigator.clipboard){ navigator.clipboard.writeText(link).then(done).catch(()=>{ prompt('Copy this link:',link); done(); }); }
+  else { try{ prompt('Copy this link:',link); done(); }catch(e){} }
+};
+document.querySelectorAll('#lobbyModePicker .lmode').forEach(btn => {
+  btn.onclick = () => {
+    gameMode = btn.dataset.mode;
+    updateLobbyLink();
+  };
+});
+// sign-in + rating on load
+initGoogle();
+refreshStats().then(updateRatingChip);
+checkChallengeURL();  // show challenge screen immediately if URL has ?ch= (no Ably needed for the screen)
+checkMeetURL();       // ?meet=<challengeId>&side= · both sides of a friends-panel challenge pair here
+// legacy ?lobby=1 entry (old copy-link "wait in the arena" flow) still works
+if (new URLSearchParams(location.search).get('lobby')) setTimeout(openLobby, 400);
+// ?gb=<saveId>: take on a SPECIFIC Hall of Fame build (a profile's ⚔️ button) · friendly
+// ghost match against that exact build, owner gets a held/fell notification after.
+(async function(){
+  const q = new URLSearchParams(location.search);
+  const gb = Number(q.get('gb'));
+  if (!gb) return;
+  let r = null;
+  try { r = await fetch('/api/account', { method:'POST', headers:{'content-type':'application/json'},
+    body: JSON.stringify({ action:'buildGet', id: gb }) }).then(x=>x.json()); } catch(e){}
+  const b = r && r.ok && r.build;
+  if (!b || b.game !== 'cfb'){
+    setStatus('Could not load that build · it may have been deleted.');
+    return;
+  }
+  startGhostMatch({ saveId: b.id, slots: Array.isArray(b.slots) ? b.slots : [],
+    ovr: Math.round(Number(b.ovr) || 90),
+    name: ((b.owner && b.owner.name) ? b.owner.name + "'s " : '') + (b.name || 'Build') });
+})();
+goOnline();  // connect + wire the friend-challenge inbox (global presence is joined lazily on search)
+// dev harness: /versus-cfb.html?animtest=1&seed=5&aovr=95&bovr=88 plays the game animation with
+// fake builds · no Ably, no matchmaking, and friendlyMode means no Elo is reported.
+(function(){
+  const q=new URLSearchParams(location.search);
+  if(q.get('animtest')!=='1') return;
+  friendlyMode = true;
+  myRole='pitcher'; seed=(+q.get('seed'))||12345;
+  myBuild  = { name:'Tester A', ovr:(+q.get('aovr'))||95, team:'LAL', elo:1000 };
+  oppBuild = { name:'Tester B', ovr:(+q.get('bovr'))||88, team:'BOS', elo:1000 };
+  setTimeout(playAtBat, 400);
+})();
+// dev harness: /versus-cfb.html?ghost=1 runs the REAL ghost flow end-to-end (no 20s wait, no live opp)
+(function(){ if(new URLSearchParams(location.search).get('ghost')==='1') setTimeout(startGhostMatch, 300); })();
+// leave the queue if the tab closes while waiting
+window.addEventListener('pagehide', () => {
+  if (clientId) { try { navigator.sendBeacon('/api/match-cfb', JSON.stringify({ action:'leave', id: clientId })); } catch(e){} }
+  if (ably) { try { ably.close(); } catch(e){} }
+});
+</script>
+
+</body>
+</html>
