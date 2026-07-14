@@ -1260,6 +1260,7 @@ const LB_SPORTS = [
   { id: 'baseball', icon: '⚾', label: 'Baseball', games: [['pitcher', 'Pitchers'], ['batter', 'Batters']] },
   { id: 'hoops',    icon: '🏀', label: 'Hoops',    games: [['baller', 'Hoopers']] },
   { id: 'soccer',   icon: '⚽', label: 'Soccer',   games: [['striker', 'Strikers'], ['keeper', 'Keepers']] },
+  { id: 'hockey',   icon: '🏒', label: 'Hockey',   games: [['hockey', 'Skaters']] },
 ];
 const lbSportOf = g => LB_SPORTS.find(s => s.games.some(x => x[0] === g)) || LB_SPORTS[0];
 function renderLbNav() {
