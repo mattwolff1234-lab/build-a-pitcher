@@ -76,6 +76,10 @@
     pvpWinDailyCap: 5,  // max coin-paying wins per day                                      // TUNE
     discord: 1000,      // one-time: joining the GoatLab Discord (per account)               // TUNE
     trackSeasonCap: 800, // max coins claimable from Season Track tiers per season           // TUNE
+    // Daily 64-player Tournament placement payouts (one per player per bracket, best placement,
+    // settled on locked truth only · ledger ref tourn:<bracketId>:<player_key>). See
+    // tournament-design.md + tournament-engine.js. FEATURE-FLAGGED OFF until launch.
+    tournament: { champion: 500, runnerUp: 250, semifinal: 120, quarterfinal: 60, round16: 30, round32: 15, round64: 5 }, // TUNE
   };
 
   // Season Track COIN tiers (the cosmetic tiers stay in season-track.js's SEASONS — these are
