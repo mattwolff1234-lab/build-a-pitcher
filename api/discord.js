@@ -56,7 +56,10 @@ async function authed(sub, sessionToken) {
 module.exports = async (req, res) => {
   if (!CONN) return res.status(500).json({ ok: false, error: 'Database not configured' });
   const origin = 'https://' + String(req.headers.host || 'pitchinglab.pitchergami.com');
-  const redirectUri = origin + '/api/discord';
+  // FIXED canonical redirect — must be registered EXACTLY in the Discord app's OAuth2 → Redirects
+  // (no trailing slash). Hardcoded so it never depends on which domain the player is on (that was
+  // causing "Invalid OAuth2 redirect_uri"). Players on other domains just land back here after.
+  const redirectUri = 'https://pitchinglab.pitchergami.com/api/discord';
 
   // ---- START: authenticate the player, hand back a signed Discord authorize URL ----
   if (req.method === 'POST') {
