@@ -26,6 +26,9 @@
   const C = window.Catalog;
 
   const DISCORD_URL = 'https://discord.gg/bMVX2zJp49';
+  // Launch gate: while true the store sells ONLY GoatLab Pro — coin packs (Get Coins tab) and
+  // coin-spend items (avatars/consumables) are hidden. Flip to false to reopen the coin economy.
+  const PRO_ONLY = true;
 
   /* ---------- identity + api ---------- */
   function acct() { try { return JSON.parse(localStorage.getItem('pl_account') || 'null'); } catch (e) { return null; } }
@@ -195,6 +198,9 @@
       <div class="gc-err" id="gcProMsg"></div></div>`;
   }
   function bodyShop() {
+    if (PRO_ONLY) return proCard()
+      + `<div class="gc-note">More ways to spend coins are coming soon — for now, GoatLab Pro is the play.</div>`
+      + `<div class="gc-err" id="gcShopMsg"></div>`;
     const group = (title, ids) => ids.length ? `<div class="gc-sec">${title}</div>` + ids.map(skuRow).join('') : '';
     const byType = t => Object.keys(C.SKUS).filter(k => C.SKUS[k].type === t);
     return proCard()
@@ -231,6 +237,7 @@
 
   function render() {
     if (!overlay) return;
+    if (PRO_ONLY && tab === 'coins') tab = 'shop';
     if (!signedIn()) {
       overlay.innerHTML = `<div class="gc-panel"><button class="gc-close">✕</button>
         <div class="gc-eyebrow">GoatLab Store</div><div class="gc-title">🪙 Goat Coins</div>
@@ -246,7 +253,7 @@
       <div class="gc-bal">Balance: ${coins().toLocaleString('en-US')}</div>
       <div class="gc-tabs">
         <button class="gc-tab ${tab === 'shop' ? 'active' : ''}" data-tab="shop">🛒 Shop</button>
-        ${inApp() ? '' : `<button class="gc-tab ${tab === 'coins' ? 'active' : ''}" data-tab="coins">🪙 Get Coins</button>`}
+        ${(inApp() || PRO_ONLY) ? '' : `<button class="gc-tab ${tab === 'coins' ? 'active' : ''}" data-tab="coins">🪙 Get Coins</button>`}
         <button class="gc-tab ${tab === 'earn' ? 'active' : ''}" data-tab="earn">🎁 Earn</button>
       </div>
       <div class="gc-body">${(bodies[tab] || bodies.shop)()}</div></div>`;
