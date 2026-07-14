@@ -55,8 +55,11 @@ pitchergami.com purely for the "family of games" cross-promo; nothing is shared 
 
 ### Weighted OVR
 `weightedOvr` = weighted avg of the 9 slot values: **1.2×** Strikeout, Ground Ball & Command (the
-three true outcomes — K, HR, BB), **1.1×** Velocity/Break/Stamina/Clutch, **1.0×** Defense/Frame.
-So slot placement is strategic.
+three true outcomes — K, HR, BB), **1.1×** Velocity/Break/Stamina/Clutch. **Defense & Frame use a
+value-scaled weight** (`slotWeight`): they ramp **0.4× → 1.3×** as the rating climbs (Defense over
+raw 73→85, Frame over 78→92) — a mediocre glove/height barely counts, an elite one is rewarded well.
+So slot placement is strategic. (`build-check.js` `pitcherSoloOvr` mirrors this exact formula
+server-side for anti-cheat.)
 
 ### Tiers (border + glow colors)
 Grey ≤64 · Bronze 65–74 · Silver 75–79 · Gold 80–84 · Diamond 85+ · **Legend = purple** (retired greats).
@@ -97,7 +100,10 @@ flip the primary to `mlb26` in both `fetch-data.js` and `fetch-batters.js`.**
   - **SP + CP only** (relief pitchers `display_position === 'RP'` are dropped; legends exempt).
   - 2026 (current) = all tiers; 2025–2021 = **gold+ (OVR ≥ 80) historical** versions, tagged with year.
   - **Prime** map = highest-OVR special-edition card per player (Boost power-up). Don't say "MLB The
-    Show" in the UI — call them "Prime."
+    Show" in the UI — call them "Prime." **Known cosmetic caveat:** ~26 SP/CP-pool players have their
+    highest special card at `pos:"RP"`, so Boosting them shows an RP Prime even though the pool itself
+    is SP/CP-only. Accepted as-is (still the correct player + legit stats; `reelPrimes()` filters by
+    OVR/name, not position). Filter RP in `reelPrimes()`/`fetch-data.js` if this ever needs tightening.
   - **Legends** = retired greats (special card, no current Live card, OVR ≥ 85). Excluded by NAME if
     they have any prospect/showcase card (`PROSPECT_SERIES`, incl. Spring Breakout) — so hyped
     prospects like Konnor Griffin land in the Live pool (boostable), not as purple legends.
@@ -225,12 +231,66 @@ word-boundary only (so Nigeria/raccoon/therapist/Hancock/Scunthorpe stay legal).
   browser and server pick the change up automatically since it's one file). Franchise clone
   pages regenerate from `franchise.html` via `gen-franchise-clones.js` as usual.
 
-### Known caveat — anti-cheat
-Scores are submitted from the browser; the server only clamps `ovr` 1–99 and name length, so the OVR
-is currently trust-the-client. Harden later by recomputing OVR server-side from the submitted `build`
-(re-implement `WEIGHTS` + `heightToRating` in `api/score.js`).
+### Anti-cheat (hardened 2026-07-12 — the old "trust-the-client OVR" caveat is CLOSED)
+**`build-check.js`** (root, required by `api/score.js` AND `api/account.js` — the JSONs it
+requires are bundled into both lambdas): three validation layers on every submitted build —
+slot caps (`SLOT_MAX`), weighted-OVR recompute ±3 (`OVR_W` for batter/baller/soccer/cfb/hockey/mon;
+**pitcher solo submits recompute via `pitcherSoloOvr`** — value-scaled Defense/Frame ramps — and MUST
+carry the full 9-slot build; a missing pitcher build is now rejected, not passed through), and **card
+truth**: every verifiable slot must name a REAL player from the game's own data files and stay ≤ that
+player's best version (live/prime/legend/era) + power-up headroom (`CARD_ALLOW`: baseball 15 = hot 10 +
+boost 5; others 5). Client pool and validator ship from the same commit, so they can't drift. Frame
+slots are height-derived → cap-only. **HOF saves (`api/account.js` `save`) run the same `checkBuild`.**
+Versus builds pass `{versus:true}` (skips card-layer for the curved slots: pitcher Defense,
+all keeper KP_LIFT values); `versusPitcherOvr` replicates the dynamic-weight versus pitcher OVR
+exactly. Harness: 225 sampled prod builds pass (6 rejects = pre-2026-07-09 keeper submissions
+whose players a data refresh removed — impossible for new submissions).
+**Ranked 1v1 is server-settled:** versus pages POST `pvpLock {matchId, game, role, build}` at
+build-finish (validated, OVR + server-read Elo stored in `pvp_builds`, first lock wins, 2-day
+sweep); `pvpResult`/hoops/soccer handlers override the reported winner with `lockedTruth` when
+BOTH locks exist (exact OVR ties keep the client's seeded-coin verdict — it sits mid-RNG-stream).
+Old/no-lock matches fall through to the legacy trust path (deprecation window); coins only ever
+pay on locked-truth wins. Still trust-the-client: XP/SXP/cosmetics/consumables (accepted).
 
 ---
+
+## 🪙 Goat Coins (currency + store + Stripe — built 2026-07-12, needs Stripe env to sell packs)
+Server-authoritative wallet, **signed-in only**. `users.coins` + `users.entitlements jsonb` +
+append-only `coin_ledger` whose UNIQUE `ref` is the idempotency key for every movement
+(`stripe:<sessionId>` · `daily:<date>:<game>:<sub>` · `pvpwin:<matchId>:<sub>` ·
+`discord:<sub>` · `track:<season>:<lane>:<i>:<sub>` · `spend:<sku>:…`).
+- **`catalog.js`** — dual-env (namefilter pattern): coin PACKS (usd cents), SKUS (pass_s2 ·
+  3 avatar cosmetics · scout/resim bundles · no_ads_30; franchise perks COMMENTED OUT until
+  the franchise pages read them), EARN amounts, TRACK_COINS season coin-tiers. Server prices
+  are the only truth; everything marked `// TUNE`.
+- **api/account.js**: `wallet` · `coinSpend` (pre-checks one-time SKUs, race-safe conditional
+  debit, applies effect: pass/entitlement/tokens/noads/cosmetic-unlock/item-count) ·
+  `trackClaimCoins` (validates synced sxp + pass for premium lane, per-tier ledger dedupe) ·
+  `discordClaim` (one-time large reward; honor-system v1 — Discord OAuth verify is roadmap).
+  Earning: daily grant inside score.js `challengeSubmit` (first valid run/day/game, accounts
+  only), 1v1 grant via `pvpWinCoins` in all three result handlers (locked-truth wins only,
+  daily cap). Responses carry `coins:{granted, coins}` for client animation.
+- **Stripe (no SDK — raw REST + crypto HMAC)**: `api/buy.js` creates Checkout Sessions
+  (metadata carries player_key+pack, path-only returnTo); **`api/stripe-webhook.js` is the
+  ONLY place purchases credit** (signature verified by hand, 5-min tolerance, amount must
+  match the pack, ledger-idempotent — 6-check mock-DB harness in session scratchpad).
+  **Setup needed before selling**: Stripe account for Wolff Labs LLC → `STRIPE_SECRET_KEY` +
+  webhook endpoint `/api/stripe-webhook` (checkout.session.completed) → `STRIPE_WEBHOOK_SECRET`
+  in Vercel (Sensitive). Test mode works end-to-end without the LLC bank account.
+- **`store.js`** — drop-in module (loads AFTER catalog.js) on hub + 5 game pages + 3 versus
+  pages: `[data-coin-chip]` balance chips, ☰ `#miStore` item, tabbed overlay (Shop / Get
+  Coins / Earn incl. the Discord claim), `?purchase=success` bounce polls the wallet until the
+  webhook lands. **Capacitor check hides Get Coins in the iOS app** (Apple IAP rule); both new
+  files are in ios-app/build-www.js SCRIPTS.
+- **Season 2 "Dog Days"** defined in season-track.js (beats the 08-15 deadline) WITH the first
+  **premium lane**: `SEASONS[2].premium` cosmetics auto-unlock only while `entitlements.pass[2]`
+  (read from the pl_wallet cache; render retro-unlocks after a mid-season pass purchase), coin
+  tiers render from TRACK_COINS with server-side Claim buttons. New frames st-frame-ember/frost.
+- **No-ads**: every ad page's static ramp.js tag is now a conditional loader — skips Playwire
+  while `entitlements.no_ads_until` is in the future (rest of the ads.md 3-piece contract
+  untouched; franchise clones patched via franchise.html so a regen keeps it).
+- Deferred: franchise perk SKUs (engine determinism — needs its own pass), Discord OAuth
+  verification, Apple IAP, refund/ToS page + Stripe Tax before LIVE mode.
 
 ## Career simulation (shipped)
 
@@ -255,7 +315,8 @@ under Node):
 ### Balance (tuned — re-verify if you touch any formula)
 - **Cy Young** = rare, competitive *probability* (you must beat the whole league): 90 OVR ≈ 1.3
   career Cy, 93+ get a real shot at multiples (capped sane via `cyElite`), 80 ≈ 0.
-- **Hall of Fame** (`hallOfFame`): `hofScore` (WAR + hardware + milestones) ≥ 80, or career WAR ≥ 80.
+- **Hall of Fame** (`hallOfFame`): `hofScore` (WAR·0.82 + K/W/ERA-title milestones + hardware) **≥ 112**,
+  OR a `slamDunk` résumé (WAR ≥ 64, or 3+ Cy Youngs, or 4,000 K + 50 WAR, or 3,000 K + 2 rings + 46 WAR).
   ~85 OVR ≈ 70% HOF, 80 ≈ 0–5%, below ~78 ≈ never.
 - **Career K** realistic (career K/9 ~6.7–9; only durable elite builds approach the 3,000-K club).
   The strikeout/Cy/K-milestone thresholds are anchored to these K levels — **bump them together** if
@@ -592,8 +653,23 @@ a `⚔️ 1v1 Live` ☰ item in both games, and the `/versus` route.
   `curl -s -X POST https://pitchinglab.pitchergami.com/api/account -H "content-type: application/json"
   -d '{"action":"pvpMatchStats","token":"pl-balance-7f3a9c21"}'`
 
+### Ghosts, friend challenges + build challenges (all 3 versus pages)
+- **Ghost match**: an empty lobby offers "👻 Face a Ghost" after ~20s — a random real recent build
+  from the leaderboard (`GET /api/score?action=ghost&game=&min=&max=`), Elo counts.
+  Dev harness: `?ghost=1`.
+- **Meet lobby (social-tab challenges, 2026-07-12)**: both sides of a friends-panel challenge
+  navigate to `?meet=<challengeId>&side=from|to` — presence on Ably `versus:meet:<id>` (hoops:/
+  soccer: prefix on those pages) pairs them in ANY arrival order; the `from` side generates the
+  match, friendly (no Elo), 3-min no-show timeout. Replaced the fragile ?ch= handshake for
+  social challenges; `?ch=` copy-links + `?lobby=1` still work. Challenges are open to ANYONE
+  (server caps: 10 pending outgoing, 1/pair, 24h expiry).
+- **Build challenge (`?gb=<saveId>`)**: profile build rows' ⚔️ → ghost match vs that EXACT Hall of
+  Fame save (`buildGet` action; saved game key = defender role, e.g. pitcher build → you build the
+  batter). Friendly, no Elo (farmable otherwise); reports `buildDefenseResult` → the owner gets a
+  🛡️ held / 💥 fell notification (`notifications` table + APNs, deduped per save+challenger per
+  day) surfaced by social.js's 🔔 Activity tab, toasts, and the ☰-button badge dot (20s poll).
+
 ### Known caveats (1v1)
 - **Trust-the-client**: OVR, Elo, and win/loss are reported from the browser (cheatable) — same class
   as the leaderboard caveat. Harden later by validating server-side.
-- **Empty-lobby**: live-only matchmaking, no "ghost"/bot fallback — a lone player waits.
 - All `pvp_*` tables + columns auto-create/`ALTER … IF NOT EXISTS` on first request (no migrations).

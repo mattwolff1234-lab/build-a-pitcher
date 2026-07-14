@@ -7,16 +7,20 @@
      - CLAIMED HANDLES: signed-in players claim a unique @handle (first come,
        first served) and are found by handle search. Guests can search + add +
        be friends, but can't claim (a handle must survive a cleared browser).
-     - Friends overlay (☰ → 👥 Friends): friends / requests / search tabs,
-       pending challenges, online dots, head-to-head records.
+     - Friends overlay (☰ → 👥 Friends): friends / find / activity tabs
+       (requests live inline in Friends), pending challenges, online dots,
+       head-to-head records. Tapping any row opens that player's profile.
      - Profile overlay: XP level, per-sport 1v1 records, top + recent Hall of
-       Fame builds, challenge button.
-     - Challenges ride the versus pages' EXISTING friendly-challenge flow:
-       accepting one navigates to /versus[-hoops|-soccer]?ch=<personId>&cn=<name>,
-       which pings the challenger's Ably inbox exactly like a shared link.
-     - Polls friendList on load + every 60s while visible (also the heartbeat
+       Fame builds (each with a ⚔️ "take this build on" button → the versus
+       page's ?gb=<saveId> ghost flow), challenge button. Strangers get the
+       limited card but CAN be challenged and their top builds taken on.
+     - Live challenges ride the versus pages' MEET lobby: both sides navigate
+       to /versus[-hoops|-soccer]?meet=<challengeId>&side=from|to — presence
+       on the shared Ably channel pairs them no matter who arrives first.
+     - Polls friendList on load + every 20s while visible (also the heartbeat
        that makes you show as "online"). Badges [data-social-badge] slots and
-       pops a toast on new incoming requests/challenges.
+       pops a toast on new incoming requests/challenges, on YOUR challenge
+       being accepted, and on server notifications (build defenses).
    ========================================================================== */
 (function () {
   'use strict';
@@ -64,6 +68,12 @@
     baller: { icon: '🏀', label: 'Hooper' },
     striker: { icon: '⚽', label: 'Striker' },
     keeper: { icon: '🧤', label: 'Keeper' },
+  };
+  // Games whose saved builds can be taken on in a versus arena (?gb=<saveId> ghost flow).
+  const VS_GAME = {
+    pitcher: '/versus', batter: '/versus',
+    baller: '/versus-hoops',
+    striker: '/versus-soccer', keeper: '/versus-soccer',
   };
 
   /* ---------- avatar registry ----------
@@ -227,6 +237,7 @@
     overflow:hidden; text-overflow:ellipsis; }
   .soc-build .bn small { display:block; font-weight:400; font-size:10px; color:#8ea2bd; margin-top:1px; }
   .soc-build .ov { font-family:'Oswald',sans-serif; font-size:15px; font-weight:700; color:#ffd23f; flex:0 0 auto; }
+  .soc-build .soc-btn { flex:0 0 auto; padding:5px 9px; }
   .soc-h2h { text-align:center; font-family:'Oswald',sans-serif; font-size:13px; letter-spacing:1px; color:#dfe9f5;
     background:rgba(255,210,63,.07); border:1px solid rgba(255,210,63,.25); border-radius:9px; padding:7px; }
   .soc-kv { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:8px 11px;
@@ -238,6 +249,7 @@
   .soc-sport { font-family:'Oswald',sans-serif; text-transform:uppercase; letter-spacing:1px; font-size:12px; color:#dfe9f5;
     background:rgba(20,32,48,.7); border:1px solid rgba(120,170,220,.25); border-radius:10px; padding:13px 6px; cursor:pointer; text-align:center; }
   .soc-sport:hover { border-color:rgba(59,209,255,.55); background:rgba(25,198,255,.1); }
+  .soc-sport.sel { border-color:#ffb02e; background:rgba(255,176,46,.12); box-shadow:0 0 0 1px rgba(255,176,46,.35); }
   .soc-sport .si { display:block; font-size:22px; margin-bottom:4px; }
   .soc-toast { position:fixed; bottom:84px; left:50%; transform:translateX(-50%); z-index:540; max-width:380px;
     width:calc(100% - 32px); background:linear-gradient(160deg,#14212f,#0d1520); border:1px solid rgba(255,176,46,.45);
@@ -247,6 +259,9 @@
   .soc-toast .ta { display:flex; gap:8px; margin-top:9px; }
   [data-social-badge] { display:none; margin-left:auto; min-width:18px; text-align:center; padding:1px 5px; border-radius:9px;
     font-family:'Oswald',sans-serif; font-size:11px; font-weight:700; background:#ff4d5e; color:#fff; }
+  .soc-menu-dot { display:none; position:absolute; top:-5px; right:-6px; min-width:17px; height:17px; padding:0 4px;
+    border-radius:9px; background:#ff4d5e; color:#fff; font-family:'Oswald',sans-serif; font-size:10.5px; font-weight:700;
+    line-height:17px; text-align:center; box-shadow:0 0 0 2px rgba(10,16,24,.85); z-index:5; pointer-events:none; }
   @media (max-width:480px) { .soc-stats { grid-template-columns:repeat(3,1fr); } .soc-title { font-size:20px; } }`;
 
   let cssIn = false;
@@ -263,9 +278,17 @@
   let toastEl = null;
 
   /* ---------- badge + toast ---------- */
+  function acceptedOut() {   // my outgoing challenges accepted in the last 2h (server window)
+    return (data && data.challenges || []).filter(c => !c.incoming && c.status === 'accepted');
+  }
+  function unseenNoti() { return (data && data.noti || []).filter(n => !n.seen); }
   function pendingCount() {
     if (!data) return 0;
-    return (data.requestsIn || []).length + (data.challenges || []).filter(c => c.incoming).length;
+    const s = seen();
+    return (data.requestsIn || []).length
+      + (data.challenges || []).filter(c => c.incoming).length
+      + acceptedOut().filter(c => !(s.acc || []).includes(c.id)).length
+      + unseenNoti().length;
   }
   function paintBadge() {
     injectCss();   // badge styles live in the injected sheet · make sure it's in before painting
@@ -274,6 +297,19 @@
       el.textContent = n;
       el.style.display = n > 0 ? 'inline-block' : 'none';
     });
+    // the ☰ trigger itself wears a dot, so you see it without opening the menu
+    const mb = document.getElementById('menuBtn');
+    if (mb) {
+      let dot = mb.querySelector('.soc-menu-dot');
+      if (!dot) {
+        if (!/relative|absolute|fixed/.test(getComputedStyle(mb).position)) mb.style.position = 'relative';
+        dot = document.createElement('span');
+        dot.className = 'soc-menu-dot';
+        mb.appendChild(dot);
+      }
+      dot.textContent = n > 9 ? '9+' : n;
+      dot.style.display = n > 0 ? 'inline-block' : 'none';
+    }
   }
   function seen() {
     try { return JSON.parse(localStorage.getItem('pl_social_seen') || '{}'); } catch (e) { return {}; }
@@ -283,8 +319,26 @@
     const s = {
       req: (data.requestsIn || []).map(r => r.key),
       chal: (data.challenges || []).filter(c => c.incoming).map(c => c.id),
+      acc: acceptedOut().map(c => c.id),
     };
     try { localStorage.setItem('pl_social_seen', JSON.stringify(s)); } catch (e) {}
+    // server-side notifications: mark read + flip locally so the badge clears right away
+    if (unseenNoti().length) {
+      (data.noti || []).forEach(n => { n.seen = true; });
+      api('notiSeen').catch(() => {});
+    }
+  }
+  function notiText(n) {
+    const p = n.payload || {};
+    if (n.kind === 'defense') {
+      return p.held
+        ? { title: '🛡️ Your build held!', msg: `<b>${esc(p.buildName)}</b> (${p.ovr} OVR) fought off <b>${esc(p.byName)}</b>'s 1v1 challenge.` }
+        : { title: '💥 Your build fell', msg: `<b>${esc(p.byName)}</b> took down <b>${esc(p.buildName)}</b> (${p.ovr} OVR) in a 1v1 challenge.` };
+    }
+    return null;
+  }
+  function meetUrl(c) {   // challenger's side of the meet lobby for an accepted/pending challenge
+    return sport(c.sport).route + '?meet=' + encodeURIComponent(c.id) + '&side=from&cn=' + encodeURIComponent(c.toName || '');
   }
   function maybeToast() {
     if (!data || (overlay && overlay.classList.contains('show'))) return;
@@ -297,10 +351,24 @@
         { label: 'View', fn: () => { hideToast(); open(); } },
       ]);
     }
+    // your challenge got accepted → the other side is heading to the arena, go meet them
+    const acc = acceptedOut().filter(c => !(s.acc || []).includes(c.id))[0];
+    if (acc) {
+      const sp = sport(acc.sport);
+      return showToast('✅ Challenge accepted!', `<b>${esc(acc.toName)}</b> accepted your ${sp.icon} ${sp.label} challenge and is heading to the arena.`, [
+        { label: '⚔️ Enter arena', warm: true, fn: () => { markSeen(); location.href = meetUrl(acc); } },
+      ]);
+    }
+    const newNoti = unseenNoti().map(n => ({ n, t: notiText(n) })).filter(x => x.t)[0];
+    if (newNoti) {
+      return showToast(newNoti.t.title, newNoti.t.msg, [
+        { label: 'View', warm: true, fn: () => { hideToast(); open('activity'); } },
+      ]);
+    }
     const newReq = (data.requestsIn || []).filter(r => !(s.req || []).includes(r.key))[0];
     if (newReq) {
       showToast('👥 Friend request', `<b>${esc(newReq.name)}</b> wants to be your friend.`, [
-        { label: 'View', warm: true, fn: () => { hideToast(); open('requests'); } },
+        { label: 'View', warm: true, fn: () => { hideToast(); open(); } },
       ]);
     }
   }
@@ -345,7 +413,7 @@
   function startPolling() {
     if (pollTimer) return;
     setTimeout(refresh, 1600);          // let Google One Tap set pl_account first
-    pollTimer = setInterval(() => { if (document.visibilityState === 'visible') refresh(); }, 60000);
+    pollTimer = setInterval(() => { if (document.visibilityState === 'visible') refresh(); }, 20000);
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refresh(); });
   }
 
@@ -402,10 +470,15 @@
         <button class="soc-btn dim" data-act="chal-decline">✕</button></div></div>`;
     }).join('') + outChals.map(c => {
       const sp = sport(c.sport);
-      return `<div class="soc-row soc-chal" data-chal="${esc(c.id)}">
-        <div class="soc-who"><div class="nm">${sp.icon} You → ${esc(c.toName)}</div>
-        <div class="sub">waiting for them to accept · <a href="${sport(c.sport).route}?lobby=1" style="color:#3bd1ff">wait in the arena</a></div></div>
-        <div class="soc-acts"><button class="soc-btn dim" data-act="chal-cancel">Cancel</button></div></div>`;
+      return c.status === 'accepted'
+        ? `<div class="soc-row soc-chal" data-chal="${esc(c.id)}">
+          <div class="soc-who"><div class="nm">${sp.icon} You → ${esc(c.toName)}</div>
+          <div class="sub" style="color:#39d98a">accepted! they're heading to the arena</div></div>
+          <div class="soc-acts"><a class="soc-btn warm" href="${meetUrl(c)}" style="text-decoration:none">⚔️ Enter arena</a></div></div>`
+        : `<div class="soc-row soc-chal" data-chal="${esc(c.id)}">
+          <div class="soc-who"><div class="nm">${sp.icon} You → ${esc(c.toName)}</div>
+          <div class="sub">waiting for them to accept · <a href="${meetUrl(c)}" style="color:#3bd1ff">wait in the arena</a></div></div>
+          <div class="soc-acts"><button class="soc-btn dim" data-act="chal-cancel">Cancel</button></div></div>`;
     }).join('');
 
     const friendRows = (data.friends || []).length ? data.friends.map(f => {
@@ -420,18 +493,16 @@
         </div></div>`;
     }).join('') : `<div class="soc-empty">No friends yet.<br>Search a handle in the <b>Find</b> tab to add your first one.</div>`;
 
-    const reqRows = nIn || (data.requestsOut || []).length
-      ? (data.requestsIn || []).map(r => `<div class="soc-row" data-key="${esc(r.key)}">
+    // friend requests live inline in the Friends tab (no separate Requests tab)
+    const reqRows = (data.requestsIn || []).map(r => `<div class="soc-row" data-key="${esc(r.key)}">
           ${avatarHtml(r)}
           <div class="soc-who"><div class="nm">${esc(r.name)}</div><div class="sub">wants to be friends</div></div>
           <div class="soc-acts"><button class="soc-btn warm" data-act="req-accept">Accept</button>
           <button class="soc-btn dim" data-act="req-decline">✕</button></div></div>`).join('')
-        + ((data.requestsOut || []).length ? `<div class="soc-sec">Sent</div>` : '')
-        + (data.requestsOut || []).map(r => `<div class="soc-row" data-key="${esc(r.key)}">
+      + (data.requestsOut || []).map(r => `<div class="soc-row" data-key="${esc(r.key)}">
           ${avatarHtml(r)}
           <div class="soc-who"><div class="nm">${esc(r.name)}</div><div class="sub">request sent · waiting</div></div>
-          <div class="soc-acts"><button class="soc-btn dim" data-act="req-cancel">Cancel</button></div></div>`).join('')
-      : `<div class="soc-empty">No pending requests.</div>`;
+          <div class="soc-acts"><button class="soc-btn dim" data-act="req-cancel">Cancel</button></div></div>`).join('');
 
     const isGuestNoName = !acct() && !handle();
     const addBody = `
@@ -445,10 +516,14 @@
       challenge you to friendly 1v1s in any sport. Only players who've <b>claimed a handle</b> show up in
       search${acct() ? '' : ' · sign in with Google (☰ menu) to claim yours and let friends find you'}.</div>`;
 
+    const notiList = (data.noti || []).map(notiRow).filter(Boolean).join('');
     const bodies = {
-      friends: (chalRows ? `<div class="soc-sec">Challenges</div>${chalRows}<div class="soc-sec">Friends</div>` : '') + friendRows,
-      requests: reqRows,
+      friends: (chalRows ? `<div class="soc-sec">Challenges</div>${chalRows}` : '')
+        + (reqRows ? `<div class="soc-sec">Requests</div>${reqRows}` : '')
+        + ((chalRows || reqRows) ? `<div class="soc-sec">Friends</div>` : '') + friendRows,
       add: addBody,
+      activity: notiList || `<div class="soc-empty">Nothing yet.<br>When someone takes on one of your Hall of Fame builds
+        or answers a challenge, it shows up here.</div>`,
     };
 
     const claimUi = `<div class="soc-code" style="flex-direction:column;align-items:stretch">
@@ -473,11 +548,11 @@
         ${headExtra}
       </div>
       <div class="soc-tabs">
-        <button class="soc-tab ${tab === 'friends' ? 'active' : ''}" data-tab="friends">Friends${inChals.length ? `<span class="n">${inChals.length}</span>` : ''}</button>
-        <button class="soc-tab ${tab === 'requests' ? 'active' : ''}" data-tab="requests">Requests${nIn ? `<span class="n">${nIn}</span>` : ''}</button>
+        <button class="soc-tab ${tab === 'friends' ? 'active' : ''}" data-tab="friends">Friends${(inChals.length + nIn) ? `<span class="n">${inChals.length + nIn}</span>` : ''}</button>
         <button class="soc-tab ${tab === 'add' ? 'active' : ''}" data-tab="add">🔎 Find</button>
+        <button class="soc-tab ${tab === 'activity' ? 'active' : ''}" data-tab="activity">🔔 Activity${unseenNoti().length ? `<span class="n">${unseenNoti().length}</span>` : ''}</button>
       </div>
-      <div class="soc-body">${bodies[tab] || ''}</div></div>`;
+      <div class="soc-body">${bodies[tab] || bodies.friends}</div></div>`;
 
     overlay.querySelector('.soc-close').onclick = close;
     overlay.querySelectorAll('.soc-tab').forEach(b => b.onclick = () => { tab = b.dataset.tab; renderFriends(); });
@@ -496,6 +571,28 @@
       searchIn.addEventListener('keydown', e => { if (e.key === 'Enter') { clearTimeout(searchTimer); doSearch(); } });
     }
     overlay.querySelectorAll('[data-act]').forEach(b => b.onclick = () => handleAct(b));
+    wireRowTaps();
+  }
+
+  // Tapping anywhere on a player row (outside its buttons/links) opens their profile.
+  function wireRowTaps() {
+    overlay.querySelectorAll('.soc-row[data-key]').forEach(r => {
+      r.style.cursor = 'pointer';
+      r.onclick = e => { if (e.target.closest('button, a, input')) return; openProfile(r.dataset.key); };
+    });
+  }
+
+  // One Activity-feed line per server notification · rendered by kind.
+  function notiRow(n) {
+    const p = n.payload || {};
+    if (n.kind === 'defense') {
+      const g = GAME_META[p.game] || { icon: '🏗️', label: p.game };
+      return `<div class="soc-row" style="${n.seen ? 'opacity:.72' : ''}">
+        <div class="soc-who"><div class="nm">${p.held ? '🛡️' : '💥'} ${esc(p.buildName)} ${p.held ? 'held!' : 'fell'}</div>
+        <div class="sub">${g.icon} <b>${esc(p.byName)}</b> challenged your ${p.ovr} OVR ${esc(g.label)} ·
+          ${p.held ? 'your build won' : 'they won'} · ${fmtD(n.at)}</div></div></div>`;
+    }
+    return '';
   }
 
   /* ---------- claim a handle ---------- */
@@ -570,6 +667,7 @@
     }).join('');
     out.querySelectorAll('[data-sadd]').forEach(b => b.onclick = () => addFromSearch(b));
     out.querySelectorAll('[data-sprof]').forEach(b => b.onclick = () => openProfile(b.closest('.soc-row').dataset.key));
+    wireRowTaps();
   }
   async function addFromSearch(btn) {
     if (searchBusy) return;
@@ -619,32 +717,56 @@
   }
 
   /* ---------- challenges ---------- */
+  // The sport of the page you're on (or your last active game) · preselects the challenge sheet.
+  function pageSport() {
+    const p = location.pathname;
+    if (/hoops|baller/.test(p)) return 'hoops';
+    if (/soccer|striker|keeper/.test(p)) return 'soccer';
+    if (/versus|pitch|bat/.test(p)) return 'baseball';
+    let g = null; try { g = localStorage.getItem('pl_activeGame'); } catch (e) {}
+    return ({ pitcher: 'baseball', batter: 'baseball', baller: 'hoops', striker: 'soccer', keeper: 'soccer' })[g] || 'baseball';
+  }
+  // One-sheet challenge: sport preselected to where you are, primary action sends AND takes you
+  // straight into the meet lobby (both sides pair there whoever arrives first).
   function pickSport(key, name) {
     const body = overlay.querySelector('.soc-body');
-    body.innerHTML = `<div class="soc-note" style="text-align:center">Challenge <b>${esc(name || 'your friend')}</b> to a
-      friendly 1v1 · build head-to-head, no Elo on the line. Pick the sport:</div>
-      <div class="soc-sports">${SPORTS.map(s => `<button class="soc-sport" data-sport="${s.id}"><span class="si">${s.icon}</span>${s.label}</button>`).join('')}</div>
+    let sel = pageSport();
+    let sending = false;
+    body.innerHTML = `<div class="soc-note" style="text-align:center">Challenge <b>${esc(name || 'this player')}</b> to a
+      friendly 1v1 · build head-to-head, no Elo on the line.</div>
+      <div class="soc-sports">${SPORTS.map(s => `<button class="soc-sport${s.id === sel ? ' sel' : ''}" data-sport="${s.id}"><span class="si">${s.icon}</span>${s.label}</button>`).join('')}</div>
+      <button class="soc-btn warm" id="socChalGo" style="padding:12px;font-size:14px">⚔️ Send &amp; enter the arena</button>
+      <button class="soc-btn dim" id="socChalLater" style="align-self:center">Send only · I'll head over when they accept</button>
       <div class="soc-err" id="socChalMsg"></div>
       <button class="soc-btn dim" id="socChalBack" style="align-self:center">← Back</button>`;
     body.querySelector('#socChalBack').onclick = () => renderFriends();
-    body.querySelectorAll('.soc-sport').forEach(b => b.onclick = async () => {
-      const spId = b.dataset.sport, sp = sport(spId);
+    body.querySelectorAll('.soc-sport').forEach(b => b.onclick = () => {
+      sel = b.dataset.sport;
+      body.querySelectorAll('.soc-sport').forEach(x => x.classList.toggle('sel', x.dataset.sport === sel));
+    });
+    const send = async goNow => {
+      if (sending) return; sending = true;
       const msg = body.querySelector('#socChalMsg');
       msg.textContent = 'Sending challenge…';
       try {
-        const r = await api('challengeCreate', { toKey: key, sport: spId });
+        const r = await api('challengeCreate', { toKey: key, sport: sel });
         if (r && r.ok) {
-          ga('friend_challenge_sent', { sport: spId });
+          ga('friend_challenge_sent', { sport: sel, go: goNow ? 1 : 0 });
+          const sp = sport(sel);
+          const meet = sp.route + '?meet=' + encodeURIComponent(r.id) + '&side=from&cn=' + encodeURIComponent(name || '');
+          if (goNow) { location.href = meet; return; }
           body.innerHTML = `<div class="soc-empty" style="color:#dfe9f5">⚔️ Challenge sent!<br><br>
-            <b>${esc(name || 'Your friend')}</b> will see it wherever they are on GoatLab.
-            Head to the ${sp.icon} arena so you're ready the moment they accept.</div>
+            <b>${esc(name || 'They')}</b> will see it wherever they are on GoatLab — you'll get a
+            notification the moment they accept.</div>
             <button class="soc-btn warm" id="socGoArena" style="padding:11px">⚔️ Wait in the ${sp.label} arena</button>
-            <button class="soc-btn dim" id="socStay" style="align-self:center">Stay here · I'll go later</button>`;
-          body.querySelector('#socGoArena').onclick = () => { location.href = sp.route + '?lobby=1'; };
+            <button class="soc-btn dim" id="socStay" style="align-self:center">← Back to friends</button>`;
+          body.querySelector('#socGoArena').onclick = () => { location.href = meet; };
           body.querySelector('#socStay').onclick = () => { refresh().then(renderFriends); };
-        } else msg.textContent = (r && r.error) || 'Could not send the challenge.';
-      } catch (e) { msg.textContent = 'Network error · try again.'; }
-    });
+        } else { msg.textContent = (r && r.error) || 'Could not send the challenge.'; sending = false; }
+      } catch (e) { msg.textContent = 'Network error · try again.'; sending = false; }
+    };
+    body.querySelector('#socChalGo').onclick = () => send(true);
+    body.querySelector('#socChalLater').onclick = () => send(false);
   }
   async function acceptChallenge(id) {
     hideToast();
@@ -654,7 +776,7 @@
         ga('friend_challenge_accept', { sport: r.sport });
         markSeen();
         const sp = sport(r.sport);
-        location.href = sp.route + '?ch=' + encodeURIComponent(r.fromPersonId) + '&cn=' + encodeURIComponent(r.fromName);
+        location.href = sp.route + '?meet=' + encodeURIComponent(id) + '&side=to&cn=' + encodeURIComponent(r.fromName);
         return;
       }
     } catch (e) {}
@@ -677,9 +799,11 @@
   const fmtD = d => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   function buildRow(b) {
     const g = GAME_META[b.game] || { icon: '🏗️', label: b.game };
+    const chal = (b.id && VS_GAME[b.game])
+      ? `<button class="soc-btn warm" data-gb="${b.id}" data-gbgame="${esc(b.game)}" title="Take this build on in a 1v1">⚔️</button>` : '';
     return `<div class="soc-build"><span class="gi">${g.icon}</span>
       <span class="bn">${esc(b.name)}<small>${g.label} · ${fmtD(b.created_at)}</small></span>
-      <span class="ov">${b.ovr} OVR</span></div>`;
+      <span class="ov">${b.ovr} OVR</span>${chal}</div>`;
   }
   function sportRow(icon, label, s) {
     const games = s.wins + s.losses;
@@ -699,22 +823,28 @@
       const lead = p.h2h.mine > p.h2h.theirs ? 'You lead' : p.h2h.mine < p.h2h.theirs ? 'They lead' : 'All square';
       h2h = `<div class="soc-h2h">HEAD-TO-HEAD · ${lead} ${p.h2h.mine}–${p.h2h.theirs}</div>`;
     }
-    // Stranger's card: records + a big Add/Accept CTA instead of the friends-only sections.
+    // Stranger's card: records, challenge button + their top builds (public like the
+    // leaderboard, each takeable-on) · full stats/friends stay friends-only.
     if (p.limited) {
       const cta = p.rel === 'incoming'
         ? '<button class="soc-btn warm" id="socProfAdd" data-mode="accept" style="padding:11px">✓ Accept friend request</button>'
         : p.rel === 'pending'
           ? '<button class="soc-btn dim" disabled style="padding:11px">Request sent · waiting</button>'
           : '<button class="soc-btn warm" id="socProfAdd" data-mode="add" style="padding:11px">＋ Add Friend</button>';
+      const topSorted = (p.topBuilds || []).slice().sort((x, y) => y.ovr - x.ovr);
+      const buildsHtml = topSorted.length
+        ? `<div class="soc-sec">Top builds · tap ⚔️ to take one on</div>${topSorted.map(buildRow).join('')}` : '';
       return `<div class="soc-stats">${statCells}</div>
         ${cta}
+        <button class="soc-btn" id="socProfChal" style="padding:11px">⚔️ Challenge to a live 1v1</button>
         <div class="soc-err" id="socProfAddMsg"></div>
-        <div class="soc-empty">🔒 Builds, friends, and full stats are visible to friends only.</div>
+        ${buildsHtml}
+        <div class="soc-empty">🔒 Recent builds, friends, and full stats are visible to friends only.</div>
         <button class="soc-btn dim" id="socProfBack" style="align-self:flex-start">← Friends</button>`;
     }
     const topSorted = (p.topBuilds || []).slice().sort((x, y) => y.ovr - x.ovr);
     const buildsHtml = topSorted.length
-      ? `<div class="soc-sec">Top builds</div>${topSorted.map(buildRow).join('')}
+      ? `<div class="soc-sec">Top builds${p.self ? '' : ' · tap ⚔️ to take one on'}</div>${topSorted.map(buildRow).join('')}
          <div class="soc-sec">Recent builds</div>${(p.recentBuilds || []).map(buildRow).join('')}`
       : `<div class="soc-empty">${p.guest
           ? 'Guest account · builds only save to a Hall of Fame after signing in with Google.'
@@ -866,6 +996,13 @@
     if (find) find.onclick = () => { profTab = 'friends'; renderProfile(); const i = overlay.querySelector('#socSearch'); if (i) i.focus(); };
     const chal = overlay.querySelector('#socProfChal');
     if (chal) chal.onclick = () => { tab = 'friends'; renderFriends(); pickSport(p.key, p.name); };
+    // per-build ⚔️ → the versus page's ghost-vs-save flow (?gb=<saveId>)
+    overlay.querySelectorAll('[data-gb]').forEach(b => b.onclick = () => {
+      const route = VS_GAME[b.dataset.gbgame];
+      if (!route) return;
+      ga('build_challenge_start', { game: b.dataset.gbgame });
+      location.href = route + '?gb=' + encodeURIComponent(b.dataset.gb);
+    });
     // limited (stranger) profile: the big Add / Accept CTA
     const addBtn = overlay.querySelector('#socProfAdd');
     if (addBtn) addBtn.onclick = async () => {

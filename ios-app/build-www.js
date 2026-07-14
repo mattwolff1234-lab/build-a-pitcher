@@ -19,6 +19,9 @@ const PAGES = [
 const SCRIPTS = [
   'switcher.js', 'social.js', 'xp.js', 'achievements.js', 'hotboard.js', 'quests.js',
   'season-track.js', 'streak-pop.js', 'share-card.js', 'collection.js', 'namefilter.js',
+  // Goat Coins store · store.js hides real-money purchases at runtime inside the Capacitor
+  // shell (window.Capacitor check — Apple requires IAP for digital currency); spending stays.
+  'catalog.js', 'store.js',
 ];
 const DATA = ['pitchers.json', 'batters.json', 'ballers.json', 'strikers.json', 'keepers.json', 'cfb.json'];
 const ASSET_DIRS = ['avatars', 'baseball-anim', 'hoops-anim', 'soccer-anim'];

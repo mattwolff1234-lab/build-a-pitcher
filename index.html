@@ -21,6 +21,8 @@
 <script src="/namefilter.js"></script>
 <script src="/xp.js" defer></script>
 <script src="/social.js" defer></script>
+<script src="/catalog.js" defer></script>
+<script src="/store.js" defer></script>
 <script src="/hotboard.js" defer></script>
 <script src="/switcher.js?v=15" defer></script>
 <script src="https://accounts.google.com/gsi/client" async></script>
@@ -42,7 +44,20 @@
     window.ramp.que.push(function () { window.ramp.spaNewPage(window.location.pathname); });
   });
 </script>
-<script async src="//cdn.intergient.com/1025880/77906/ramp.js"></script>
+<script>
+  // Goat Coins '30 Days Ad-Free' entitlement — skip loading Playwire entirely while active
+  // (pl_wallet is the server wallet cached by store.js; the expiry is a server-set timestamp).
+  // Everything else in the ads contract (window.ramp setup, spacing CSS) stays put — see ads.md.
+  (function () {
+    try {
+      var w = JSON.parse(localStorage.getItem('pl_wallet') || 'null');
+      if (w && w.entitlements && w.entitlements.no_ads_until && Date.parse(w.entitlements.no_ads_until) > Date.now()) return;
+    } catch (e) {}
+    var s = document.createElement('script');
+    s.async = true; s.src = '//cdn.intergient.com/1025880/77906/ramp.js';
+    document.head.appendChild(s);
+  })();
+</script>
 <style>
 /* Ad-safe mobile spacing: keep fixed-bottom UI above the Playwire anchor ad (see ads.md) */
 @media (max-width:900px){
@@ -410,6 +425,7 @@
       <div id="acctSlot"></div>
       <div data-player-title></div>
       <div data-xp-bar></div>
+      <div data-coin-chip style="margin:4px 0"></div>
       <div class="menu-sec">Play</div>
       <a class="menu-item" href="/pitching#daily">🎯 Daily Challenge</a>
       <button class="menu-item" id="miHot">🔥 Last Night's Studs</button>
@@ -424,6 +440,7 @@
       <a class="menu-item" href="/pitching#achievements">🏅 Achievements</a>
       <a class="menu-item" href="/pitching#collection">📇 My Collection</a>
       <button class="menu-item" id="miTrack">🎟️ Season Track</button>
+      <button class="menu-item" id="miStore">🪙 Store &amp; Coins</button>
       <div class="menu-sec">Compete</div>
       <a class="menu-item" href="/pitching#leaderboard">🏆 Leaderboard</a>
       <a class="menu-item" href="/versus#stats">📊 1v1 Stats</a>

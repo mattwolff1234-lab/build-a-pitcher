@@ -42,7 +42,20 @@
     window.ramp.que.push(function () { window.ramp.spaNewPage(window.location.pathname); });
   });
 </script>
-<script async src="//cdn.intergient.com/1025880/77906/ramp.js"></script>
+<script>
+  // Goat Coins '30 Days Ad-Free' entitlement — skip loading Playwire entirely while active
+  // (pl_wallet is the server wallet cached by store.js; the expiry is a server-set timestamp).
+  // Everything else in the ads contract (window.ramp setup, spacing CSS) stays put — see ads.md.
+  (function () {
+    try {
+      var w = JSON.parse(localStorage.getItem('pl_wallet') || 'null');
+      if (w && w.entitlements && w.entitlements.no_ads_until && Date.parse(w.entitlements.no_ads_until) > Date.now()) return;
+    } catch (e) {}
+    var s = document.createElement('script');
+    s.async = true; s.src = '//cdn.intergient.com/1025880/77906/ramp.js';
+    document.head.appendChild(s);
+  })();
+</script>
 <style>
 /* Ad-safe mobile spacing: keep fixed-bottom UI above the Playwire anchor ad (see ads.md) */
 @media (max-width:900px){

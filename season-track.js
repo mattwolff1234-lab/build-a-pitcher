@@ -64,6 +64,22 @@
     av_flame_ball:  { type: 'avatar', name: 'Heat Check Avatar',    icon: '🔥' },
     av_octo_keeper: { type: 'avatar', name: 'Octo Keeper Avatar',   icon: '🐙' },
     av_golden_goat: { type: 'avatar', name: 'Golden GOAT Avatar',   icon: '🐐' },
+    // ---- Season 2 "Dog Days" (free lane) ----
+    title_dog_days: { type: 'title', name: 'Dog Days Grinder',      icon: '🌭' },
+    av_bull_bat:    { type: 'avatar', name: 'Raging Bull Avatar',   icon: '🐂' },
+    scout_s2:       { type: 'item',  name: 'Scout Tokens ×2',       icon: '🔭', item: 'scout', qty: 2 },
+    frame_ember:    { type: 'frame', name: 'Ember Stitch',          icon: '🟧', cls: 'st-frame-ember' },
+    resim_s2:       { type: 'item',  name: 'Re-sim Tokens ×2',      icon: '🔁', item: 'resim', qty: 2 },
+    av_rhino_bat:   { type: 'avatar', name: 'The Tank Avatar',      icon: '🦏' },
+    title_dog_star: { type: 'title', name: 'The Dog Star',          icon: '🌟' },
+    scout_s2b:      { type: 'item',  name: 'Scout Tokens ×3',       icon: '🔭', item: 'scout', qty: 3 },
+    frame_frost:    { type: 'frame', name: 'Frostbite',             icon: '🟦', cls: 'st-frame-frost' },
+    // ---- Season 2 PREMIUM lane (needs the Premium Pass from the 🪙 Store) ----
+    av_eagle_glove: { type: 'avatar', name: 'Talon Avatar',         icon: '🦅' },
+    av_lightning_bat: { type: 'avatar', name: 'Voltage Avatar',     icon: '⚡' },
+    title_high_roller: { type: 'title', name: 'High Roller',        icon: '🎲' },
+    scout_s2p:      { type: 'item',  name: 'Scout Tokens ×3',       icon: '🔭', item: 'scout', qty: 3 },
+    resim_s2p:      { type: 'item',  name: 'Re-sim Tokens ×3',      icon: '🔁', item: 'resim', qty: 3 },
   };
   // "frame" = the CAREER card (the shareable trophy) — never the reel cards, whose
   // borders are tier information (grey→legend) that cosmetics must not repaint.
@@ -87,6 +103,26 @@
       { req: 4500, id: 'scout_3' },
       { req: 5500, id: 'frame_holo' },
       { req: 6200, id: 'av_golden_goat' },
+    ] },
+    // Season 2 (Aug): first season WITH a premium lane (Premium Pass SKU in the 🪙 Store).
+    // Coin payout tiers live in catalog.js TRACK_COINS (server-validated claims) and render
+    // interleaved with these; premium cosmetics auto-unlock only while the pass is owned.
+    2: { name: 'Dog Days', icon: '🌭', tiers: [
+      { req: 100,  id: 'title_dog_days' },
+      { req: 300,  id: 'av_bull_bat' },
+      { req: 700,  id: 'scout_s2' },
+      { req: 1100, id: 'frame_ember' },
+      { req: 1700, id: 'resim_s2' },
+      { req: 2400, id: 'av_rhino_bat' },
+      { req: 3200, id: 'title_dog_star' },
+      { req: 4200, id: 'scout_s2b' },
+      { req: 5600, id: 'frame_frost' },
+    ], premium: [
+      { req: 150,  id: 'av_eagle_glove' },
+      { req: 900,  id: 'scout_s2p' },
+      { req: 1800, id: 'av_lightning_bat' },
+      { req: 3000, id: 'resim_s2p' },
+      { req: 4600, id: 'title_high_roller' },
     ] },
   };
   const seasonDef = n => SEASONS[n] || { name: `Season ${n}`, icon: '🏟️', tiers: SEASONS[1].tiers };
@@ -218,6 +254,10 @@
     box-shadow:0 0 0 1px rgba(25,198,255,.35), 0 0 22px rgba(25,198,255,.6), 0 14px 44px rgba(0,0,0,.5) !important; }
   .st-frame-gold{ border:2px solid #ffce3a !important;
     box-shadow:0 0 0 1px rgba(255,206,58,.4), 0 0 24px rgba(255,206,58,.6), 0 14px 44px rgba(0,0,0,.5) !important; }
+  .st-frame-ember{ border:2px solid #ff7a3c !important;
+    box-shadow:0 0 0 1px rgba(255,122,60,.4), 0 0 24px rgba(255,122,60,.55), 0 14px 44px rgba(0,0,0,.5) !important; }
+  .st-frame-frost{ border:2px solid #9fdcff !important;
+    box-shadow:0 0 0 1px rgba(159,220,255,.45), 0 0 26px rgba(159,220,255,.55), inset 0 0 18px rgba(159,220,255,.12), 0 14px 44px rgba(0,0,0,.5) !important; }
   @property --stg { syntax:'<angle>'; initial-value:135deg; inherits:false; }
   .st-frame-holo{ border:3px solid transparent !important;
     background:linear-gradient(#0c131e,#0c131e) padding-box,
@@ -309,6 +349,8 @@
         ${tId ? `<div class="st-title-chip">${COSMETICS[tId].icon} ${COSMETICS[tId].name}</div>` : ''}
       </div>`;
 
+    // retro-unlock earned tiers first (covers "just bought the Premium Pass" mid-season)
+    if (active && sweepUnlocks(s)) { save(s); queueSync(); }
     const tiers = def.tiers;
     const nextTier = tiers.find(t => !s.unlocked[t.id] && t.req > s.sxp);
     const inv = [['scout', '🔭 Scout'], ['resim', '🔁 Re-sim']]
@@ -320,28 +362,91 @@
       <div class="ss-track"><div class="ss-fill" style="width:${nextTier ? Math.min(100, (s.sxp / nextTier.req) * 100) : 100}%"></div></div>
       ${inv ? `<div class="ss-inv">Inventory: ${inv}</div>` : ''}` : '';
 
-    listEl.innerHTML = tiers.map((t, i) => {
+    // ---- rows: cosmetic tiers (either lane) + server-claimed coin tiers (catalog.js) ----
+    const ownedPass = hasPass(showN);
+    const coinDefs = (window.Catalog && window.Catalog.TRACK_COINS && window.Catalog.TRACK_COINS[showN]) || {};
+    const coinClaims = (s.coinClaims && typeof s.coinClaims === 'object') ? s.coinClaims : {};
+    const cosRow = (t, i, lockedLane) => {
       const c = COSMETICS[t.id] || { type: 'skin', name: t.id, icon: '🎁' };
-      const got = !!s.unlocked[t.id];
-      const isNext = nextTier && nextTier.id === t.id;
+      const got = !!s.unlocked[t.id] && !lockedLane;
+      const isNext = !lockedLane && nextTier && nextTier.id === t.id;
       const equipable = got && !c.soon && EQUIPABLE[c.type];
       const on = equipable && s.equipped[c.type] === t.id;
-      const right = got
-        ? (c.soon ? '<span class="st-soon">SOON</span>'
-          : c.type === 'avatar' ? '<button class="st-eq" data-av-open="1">Use in Profile</button>'
-          : equipable ? `<button class="st-eq${on ? ' on' : ''}" data-eq="${t.id}">${on ? 'Equipped' : 'Equip'}</button>` : '✅')
-        : `<span class="st-req">${t.req.toLocaleString()} SXP</span>`;
-      return `<div class="st-row${got ? ' got' : ''}${isNext ? ' next' : ''}">
+      const right = lockedLane ? '<span class="st-soon">🔒 PASS</span>'
+        : got
+          ? (c.soon ? '<span class="st-soon">SOON</span>'
+            : c.type === 'avatar' ? '<button class="st-eq" data-av-open="1">Use in Profile</button>'
+            : equipable ? `<button class="st-eq${on ? ' on' : ''}" data-eq="${t.id}">${on ? 'Equipped' : 'Equip'}</button>` : '✅')
+          : `<span class="st-req">${t.req.toLocaleString()} SXP</span>`;
+      return `<div class="st-row${got ? ' got' : ''}${isNext ? ' next' : ''}"${lockedLane ? ' style="opacity:.65"' : ''}>
         <span class="st-tier">${i + 1}</span>
         <span class="st-ico">${c.icon}</span>
         <div class="st-body"><div class="st-name">${c.name}</div><div class="st-kind">${TYPE_LABEL[c.type] || c.type}${c.soon ? ' · coming soon' : ''}</div></div>
         <div class="st-right">${right}</div>
       </div>`;
-    }).join('');
+    };
+    const coinRow = (lane, i, tier, lockedLane) => {
+      const key = `${showN}:${lane}:${i}`;
+      const claimed = !!coinClaims[key];
+      const can = active && !lockedLane && !claimed && s.sxp >= tier.req;
+      const right = lockedLane ? '<span class="st-soon">🔒 PASS</span>'
+        : claimed ? '✅'
+        : can ? `<button class="st-eq" data-claim="${lane}:${i}">Claim</button>`
+        : `<span class="st-req">${tier.req.toLocaleString()} SXP</span>`;
+      return `<div class="st-row${claimed ? ' got' : ''}"${lockedLane ? ' style="opacity:.65"' : ''}>
+        <span class="st-tier">$</span>
+        <span class="st-ico">🪙</span>
+        <div class="st-body"><div class="st-name">${tier.coins} Goat Coins</div><div class="st-kind">Goat Coins · claim to bank them</div></div>
+        <div class="st-right">${right}</div>
+      </div>`;
+    };
+    // free lane: cosmetic + coin tiers interleaved by SXP requirement
+    const freeRows = tiers.map((t, i) => ({ req: t.req, html: cosRow(t, i, false) }))
+      .concat(((coinDefs.free) || []).map((t, i) => ({ req: t.req, html: coinRow('free', i, t, false) })))
+      .sort((a, b) => a.req - b.req).map(r => r.html).join('');
+    // premium lane (Season 2+): locked behind the Premium Pass from the 🪙 Store
+    let premRows = '';
+    if (def.premium && def.premium.length) {
+      const head = ownedPass
+        ? `<div class="st-row got"><span class="st-ico">🎫</span>
+            <div class="st-body"><div class="st-name">Premium Pass lane</div><div class="st-kind">unlocked — rewards drop automatically as you earn SXP</div></div>
+            <div class="st-right">✅</div></div>`
+        : `<div class="st-row next"><span class="st-ico">🎫</span>
+            <div class="st-body"><div class="st-name">Premium Pass lane</div><div class="st-kind">exclusive avatars · frames · 🪙 coins back</div></div>
+            <div class="st-right"><button class="st-eq" data-get-pass="1">Unlock in Store</button></div></div>`;
+      premRows = head
+        + def.premium.map((t, i) => ({ req: t.req, html: cosRow(t, i, !ownedPass) }))
+          .concat(((coinDefs.premium) || []).map((t, i) => ({ req: t.req, html: coinRow('premium', i, t, !ownedPass) })))
+          .sort((a, b) => a.req - b.req).map(r => r.html).join('');
+    }
+    listEl.innerHTML = freeRows + premRows;
     listEl.querySelectorAll('[data-eq]').forEach(b => { b.onclick = () => equip(b.dataset.eq); });
     // avatars equip in the profile's Style tab (social.js owns the server-visible avatar)
     listEl.querySelectorAll('[data-av-open]').forEach(b => {
       b.onclick = () => { close(); if (window.Social) Social.openProfile(null, 'style'); };
+    });
+    const gp = listEl.querySelector('[data-get-pass]');
+    if (gp) gp.onclick = () => { close(); if (window.Store) window.Store.open('shop'); };
+    // 🪙 coin tiers settle SERVER-side (trackClaimCoins validates sxp/pass and dedupes per tier)
+    listEl.querySelectorAll('[data-claim]').forEach(b => b.onclick = async () => {
+      const parts = b.dataset.claim.split(':');
+      const a = acct();
+      if (!a || !a.sub) { b.textContent = 'Sign in first'; return; }
+      b.disabled = true; b.textContent = '…';
+      let r = null;
+      try {
+        r = await fetch('/api/account', { method: 'POST', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ action: 'trackClaimCoins', sub: a.sub, sessionToken: a.sessionToken,
+            season: showN, lane: parts[0], i: Number(parts[1]) }) }).then(x => x.json());
+      } catch (e) {}
+      if (r && (r.ok || r.error === 'Already claimed')) {
+        const cur = load();
+        cur.coinClaims = (cur.coinClaims && typeof cur.coinClaims === 'object') ? cur.coinClaims : {};
+        cur.coinClaims[`${showN}:${parts[0]}:${parts[1]}`] = 1;
+        save(cur);
+        if (window.Store) window.Store.refresh();
+        render();
+      } else { b.disabled = false; b.textContent = 'Claim'; }
     });
   }
   function renderIfOpen() { if (ov && ov.classList.contains('show')) render(); }
@@ -401,21 +506,43 @@
   }
 
   // ---- progression ----------------------------------------------------------------
+  // Premium Pass ownership — store.js caches the server wallet in pl_wallet (entitlements.pass
+  // is granted by coinSpend server-side; reading the cache means no load-order dependency).
+  function hasPass(season) {
+    try {
+      const w = JSON.parse(localStorage.getItem('pl_wallet') || 'null');
+      return !!(w && w.entitlements && w.entitlements.pass && w.entitlements.pass[String(season)]);
+    } catch (e) { return false; }
+  }
+  // Unlock every earned tier in a lane (idempotent — `unlocked` guards each id).
+  function sweepLane(s, tiers, laneLabel) {
+    let changed = false;
+    for (const [i, t] of (tiers || []).entries()) {
+      if (t.req <= s.sxp && !s.unlocked[t.id]) {
+        s.unlocked[t.id] = 1;
+        const c = COSMETICS[t.id] || { icon: '🎁', name: t.id };
+        if (c.type === 'item') s.items[c.item] = (Number(s.items[c.item]) || 0) + c.qty;   // consumable grant (one-time — unlocked guards)
+        showToast(c.icon, c.name, `Season ${s.season} · ${laneLabel} Tier ${i + 1}`);
+        changed = true;
+      }
+    }
+    return changed;
+  }
+  // Runs on XP gain AND on every render — so buying the pass mid-season retro-unlocks
+  // everything already earned on the premium lane.
+  function sweepUnlocks(s) {
+    const def = seasonDef(s.season);
+    let changed = sweepLane(s, def.tiers, 'Free');
+    if (def.premium && hasPass(s.season)) changed = sweepLane(s, def.premium, 'Premium') || changed;
+    return changed;
+  }
   function addSxp(amount) {
     if (!amount) return;
     const info = seasonInfo();
     if (info.number < 1) return;                        // preseason: dormant
     const s = load();
     s.sxp += amount;
-    const def = seasonDef(s.season);
-    for (const [i, t] of def.tiers.entries()) {
-      if (t.req <= s.sxp && !s.unlocked[t.id]) {
-        s.unlocked[t.id] = 1;
-        const c = COSMETICS[t.id] || { icon: '🎁', name: t.id };
-        if (c.type === 'item') s.items[c.item] = (Number(s.items[c.item]) || 0) + c.qty;   // consumable grant (one-time — unlocked guards)
-        showToast(c.icon, c.name, `Season ${s.season} · Tier ${i + 1}`);
-      }
-    }
+    sweepUnlocks(s);
     save(s); queueSync(); renderIfOpen();
   }
 

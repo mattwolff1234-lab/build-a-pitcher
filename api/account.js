@@ -188,6 +188,49 @@ function ensure() {
       )`;
       await sql`CREATE INDEX IF NOT EXISTS idx_challenges_to ON challenges (to_key, status)`;
       await sql`CREATE INDEX IF NOT EXISTS idx_challenges_from ON challenges (from_key, status)`;
+      // Server-locked ranked 1v1 builds (pvpLock): validated against the real card data at
+      // build-lock, stored with the player's server-read Elo. pvpResult settles both-locked
+      // matches from THESE rows (the reporter can't lie about who won). Short-lived — pruned
+      // after 2 days by pvpLock's occasional sweep.
+      await sql`CREATE TABLE IF NOT EXISTS pvp_builds (
+        match_id text NOT NULL,
+        player_key text NOT NULL,
+        sport text NOT NULL,
+        role text,
+        ovr int NOT NULL,
+        elo int NOT NULL DEFAULT 1000,
+        build jsonb,
+        created_at timestamptz NOT NULL DEFAULT now(),
+        PRIMARY KEY (match_id, player_key)
+      )`;
+      await sql`CREATE INDEX IF NOT EXISTS idx_pvp_builds_created ON pvp_builds (created_at)`;
+      // Goat Coins wallet (signed-in only). Balance lives on users.coins; EVERY movement is an
+      // append-only coin_ledger row whose UNIQUE ref doubles as the idempotency key
+      // (stripe:<sessionId>, daily:<date>:<game>:<sub>, pvpwin:<matchId>:<sub>, discord:<sub>,
+      // track:<season>:<lane>:<i>:<sub>, spend:<sku>:…). entitlements jsonb = what coins bought
+      // (pass lanes, franchise perks, no_ads_until, token counters).
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS coins bigint NOT NULL DEFAULT 0`;
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS entitlements jsonb`;
+      await sql`CREATE TABLE IF NOT EXISTS coin_ledger (
+        id bigserial PRIMARY KEY,
+        player_key text NOT NULL,
+        delta int NOT NULL,
+        reason text NOT NULL,
+        ref text NOT NULL UNIQUE,
+        created_at timestamptz NOT NULL DEFAULT now()
+      )`;
+      await sql`CREATE INDEX IF NOT EXISTS idx_coin_ledger_player ON coin_ledger (player_key, created_at DESC)`;
+      // In-app notification feed (build defenses etc.) · friendList returns the recent ones
+      // as `noti`, notiSeen marks them read. payload is free-form jsonb rendered by `kind`.
+      await sql`CREATE TABLE IF NOT EXISTS notifications (
+        id bigserial PRIMARY KEY,
+        to_key text NOT NULL,
+        kind text NOT NULL,
+        payload jsonb,
+        seen boolean NOT NULL DEFAULT false,
+        created_at timestamptz NOT NULL DEFAULT now()
+      )`;
+      await sql`CREATE INDEX IF NOT EXISTS idx_notifications_to ON notifications (to_key, seen, created_at DESC)`;
       // Franchise mode: one save blob per account (see franchise.html + franchiseSync)
       await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS franchise jsonb`;
       // Club Leagues (skeleton): 8 real people per club, each with a franchise-roster
@@ -281,6 +324,36 @@ function nextElo(elo, oppElo, won, k = 32) {
 // Small win-streak bonus: +2 Elo per consecutive win, stops growing at a 5-win streak (max +10).
 const STREAK_BONUS = 2, STREAK_CAP = 5;
 
+// ---- Server-authoritative 1v1 (pvpLock / lockedTruth) -------------------------
+// Both players lock their validated builds at build-lock; a match with BOTH rows is settled
+// from the locked OVRs + Elos, not the reporter's claims. Exact OVR ties keep the client
+// verdict (the at-bat's seeded coin — both clients agree, and the coin sits mid-RNG-stream
+// so it can't be replayed here).
+const { checkBuild, versusPitcherOvr } = require('../build-check.js');
+async function lockedTruth(matchId, key) {
+  try {
+    const rows = await sql`SELECT player_key, ovr, elo FROM pvp_builds WHERE match_id = ${matchId} LIMIT 2`;
+    if (rows.length !== 2) return null;
+    const mine = rows.find(r => r.player_key === key), opp = rows.find(r => r.player_key !== key);
+    if (!mine || !opp) return null;
+    return { myOvr: mine.ovr, oppOvr: opp.ovr, oppElo: opp.elo, oppKey: opp.player_key };
+  } catch (e) { return null; }
+}
+// The Elo a lock records = what the player is actually playing from right now (baseball uses
+// the season rating once seasons kick off; a missing season row seeds like settleSeason does).
+async function lockElo(key, sport) {
+  const [u] = await sql`SELECT pvp_elo, pvp_elo_hoops, pvp_elo_soccer FROM users WHERE google_sub = ${key}`;
+  const lifetime = (u && (sport === 'hoops' ? u.pvp_elo_hoops : sport === 'soccer' ? u.pvp_elo_soccer : u.pvp_elo)) || 1000;
+  if (sport !== 'baseball') return lifetime;
+  const cur = seasonInfo(Date.now()).number;
+  if (cur < 1) return lifetime;
+  try {
+    const [s] = await sql`SELECT elo FROM pvp_seasons WHERE season = ${cur} AND player_key = ${key}`;
+    if (s) return s.elo;
+  } catch (e) {}
+  return Math.round(1000 + (lifetime - 1000) * SQUASH);
+}
+
 // ---- Monthly Elo seasons ----------------------------------------------------
 // Season 1 kickoff (one editable constant; MUST match SEASON1_START_MS in versus.html). Everything
 // season-related is DORMANT until this instant · before it, seasonInfo().number is 0 and pvpResult
@@ -372,12 +445,18 @@ async function hoopsStats(key, res) {
 async function hoopsResult(body, key, res) {
   const matchId = String(body.matchId || '').slice(0, 80);
   if (!matchId) return res.status(400).json({ ok: false, error: 'missing matchId' });
-  const won = !!body.won;
-  const decided = body.decided !== false;   // completed at-bat vs forfeit/quit claim (see pvpResult)
-  const oppElo = Math.max(100, Math.min(4000, Math.round(Number(body.oppElo) || 1000)));
-  const myOvr = Math.round(Number(body.ovr) || 0) || null;
-  const oppOvr = Math.round(Number(body.oppOvr) || 0) || null;
+  let won = !!body.won;
+  let decided = body.decided !== false;   // completed at-bat vs forfeit/quit claim (see pvpResult)
+  let oppElo = Math.max(100, Math.min(4000, Math.round(Number(body.oppElo) || 1000)));
+  let myOvr = Math.round(Number(body.ovr) || 0) || null;
+  let oppOvr = Math.round(Number(body.oppOvr) || 0) || null;
   const oppName = cleanName(body.oppName, null);
+  // Server-authoritative override from locked builds (see pvpLock/lockedTruth in pvpResult).
+  const truth = await lockedTruth(matchId, key);
+  if (truth) {
+    if (truth.myOvr !== truth.oppOvr) { won = truth.myOvr > truth.oppOvr; decided = true; }
+    oppElo = truth.oppElo; myOvr = truth.myOvr; oppOvr = truth.oppOvr;
+  }
   // Authoritative opponent from the recorded match (mirrors pvpResult): charge the true loser
   // even if they quit before ever identifying themselves, and reject a reporter who provably
   // wasn't one of the two participants. Matches with no record (pre-fix or friend challenges)
@@ -475,7 +554,8 @@ async function hoopsResult(body, key, res) {
       }
     } catch (e) {}
   }
-  return res.status(200).json({ ok: true, counted: true, won, elo, delta: delta + bonus, bonus, streak, wins, losses });
+  const coins = await pvpWinCoins(key, matchId, truth, won);
+  return res.status(200).json({ ok: true, counted: true, won, elo, delta: delta + bonus, bonus, streak, wins, losses, coins });
 }
 async function hoopsLeaderboard(body, res) {
   const limit = Math.max(1, Math.min(100, parseInt(body.limit, 10) || 50));
@@ -509,12 +589,18 @@ async function soccerStats(key, res) {
 async function soccerResult(body, key, res) {
   const matchId = String(body.matchId || '').slice(0, 80);
   if (!matchId) return res.status(400).json({ ok: false, error: 'missing matchId' });
-  const won = !!body.won;
-  const decided = body.decided !== false;
-  const oppElo = Math.max(100, Math.min(4000, Math.round(Number(body.oppElo) || 1000)));
-  const myOvr = Math.round(Number(body.ovr) || 0) || null;
-  const oppOvr = Math.round(Number(body.oppOvr) || 0) || null;
+  let won = !!body.won;
+  let decided = body.decided !== false;
+  let oppElo = Math.max(100, Math.min(4000, Math.round(Number(body.oppElo) || 1000)));
+  let myOvr = Math.round(Number(body.ovr) || 0) || null;
+  let oppOvr = Math.round(Number(body.oppOvr) || 0) || null;
   const oppName = cleanName(body.oppName, null);
+  // Server-authoritative override from locked builds (see pvpLock/lockedTruth in pvpResult).
+  const truth = await lockedTruth(matchId, key);
+  if (truth) {
+    if (truth.myOvr !== truth.oppOvr) { won = truth.myOvr > truth.oppOvr; decided = true; }
+    oppElo = truth.oppElo; myOvr = truth.myOvr; oppOvr = truth.oppOvr;
+  }
   const myRole = (body.role === 'striker' || body.role === 'keeper') ? body.role : null;
   const normKey = p => (p && p.indexOf('acct:') === 0) ? p.slice(5) : p;
   let recordedOpp = null;
@@ -610,7 +696,8 @@ async function soccerResult(body, key, res) {
       }
     } catch (e) {}
   }
-  return res.status(200).json({ ok: true, counted: true, won, elo, delta: delta + bonus, bonus, streak, wins, losses });
+  const coins = await pvpWinCoins(key, matchId, truth, won);
+  return res.status(200).json({ ok: true, counted: true, won, elo, delta: delta + bonus, bonus, streak, wins, losses, coins });
 }
 async function soccerLeaderboard(body, res) {
   const limit = Math.max(1, Math.min(100, parseInt(body.limit, 10) || 50));
@@ -658,6 +745,51 @@ async function pvpKey(body) {
     return body.sub;
   }
   return null;
+}
+
+// ---- Goat Coins helpers -------------------------------------------------------
+// Coins are 100% server-authoritative (unlike XP/cosmetics): the client only ever ASKS.
+const Catalog = require('../catalog.js');
+// Idempotent credit: the UNIQUE ref is the dedupe — only a brand-new ledger row moves the
+// balance, so webhook replays / double-taps / repeat claims are all no-ops. Returns the new
+// balance, or null when the ref already existed.
+async function grantCoins(key, delta, reason, ref) {
+  const ins = await sql`INSERT INTO coin_ledger (player_key, delta, reason, ref)
+    VALUES (${key}, ${Math.round(delta)}, ${String(reason).slice(0, 40)}, ${String(ref).slice(0, 120)})
+    ON CONFLICT (ref) DO NOTHING RETURNING id`;
+  if (!ins.length) return null;
+  const [u] = await sql`UPDATE users SET coins = GREATEST(0, COALESCE(coins, 0) + ${Math.round(delta)})
+    WHERE google_sub = ${key} RETURNING coins`;
+  return u ? Number(u.coins) : null;
+}
+// Race-safe debit: the conditional UPDATE is the overdraft guard (two parallel spends can't
+// both win the same coins). Returns the new balance, or null when the balance was short.
+async function spendCoins(key, amount, reason, ref) {
+  const [u] = await sql`UPDATE users SET coins = coins - ${amount}
+    WHERE google_sub = ${key} AND coins >= ${amount} RETURNING coins`;
+  if (!u) return null;
+  try { await sql`INSERT INTO coin_ledger (player_key, delta, reason, ref)
+    VALUES (${key}, ${-amount}, ${String(reason).slice(0, 40)}, ${String(ref).slice(0, 120)})`; } catch (e) {}
+  return Number(u.coins);
+}
+async function getEnt(key) {
+  const [u] = await sql`SELECT entitlements FROM users WHERE google_sub = ${key}`;
+  return (u && u.entitlements && typeof u.entitlements === 'object') ? u.entitlements : {};
+}
+// Coins for a RANKED 1v1 win — only when the outcome was settled from locked builds
+// (lockedTruth), only for signed-in accounts, daily-capped. Never blocks the Elo settle.
+async function pvpWinCoins(key, matchId, truth, won) {
+  if (!won || !truth || key.indexOf('guest:') === 0) return null;
+  try {
+    const [{ count: n }] = await sql`SELECT count(*)::int AS count FROM coin_ledger
+      WHERE player_key = ${key} AND reason = 'pvpwin' AND created_at > date_trunc('day', now())`;
+    if (n >= Catalog.EARN.pvpWinDailyCap) return null;
+    const bal = await grantCoins(key, Catalog.EARN.pvpWin, 'pvpwin', 'pvpwin:' + matchId + ':' + key);
+    return bal == null ? null : { granted: Catalog.EARN.pvpWin, coins: bal };
+  } catch (e) { return null; }
+}
+async function setEnt(key, ent) {
+  await sql`UPDATE users SET entitlements = ${JSON.stringify(ent)}::jsonb WHERE google_sub = ${key}`;
 }
 
 // ---- Social helpers ---------------------------------------------------------
@@ -718,13 +850,6 @@ async function autoClaimHandle(sub, baseName) {
   }
   return null;
 }
-// Accepted-friends check (most social actions are friends-only).
-async function areFriends(k1, k2) {
-  const [a, b] = pairOf(k1, k2);
-  const [fr] = await sql`SELECT 1 FROM friends WHERE a = ${a} AND b = ${b} AND status = 'accepted'`;
-  return !!fr;
-}
-
 module.exports = async (req, res) => {
   if (!CONN) return res.status(500).json({ ok: false, error: 'Database not configured' });
   try {
@@ -830,9 +955,13 @@ module.exports = async (req, res) => {
         if (!(await authed(body.sub, body.sessionToken))) return res.status(401).json({ ok: false, error: 'Not signed in' });
         let name = String(body.name == null ? '' : body.name).trim().slice(0, 40) || 'My Player';
         if (!NameFilter.isClean(name)) return res.status(400).json({ ok: false, error: BAD_NAME_MSG });
-        const ovr = Math.max(1, Math.min(120, Math.round(Number(body.ovr) || 0)));
-        const build = body.build && typeof body.build === 'object' ? JSON.stringify(body.build) : null;
         const game = gameOf(body.game);
+        // Validate the build the same way leaderboard submits do (anti-cheat) — HOF saves feed
+        // public build links + challenge-a-save, so an unvalidated OVR/build can't be trusted.
+        const chk = checkBuild(game, body.ovr, body.build);
+        if (!chk.ok) return res.status(400).json({ ok: false, error: 'Invalid build' });
+        const ovr = chk.ovr;
+        const build = body.build && typeof body.build === 'object' ? JSON.stringify(body.build) : null;
         const MAX_HOF_SAVES = 50;
         const [{ count: saveCount }] = await sql`SELECT count(*)::int AS count FROM saves WHERE google_sub = ${body.sub} AND game = ${game}`;
         if (saveCount >= MAX_HOF_SAVES) return res.status(400).json({ ok: false, error: `Hall of Fame full (${MAX_HOF_SAVES} max). Delete some to save new ones.` });
@@ -962,6 +1091,91 @@ module.exports = async (req, res) => {
       // Season Track cosmetics: per-season SXP keeps the max, unlocked is a union (permanent
       // inventory · same always-merge posture as collectionSync), equipped = incoming wins
       // (it's a preference; explicit null = unequipped). Trust-the-client like XP.
+      // ===================================================================
+      // Goat Coins (signed-in only — a paid balance must survive a cleared browser).
+      // ===================================================================
+
+      // Balance + entitlements + recent ledger (the store overlay's one-stop fetch).
+      if (action === 'wallet') {
+        if (!(await authed(body.sub, body.sessionToken))) return res.status(401).json({ ok: false, error: 'Not signed in' });
+        const [u] = await sql`SELECT coins, entitlements FROM users WHERE google_sub = ${body.sub}`;
+        let ledger = [];
+        try { ledger = (await sql`SELECT delta, reason, created_at FROM coin_ledger
+          WHERE player_key = ${body.sub} ORDER BY id DESC LIMIT 20`)
+          .map(r => ({ delta: Number(r.delta), reason: r.reason, at: r.created_at })); } catch (e) {}
+        return res.status(200).json({ ok: true, coins: Number(u && u.coins) || 0,
+          entitlements: (u && u.entitlements) || {}, ledger });
+      }
+
+      // Spend coins on a catalog SKU. Prices/effects come from catalog.js ONLY (the client's
+      // copy is display-only). One-time SKUs reject repeats BEFORE debiting; the debit itself
+      // is the race-safe overdraft guard.
+      if (action === 'coinSpend') {
+        if (!(await authed(body.sub, body.sessionToken))) return res.status(401).json({ ok: false, error: 'Not signed in' });
+        const key = body.sub;
+        const skuId = String(body.sku || '').slice(0, 40);
+        const sku = Catalog.SKUS[skuId];
+        if (!sku) return res.status(400).json({ ok: false, error: 'Unknown item' });
+        const ent = await getEnt(key);
+        const [urow] = await sql`SELECT cosmetics FROM users WHERE google_sub = ${key}`;
+        const cos = (urow && urow.cosmetics && typeof urow.cosmetics === 'object') ? urow.cosmetics : {};
+        if (sku.type === 'pass' && ent.pass && ent.pass[String(sku.season)]) return res.status(200).json({ ok: false, error: 'Already owned' });
+        if (sku.type === 'cosmetic' && cos.unlocked && cos.unlocked[skuId]) return res.status(200).json({ ok: false, error: 'Already owned' });
+        if (sku.type === 'entitlement' && ent[sku.ent]) return res.status(200).json({ ok: false, error: 'Already owned' });
+        const bal = await spendCoins(key, sku.price, 'spend:' + skuId, 'spend:' + skuId + ':' + key + ':' + Date.now());
+        if (bal == null) return res.status(200).json({ ok: false, error: 'Not enough coins' });
+        let items = null;
+        if (sku.type === 'pass') { ent.pass = ent.pass || {}; ent.pass[String(sku.season)] = true; await setEnt(key, ent); }
+        else if (sku.type === 'entitlement') { ent[sku.ent] = true; await setEnt(key, ent); }
+        else if (sku.type === 'tokens') { ent[sku.ent] = (Number(ent[sku.ent]) || 0) + sku.qty; await setEnt(key, ent); }
+        else if (sku.type === 'noads') {
+          const from = Math.max(Date.now(), Number(new Date(ent.no_ads_until || 0)) || 0);
+          ent.no_ads_until = new Date(from + sku.days * 86400000).toISOString();
+          await setEnt(key, ent);
+        } else if (sku.type === 'cosmetic') {
+          cos.unlocked = cos.unlocked || {}; cos.unlocked[skuId] = 1;
+          await sql`UPDATE users SET cosmetics = ${JSON.stringify(cos)}::jsonb WHERE google_sub = ${key}`;
+        } else if (sku.type === 'item') {
+          cos.items = cos.items || {}; cos.items[sku.item] = Math.min(999, (Number(cos.items[sku.item]) || 0) + sku.qty);
+          await sql`UPDATE users SET cosmetics = ${JSON.stringify(cos)}::jsonb WHERE google_sub = ${key}`;
+          items = cos.items;   // buyer's device applies this immediately (trackSync items are client-authoritative)
+        }
+        return res.status(200).json({ ok: true, coins: bal, sku: skuId, entitlements: ent, items });
+      }
+
+      // Claim a Season Track coin tier (free lane, or premium with the pass). Tier defs live in
+      // catalog.js TRACK_COINS; sxp is the server-synced value (trust-the-client XP, but the
+      // per-tier ledger refs + the small season totals cap what farming can ever yield).
+      if (action === 'trackClaimCoins') {
+        if (!(await authed(body.sub, body.sessionToken))) return res.status(401).json({ ok: false, error: 'Not signed in' });
+        const key = body.sub;
+        const season = Math.round(Number(body.season) || 0);
+        const lane = body.lane === 'premium' ? 'premium' : 'free';
+        const i = Math.round(Number(body.i));
+        const tiers = (Catalog.TRACK_COINS[season] || {})[lane];
+        const tier = tiers && tiers[i];
+        if (!tier) return res.status(400).json({ ok: false, error: 'Unknown tier' });
+        const ent = await getEnt(key);
+        if (lane === 'premium' && !(ent.pass && ent.pass[String(season)])) return res.status(200).json({ ok: false, error: 'Premium Pass needed' });
+        const [urow] = await sql`SELECT cosmetics FROM users WHERE google_sub = ${key}`;
+        const cos = (urow && urow.cosmetics && typeof urow.cosmetics === 'object') ? urow.cosmetics : {};
+        const sxp = Number((cos.seasons || {})[String(season)]) || 0;
+        if (sxp < tier.req) return res.status(200).json({ ok: false, error: 'Not there yet' });
+        const bal = await grantCoins(key, tier.coins, 'track:' + season, `track:${season}:${lane}:${i}:${key}`);
+        if (bal == null) return res.status(200).json({ ok: false, error: 'Already claimed' });
+        return res.status(200).json({ ok: true, coins: bal, granted: tier.coins });
+      }
+
+      // One-time Discord-join reward (large on purpose — it's the community hook). Honor-system
+      // v1: one claim per Google account (ledger ref = the dedupe); the client opens the invite
+      // first. Real Discord-OAuth membership verification is a roadmap item.
+      if (action === 'discordClaim') {
+        if (!(await authed(body.sub, body.sessionToken))) return res.status(401).json({ ok: false, error: 'Not signed in' });
+        const bal = await grantCoins(body.sub, Catalog.EARN.discord, 'discord', 'discord:' + body.sub);
+        if (bal == null) return res.status(200).json({ ok: false, error: 'Already claimed' });
+        return res.status(200).json({ ok: true, coins: bal, granted: Catalog.EARN.discord });
+      }
+
       if (action === 'trackSync') {
         if (!(await authed(body.sub, body.sessionToken))) return res.status(401).json({ ok: false, error: 'Not signed in' });
         const okId = v => typeof v === 'string' && /^[a-z0-9_]{1,40}$/.test(v);
@@ -1158,23 +1372,38 @@ module.exports = async (req, res) => {
           else if (r.requested_by === key) requestsOut.push(item);
           else requestsIn.push(item);
         }
-        const chals = await sql`SELECT c.id, c.from_key, c.to_key, c.sport, c.created_at,
+        // Pending both ways + my outgoing ones accepted in the last 2h (so the poll can tell
+        // the challenger "they accepted · enter the arena" even if they stayed on another page).
+        const chals = await sql`SELECT c.id, c.from_key, c.to_key, c.sport, c.status, c.created_at,
             fu.name AS from_name, tu.name AS to_name
           FROM challenges c
           LEFT JOIN users fu ON fu.google_sub = c.from_key
           LEFT JOIN users tu ON tu.google_sub = c.to_key
-          WHERE (c.to_key = ${key} OR c.from_key = ${key}) AND c.status = 'pending'
+          WHERE ((c.to_key = ${key} OR c.from_key = ${key}) AND c.status = 'pending')
+             OR (c.from_key = ${key} AND c.status = 'accepted' AND c.responded_at > now() - interval '2 hours')
           ORDER BY c.created_at DESC LIMIT 20`;
         const challenges = chals.map(c => ({
-          id: c.id, sport: c.sport, incoming: c.to_key === key,
+          id: c.id, sport: c.sport, status: c.status, incoming: c.to_key === key,
           fromKey: c.from_key, fromPersonId: personIdOf(c.from_key),
           fromName: c.from_name || 'Player', toName: c.to_name || 'Player', at: c.created_at,
         }));
+        let noti = [];
+        try { noti = (await sql`SELECT id, kind, payload, seen, created_at FROM notifications
+          WHERE to_key = ${key} ORDER BY created_at DESC LIMIT 20`)
+          .map(n => ({ id: Number(n.id), kind: n.kind, payload: n.payload || {}, seen: n.seen, at: n.created_at })); } catch (e) {}
         return res.status(200).json({ ok: true,
           myHandle: (me && me.handle) || null,
           myAvatar: (me && me.avatar) || null,
           guest: key.indexOf('guest:') === 0,
-          friends: friendsOut, requestsIn, requestsOut, challenges });
+          friends: friendsOut, requestsIn, requestsOut, challenges, noti });
+      }
+
+      // Mark my whole notification feed read (fires when the social panel opens/closes).
+      if (action === 'notiSeen') {
+        const key = await pvpKey(body);
+        if (!key) return res.status(401).json({ ok: false, error: 'Not signed in' });
+        try { await sql`UPDATE notifications SET seen = true WHERE to_key = ${key} AND seen = false`; } catch (e) {}
+        return res.status(200).json({ ok: true });
       }
 
       // Equip an avatar (id from the social.js registry; unlock state is trust-the-client,
@@ -1316,15 +1545,20 @@ module.exports = async (req, res) => {
           FROM users WHERE google_sub = ${other}`;
         if (!u) return res.status(404).json({ ok: false, error: 'Player not found' });
         // Builds only exist for signed-in players (Hall of Fame saves are account-only).
+        // Top builds are shown on EVERY card (name/OVR are already public on the leaderboard,
+        // and they power "challenge this build"); recent + counts stay friends-only.
         let top = [], recent = [], buildsByGame = [];
-        if (full && other.indexOf('guest:') !== 0) {
+        if (other.indexOf('guest:') !== 0) {
           try {
-            top = await sql`SELECT DISTINCT ON (game) game, name, ovr, created_at FROM saves
-              WHERE google_sub = ${other} ORDER BY game, ovr DESC, created_at DESC`;
-            recent = await sql`SELECT game, name, ovr, created_at FROM saves
-              WHERE google_sub = ${other} ORDER BY created_at DESC LIMIT 6`;
-            buildsByGame = await sql`SELECT game, count(*)::int AS count, max(ovr)::int AS best
-              FROM saves WHERE google_sub = ${other} GROUP BY game ORDER BY count DESC`;
+            const slim = r => ({ id: Number(r.id), game: r.game, name: cleanName(r.name, 'Player'), ovr: r.ovr, created_at: r.created_at });
+            top = (await sql`SELECT DISTINCT ON (game) id, game, name, ovr, created_at FROM saves
+              WHERE google_sub = ${other} ORDER BY game, ovr DESC, created_at DESC`).map(slim);
+            if (full) {
+              recent = (await sql`SELECT id, game, name, ovr, created_at FROM saves
+                WHERE google_sub = ${other} ORDER BY created_at DESC LIMIT 6`).map(slim);
+              buildsByGame = await sql`SELECT game, count(*)::int AS count, max(ovr)::int AS best
+                FROM saves WHERE google_sub = ${other} GROUP BY game ORDER BY count DESC`;
+            }
           } catch (e) {}
         }
         // The subject's friends, each tagged with how they relate to the CALLER
@@ -1364,8 +1598,9 @@ module.exports = async (req, res) => {
           hoops: { elo: u.pvp_elo_hoops, wins: u.pvp_wins_hoops, losses: u.pvp_losses_hoops, streak: u.pvp_streak_hoops },
           soccer: { elo: u.pvp_elo_soccer, wins: u.pvp_wins_soccer, losses: u.pvp_losses_soccer, streak: u.pvp_streak_soccer },
         };
+        prof.topBuilds = top;
         if (full) {
-          prof.topBuilds = top; prof.recentBuilds = recent; prof.h2h = h2h; prof.friends = friendsOut;
+          prof.recentBuilds = recent; prof.h2h = h2h; prof.friends = friendsOut;
           prof.stats = {
             achievements: achCount,
             dailyStreak: u.current_streak || 0, bestDailyStreak: u.best_streak || 0,
@@ -1383,7 +1618,13 @@ module.exports = async (req, res) => {
         const other = keyOf(body.toKey);
         if (!other || other === key) return res.status(400).json({ ok: false, error: 'missing toKey' });
         const sport = (body.sport === 'hoops' || body.sport === 'soccer') ? body.sport : 'baseball';
-        if (!(await areFriends(key, other))) return res.status(403).json({ ok: false, error: 'Friends only' });
+        // Anyone with a profile can be challenged (not just friends). Spam containment: the
+        // target must exist, max 10 open outgoing challenges, one live per pair, 24h expiry.
+        const [target] = await sql`SELECT google_sub FROM users WHERE google_sub = ${other}`;
+        if (!target) return res.status(404).json({ ok: false, error: 'Player not found' });
+        const [{ count: openOut }] = await sql`SELECT count(*)::int AS count FROM challenges
+          WHERE from_key = ${key} AND status = 'pending'`;
+        if (openOut >= 10) return res.status(400).json({ ok: false, error: 'Too many open challenges · wait for one to be answered or expire' });
         await sql`UPDATE challenges SET status = 'expired', responded_at = now()
           WHERE status = 'pending' AND from_key = ${key} AND to_key = ${other}`;
         const id = 'chal_' + crypto.randomBytes(8).toString('hex');
@@ -1408,8 +1649,51 @@ module.exports = async (req, res) => {
         const status = body.accept ? 'accepted' : 'declined';
         await sql`UPDATE challenges SET status = ${status}, responded_at = now() WHERE id = ${id}`;
         const [fu] = await sql`SELECT name FROM users WHERE google_sub = ${c.from_key}`;
-        return res.status(200).json({ ok: true, status, sport: c.sport,
+        return res.status(200).json({ ok: true, id: c.id, status, sport: c.sport,
           fromPersonId: personIdOf(c.from_key), fromName: (fu && fu.name) || 'Player' });
+      }
+
+      // Public read of ONE Hall of Fame save — slots only, never the career. Powers the
+      // "⚔️ challenge this build" ghost flow in the versus pages (same public surface as the
+      // leaderboard + /api/score?action=ghost reads, so no auth).
+      if (action === 'buildGet') {
+        const id = Number(body.id);
+        if (!Number.isFinite(id) || id <= 0) return res.status(400).json({ ok: false, error: 'missing id' });
+        const [b] = await sql`SELECT s.id, s.game, s.name, s.ovr, s.build->'slots' AS slots,
+            u.name AS owner_name, u.handle AS owner_handle, u.avatar AS owner_avatar, s.google_sub
+          FROM saves s LEFT JOIN users u ON u.google_sub = s.google_sub WHERE s.id = ${id}`;
+        if (!b || !Array.isArray(b.slots)) return res.status(404).json({ ok: false, error: 'Build not found' });
+        return res.status(200).json({ ok: true, build: {
+          id: Number(b.id), game: b.game, name: cleanName(b.name, 'Anonymous'), ovr: b.ovr, slots: b.slots,
+          owner: { personId: personIdOf(b.google_sub), name: cleanName(b.owner_handle || b.owner_name, 'A player'), avatar: b.owner_avatar || null },
+        } });
+      }
+
+      // The challenger reports a finished ghost-vs-save match (friendly, no Elo) · the build's
+      // owner gets a "your build held / fell" notification + push. `won` = did the CHALLENGER
+      // win. Deduped: one noti per (save, challenger) per day so a rematch spree can't spam.
+      if (action === 'buildDefenseResult') {
+        const key = await pvpKey(body);
+        if (!key) return res.status(401).json({ ok: false, error: 'Not signed in' });
+        const id = Number(body.saveId);
+        if (!Number.isFinite(id) || id <= 0) return res.status(400).json({ ok: false, error: 'missing saveId' });
+        const won = !!body.won;
+        const [s] = await sql`SELECT id, google_sub, game, name, ovr FROM saves WHERE id = ${id}`;
+        if (!s) return res.status(404).json({ ok: false, error: 'Build not found' });
+        if (s.google_sub === key) return res.status(200).json({ ok: true, notified: false });
+        const [dup] = await sql`SELECT id FROM notifications WHERE to_key = ${s.google_sub}
+          AND kind = 'defense' AND payload->>'saveId' = ${String(id)} AND payload->>'byKey' = ${key}
+          AND created_at > now() - interval '24 hours' LIMIT 1`;
+        if (dup) return res.status(200).json({ ok: true, notified: false });
+        const byName = await displayNameOf(key);
+        const buildName = cleanName(s.name, 'your build');
+        const payload = JSON.stringify({ saveId: Number(s.id), byKey: key, byName,
+          game: s.game, buildName, ovr: s.ovr, held: !won });
+        await sql`INSERT INTO notifications (to_key, kind, payload) VALUES (${s.google_sub}, 'defense', ${payload}::jsonb)`;
+        await pushTo(s.google_sub, won ? '💥 Your build fell' : '🛡️ Your build held!',
+          won ? `${byName} took down ${buildName} (${s.ovr} OVR) in a 1v1 challenge`
+              : `${buildName} (${s.ovr} OVR) fought off ${byName}'s 1v1 challenge`, { url: '/' });
+        return res.status(200).json({ ok: true, notified: true });
       }
 
       // A finished FRIENDLY 1v1 (no Elo). Only the winner's report counts, deduped per match
@@ -1472,6 +1756,39 @@ module.exports = async (req, res) => {
         return res.status(200).json({ ok: true, elo: u.elo, wins: u.wins, losses: u.losses, streak: u.streak, season: u.season || 0, placementGames: u.placement_games || 0 });
       }
 
+      // Lock a RANKED 1v1 build server-side the moment it's finished (versus pages call this
+      // alongside the Ably build publish). The build is validated against the real card data
+      // (build-check.js, versus-aware) and stored with its OVR + the player's server-read Elo;
+      // pvpResult then settles both-locked matches from these rows. First lock wins — a build
+      // can't be swapped after seeing the opponent's. Friendly/ghost matches never lock.
+      if (action === 'pvpLock') {
+        const key = await pvpKey(body);
+        if (!key) return res.status(401).json({ ok: false, error: 'Not signed in' });
+        const matchId = String(body.matchId || '').slice(0, 80);
+        const game = ['pitcher', 'batter', 'baller', 'striker', 'keeper'].includes(body.game) ? body.game : null;
+        if (!matchId || !game) return res.status(400).json({ ok: false, error: 'missing matchId/game' });
+        const slots = (body.build && Array.isArray(body.build.slots) ? body.build.slots : []).slice(0, 12);
+        if (!slots.length) return res.status(400).json({ ok: false, error: 'missing build' });
+        const claimed = Math.round(Number(body.build && body.build.ovr) || 0);
+        const chk = checkBuild(game, claimed, { slots }, { versus: true });
+        if (!chk.ok) return res.status(400).json({ ok: false, error: 'build failed validation' });
+        // pitcher versus OVR is dynamic-weighted → recompute it exactly and store OUR number
+        let ovr = chk.ovr;
+        if (game === 'pitcher') {
+          const rec = versusPitcherOvr(slots);
+          if (Math.abs(rec - claimed) > 2) return res.status(400).json({ ok: false, error: 'build failed validation' });
+          ovr = rec;
+        }
+        const sport = game === 'baller' ? 'hoops' : (game === 'striker' || game === 'keeper') ? 'soccer' : 'baseball';
+        const elo = await lockElo(key, sport);
+        const slim = JSON.stringify({ slots: slots.map(s => ({ slot: s.slot, value: s.value, player: s.player })) });
+        await sql`INSERT INTO pvp_builds (match_id, player_key, sport, role, ovr, elo, build)
+          VALUES (${matchId}, ${key}, ${sport}, ${String(body.role || game).slice(0, 12)}, ${ovr}, ${elo}, ${slim}::jsonb)
+          ON CONFLICT (match_id, player_key) DO NOTHING`;
+        if (Math.random() < 0.02) { try { await sql`DELETE FROM pvp_builds WHERE created_at < now() - interval '2 days'`; } catch (e) {} }
+        return res.status(200).json({ ok: true, ovr });
+      }
+
       if (action === 'pvpResult') {
         const key = await pvpKey(body);
         if (!key) return res.status(401).json({ ok: false, error: 'Not signed in' });
@@ -1479,15 +1796,23 @@ module.exports = async (req, res) => {
         if (body.sport === 'soccer') return soccerResult(body, key, res);
         const matchId = String(body.matchId || '').slice(0, 80);
         if (!matchId) return res.status(400).json({ ok: false, error: 'missing matchId' });
-        const won = !!body.won;
+        let won = !!body.won;
         // A completed at-bat is authoritative; a forfeit/quit claim is not. Older clients omit this
         // (undefined → treated as decided so their normal results still settle).
-        const decided = body.decided !== false;
-        const oppElo = Math.max(100, Math.min(4000, Math.round(Number(body.oppElo) || 1000)));
+        let decided = body.decided !== false;
+        let oppElo = Math.max(100, Math.min(4000, Math.round(Number(body.oppElo) || 1000)));
         const role = (body.role === 'pitcher' || body.role === 'batter') ? body.role : null;
-        const myOvr = Math.round(Number(body.ovr) || 0) || null;
-        const oppOvr = Math.round(Number(body.oppOvr) || 0) || null;
+        let myOvr = Math.round(Number(body.ovr) || 0) || null;
+        let oppOvr = Math.round(Number(body.oppOvr) || 0) || null;
         const oppName = cleanName(body.oppName, null);
+        // Server-authoritative override: both sides locked validated builds → the locked OVRs
+        // decide the winner and the locked Elos feed the math; the report can't lie. Exact OVR
+        // ties keep the client verdict (the at-bat's seeded coin, identical on both phones).
+        const truth = await lockedTruth(matchId, key);
+        if (truth) {
+          if (truth.myOvr !== truth.oppOvr) { won = truth.myOvr > truth.oppOvr; decided = true; }
+          oppElo = truth.oppElo; myOvr = truth.myOvr; oppOvr = truth.oppOvr;
+        }
 
         // Authoritative opponent from the recorded match. Closes loss-dodging (we charge the true
         // loser from the record even if they never report) and rejects a reporter who was provably
@@ -1622,6 +1947,7 @@ module.exports = async (req, res) => {
         const out = { ok: true, counted: true, won, elo, delta: delta + bonus, bonus, streak, wins, losses };
         // season extras let the client render placement progress / "placed" instead of a raw Elo delta
         if (curSeason >= 1) { out.season = curSeason; out.placementGames = r.placement_games; out.placed = r.placed; out.inPlacement = r.inPlacement; }
+        out.coins = await pvpWinCoins(key, matchId, truth, won);
         return res.status(200).json(out);
       }
 

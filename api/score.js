@@ -31,71 +31,14 @@ const playerKey = b => (b && b.sub ? 'acct:' + String(b.sub).slice(0, 80) : (b &
 // We validate it and fall back to the server's CURRENT_DATE (UTC) when absent/malformed.
 const dailyDate = v => (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
 
-// --- Server-side build validation (closes the trust-the-client hole for impossible builds) ---
-// Each slot's cap is the TRUE max for that stat across the game's real cards (+ a few points of
-// buffer); a value above it can't come from a legit card. Frame is heightToRating-bounded, so it's
-// low. Note most batter slots (Vision/Power/Contact/Clutch/Discipline) and some pitcher slots
-// (Velocity/Strikeout/Clutch/Stamina) legitimately reach ~125 · only the low-max slots below catch
-// a uniform "all-125/all-200" cheat.
-// Headroom on top of the raw card maxima, because power-ups stack on legit builds:
-//  - baseball (pitcher/batter): 🔥 hot-player boost adds up to +10 to EVERY rated stat
-//    (intentionally uncapped), and the Boost power-up then guarantees ≥ +5 over the landed
-//    card · so a legit slot can sit ~15 above the best raw card (99 Break → 114 hot+boosted).
-//  - all games: Boost's +5-over-landed guarantee alone. Frame is real height (never
-//    hot-boosted or Boost-raised), so Frame caps stay at heightToRating bounds.
-// Caps stay tight enough to catch "all-150" edited builds without rejecting real ones.
-const SLOT_MAX = {
-  pitcher: { _default: 132, Break: 117, Command: 117, Defense: 115, 'Ground Ball': 119, Frame: 102 },
-  batter:  { _default: 132, Speed: 117, Defense: 117, Frame: 96 },
-  baller:  { _default: 133, '3-Pointer': 128, Finishing: 125, Dribble: 128, Playmaking: 125, Defense: 122, Speed: 123, Clutch: 126 },
-  // Soccer caps = true maxima across pool+prime+icons in strikers/keepers.json, +5 boost headroom +3 buffer.
-  striker: { _default: 125, Finishing: 123, Pace: 125, 'Shot Power': 119, Dribbling: 122, Passing: 122, Heading: 120, Physical: 119, Clutch: 119, Frame: 102 },
-  keeper:  { _default: 122, Diving: 122, Reflexes: 122, Handling: 116, Distribution: 116, Positioning: 119, Agility: 113, Command: 119, Clutch: 119, Frame: 112 },
-  // CFB27 raw attributes cap at 99; synthesized Primes add +6 and Boost keeps the better per
-  // stat (no stacking), so 108 covers every legit slot. Frame = heightToRating (48+(in-66)*3.4).
-  cfb:     { _default: 108, Frame: 102 },
-  // Hockey ratings are percentile-curved to a 99 max; synthesized Primes add +6, so 108 covers
-  // every legit slot. Frame = heightToRating (58+(in-73)*4.5, hard-capped 99 -> 6'9" Chara 94).
-  hockey:  { _default: 108, Frame: 96 },
-  // Monster ratings = real base stats * 0.68 + 12, capped 125 (Blissey's 255 HP pins it);
-  // Mega/G-Max Primes carry real form stats and synth Primes add +6, so 134 covers every slot.
-  mon:     { _default: 134, Frame: 100 },
-};
-// Plain weighted-avg OVR · matches batter/baller's client computeOvr exactly, so we can reject an
-// inflated OVR claim. Pitcher uses a value-scaled formula, so we don't recompute it (its slot caps
-// still block impossible ratings).
-const OVR_W = {
-  batter: { Vision: 1.1, Power: 1.2, Contact: 1.2, Speed: 1.0, Clutch: 1.1, Discipline: 1.1, Frame: 1.0, Defense: 1.0 },
-  baller: { '3-Pointer': 1.2, Finishing: 1.2, Playmaking: 1.2, Dribble: 1.1, Defense: 1.1, Rebounding: 1.1, Clutch: 1.1, Speed: 0.9, Frame: 1.0 },
-  striker: { Finishing: 1.2, Pace: 1.2, Dribbling: 1.1, 'Shot Power': 1.1, Passing: 1.1, Clutch: 1.1, Heading: 1.0, Physical: 1.0, Frame: 0.7 },
-  keeper: { Reflexes: 1.2, Diving: 1.2, Positioning: 1.1, Handling: 1.1, Clutch: 1.1, Frame: 1.1, Command: 1.0, Distribution: 1.0, Agility: 1.0 },
-  // cfb: one flat map spanning all three positions' slot labels (labels are unique per weight -
-  // RB's catch slot is labeled "Catching" so it can't collide with WR's 1.2x "Hands").
-  cfb: { 'Short Accuracy': 1.2, 'Mid Accuracy': 1.2, 'Deep Ball': 1.2, 'Arm Power': 1.1, Poise: 1.1, 'Football IQ': 1.1, 'On the Run': 1.0, Wheels: 1.0,
-    Vision: 1.2, 'Break Tackle': 1.2, Power: 1.1, Burst: 1.1, Elusiveness: 1.1, 'Ball Security': 1.0, Catching: 1.0,
-    Hands: 1.2, Routes: 1.2, Speed: 1.2, Release: 1.1, 'In Traffic': 1.1, Spectacular: 1.1, Agility: 1.0, Leaping: 1.0, Frame: 1.0 },
-  hockey: { Sniping: 1.2, Playmaking: 1.2, Defense: 1.2, Motor: 1.1, Clutch: 1.1, 'Hockey IQ': 1.1, 'Shot Power': 1.0, Physicality: 1.0, Frame: 1.0 },
-  mon: { Attack: 1.2, 'Sp. Attack': 1.2, Speed: 1.2, HP: 1.1, 'Sp. Defense': 1.1, Defense: 1.0, Frame: 1.0 },
-};
-// Legend names per game, loaded lazily from the baked data (auto-updates on refresh; only read on
-// submit, so the GET leaderboard hot path is untouched). Blocks impossible "all-legends" builds:
-// legends only come from random spins (~3-4% each), so more than a few can only be a client-edited
-// build. Matched by player NAME (not the client-supplied `legend` flag, which a cheat could fake).
-let _legends = null;
-function legendSet(game) {
-  if (!_legends) {
-    const names = d => new Set((((d && d.legends) || [])).map(p => String((p && p.name) || '').trim().toLowerCase()).filter(Boolean));
-    try {
-      _legends = { pitcher: names(require('../pitchers.json')), batter: names(require('../batters.json')), baller: names(require('../ballers.json')),
-        striker: names(require('../strikers.json')), keeper: names(require('../keepers.json')), hockey: names(require('../hockey.json')), mon: names(require('../pokemon.json')) };
-      const cfbLeg = require('../cfb.json').legends || {};
-      _legends.cfb = names({ legends: [].concat(cfbLeg.qb || [], cfbLeg.rb || [], cfbLeg.wr || []) });
-    } catch (e) { _legends = { pitcher: new Set(), batter: new Set(), baller: new Set(), striker: new Set(), keeper: new Set(), cfb: new Set(), hockey: new Set(), mon: new Set() }; }
-  }
-  return _legends[game] || null;
-}
-const LEGEND_CAP = { baller: 6, batter: 7, pitcher: 7, striker: 6, keeper: 6, cfb: 6, hockey: 6, mon: 5 };   // observed legit maxima: baller 3, batter 4, pitcher 5; soccer icon odds match baller's 4%
-
+// --- Server-side build validation ---------------------------------------------------------
+// Moved to ../build-check.js (now SHARED with api/account.js's pvpLock): slot caps, weighted-
+// OVR recompute, legend-count limits, plus the new CARD-TRUTH layer — every verifiable slot
+// must name a real player from the baked data and stay within that player's best legit version
+// (+ power-up headroom). The data JSONs it requires are bundled into this lambda exactly like
+// the old inline legendSet's requires were.
+const { checkBuild } = require('../build-check.js');
+const Catalog = require('../catalog.js');   // EARN.daily — the Goat Coins daily payout
 // Career-total sanity caps · above these is impossible under the tuned sim, so an over-cap
 // career is either a stale pre-fix client or a doctored payload. We KEEP the score (ovr is
 // validated separately) and just strip the career object, so the entry stays on the OVR board
@@ -123,31 +66,6 @@ function stripInsaneCareer(game, build) {
 
 // Token for admin/maintenance actions (same env + fallback as account.js's pvpMatchStats).
 const ADMIN_TOKEN = process.env.STATS_TOKEN || 'pl-balance-7f3a9c21';
-
-function checkBuild(game, clientOvr, build) {
-  const ovr = Math.max(1, Math.min(120, Math.round(Number(clientOvr) || 0)));
-  const maxes = SLOT_MAX[game];
-  const slots = build && typeof build === 'object' && Array.isArray(build.slots) ? build.slots : null;
-  if (!slots || !slots.length || !maxes) return { ok: true, ovr };   // nothing to validate (legacy/missing build)
-  let vsum = 0, wsum = 0, matched = 0, flagLeg = 0, nameLeg = 0;
-  const w = OVR_W[game];
-  const legs = legendSet(game);
-  for (const s of slots) {
-    const v = Number(s && s.value);
-    if (!Number.isFinite(v) || v < 0) return { ok: false };
-    const cap = maxes[s.slot] != null ? maxes[s.slot] : maxes._default;
-    if (v > cap) return { ok: false };
-    if (s && s.legend === true) flagLeg++;
-    if (legs && s && legs.has(String((s.player) || '').trim().toLowerCase())) nameLeg++;
-    if (w && w[s.slot] != null) { vsum += v * w[s.slot]; wsum += w[s.slot]; matched++; }
-  }
-  if (Math.max(flagLeg, nameLeg) >= (LEGEND_CAP[game] || 99)) return { ok: false };   // impossible legend count
-  if (w && wsum > 0 && matched === slots.length) {
-    const recomputed = Math.round(vsum / wsum);
-    if (recomputed > 124 || Math.abs(recomputed - ovr) > 3) return { ok: false };   // inflated / implausible OVR
-  }
-  return { ok: true, ovr };
-}
 
 let ready;
 function ensure() {
@@ -435,14 +353,40 @@ module.exports = async (req, res) => {
         if (!NameFilter.isClean(cname)) return res.status(400).json({ ok: false, error: BAD_NAME_MSG });
         const cbuild = body.build && typeof body.build === 'object' ? JSON.stringify(stripInsaneCareer(game, body.build)) : null;
         const cd = dailyDate(body.date);
-        await sql`INSERT INTO daily_scores (player_key, game, name, ovr, build, challenge_date)
+        const ins = await sql`INSERT INTO daily_scores (player_key, game, name, ovr, build, challenge_date)
           VALUES (${key}, ${game}, ${cname}, ${ovr}, ${cbuild}::jsonb, COALESCE(${cd}::date, CURRENT_DATE))
-          ON CONFLICT (player_key, game, challenge_date) DO NOTHING`;
+          ON CONFLICT (player_key, game, challenge_date) DO NOTHING RETURNING id`;
+        // Goat Coins: a validated daily submission pays out once per game per day — signed-in
+        // accounts only, first attempt only (the UNIQUE is the dedupe; the ledger ref makes the
+        // grant idempotent on top). Never allowed to block the submission itself.
+        const inserted = ins.length > 0;
+        // Already played today (duplicate) → report the STORED row's standing, not this fresh
+        // attempt's OVR, so a re-submit after a dropped response shows the real rank.
+        let effOvr = ovr;
+        if (!inserted) {
+          const [ex] = await sql`SELECT ovr FROM daily_scores
+            WHERE player_key = ${key} AND game = ${game} AND challenge_date = COALESCE(${cd}::date, CURRENT_DATE)`;
+          if (ex) effOvr = Number(ex.ovr);
+        }
+        let coins = null;
+        if (inserted && key.indexOf('acct:') === 0) {
+          try {
+            const sub = key.slice(5);
+            const ref = `daily:${cd || new Date().toISOString().slice(0, 10)}:${game}:${sub}`;
+            const led = await sql`INSERT INTO coin_ledger (player_key, delta, reason, ref)
+              VALUES (${sub}, ${Catalog.EARN.daily}, 'daily', ${ref}) ON CONFLICT (ref) DO NOTHING RETURNING id`;
+            if (led.length) {
+              const [cu] = await sql`UPDATE users SET coins = GREATEST(0, COALESCE(coins, 0) + ${Catalog.EARN.daily})
+                WHERE google_sub = ${sub} RETURNING coins`;
+              if (cu) coins = { granted: Catalog.EARN.daily, coins: Number(cu.coins) };
+            }
+          } catch (e) {}
+        }
         const [{ rank }] = await sql`SELECT count(*)::int + 1 AS rank FROM daily_scores
-          WHERE game = ${game} AND challenge_date = COALESCE(${cd}::date, CURRENT_DATE) AND ovr > ${ovr}`;
+          WHERE game = ${game} AND challenge_date = COALESCE(${cd}::date, CURRENT_DATE) AND ovr > ${effOvr}`;
         const [{ total }] = await sql`SELECT count(*)::int AS total FROM daily_scores
           WHERE game = ${game} AND challenge_date = COALESCE(${cd}::date, CURRENT_DATE)`;
-        return res.status(200).json({ ok: true, rank: Number(rank), total: Number(total) });
+        return res.status(200).json({ ok: true, rank: Number(rank), total: Number(total), coins, recorded: true, dup: !inserted });
       }
 
       let name = String(body.name == null ? '' : body.name).trim().slice(0, 20);
@@ -535,7 +479,21 @@ module.exports = async (req, res) => {
         created_at, game, (build->'career'->'totals'->>${statField})::numeric AS stat FROM scores WHERE id = ${meId}`;
       if (row && row.game === game) {
         let ahead;
-        if (sortField) {
+        if (sortField && asc) {
+          // worst-first stat sort (dir=asc): rank counts entries with a LOWER stat. Missing careers
+          // sort LAST (ORDER BY ... ASC NULLS LAST), so treat a null stat as +BIG here too.
+          const ASC_NULL = 1e30;
+          const meVal = row.stat == null ? ASC_NULL : Number(row.stat);
+          ahead = daily
+            ? (await sql`SELECT count(*)::int AS ahead FROM scores
+                  WHERE game = ${game} AND created_at >= date_trunc('day', now())
+                    AND (COALESCE((build->'career'->'totals'->>${sortField})::numeric, ${ASC_NULL}) < ${meVal}
+                      OR (COALESCE((build->'career'->'totals'->>${sortField})::numeric, ${ASC_NULL}) = ${meVal} AND created_at < ${row.created_at}))`)[0].ahead
+            : (await sql`SELECT count(*)::int AS ahead FROM scores
+                  WHERE game = ${game}
+                    AND (COALESCE((build->'career'->'totals'->>${sortField})::numeric, ${ASC_NULL}) < ${meVal}
+                      OR (COALESCE((build->'career'->'totals'->>${sortField})::numeric, ${ASC_NULL}) = ${meVal} AND created_at < ${row.created_at}))`)[0].ahead;
+        } else if (sortField) {
           const meVal = row.stat == null ? NULL_SENTINEL : Number(row.stat);
           ahead = daily
             ? (await sql`SELECT count(*)::int AS ahead FROM scores

@@ -11,6 +11,8 @@
 <script src="/achievements.js" defer></script>
 <script src="/xp.js" defer></script>
 <script src="/social.js" defer></script>
+<script src="/catalog.js" defer></script>
+<script src="/store.js" defer></script>
 <script src="/quests.js" defer></script>
 <script src="/season-track.js" defer></script>
 <script src="https://cdn.ably.com/lib/ably.min-2.js"></script>
@@ -33,7 +35,20 @@
     window.ramp.que.push(function () { window.ramp.spaNewPage(window.location.pathname); });
   });
 </script>
-<script async src="//cdn.intergient.com/1025880/77906/ramp.js"></script>
+<script>
+  // Goat Coins '30 Days Ad-Free' entitlement — skip loading Playwire entirely while active
+  // (pl_wallet is the server wallet cached by store.js; the expiry is a server-set timestamp).
+  // Everything else in the ads contract (window.ramp setup, spacing CSS) stays put — see ads.md.
+  (function () {
+    try {
+      var w = JSON.parse(localStorage.getItem('pl_wallet') || 'null');
+      if (w && w.entitlements && w.entitlements.no_ads_until && Date.parse(w.entitlements.no_ads_until) > Date.now()) return;
+    } catch (e) {}
+    var s = document.createElement('script');
+    s.async = true; s.src = '//cdn.intergient.com/1025880/77906/ramp.js';
+    document.head.appendChild(s);
+  })();
+</script>
 <style>
 /* Ad-safe mobile spacing: keep fixed-bottom UI above the Playwire anchor ad (see ads.md) */
 @media (max-width:900px){
@@ -544,6 +559,7 @@
       <button class="btn ghost" id="mmChalBtn" style="width:100%;font-size:13px;padding:11px 20px;letter-spacing:1.5px;">🔗 Challenge a Friend</button>
       <div style="color:var(--dim);font-size:11.5px;margin-top:7px;letter-spacing:.2px;text-align:center;">Pick a mode · Share a link · No Elo change</div>
       <button class="btn ghost" id="miFriends" style="width:100%;font-size:13px;padding:11px 20px;letter-spacing:1.5px;margin-top:10px;">👥 Friends<span data-social-badge style="margin-left:6px"></span></button>
+      <div style="margin-top:10px;text-align:center"><span data-coin-chip></span></div>
       <div class="spinner" id="mmSpin"></div>
       <div class="status" id="mmStatus"></div>
       <div style="margin-top:18px; display:none;" id="cancelWrap">
@@ -1006,6 +1022,7 @@ let DATA={};               // role -> data json
 let myBuild=null, oppBuild=null, atBatStarted=false, matchResolved=false;
 let claimTimeout=null, waitTimeout=null;
 let isGhost=false, ghostTimer=null;   // Ghost = async match vs a real recent build when the lobby is empty
+let ghostFixed=null;                  // set when the ghost is a SPECIFIC Hall of Fame save (?gb= build challenge)
 
 /* ---------- account + Elo rating ----------
    Two ways to have a rating:
@@ -1467,6 +1484,83 @@ function cancelLobby(){
   showScreen('mmScreen');
   updateRatingChip();
 }
+
+/* ---------- meet lobby (social-tab challenges) ----------
+   Both sides of a friends-panel challenge come here with ?meet=<challengeId>&side=from|to.
+   Presence on the shared channel pairs them NO MATTER who arrives first (the old ?ch= flow
+   needed the challenger already camping in the arena): when both are present, the 'from'
+   side generates the match and publishes 'start'; both start the same friendly match. */
+let meetCh=null, meetTimeout=null, meetStarted=false;
+function checkMeetURL(){
+  const q = new URLSearchParams(location.search);
+  const id = q.get('meet');
+  if (!id) return false;
+  const side = q.get('side') === 'to' ? 'to' : 'from';
+  const name = q.get('cn') ? decodeURIComponent(q.get('cn')) : 'your opponent';
+  setTimeout(() => startMeet(String(id).slice(0, 48), side, name), 200);
+  return true;
+}
+async function startMeet(meetId, side, oppName){
+  resetMatch();
+  gameMode = 'classic';
+  showScreen('mmScreen'); updateRatingChip();
+  $('findBtn').style.display='none'; $('mmSpin').style.display='block'; $('cancelWrap').style.display='block'; $('statsWrap').style.display='none';
+  setStatus('Connecting…');
+  try { await connectAbly(); } catch(e){ setStatus('Could not connect · check your network and retry.'); failBack(); return; }
+  setOnlineStatus('searching');
+  setStatus(`⚔️ Waiting for ${oppName} — they've been pinged…`);
+  try { gtag('event', 'meet_lobby', { game: 'versus-soccer', side }); } catch(e){}
+  meetStarted = false;
+  meetCh = ably.channels.get('soccer:meet:' + meetId);
+  meetCh.subscribe('start', m => {
+    if (m.clientId === clientId || meetStarted) return;
+    meetStarted = true;
+    const d = m.data || {};
+    leaveMeet(false);
+    gameMode = d.mode || 'classic';
+    startMatch(d.matchId, d.otherRole, d.seed, d.fromClientId, false, true);
+  });
+  // only the 'from' side generates the match — deterministic, so a double-start is impossible
+  const maybeStart = async () => {
+    if (meetStarted || side !== 'from' || !meetCh) return;
+    let members = [];
+    try { members = await meetCh.presence.get(); } catch(e){ return; }
+    const others = members.filter(mm => mm.clientId !== clientId);
+    if (!others.length || meetStarted) return;
+    meetStarted = true;
+    const newId = rid(), newSeed = (Math.random() * 0xFFFFFFFF) >>> 0;
+    const myNewRole = Math.random() < 0.5 ? 'striker' : 'keeper';
+    const theirRole = myNewRole === 'striker' ? 'keeper' : 'striker';
+    const payload = { matchId: newId, seed: newSeed, otherRole: theirRole, fromClientId: clientId, mode: gameMode };
+    for (let i = 0; i < 3; i++){
+      try { await meetCh.publish('start', payload); break; } catch(e){ if (i < 2) await new Promise(r => setTimeout(r, 700)); }
+    }
+    leaveMeet(false);
+    startMatch(newId, myNewRole, newSeed, others[0].clientId, false, true);
+  };
+  meetCh.presence.subscribe('enter', maybeStart);
+  meetCh.presence.subscribe('present', maybeStart);
+  try { await meetCh.presence.enter({ name: displayName() }); } catch(e){}
+  maybeStart();
+  // generous no-show window · the other side may still be reading the notification
+  meetTimeout = setTimeout(() => {
+    if (meetStarted) return;
+    leaveMeet(true);
+    setStatus(`${oppName} hasn't shown up yet · they'll still see the challenge in 👥 Friends. Try again from there, or find a live match.`);
+    failBack();
+    setOnlineStatus('idle');
+  }, 180000);
+}
+function leaveMeet(detach){
+  if (meetTimeout){ clearTimeout(meetTimeout); meetTimeout=null; }
+  if (meetCh){
+    try{ meetCh.presence.leave(); }catch(e){}
+    try{ meetCh.presence.unsubscribe(); }catch(e){}
+    meetCh.unsubscribe();
+    if (detach){ try{ meetCh.detach(); }catch(e){} }
+    meetCh = null;
+  }
+}
 function setOnlineStatus(s){
   myOnlineStatus = s;
   liveHeartbeat();   // reflect the new status in the live count right away
@@ -1532,6 +1626,7 @@ function failBack(){ $('findBtn').style.display='inline-block'; $('mmSpin').styl
 
 async function cancelSearch(){
   stopSearch();
+  leaveMeet(true);   // also covers backing out of a meet lobby (same Cancel button)
   setOnlineStatus('idle');
   if (clientId) { try { await fetch('/api/match-soccer',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'leave',id:clientId})}); } catch(e){} }
   if (inviteCh) { inviteCh.unsubscribe(); try{ inviteCh.detach(); }catch(e){} inviteCh=null; }
@@ -1547,29 +1642,39 @@ async function fetchGhostBuild(role){
     return (r && r.ghost) ? r.ghost : null;
   } catch(e){ return null; }
 }
-async function startGhostMatch(){
+// `fixed` (optional) = a SPECIFIC Hall of Fame save to take on ({saveId, myRole, slots, ovr,
+// name} from the ?gb= flow) · fixed matches are FRIENDLY (a targeted build could be farmed
+// for Elo otherwise) and report a buildDefenseResult so the owner gets notified.
+async function startGhostMatch(fixed){
   resetMatch();                       // clears any prior match/timers (and isGhost)
   gameMode = 'classic';
-  isGhost = true; friendlyMode = false;   // a ghost is a real build → Elo counts
-  try { gtag('event', 'versus_ghost_start', { game: 'versus-soccer' }); } catch(e){}
+  isGhost = true; ghostFixed = fixed || null;
+  friendlyMode = !!fixed;             // random ghost = a real build → Elo counts · targeted = friendly
+  try { gtag('event', fixed ? 'versus_build_challenge' : 'versus_ghost_start', { game: 'versus-soccer' }); } catch(e){}
   // leave the live queue so nobody claims us while we play the ghost
   if (clientId) { try { fetch('/api/match-soccer',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'leave',id:clientId})}); } catch(e){} }
   if (inviteCh) { inviteCh.unsubscribe(); try{ inviteCh.detach(); }catch(e){} inviteCh=null; }
   setOnlineStatus('playing');
-  myRole = Math.random() < 0.5 ? 'striker' : 'keeper';
+  myRole = fixed ? fixed.myRole : (Math.random() < 0.5 ? 'striker' : 'keeper');
   oppRole = myRole === 'striker' ? 'keeper' : 'striker';
   matchId = 'ghost:' + Math.random().toString(16).slice(2, 10);
   seed = (Math.random() * 0xffffffff) >>> 0;
   rng = mulberry32(seed || 1);
   oppId = 'ghost';
-  const g = await fetchGhostBuild(oppRole);
-  const slots = (g && g.build && Array.isArray(g.build.slots)) ? g.build.slots : [];
-  // no real build in that OVR band yet → synthesize one so a ghost is ALWAYS available.
-  // the at-bat reads .ovr (+ optional slot values with ovr fallbacks), so this is enough.
-  const ovr = g ? Math.round(Number(g.ovr) || 90) : (87 + Math.floor(Math.random() * 9));
-  const name = g ? String(g.name || 'A Challenger') : GHOST_NAMES[Math.floor(Math.random() * GHOST_NAMES.length)];
+  let g = null, slots, ovr, name;
+  if (fixed){
+    slots = Array.isArray(fixed.slots) ? fixed.slots : [];
+    ovr = fixed.ovr; name = fixed.name;
+  } else {
+    g = await fetchGhostBuild(oppRole);
+    slots = (g && g.build && Array.isArray(g.build.slots)) ? g.build.slots : [];
+    // no real build in that OVR band yet → synthesize one so a ghost is ALWAYS available.
+    // the at-bat reads .ovr (+ optional slot values with ovr fallbacks), so this is enough.
+    ovr = g ? Math.round(Number(g.ovr) || 90) : (87 + Math.floor(Math.random() * 9));
+    name = g ? String(g.name || 'A Challenger') : GHOST_NAMES[Math.floor(Math.random() * GHOST_NAMES.length)];
+  }
   oppBuild = { role: oppRole, ovr, name, team: slots.length ? modalTeam(slots) : '', slots,
-    elo: myElo(), key: 'ghost:' + (g ? g.id : seed), ghost: true };
+    elo: myElo(), key: fixed ? ('save:' + fixed.saveId) : 'ghost:' + (g ? g.id : seed), ghost: true };
   oppPresent = true; oppPresenceName = name; oppPresenceElo = 0;
   await loadData(myRole);
   beginRoleReveal();
@@ -1577,6 +1682,7 @@ async function startGhostMatch(){
 
 function resetMatch(){
   stopSearch();
+  leaveMeet(true);
   lobbyWaiting=false; _poolCache={}; isGhost=false;
   friendlyMode=false; pendingChallenge=null;
   if ($('challengeNotif')) { gsap.killTweensOf($('challengeNotif')); $('challengeNotif').style.display='none'; }
@@ -1639,7 +1745,8 @@ function updateOppChip(){
     ? '👻 ' + escapeHTML(oppPresenceName || 'Opponent')
     : avatarChipHTML(oppAvatarId(), oppPresenceName, 26) + '<span>' + escapeHTML(oppPresenceName || 'Opponent') + '</span>';
   const el = $('oppChipElo');
-  el.textContent = isGhost ? 'Ghost · a real recent build' : (oppPresenceElo ? ('⚡ ' + oppPresenceElo + ' Rating') : '');
+  el.textContent = isGhost ? (ghostFixed ? 'Hall of Fame build · friendly challenge' : 'Ghost · a real recent build')
+    : (oppPresenceElo ? ('⚡ ' + oppPresenceElo + ' Rating') : '');
 }
 function beginRoleReveal(){
   showScreen('roleScreen');
@@ -1986,6 +2093,14 @@ function finishBuild(){
   const ovr = computeOvr(myRole, buildState.filled);
   const team = modalTeam(slots);
   myBuild = { role:myRole, ovr, team, slots, elo: myElo(), name: displayName(), key: personId(), avatar: myAvatarId() };
+  // Ranked matches also LOCK the build server-side (validated against real card data +
+  // Elo-stamped, keeper KP_LIFT-aware) — pvpResult settles both-locked matches from those
+  // rows, so a doctored client can't lie its way up the ladder. Friendly/ghost never lock.
+  if (!friendlyMode && !isGhost) {
+    const lockBody = JSON.stringify(Object.assign({ action:'pvpLock', matchId, game: myRole, role: myRole,
+      build: { ovr, slots } }, principal()));
+    (async () => { for (let i=0;i<3;i++){ try { await fetch('/api/account',{method:'POST',headers:{'content-type':'application/json'},body:lockBody}); return; } catch(e){ await new Promise(r=>setTimeout(r,700*(i+1))); } } })();
+  }
   publishBuild();
   updateOppPill();
   // Safety net: if the opponent never delivers a build (left/closed), don't hang forever.
@@ -2493,6 +2608,11 @@ function showResult(iWon, striker, keeper, winnerRole, script){
       try { fetch('/api/account', { method:'POST', headers:{'content-type':'application/json'},
         body: JSON.stringify(Object.assign({ action:'friendlyResult', matchId, won: !!iWon, oppKey: oppBuild.key }, principal())) }); } catch(e){}
     }
+    // build challenge (?gb=): tell the build's owner it held or fell (server dedupes per day)
+    if (isGhost && ghostFixed && ghostFixed.saveId) {
+      try { fetch('/api/account', { method:'POST', headers:{'content-type':'application/json'},
+        body: JSON.stringify(Object.assign({ action:'buildDefenseResult', saveId: ghostFixed.saveId, won: !!iWon }, principal())) }); } catch(e){}
+    }
     $('ratingResult').innerHTML = '<div class="prompt" style="color:var(--accent2);font-size:14px;margin-top:4px">⚔️ Friendly Match · No Elo Change</div>';
   } else {
     pendingResult = { matchId, won: iWon, oppElo, role: myRole, ovr: (myBuild ? myBuild.ovr : 0), oppOvr: (oppBuild ? oppBuild.ovr : 0), oppName: oppName, oppKey: (oppBuild && oppBuild.key ? oppBuild.key : ''), decided: true };
@@ -2647,10 +2767,10 @@ document.querySelectorAll('#statsSportToggle .stab').forEach(b => {
 if (location.hash === '#stats') openStats();
 if (location.hash === '#seasons') openStats('seasons');
 if (location.hash === '#achievements' || location.hash === '#ach') { const o = () => (window.Ach ? Ach.open() : setTimeout(o, 120)); o(); }
-$('newMatchBtn').onclick = () => { Sound.click(); if (isGhost) startGhostMatch(); else findMatch(); };
+$('newMatchBtn').onclick = () => { Sound.click(); if (isGhost) startGhostMatch(ghostFixed); else findMatch(); };
 $('rematchBtn').onclick = () => {
   Sound.click();
-  if (isGhost){ startGhostMatch(); return; }   // run another ghost immediately (no live channel to rematch on)
+  if (isGhost){ startGhostMatch(ghostFixed); return; }   // rerun the ghost (same saved build if it was a ?gb= challenge)
   if (matchResolved && matchId && matchCh){
     if (rematchOppOffer && !rematchOffered){ acceptOppRematch(); }
     else if (rematchOffered){ resetRematchUI(); }   // cancel pending offer
@@ -2684,9 +2804,28 @@ initGoogle();
 refreshStats().then(() => { updateRatingChip(); renderSeasonBar(); });
 startSeasonBar();   // keep the season countdown live on the matchmaking screen
 checkChallengeURL();  // show challenge screen immediately if URL has ?ch= (no Ably needed for the screen)
-// A friends-panel challenge (social.js) sends the CHALLENGER here with ?lobby=1: wait in the
-// challenge lobby · an incoming ping auto-accepts (lobbyWaiting) and the match starts.
+checkMeetURL();       // ?meet=<challengeId>&side= · both sides of a friends-panel challenge pair here
+// legacy ?lobby=1 entry (old copy-link "wait in the arena" flow) still works
 if (new URLSearchParams(location.search).get('lobby')) setTimeout(openLobby, 400);
+// ?gb=<saveId>: take on a SPECIFIC Hall of Fame build (a profile's ⚔️ button) · friendly
+// ghost match against that exact build, owner gets a held/fell notification after.
+(async function(){
+  const q = new URLSearchParams(location.search);
+  const gb = Number(q.get('gb'));
+  if (!gb) return;
+  let r = null;
+  try { r = await fetch('/api/account', { method:'POST', headers:{'content-type':'application/json'},
+    body: JSON.stringify({ action:'buildGet', id: gb }) }).then(x=>x.json()); } catch(e){}
+  const b = r && r.ok && r.build;
+  if (!b || (b.game !== 'striker' && b.game !== 'keeper')){
+    setStatus('Could not load that build · it may have been deleted.');
+    return;
+  }
+  const oppRoleGb = b.game;   // a saved striker build defends as the striker — you build the keeper
+  startGhostMatch({ saveId: b.id, myRole: oppRoleGb === 'striker' ? 'keeper' : 'striker',
+    slots: Array.isArray(b.slots) ? b.slots : [], ovr: Math.round(Number(b.ovr) || 90),
+    name: ((b.owner && b.owner.name) ? b.owner.name + "'s " : '') + (b.name || 'Build') });
+})();
 goOnline();  // connect + wire the friend-challenge inbox (global presence is joined lazily on search)
 // dev harness: /versus.html?animtest=1&seed=5&aovr=95&bovr=88&ateam=LAD&bteam=LAD plays the at-bat
 // with fake builds · no Ably, no matchmaking, and friendlyMode means no Elo is reported.
