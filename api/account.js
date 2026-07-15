@@ -2332,6 +2332,31 @@ module.exports = async (req, res) => {
         return res.status(200).json({ ok: true, user: u || null, count: rows.length, history: rows });
       }
 
+      // admin: check a buyer's GoatLab Pro / ad-free entitlement (token-gated). Use when someone
+      // reports "still seeing ads after buying Pro" — this tells you whether the purchase actually
+      // granted server-side (webhook worked). pro_active:true  => granted; the issue is the device
+      // (not signed in with THIS account, or stale cache). pro_active:false / no user => the grant
+      // never happened (check Stripe webhook deliveries / env). Target by email or google_sub key.
+      //   curl -s -X POST .../api/account -H "content-type: application/json" \
+      //     -d '{"action":"proLookup","token":"<STATS_TOKEN>","email":"buyer@example.com"}'
+      if (action === 'proLookup') {
+        if (body.token !== STATS_TOKEN) return res.status(403).json({ ok: false, error: 'forbidden' });
+        const now = Date.now();
+        let rows;
+        if (body.key) rows = await sql`SELECT google_sub, email, name, entitlements, coins FROM users WHERE google_sub = ${String(body.key)}`;
+        else if (body.email) rows = await sql`SELECT google_sub, email, name, entitlements, coins FROM users WHERE lower(email) = lower(${String(body.email).trim()})`;
+        else return res.status(400).json({ ok: false, error: 'email or key required' });
+        const users = rows.map(u => {
+          const e = (u.entitlements && typeof u.entitlements === 'object') ? u.entitlements : {};
+          const proActive = !!(e.pro_until && Date.parse(e.pro_until) > now);
+          const adsFree = proActive || !!(e.no_ads_until && Date.parse(e.no_ads_until) > now);
+          return { google_sub: u.google_sub, email: u.email, name: u.name, coins: Number(u.coins) || 0,
+            pro_active: proActive, ads_free: adsFree, pro_until: e.pro_until || null,
+            no_ads_until: e.no_ads_until || null, pro_subscription: e.pro_subscription || null };
+        });
+        return res.status(200).json({ ok: true, count: users.length, users });
+      }
+
       // admin: manually reverse one match's Elo/record when a false forfeit/quit claim beat the real
       // winner's report to the server (the same wrong the live reversal in pvpResult now prevents,
       // but for matches that were settled before that shipped). Token-gated + idempotent: only acts
