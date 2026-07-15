@@ -532,7 +532,7 @@
           <button class="soc-btn warm" id="socClaimBtn">Claim</button>${renaming ? '<button class="soc-btn dim" id="socClaimCancel">✕</button>' : ''}</div>
           <div class="soc-err" id="socClaimMsg"></div></div>`;
     const headExtra = (data.myHandle && !renaming)
-      ? `<div class="soc-code"><span class="cd" id="socMe" style="cursor:pointer" title="View my profile">@${esc(data.myHandle)}</span>
+      ? `<div class="soc-code"><span class="cd" id="socMe" style="cursor:pointer" title="View my profile">@${esc(data.myHandle)}<span data-pro-star></span></span>
           <button class="cp" id="socRename">Change</button>
           <button class="cp" id="socMeBtn">My profile</button>
           <span class="hint">Your handle · friends find you by searching it.</span></div>`
@@ -554,6 +554,7 @@
       </div>
       <div class="soc-body">${bodies[tab] || bodies.friends}</div></div>`;
 
+    if (window.Store && window.Store.paintProStars) window.Store.paintProStars();
     overlay.querySelector('.soc-close').onclick = close;
     overlay.querySelectorAll('.soc-tab').forEach(b => b.onclick = () => { tab = b.dataset.tab; renderFriends(); });
     const renameBtn = overlay.querySelector('#socRename');
@@ -970,7 +971,7 @@
       <div class="soc-head" style="padding-bottom:0">
         <div class="soc-phead">
           ${avatarHtml(p)}
-          <div><div class="soc-pname">${p.handle ? '@' : ''}${esc(p.name)}</div>
+          <div><div class="soc-pname">${p.handle ? '@' : ''}${esc(p.name)}${p.self ? '<span data-pro-star></span>' : ''}</div>
           <div class="soc-psub"><span class="soc-lvl">LV ${levelOf(p.xp)}</span>${since ? 'Playing since ' + since : ''}${p.online ? ' · <span style="color:#39d98a">online now</span>' : ''}</div></div>
         </div>
         <div class="soc-tabs" style="padding:12px 0 0">
@@ -978,6 +979,7 @@
         </div>
       </div>
       <div class="soc-body">${(bodies[profTab] || profOverview)(p)}</div></div>`;
+    if (window.Store && window.Store.paintProStars) window.Store.paintProStars();
     overlay.querySelector('.soc-close').onclick = close;
     overlay.querySelectorAll('[data-ptab]').forEach(b => b.onclick = () => { profTab = b.dataset.ptab; renderProfile(); });
     wireProfileBody(p);
@@ -1088,6 +1090,14 @@
       row.style.cursor = 'pointer';
       row.title = 'View my profile';
     }
+    // GoatLab Pro ⭐ next to the name — drop an empty slot store.js fills/clears by entitlement.
+    const nameEl = row.querySelector('.who b');
+    if (nameEl && !row.querySelector('[data-pro-star]')) {
+      const star = document.createElement('span');
+      star.setAttribute('data-pro-star', '');
+      nameEl.appendChild(star);   // inside the block <b> so it sits inline right after the name
+    }
+    if (window.Store && window.Store.paintProStars) window.Store.paintProStars();
     const avId = myAvatar();
     if (row.__socAv === (avId || '')) return;
     row.__socAv = avId || '';
