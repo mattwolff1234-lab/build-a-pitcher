@@ -52,16 +52,19 @@ module.exports = async (req, res) => {
       // is set/renewed/expired by api/stripe-webhook.js (never here). player_key rides on the
       // subscription metadata so renewal invoices map back to this account.
       const PRO = Catalog.PRO;
+      const cycle = body.cycle === 'yearly' ? 'yearly' : 'monthly';
+      const plan = (PRO.plans && PRO.plans[cycle]) || { usd: 499, interval: 'month' };
       form = new URLSearchParams({
         mode: 'subscription',
         'line_items[0][quantity]': '1',
         'line_items[0][price_data][currency]': 'usd',
-        'line_items[0][price_data][unit_amount]': String(PRO.usd),
-        'line_items[0][price_data][recurring][interval]': PRO.interval,
-        'line_items[0][price_data][product_data][name]': PRO.name,
+        'line_items[0][price_data][unit_amount]': String(plan.usd),
+        'line_items[0][price_data][recurring][interval]': plan.interval,
+        'line_items[0][price_data][product_data][name]': PRO.name + (cycle === 'yearly' ? ' (Annual)' : ''),
         'line_items[0][price_data][product_data][description]': PRO.tagline,
         'metadata[player_key]': playerKey,
         'metadata[plan]': 'pro',
+        'metadata[cycle]': cycle,
         'subscription_data[metadata][player_key]': playerKey,
         success_url: origin + returnTo + glue + 'purchase=success&pro=1&session_id={CHECKOUT_SESSION_ID}',
         cancel_url: origin + returnTo + glue + 'purchase=cancel',

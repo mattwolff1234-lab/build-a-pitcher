@@ -113,6 +113,10 @@
   .gc-pro-sub { font-size:12px; color:#c9d6e6; margin-top:3px; }
   .gc-pro-perks { margin:8px 0 2px; padding-left:18px; color:#9fb4d0; font-size:12px; line-height:1.6; }
   .gc-pro-btn { width:100%; margin-top:8px; padding:10px; font-size:14px; }
+  .gc-pro-plans { display:flex; flex-direction:column; gap:8px; margin-top:10px; }
+  .gc-pro-plans .gc-pro-btn { margin-top:0; }
+  .gc-pro-year { border-color:rgba(57,217,138,.5); color:#39d98a; background:rgba(57,217,138,.1); }
+  .gc-pro-save { font-size:11px; background:rgba(57,217,138,.25); color:#bff5d8; border-radius:6px; padding:1px 6px; margin-left:4px; }
   .gc-note { font-size:11.5px; color:#8ea2bd; line-height:1.45; margin:8px 0; }
   .gc-err { font-size:12px; color:#ff7d8a; min-height:15px; margin-top:6px; }
   .gc-burst { position:fixed; z-index:600; pointer-events:none; font-size:20px; }
@@ -185,7 +189,10 @@
 
   // GoatLab Pro — the real-money $5/mo subscription (NOT coins). Its own hero card atop the Shop.
   function proCard() {
-    const P = C.PRO; const price = '$' + (P.usd / 100).toFixed(2);
+    const P = C.PRO;
+    const mo = (P.plans && P.plans.monthly) || { usd: 499 };
+    const yr = (P.plans && P.plans.yearly) || { usd: 3999 };
+    const moP = '$' + (mo.usd / 100).toFixed(2), yrP = '$' + (yr.usd / 100).toFixed(2);
     if (proActive()) {
       const until = new Date(ent().pro_until).toLocaleDateString();
       return `<div class="gc-pro gc-pro-on">
@@ -196,13 +203,16 @@
     }
     const perks = (P.perks || []).map(x => `<li>${x}</li>`).join('');
     const pitch = `<div class="gc-pro">
-      <div class="gc-pro-top"><span class="gc-pro-name">${P.icon} ${P.name}</span><span class="gc-pro-tag">${price}/mo</span></div>
+      <div class="gc-pro-top"><span class="gc-pro-name">${P.icon} ${P.name}</span></div>
       <div class="gc-pro-sub">${P.tagline}</div>
       <ul class="gc-pro-perks">${perks}</ul>`;
     if (!PRO_LIVE) return pitch + `<button class="gc-buy gc-pro-btn" disabled>Coming soon</button></div>`;
     if (inApp()) return pitch + `<div class="gc-note">Subscribe on the website: <b>goat-lab.app</b></div></div>`;
-    return pitch + `<button class="gc-buy gc-pro-btn" id="gcProSubscribe">Get ${P.name} — ${price}/mo</button>
-      <div class="gc-err" id="gcProMsg"></div></div>`;
+    const save = yr.tag ? ` <span class="gc-pro-save">${yr.tag}</span>` : '';
+    return pitch + `<div class="gc-pro-plans">
+        <button class="gc-buy gc-pro-btn" data-cycle="monthly">Monthly · ${moP}/mo</button>
+        <button class="gc-buy gc-pro-btn gc-pro-year" data-cycle="yearly">Yearly · ${yrP}/yr${save}</button>
+      </div><div class="gc-err" id="gcProMsg"></div></div>`;
   }
   function bodyShop() {
     if (PRO_ONLY) return proCard()
@@ -270,7 +280,7 @@
     overlay.querySelectorAll('[data-pack]').forEach(b => b.onclick = () => buyPack(b.dataset.pack, b));
     const dj = overlay.querySelector('#gcDiscordJoin');
     if (dj) dj.onclick = () => discordVerify(dj);
-    const ps = overlay.querySelector('#gcProSubscribe'); if (ps) ps.onclick = () => buyPro(ps);
+    overlay.querySelectorAll('.gc-pro-btn[data-cycle]').forEach(b => b.onclick = () => buyPro(b, b.dataset.cycle));
     const pm = overlay.querySelector('#gcProManage'); if (pm) pm.onclick = () => managePro(pm);
   }
 
@@ -318,19 +328,20 @@
     btn.disabled = false; btn.textContent = '$' + (C.PACKS[packId].usd / 100).toFixed(2);
     busy = false;
   }
-  async function buyPro(btn) {
+  async function buyPro(btn, cycle) {
     if (busy) return; busy = true;
+    const label = btn.innerHTML;
     btn.disabled = true; btn.textContent = 'Opening…';
-    ga('pro_subscribe_checkout');
+    ga('pro_subscribe_checkout', { cycle: cycle || 'monthly' });
     const a = acct(); let r = null;
     try {
       r = await fetch('/api/buy', { method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ action: 'checkout', plan: 'pro', sub: a.sub, sessionToken: a.sessionToken, returnTo: location.pathname }) }).then(x => x.json());
+        body: JSON.stringify({ action: 'checkout', plan: 'pro', cycle: cycle || 'monthly', sub: a.sub, sessionToken: a.sessionToken, returnTo: location.pathname }) }).then(x => x.json());
     } catch (e) {}
     if (r && r.ok && r.url) { location.href = r.url; return; }
     const msg = overlay.querySelector('#gcProMsg');
     if (msg) msg.textContent = (r && r.error) || 'Subscription checkout is unavailable right now.';
-    btn.disabled = false; btn.textContent = 'Get ' + C.PRO.name + ' — $' + (C.PRO.usd / 100).toFixed(2) + '/mo';
+    btn.disabled = false; btn.innerHTML = label;
     busy = false;
   }
   async function managePro(btn) {

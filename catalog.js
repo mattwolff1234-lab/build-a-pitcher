@@ -35,14 +35,18 @@
     c2600: { coins: 16000, usd: 1999, label: 'Vault of Coins',    icon: '🏦', tag: 'Best value' },    // TUNE
   };
 
-  // GoatLab Pro — real-money MONTHLY SUBSCRIPTION (NOT coins). Auto-renews via Stripe; grants
+  // GoatLab Pro — real-money AUTO-RENEWING SUBSCRIPTION (NOT coins). Monthly or annual. Grants
   // no-ads + the premium Season Track lane (+ room for more perks). api/buy.js creates a
-  // mode:'subscription' Checkout at PRO.usd/month; api/stripe-webhook.js sets entitlements
-  // .pro_until (= no_ads_until) on every paid invoice and lets it lapse on cancel.
+  // mode:'subscription' Checkout for the chosen plan; api/stripe-webhook.js sets entitlements
+  // .pro_until (= no_ads_until) to each paid period's end (works for month OR year) and lapses on cancel.
   const PRO = {
-    id: 'pro', usd: 500, interval: 'month', name: 'GoatLab Pro', icon: '⭐',   // TUNE ($5.00/mo)
+    id: 'pro', name: 'GoatLab Pro', icon: '⭐',
     tagline: 'No ads · Premium battle pass · more perks',
     perks: ['Zero ads across every GoatLab game', 'Premium Season Track lane (exclusive rewards + coins back)', 'More Pro perks coming'],
+    plans: {   // usd in CENTS. api/buy.js picks by body.cycle; the webhook reads the real period end.
+      monthly: { usd: 499,  interval: 'month', label: 'Monthly' },                    // TUNE $4.99/mo
+      yearly:  { usd: 3999, interval: 'year',  label: 'Yearly', tag: 'Save 33%' },    // TUNE $39.99/yr
+    },
   };
 
   // Coin-priced store items.  (Ad-free + the premium pass are NOT here anymore — they're part of
