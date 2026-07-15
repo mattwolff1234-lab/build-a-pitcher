@@ -11,3 +11,7 @@ _*.png
 # EA ratings raw dump (12.6MB, regenerate with: node fetch-footballers.js --fresh)
 footballers-raw.json
 _pose-src/
+
+# X scraper output (regenerate with: X_BEARER_TOKEN=… node scrape-x-tweets.js)
+x-tweets.json
+x-tweets-digest.md
