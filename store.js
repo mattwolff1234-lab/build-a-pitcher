@@ -78,6 +78,8 @@
     background:rgba(50,40,12,.55); color:#ffd23f; border-radius:999px; padding:4px 12px; font-family:'Oswald',sans-serif;
     font-size:13px; font-weight:700; letter-spacing:.5px; user-select:none; }
   .gc-chip:hover { background:rgba(70,56,16,.7); }
+  .pro-star { display:inline-block; margin-left:5px; font-size:.82em; line-height:1; vertical-align:baseline;
+    filter:drop-shadow(0 0 5px rgba(255,210,63,.75)); }
   .gc-overlay { position:fixed; inset:0; z-index:560; display:none; align-items:center; justify-content:center;
     background:rgba(4,8,14,.72); backdrop-filter:blur(4px); padding:14px; }
   .gc-overlay.show { display:flex; }
@@ -142,6 +144,18 @@
         el.innerHTML = ''; el.appendChild(chip);
       }
       chip.textContent = signedIn() && wallet ? '🪙 ' + coins().toLocaleString('en-US') : '🪙 Store';
+    });
+    paintProStars();
+  }
+  // Fill every [data-pro-star] slot with a ⭐ while GoatLab Pro is active; clear it when it lapses.
+  // Render spots just drop an empty <span data-pro-star></span> next to the name — this keeps it live
+  // as the wallet refreshes (boot reads the cached pl_wallet; refresh() repaints after the server round-trip).
+  function paintProStars() {
+    const on = proActive();
+    document.querySelectorAll('[data-pro-star]').forEach(el => {
+      const has = !!el.firstChild;
+      if (on && !has) el.innerHTML = '<span class="pro-star" title="GoatLab Pro member">⭐</span>';
+      else if (!on && has) el.textContent = '';
     });
   }
 
@@ -410,6 +424,14 @@
 
   /* ---------- Stripe return bounce ---------- */
   function checkPurchaseReturn() {
+    // We reloaded after Pro landed (to drop ads that had already loaded) — celebrate now that
+    // the page is fresh and ad-free. Runs once; the flag is consumed on read.
+    try {
+      if (localStorage.getItem('pl_pro_celebrate') === '1') {
+        localStorage.removeItem('pl_pro_celebrate');
+        refresh().then(() => { open('shop'); celebrate('⭐', 'GoatLab Pro is live!', 'Ads gone · premium lane unlocked'); });
+      }
+    } catch (e) {}
     const q = new URLSearchParams(location.search);
     const state = q.get('purchase');
     if (!state) return;
@@ -426,11 +448,19 @@
       await refresh();
       const landed = isPro ? (proActive() && !wasPro) : (coins() > before);
       if (landed || tries++ >= 6) {
-        open('shop');
-        if (landed && isPro) celebrate('⭐', 'GoatLab Pro is live!', 'Ads gone · premium lane unlocked');
-        else if (landed) { celebrate('🪙', '+' + (coins() - before).toLocaleString('en-US') + ' coins!', 'Loaded into your wallet'); countUpChip(before, coins()); }
-        else { const chip = document.querySelector('.gc-chip'); if (chip) burst(chip); }
         ga(isPro ? 'pro_landed' : 'coin_pack_landed', { landed: landed ? 1 : 0 });
+        if (landed && isPro) {
+          // Pro just granted, but Playwire already loaded on this page — the head ad-gate ran
+          // at page load, BEFORE the webhook set no_ads_until. refresh() has now cached the
+          // entitlement into pl_wallet, so reload: the gate re-runs and skips ramp.js entirely.
+          // The "Pro is live" celebration is shown after the reload via pl_pro_celebrate.
+          try { localStorage.setItem('pl_pro_celebrate', '1'); } catch (e) {}
+          location.reload();
+          return;
+        }
+        open('shop');
+        if (landed) { celebrate('🪙', '+' + (coins() - before).toLocaleString('en-US') + ' coins!', 'Loaded into your wallet'); countUpChip(before, coins()); }
+        else { const chip = document.querySelector('.gc-chip'); if (chip) burst(chip); }
         return;
       }
       setTimeout(poll, 1500);
@@ -461,9 +491,21 @@
     const t = e.target.closest('#miStore, [data-store-open]');
     if (t) { e.preventDefault(); open(); }
   });
-  function boot() { paintChips(); refresh(); checkPurchaseReturn(); checkDiscordReturn(); }
+  // The head ad-gate reads the CACHED pl_wallet at page load, so it's always one refresh behind
+  // the server. After refresh() pulls the live wallet, if no-ads/Pro is active but Playwire was
+  // already injected on this page, reload ONCE to drop the ads. sessionStorage guards against loops
+  // and normal (non-Pro) users never trip it (noAds() is false for them).
+  function dropAdsIfPro() {
+    try {
+      if (noAds() && document.querySelector('script[src*="ramp.js"]') && !sessionStorage.getItem('pl_ads_reloaded')) {
+        sessionStorage.setItem('pl_ads_reloaded', '1');
+        location.reload();
+      }
+    } catch (e) {}
+  }
+  function boot() { paintChips(); refresh().then(dropAdsIfPro); checkPurchaseReturn(); checkDiscordReturn(); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
 
-  window.Store = { open, refresh, coins, noAds, entitlements: ent };
+  window.Store = { open, refresh, coins, noAds, isPro: proActive, paintProStars, entitlements: ent };
 })();
