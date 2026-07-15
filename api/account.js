@@ -2357,6 +2357,29 @@ module.exports = async (req, res) => {
         return res.status(200).json({ ok: true, count: users.length, users });
       }
 
+      // admin: list every account that has EVER been granted Pro / ad-free (token-gated), newest
+      // account first. Use to find a buyer whose Stripe/checkout email differs from their Google
+      // sign-in email — match by name/timing — or to confirm whether a grant happened at all.
+      //   curl -s -X POST .../api/account -H "content-type: application/json" \
+      //     -d '{"action":"proRecent","token":"<STATS_TOKEN>"}'
+      if (action === 'proRecent') {
+        if (body.token !== STATS_TOKEN) return res.status(403).json({ ok: false, error: 'forbidden' });
+        const now = Date.now();
+        const limit = Math.min(Number(body.limit) || 50, 200);
+        const rows = await sql`SELECT google_sub, email, name, entitlements, created_at FROM users
+          WHERE entitlements->>'pro_until' IS NOT NULL OR entitlements->>'no_ads_until' IS NOT NULL
+          ORDER BY created_at DESC LIMIT ${limit}`;
+        const users = rows.map(u => {
+          const e = (u.entitlements && typeof u.entitlements === 'object') ? u.entitlements : {};
+          const proActive = !!(e.pro_until && Date.parse(e.pro_until) > now);
+          return { google_sub: u.google_sub, email: u.email, name: u.name,
+            pro_active: proActive, ads_free: proActive || !!(e.no_ads_until && Date.parse(e.no_ads_until) > now),
+            pro_until: e.pro_until || null, no_ads_until: e.no_ads_until || null,
+            pro_subscription: e.pro_subscription || null, created_at: u.created_at };
+        });
+        return res.status(200).json({ ok: true, count: users.length, users });
+      }
+
       // admin: manually reverse one match's Elo/record when a false forfeit/quit claim beat the real
       // winner's report to the server (the same wrong the live reversal in pvpResult now prevents,
       // but for matches that were settled before that shipped). Token-gated + idempotent: only acts
