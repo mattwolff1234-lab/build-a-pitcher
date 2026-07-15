@@ -32,7 +32,7 @@
   // Real-money go-live gate. FALSE = Pro shows "Coming soon" (can't subscribe) — use while Stripe is
   // still in test mode / the account isn't activated. Flip TRUE (and swap Vercel to LIVE Stripe
   // keys + a LIVE-mode webhook — see GO-LIVE.md) to actually start charging. One switch, that's it.
-  const PRO_LIVE = false;
+  const PRO_LIVE = true;
 
   /* ---------- identity + api ---------- */
   function acct() { try { return JSON.parse(localStorage.getItem('pl_account') || 'null'); } catch (e) { return null; } }
