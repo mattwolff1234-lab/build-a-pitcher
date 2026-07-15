@@ -384,7 +384,14 @@
     .hero .kick { margin-top:40px; }   /* nudge the badge + hero down a bit on desktop */
   }
   @media (max-width: 620px) {
-    .stage { padding:18px 12px 30px; }
+    .stage { padding:12px 12px 28px; }
+    /* tighten the hero so the sport chips + Daily card + modes surface above the fold sooner */
+    .hero .kick { margin-bottom:12px; }
+    .hero p { font-size:13.5px; margin-top:9px; line-height:1.42; }
+    .stat-bar { margin-top:11px; }
+    .how-hub { margin-top:9px; }
+    .pro-banner { font-size:13px; padding:9px 13px; gap:6px 10px; }
+    .pro-banner .pb-right { font-size:12.5px; }
     /* tighter hub so the floating background shows through the side gutters */
     .modes { grid-template-columns:repeat(2,1fr); gap:8px; }
     /* one compact row on phones: text + button, no wrapping into a tall stack */
@@ -404,7 +411,7 @@
     .versus .vtitle { flex-wrap:wrap; gap:7px; font-size:17px; }
     .versus .vdesc { font-size:12px; }
     .versus .vgo { padding:8px 13px; letter-spacing:1.4px; }
-    .hero { margin-bottom:16px; }
+    .hero { margin-bottom:12px; }
   }
 </style>
 </head>
@@ -792,10 +799,22 @@ function clearAccount() { account = null; try { localStorage.removeItem('pl_acco
 function escapeHTML(s) { return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
 
 let gsiReady = false;
+function inAppBrowser() {
+  try {
+    var ua = navigator.userAgent || '';
+    if (/\b(Twitter|FBAN|FBAV|FB_IAB|Instagram|Snapchat|TikTok|musical_ly|LinkedInApp|MicroMessenger|Pinterest|GSA)\b/i.test(ua)) return true;
+    if (/Line\//i.test(ua)) return true;
+    if (/;\s?wv[;)]/i.test(ua)) return true;
+    var iOS = /iPhone|iPod|iPad/i.test(ua);
+    if (iOS && /AppleWebKit/i.test(ua) && !/Safari/i.test(ua) && !/(CriOS|FxiOS|EdgiOS|OPiOS)/i.test(ua)) return true;
+  } catch (e) {}
+  return false;
+}
 function initGoogle(tries) {
   tries = tries || 0;
+  if (inAppBrowser()) { renderAcct(); return; }
   if (!window.google || !google.accounts || !google.accounts.id) { if (tries < 40) setTimeout(() => initGoogle(tries + 1), 250); return; }
-  try { google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleCredential, auto_select: true }); } catch (e) {}
+  try { google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleCredential, auto_select: false }); } catch (e) {}
   gsiReady = true; renderAcct();
 }
 async function onGoogleCredential(resp) {
@@ -818,6 +837,8 @@ function renderAcct() {
       <div class="who"><b>${escapeHTML(account.name || 'Player')}</b><span>${escapeHTML(account.email || '')}</span></div>
       <button class="signout" id="signOutBtn">Sign out</button></div>`;
     const so = $('signOutBtn'); if (so) so.onclick = () => clearAccount();
+  } else if (inAppBrowser()) {
+    slot.innerHTML = `<div class="acct-hint">To sign in with Google, open this page in your normal browser: tap the share/menu button and choose "Open in Safari" or "Open in Chrome." Google sign-in doesn't work inside in-app browsers (X, Instagram, Facebook, etc.).</div>`;
   } else {
     slot.innerHTML = `<div id="gsiWrap"></div><div class="acct-hint">Sign in with Google to save your players &amp; your 1v1 rating.</div>`;
     if (gsiReady) { try { google.accounts.id.renderButton($('gsiWrap'), { theme: 'filled_black', size: 'large', shape: 'pill', text: 'signin_with' }); } catch (e) {} }

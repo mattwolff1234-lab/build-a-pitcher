@@ -1057,9 +1057,11 @@ function displayName(){ return guestName; }
 // stable per-person id used to avoid matching yourself on a second tab/device
 function personId(){ return account ? ('acct:' + account.sub) : ('guest:' + guestId); }
 
+function inAppBrowser(){ try { var ua=navigator.userAgent||''; if(/\b(Twitter|FBAN|FBAV|FB_IAB|Instagram|Snapchat|TikTok|musical_ly|LinkedInApp|MicroMessenger|Pinterest|GSA)\b/i.test(ua))return true; if(/Line\//i.test(ua))return true; if(/;\s?wv[;)]/i.test(ua))return true; var iOS=/iPhone|iPod|iPad/i.test(ua); if(iOS&&/AppleWebKit/i.test(ua)&&!/Safari/i.test(ua)&&!/(CriOS|FxiOS|EdgiOS|OPiOS)/i.test(ua))return true; } catch(e){} return false; }
 function initGoogle(tries=0){
+  if (inAppBrowser()) return;
   if (!window.google || !google.accounts || !google.accounts.id){ if (tries<40) setTimeout(()=>initGoogle(tries+1), 250); return; }
-  try { google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleCredential, auto_select: true }); } catch(e){}
+  try { google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleCredential, auto_select: false }); } catch(e){}
   gsiReady=true; updateRatingChip();
 }
 let gsiReady=false;
