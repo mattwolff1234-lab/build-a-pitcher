@@ -261,7 +261,7 @@
 
   /* ---------- figure stage ---------- */
   .stage3d { perspective:1100px; margin:8px auto 0; max-width:600px; }
-  .stage { position:relative; width:100%; aspect-ratio:7/5; border-radius:16px; overflow:hidden;
+  .stage { position:relative; width:100%; aspect-ratio:1/1; border-radius:16px; overflow:hidden;
     border:1px solid var(--line); transform-style:preserve-3d; will-change:transform;
     background:radial-gradient(120% 100% at 50% 30%, #122236 0%, #060a12 76%);
     box-shadow:inset 0 0 70px rgba(0,0,0,.6), 0 14px 50px rgba(0,0,0,.5); }
@@ -1119,14 +1119,14 @@
 // Each slot maps an attribute to a body part. ax/ay = anchor point on the figure (%),
 // lx/ly = where the label node floats (%). A wire connects the two.
 const SLOTS = [
-  { key: 'plate_vision',     label: 'Vision',     part: 'Eyes',   mask: 'bat-seg-plate_vision.png',     ax: 53.4, ay: 28.3, lx: 12, ly: 13 },
-  { key: 'power',            label: 'Power',      part: 'Bat',    mask: 'bat-seg-power.png',            ax: 40.5, ay: 33.5, lx: 10, ly: 35 },
-  { key: 'contact',          label: 'Contact',    part: 'Hands',  mask: 'bat-seg-contact.png',          ax: 38.2, ay: 26.2, lx: 10, ly: 57 },
-  { key: 'speed',            label: 'Speed',      part: 'Feet',   mask: 'bat-seg-speed.png',            ax: 43.7, ay: 61.0, lx: 14, ly: 80 },
-  { key: 'batting_clutch',   label: 'Clutch',     part: 'Helmet', mask: 'bat-seg-batting_clutch.png',   ax: 47.9, ay: 13.6, lx: 90, ly: 12 },
-  { key: 'plate_discipline', label: 'Discipline', part: 'Head',   mask: 'bat-seg-plate_discipline.png', ax: 56, ay: 20, lx: 90, ly: 37 },
-  { key: 'frame',            label: 'Frame',      part: 'Body',   mask: 'bat-seg-frame.png',            ax: 50.3, ay: 40.3, lx: 90, ly: 58, type: 'height' },
-  { key: 'fielding_ability', label: 'Defense',    part: 'Thigh',  mask: 'bat-seg-fielding_ability.svg', ax: 57.1, ay: 58.3, lx: 90, ly: 78 },
+  { key: 'plate_vision',     label: 'Vision',     part: 'Eyes',   mask: 'bat-seg-plate_vision.png',     ax: 53.4, ay: 28.3, lx: 12, ly: 11 },
+  { key: 'power',            label: 'Power',      part: 'Bat',    mask: 'bat-seg-power.png',            ax: 40.5, ay: 33.5, lx: 12, ly: 37 },
+  { key: 'contact',          label: 'Contact',    part: 'Hands',  mask: 'bat-seg-contact.png',          ax: 38.2, ay: 26.2, lx: 12, ly: 63 },
+  { key: 'speed',            label: 'Speed',      part: 'Feet',   mask: 'bat-seg-speed.png',            ax: 43.7, ay: 61.0, lx: 12, ly: 89 },
+  { key: 'batting_clutch',   label: 'Clutch',     part: 'Helmet', mask: 'bat-seg-batting_clutch.png',   ax: 47.9, ay: 13.6, lx: 88, ly: 11 },
+  { key: 'plate_discipline', label: 'Discipline', part: 'Head',   mask: 'bat-seg-plate_discipline.png', ax: 56, ay: 20, lx: 88, ly: 37 },
+  { key: 'frame',            label: 'Frame',      part: 'Body',   mask: 'bat-seg-frame.png',            ax: 50.3, ay: 40.3, lx: 88, ly: 63, type: 'height' },
+  { key: 'fielding_ability', label: 'Defense',    part: 'Thigh',  mask: 'bat-seg-fielding_ability.svg', ax: 57.1, ay: 58.3, lx: 88, ly: 89 },
 ];
 
 // MLB team primary colors (jersey tint). FA / unknown -> neutral steel.

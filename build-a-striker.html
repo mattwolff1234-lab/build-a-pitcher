@@ -259,7 +259,7 @@
 
   /* ---------- figure stage ---------- */
   .stage3d { perspective:1100px; margin:8px auto 0; max-width:600px; }
-  .stage { position:relative; width:100%; aspect-ratio:7/5; max-width:520px; margin:0 auto; border-radius:16px; overflow:hidden;
+  .stage { position:relative; width:100%; aspect-ratio:1/1; max-width:520px; margin:0 auto; border-radius:16px; overflow:hidden;
     border:1px solid var(--line); transform-style:preserve-3d; will-change:transform;
     background:radial-gradient(120% 100% at 50% 30%, #122236 0%, #060a12 76%);
     box-shadow:inset 0 0 70px rgba(0,0,0,.6), 0 14px 50px rgba(0,0,0,.5); }
@@ -1120,15 +1120,15 @@
 // Each slot maps an attribute to a body part. ax/ay = anchor point on the figure (%),
 // lx/ly = where the label node floats (%). A wire connects the two.
 const SLOTS = [
-  { key: 'finishing', label: 'Finishing',  part: 'Striking Boot', mask: 'soc-seg-finishing.png', ax: 60, ay: 90, lx: 89, ly: 70 },
-  { key: 'pace',      label: 'Pace',       part: 'Legs',          mask: 'soc-seg-pace.png',      ax: 43.4, ay: 69.3, lx: 9,  ly: 82 },
-  { key: 'power',     label: 'Shot Power', part: 'Thigh',         mask: 'soc-seg-power.png',     ax: 50.2, ay: 54.4, lx: 90, ly: 58 },
-  { key: 'dribbling', label: 'Dribbling',  part: 'Close Control', mask: 'soc-seg-dribbling.png', ax: 56, ay: 64, lx: 92, ly: 40 },
-  { key: 'passing',   label: 'Passing',    part: 'Vision Arm',    mask: 'soc-seg-passing.png',   ax: 43.4, ay: 28.9, lx: 7,  ly: 36 },
-  { key: 'heading',   label: 'Heading',    part: 'Head',          mask: 'soc-seg-heading.png',   ax: 50, ay: 10,  lx: 84, ly: 6 },
-  { key: 'physical',  label: 'Physical',   part: 'Engine',        mask: 'soc-seg-physical.png',  ax: 58.1, ay: 28.9, lx: 92, ly: 22 },
-  { key: 'clutch',    label: 'Clutch',     part: 'Heart',         mask: 'soc-seg-clutch.png',    ax: 50, ay: 26, lx: 12, ly: 8 },
-  { key: 'frame',     label: 'Frame',      part: 'Height',        mask: 'soc-seg-frame.png',     ax: 50.8, ay: 34.3, lx: 9,  ly: 52, type: 'height' },
+  { key: 'finishing', label: 'Finishing',  part: 'Striking Boot', mask: 'soc-seg-finishing.png', ax: 60, ay: 90, lx: 88, ly: 90 },
+  { key: 'pace',      label: 'Pace',       part: 'Legs',          mask: 'soc-seg-pace.png',      ax: 43.4, ay: 69.3, lx: 12,  ly: 89 },
+  { key: 'power',     label: 'Shot Power', part: 'Thigh',         mask: 'soc-seg-power.png',     ax: 50.2, ay: 54.4, lx: 88, ly: 70 },
+  { key: 'dribbling', label: 'Dribbling',  part: 'Close Control', mask: 'soc-seg-dribbling.png', ax: 56, ay: 64, lx: 88, ly: 50 },
+  { key: 'passing',   label: 'Passing',    part: 'Vision Arm',    mask: 'soc-seg-passing.png',   ax: 43.4, ay: 28.9, lx: 12,  ly: 37 },
+  { key: 'heading',   label: 'Heading',    part: 'Head',          mask: 'soc-seg-heading.png',   ax: 50, ay: 10,  lx: 88, ly: 10 },
+  { key: 'physical',  label: 'Physical',   part: 'Engine',        mask: 'soc-seg-physical.png',  ax: 58.1, ay: 28.9, lx: 88, ly: 30 },
+  { key: 'clutch',    label: 'Clutch',     part: 'Heart',         mask: 'soc-seg-clutch.png',    ax: 50, ay: 26, lx: 12, ly: 11 },
+  { key: 'frame',     label: 'Frame',      part: 'Height',        mask: 'soc-seg-frame.png',     ax: 50.8, ay: 34.3, lx: 12,  ly: 63, type: 'height' },
 ];
 
 // Career clubs (Signing Day, transfers): 30 famous sides. color = kit primary; tid = EA club id -

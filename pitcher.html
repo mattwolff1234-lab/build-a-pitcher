@@ -348,7 +348,7 @@
 
   /* ---------- figure stage ---------- */
   .stage3d { perspective:1100px; margin:8px auto 0; max-width:620px; }
-  .stage { position:relative; width:100%; aspect-ratio:7/5; border-radius:16px; overflow:hidden;
+  .stage { position:relative; width:100%; aspect-ratio:1/1; border-radius:16px; overflow:hidden;
     border:1px solid var(--line); transform-style:preserve-3d; will-change:transform;
     background:radial-gradient(120% 100% at 50% 30%, #122236 0%, #060a12 76%);
     box-shadow:inset 0 0 70px rgba(0,0,0,.6), 0 14px 50px rgba(0,0,0,.5); }
@@ -1131,15 +1131,15 @@
 // Each slot maps an attribute to a body part. ax/ay = anchor point on the figure (%),
 // lx/ly = where the label node floats (%). A wire connects the two.
 const SLOTS = [
-  { key: 'hr_per_bf',           label: 'Ground Ball', part: 'Ball',     ax: 31, ay: 24, lx: 12, ly: 18 },
-  { key: 'pitch_movement',      label: 'Break',       part: 'Wrist',    ax: 34, ay: 26, lx: 11, ly: 34 },
-  { key: 'k_per_bf',            label: 'Strikeout',   part: 'Forearm',  ax: 38, ay: 27, lx: 11, ly: 50 },
-  { key: 'pitch_velocity',      label: 'Velocity',    part: 'Bicep',    ax: 41, ay: 28, lx: 12, ly: 66 },
-  { key: 'pitch_control',       label: 'Command',     part: 'Shoulder', ax: 57, ay: 28, lx: 88, ly: 31 },
-  { key: 'pitching_clutch',     label: 'Clutch',      part: 'Head',     ax: 48, ay: 13, lx: 88, ly: 15 },
-  { key: 'fielding_ability',    label: 'Defense',     part: 'Glove',    ax: 64, ay: 40, lx: 89, ly: 47 },
-  { key: 'frame',               label: 'Frame',       part: 'Body',     ax: 49, ay: 37, lx: 89, ly: 63, type: 'height' },
-  { key: 'stamina',             label: 'Stamina',     part: 'Legs',     ax: 43, ay: 65, lx: 14, ly: 84 },
+  { key: 'hr_per_bf',           label: 'Ground Ball', part: 'Ball',     ax: 31, ay: 24, lx: 12, ly: 10 },
+  { key: 'pitch_movement',      label: 'Break',       part: 'Wrist',    ax: 34, ay: 26, lx: 12, ly: 30 },
+  { key: 'k_per_bf',            label: 'Strikeout',   part: 'Forearm',  ax: 38, ay: 27, lx: 12, ly: 50 },
+  { key: 'pitch_velocity',      label: 'Velocity',    part: 'Bicep',    ax: 41, ay: 28, lx: 12, ly: 70 },
+  { key: 'pitch_control',       label: 'Command',     part: 'Shoulder', ax: 57, ay: 28, lx: 88, ly: 37 },
+  { key: 'pitching_clutch',     label: 'Clutch',      part: 'Head',     ax: 48, ay: 13, lx: 88, ly: 11 },
+  { key: 'fielding_ability',    label: 'Defense',     part: 'Glove',    ax: 64, ay: 40, lx: 88, ly: 63 },
+  { key: 'frame',               label: 'Frame',       part: 'Body',     ax: 49, ay: 37, lx: 88, ly: 89, type: 'height' },
+  { key: 'stamina',             label: 'Stamina',     part: 'Legs',     ax: 43, ay: 65, lx: 12, ly: 90 },
 ];
 
 // MLB team primary colors (jersey tint). FA / unknown -> neutral steel.

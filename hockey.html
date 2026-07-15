@@ -217,7 +217,7 @@
 
   /* ---------- figure stage ---------- */
   .stage3d { perspective:1100px; margin:8px auto 0; max-width:600px; }
-  .stage { position:relative; width:100%; aspect-ratio:7/5; max-width:520px; margin:0 auto; border-radius:16px; overflow:hidden;
+  .stage { position:relative; width:100%; aspect-ratio:1/1; max-width:520px; margin:0 auto; border-radius:16px; overflow:hidden;
     border:1px solid var(--line); transform-style:preserve-3d; will-change:transform;
     background:radial-gradient(120% 100% at 50% 30%, #122236 0%, #060a12 76%);
     box-shadow:inset 0 0 70px rgba(0,0,0,.6), 0 14px 50px rgba(0,0,0,.5); }
@@ -1070,15 +1070,15 @@
 // Each slot maps an attribute to a body part. ax/ay = anchor point on the figure (%),
 // lx/ly = where the label node floats (%). A wire connects the two.
 const SLOTS = [
-  { key: 'sniping',    label: 'Sniping',     part: 'Stick Blade',  mask: 'hockey-seg-sniping.png',    ax: 20,   ay: 86,   lx: 6,  ly: 95 },
-  { key: 'playmaking', label: 'Playmaking',  part: 'Hands',        mask: 'hockey-seg-playmaking.png', ax: 49.5, ay: 58.2, lx: 8,  ly: 52 },
-  { key: 'shotpower',  label: 'Shot Power',  part: 'Shooting Arm', mask: 'hockey-seg-shotpower.png',  ax: 44.7, ay: 41.1, lx: 7,  ly: 34 },
-  { key: 'physical',   label: 'Physicality', part: 'Shoulders',    mask: 'hockey-seg-physical.png',   ax: 63.1, ay: 30.3, lx: 91, ly: 7 },
-  { key: 'defense',    label: 'Defense',     part: 'Shin Pads',    mask: 'hockey-seg-defense.png',    ax: 63.6, ay: 70.9, lx: 90, ly: 88 },
-  { key: 'iq',         label: 'Hockey IQ',   part: 'Helmet',       mask: 'hockey-seg-iq.png',         ax: 51.9, ay: 13.5, lx: 12, ly: 5 },
-  { key: 'motor',      label: 'Motor',       part: 'Legs',         mask: 'hockey-seg-motor.png',      ax: 58.9, ay: 57.3, lx: 91, ly: 60 },
-  { key: 'clutch',     label: 'Clutch',      part: 'Chest',        mask: 'hockey-seg-clutch.png',     ax: 52,   ay: 30,   lx: 90, ly: 22 },
-  { key: 'frame',      label: 'Frame',       part: 'Height',       mask: 'hockey-seg-frame.png',      ax: 53.0, ay: 34.6, lx: 92, ly: 40, type: 'height' },
+  { key: 'sniping',    label: 'Sniping',     part: 'Stick Blade',  mask: 'hockey-seg-sniping.png',    ax: 20,   ay: 86,   lx: 12,  ly: 89 },
+  { key: 'playmaking', label: 'Playmaking',  part: 'Hands',        mask: 'hockey-seg-playmaking.png', ax: 49.5, ay: 58.2, lx: 12,  ly: 63 },
+  { key: 'shotpower',  label: 'Shot Power',  part: 'Shooting Arm', mask: 'hockey-seg-shotpower.png',  ax: 44.7, ay: 41.1, lx: 12,  ly: 37 },
+  { key: 'physical',   label: 'Physicality', part: 'Shoulders',    mask: 'hockey-seg-physical.png',   ax: 63.1, ay: 30.3, lx: 88, ly: 10 },
+  { key: 'defense',    label: 'Defense',     part: 'Shin Pads',    mask: 'hockey-seg-defense.png',    ax: 63.6, ay: 70.9, lx: 88, ly: 90 },
+  { key: 'iq',         label: 'Hockey IQ',   part: 'Helmet',       mask: 'hockey-seg-iq.png',         ax: 51.9, ay: 13.5, lx: 12, ly: 11 },
+  { key: 'motor',      label: 'Motor',       part: 'Legs',         mask: 'hockey-seg-motor.png',      ax: 58.9, ay: 57.3, lx: 88, ly: 70 },
+  { key: 'clutch',     label: 'Clutch',      part: 'Chest',        mask: 'hockey-seg-clutch.png',     ax: 52,   ay: 30,   lx: 88, ly: 30 },
+  { key: 'frame',      label: 'Frame',       part: 'Height',       mask: 'hockey-seg-frame.png',      ax: 53.0, ay: 34.6, lx: 88, ly: 50, type: 'height' },
 ];
 
 // NHL team primary colors (jersey tint). FA / unknown -> neutral steel.
