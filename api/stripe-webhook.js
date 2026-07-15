@@ -37,13 +37,24 @@ async function setPro(player, patch) {
   await sql`UPDATE users SET entitlements = COALESCE(entitlements, '{}'::jsonb) || ${JSON.stringify(patch)}::jsonb
     WHERE google_sub = ${player}`;
 }
+// Stripe API 2025+/dahlia moved current_period_end OFF the Subscription root onto its items.
+// Read the latest item period end, falling back to the legacy root field for older API versions.
+// (This is what was silently breaking every Pro grant: sub.current_period_end is now undefined,
+//  so grantPro bailed with 'no player/end' and returned 200 without granting.)
+function subPeriodEndMs(sub) {
+  const items = (sub && sub.items && sub.items.data) || [];
+  const fromItems = items.map(i => Number(i && i.current_period_end)).filter(n => n > 0).sort((a, b) => b - a)[0];
+  const secs = fromItems || Number(sub && sub.current_period_end) || 0;
+  return secs * 1000;
+}
 // Grant/extend Pro from a subscription id (checkout.session.completed + every paid invoice).
-async function grantPro(res, subId) {
+// fallbackPlayer = player_key stamped on the checkout session, in case the sub metadata is empty.
+async function grantPro(res, subId, fallbackPlayer) {
   const sub = await stripeGet('subscriptions/' + encodeURIComponent(String(subId || '')));
   if (!sub || sub.error) return res.status(200).json({ ok: true, ignored: 'sub fetch' });
-  const player = String((sub.metadata && sub.metadata.player_key) || '').slice(0, 80);
-  const end = Number(sub.current_period_end) * 1000;
-  if (!player || !end) return res.status(200).json({ ok: true, ignored: 'no player/end' });
+  const player = String((sub.metadata && sub.metadata.player_key) || fallbackPlayer || '').slice(0, 80);
+  const end = subPeriodEndMs(sub);
+  if (!player || !end) return res.status(200).json({ ok: true, ignored: 'no player/end', hasPlayer: !!player, hasEnd: !!end });
   const untilISO = new Date(end).toISOString();
   await setPro(player, { pro_until: untilISO, no_ads_until: untilISO,
     pro_customer: String(sub.customer || '').slice(0, 80), pro_subscription: String(sub.id || '').slice(0, 80) });
@@ -52,7 +63,7 @@ async function grantPro(res, subId) {
 // Cancel — let Pro lapse at the current period end (immediate cancels put that at ~now).
 async function revokePro(res, sub) {
   const player = String((sub && sub.metadata && sub.metadata.player_key) || '').slice(0, 80);
-  const end = (Number(sub && sub.current_period_end) * 1000) || Date.now();
+  const end = subPeriodEndMs(sub) || Date.now();
   if (!player) return res.status(200).json({ ok: true, ignored: 'no player' });
   const untilISO = new Date(end).toISOString();
   await setPro(player, { pro_until: untilISO, no_ads_until: untilISO, pro_subscription: null });
@@ -100,9 +111,13 @@ module.exports = async (req, res) => {
     const obj = (event.data && event.data.object) || {};
 
     // --- GoatLab Pro subscription lifecycle ---
+    // subscription id comes from the Checkout Session (obj.subscription) or an invoice
+    // (obj.subscription on older API versions, obj.parent.subscription_details.subscription on dahlia).
+    const proSubId = obj.subscription
+      || (obj.parent && obj.parent.subscription_details && obj.parent.subscription_details.subscription) || null;
     if ((type === 'checkout.session.completed' && obj.mode === 'subscription') ||
-        ((type === 'invoice.paid' || type === 'invoice.payment_succeeded') && obj.subscription)) {
-      return await grantPro(res, obj.subscription);
+        ((type === 'invoice.paid' || type === 'invoice.payment_succeeded') && proSubId)) {
+      return await grantPro(res, proSubId, obj.metadata && obj.metadata.player_key);
     }
     if (type === 'customer.subscription.deleted') {
       return await revokePro(res, obj);   // obj = the subscription
