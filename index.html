@@ -474,6 +474,28 @@
     <div class="kick">A Pitchergami Game</div>
     <h1>Goat<i>Lab</i></h1>
     <p>Spin the reel, draft real pros into the attribute slots, then simulate their entire career.</p>
+    <style>
+      .pro-banner{ display:flex; align-items:center; justify-content:center; gap:8px 14px; flex-wrap:wrap;
+        margin:14px auto 2px; max-width:540px; padding:10px 16px; border-radius:12px; text-decoration:none; cursor:pointer;
+        background:linear-gradient(100deg,rgba(255,210,63,.16),rgba(120,80,255,.16)); border:1px solid rgba(255,210,63,.45);
+        color:#fff; font-size:14.5px; transition:transform .15s ease, box-shadow .15s ease; }
+      .pro-banner:hover{ transform:translateY(-1px); box-shadow:0 8px 22px rgba(255,210,63,.2); }
+      .pro-banner .pb-right{ color:#ffd23f; font-family:'Oswald',sans-serif; letter-spacing:.5px; white-space:nowrap; }
+    </style>
+    <a class="pro-banner" data-store-open href="#" id="proBanner">
+      <span>⭐ <b>Go ad-free</b> with GoatLab Pro</span>
+      <span class="pb-right">$4.99/mo · $39.99/yr →</span>
+    </a>
+    <script>
+      (function () {
+        var b = document.getElementById('proBanner'); if (!b) return;
+        if (window.Capacitor) { b.style.display = 'none'; return; }   // Apple IAP — no web purchase in the app
+        try {
+          var e = (JSON.parse(localStorage.getItem('pl_wallet') || 'null') || {}).entitlements;
+          if (e && ((e.pro_until && Date.parse(e.pro_until) > Date.now()) || (e.no_ads_until && Date.parse(e.no_ads_until) > Date.now()))) b.style.display = 'none';
+        } catch (err) {}
+      })();
+    </script>
     <div id="statBar" class="stat-bar" style="display:none">
       <span class="sb-plays" style="display:none"></span>
       <span class="sb-msg">Can you build the <b class="sb-goat">GOAT</b> (99 OVR)?</span>
