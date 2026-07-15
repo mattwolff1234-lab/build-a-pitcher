@@ -146,6 +146,15 @@
       chip.textContent = signedIn() && wallet ? '🪙 ' + coins().toLocaleString('en-US') : '🪙 Store';
     });
     paintProStars();
+    paintProBanner();
+  }
+  // Hide Pro-upsell banners (e.g. the landing "Go ad-free with Pro" banner) while Pro / ad-free is
+  // active or we're in the native app; show them otherwise. The page's own inline script hides it
+  // from the CACHED wallet at load — this is the authoritative pass that runs again after refresh(),
+  // so a stale cache that let the banner slip through gets corrected once the live wallet lands.
+  function paintProBanner() {
+    const hide = inApp() || noAds();
+    document.querySelectorAll('.pro-banner').forEach(el => { el.style.display = hide ? 'none' : ''; });
   }
   // Fill every [data-pro-star] slot with a ⭐ while GoatLab Pro is active; clear it when it lapses.
   // Render spots just drop an empty <span data-pro-star></span> next to the name — this keeps it live
