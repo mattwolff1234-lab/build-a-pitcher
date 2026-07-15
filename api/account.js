@@ -2380,6 +2380,28 @@ module.exports = async (req, res) => {
         return res.status(200).json({ ok: true, count: users.length, users });
       }
 
+      // admin: manually grant Pro / ad-free to an account (token-gated) — rescue a buyer whose
+      // webhook grant failed. Target by key (google_sub) or Google email. days defaults to 32
+      // (a monthly cycle + buffer). Same entitlement shape the Stripe webhook writes.
+      //   curl -s -X POST .../api/account -H "content-type: application/json" \
+      //     -d '{"action":"proGrant","token":"<STATS_TOKEN>","key":"<google_sub>","days":32}'
+      if (action === 'proGrant') {
+        if (body.token !== STATS_TOKEN) return res.status(403).json({ ok: false, error: 'forbidden' });
+        let key = body.key ? String(body.key) : null;
+        if (!key && body.email) {
+          const [u] = await sql`SELECT google_sub FROM users WHERE lower(email) = lower(${String(body.email).trim()})`;
+          key = u ? u.google_sub : null;
+        }
+        if (!key) return res.status(400).json({ ok: false, error: 'key or email required (no match)' });
+        const days = Math.min(Math.max(Number(body.days) || 32, 1), 400);
+        const until = new Date(Date.now() + days * 864e5).toISOString();
+        const patch = JSON.stringify({ pro_until: until, no_ads_until: until, pro_grant: 'manual' });
+        const [u] = await sql`UPDATE users SET entitlements = COALESCE(entitlements, '{}'::jsonb) || ${patch}::jsonb
+          WHERE google_sub = ${key} RETURNING google_sub, email, name, entitlements`;
+        if (!u) return res.status(404).json({ ok: false, error: 'no user with that key' });
+        return res.status(200).json({ ok: true, granted: key, until, user: { email: u.email, name: u.name, entitlements: u.entitlements } });
+      }
+
       // admin: manually reverse one match's Elo/record when a false forfeit/quit claim beat the real
       // winner's report to the server (the same wrong the live reversal in pvpResult now prevents,
       // but for matches that were settled before that shipped). Token-gated + idempotent: only acts
