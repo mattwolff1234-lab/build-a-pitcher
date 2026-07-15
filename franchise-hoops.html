@@ -148,6 +148,8 @@ button.btn.danger { color:#ffdede; background:rgba(255,77,94,.14); border:1px so
 .seat.empty { border-style:dashed; color:var(--dim); align-items:center; justify-content:center; }
 .seat.empty .plus { font-size:20px; color:var(--accent2); }
 .ov.t-d { color:#7fd7ff; } .ov.t-g { color:var(--gold); } .ov.t-s { color:#cfd8e6; } .ov.t-b { color:#d09a5e; } .ov.t-x { color:#9aa7ba; }
+/* over-99 "elite" — a maxed rating that visibly pops (your studs / real over-99 builds) */
+.ov.t-e, .pcard-ovr.t-e { color:#ffe27a; text-shadow:0 0 10px rgba(255,196,54,.9), 0 0 3px rgba(255,255,255,.7); }
 .potstars { color:var(--gold); font-size:10px; letter-spacing:1px; }
 .rosterbar { display:flex; gap:10px; margin:20px 0 4px; flex-wrap:wrap; align-items:center; }
 /* season */
@@ -659,6 +661,9 @@ function seededRandom(seedText) {
   };
 }
 const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
+// Your own creations (built rookies, HoF imports, real leaderboard builds) can exceed 99 and
+// keep their true rating up to here; generated FAs/rivals still top out at 99 (see mkFA/mkRival).
+const OVR_CEIL = 125;
 const RIVAL_CITIES = ['Rivertown', 'Port Vista', 'Iron Ridge', 'Bayshore', 'Summit Falls', 'Red Mesa', 'Kingsport', 'Palm Vale', 'Storm Lake', 'North Haven', 'Gold Coast', 'Cedar Hill', 'Silver City', 'Twin Rivers'];
 const RIVAL_MASCOTS = ['Admirals', 'Bison', 'Comets', 'Wolves', 'Sentinels', 'Rattlers', 'Mariners', 'Falcons', 'Miners', 'Thunder', 'Royals', 'Aces', 'Longhorns', 'Captains'];
 const FA_FIRST = ['Denny', 'Hal', 'Rusty', 'Vern', 'Chip', 'Gus', 'Lefty', 'Moose', 'Ray', 'Bucky', 'Ernie', 'Wade', 'Sal', 'Duke', 'Ollie', 'Red', 'Tito', 'Cy', 'Amos', 'Flip', 'Dizzy', 'Hank', 'Otis', 'Zeke'];
@@ -705,7 +710,7 @@ function mkProspect(rng, game, pool, used) {
   const real = poolPick(rng, pool, game, ovr - 4, ovr + 4, used);   // nearest real build to the rolled tier
   if (real) {
     p.name = String(real.name).slice(0, 26);
-    p.ovr = clamp(Math.round(real.ovr), 55, 99);
+    p.ovr = clamp(Math.round(real.ovr), 55, OVR_CEIL);
     p.pot = Math.max(p.pot, p.ovr);
     if (used) used.add(p.name);
   }
@@ -944,7 +949,9 @@ function developPlayer(rng, p) {
   } else {
     p.ovr -= 2 + Math.round(rng() * 2);                           // 2–4
   }
-  p.ovr = clamp(p.ovr, 40, 99);
+  // over-99 players (pot carries their real ceiling) decline naturally with age instead of
+  // snapping to 99; normal players still cap at 99 since their pot never exceeds it.
+  p.ovr = clamp(p.ovr, 40, Math.max(99, p.pot || p.ovr));
   const retired = (p.age >= 38) || (p.age >= 33 && (from - p.ovr) >= 3 && rng() < 0.6) || (p.ovr <= 52);
   return { from, to: p.ovr, retired, note };
 }
@@ -1141,7 +1148,7 @@ function awardWinXP() {
 }
 
 /* ---------- tiny ui helpers ---------- */
-const tierCls = o => o >= 85 ? 't-d' : o >= 80 ? 't-g' : o >= 75 ? 't-s' : o >= 65 ? 't-b' : 't-x';
+const tierCls = o => o >= 100 ? 't-e' : o >= 85 ? 't-d' : o >= 80 ? 't-g' : o >= 75 ? 't-s' : o >= 65 ? 't-b' : 't-x';
 const escapeHTML = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 function potStars(p) {
   const room = Math.max(0, (p.pot || p.ovr) - p.ovr);
@@ -1282,7 +1289,7 @@ async function openPicker(where, idx) {
       const s = j.rows[Number(el.dataset.hof)];
       if (isTaken(s)) { toast('Already on the roster.'); return; }
       const rng = seededRandom(`${F.id}|hof|${s.id}`);
-      const p = mkPlayer(rng, game, clamp(Math.round(s.ovr), 40, 99), 23, 'hof');
+      const p = mkPlayer(rng, game, clamp(Math.round(s.ovr), 40, OVR_CEIL), 23, 'hof');
       p.name = String(s.name).slice(0, 26);   // your build keeps its name
       p.hofId = s.id;                          // the save it came from (dedupe key)
       placePlayer(p);
@@ -1300,7 +1307,7 @@ function signRookieTo(where, idx) {
     return;
   }
   const rng = seededRandom(`${F.id}|rookie|${rk.name}|${F.prog || 0}`);
-  const p = mkPlayer(rng, rk.game, clamp(Math.round(rk.ovr), 40, 99), 22, 'rookie');
+  const p = mkPlayer(rng, rk.game, clamp(Math.round(rk.ovr), 40, OVR_CEIL), 22, 'rookie');
   p.name = String(rk.name).slice(0, 26);
   if (F.phase === 'season' || F.phase === 'playoffs') p.s = blankS(p.game);
   const arr = where === 'rot' ? F.rotation : F.lineup;
