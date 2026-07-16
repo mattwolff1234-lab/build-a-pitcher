@@ -53,7 +53,9 @@ async function authed(sub, sessionToken) {
   return !!(u && u.session_token && u.session_token === sessionToken);
 }
 
+const cors = require('./cors.js');
 module.exports = async (req, res) => {
+  if (cors(req, res)) return;
   if (!CONN) return res.status(500).json({ ok: false, error: 'Database not configured' });
   const origin = 'https://' + String(req.headers.host || 'pitchinglab.pitchergami.com');
   // FIXED canonical redirect — must be registered EXACTLY in the Discord app's OAuth2 → Redirects

@@ -50,7 +50,9 @@ async function counts(game) {
   return { online: Number(r.online), searching: Number(r.searching), playing: Number(r.playing) };
 }
 
+const cors = require('./cors.js');
 module.exports = async (req, res) => {
+  if (cors(req, res)) return;
   // A live-counter hiccup must never break the page — always answer 200 with a usable shape.
   if (!CONN) return res.status(200).json({ ok: false, online: 0, searching: 0, playing: 0 });
   try {

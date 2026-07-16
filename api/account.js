@@ -26,6 +26,12 @@ const cleanName = (v, fb, max) => {
 // Google Cloud Console, or set GOOGLE_CLIENT_ID in the Vercel project env.
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID
   || '349698720898-t9bpb8fp7ks6scf8ci8mmoeec1lpm3d3.apps.googleusercontent.com';
+// Native Google Sign-In in the iOS app uses a separate "iOS" OAuth client in the SAME
+// Google project, so its id tokens carry a different `aud` but the SAME `sub` (Google
+// user id) — meaning a native sign-in lands on the exact same account as the web one.
+// Set GOOGLE_IOS_CLIENT_ID in Vercel to that iOS client id to accept those tokens.
+const GOOGLE_IOS_CLIENT_ID = process.env.GOOGLE_IOS_CLIENT_ID || '';
+const GOOGLE_AUDS = [GOOGLE_CLIENT_ID, GOOGLE_IOS_CLIENT_ID].filter(Boolean);
 
 // Secret for the private balance-stats read (server-side only; not served to the browser).
 const STATS_TOKEN = process.env.STATS_TOKEN || 'pl-balance-7f3a9c21';
@@ -282,7 +288,7 @@ async function verifyGoogle(idToken) {
     const r = await fetch('https://oauth2.googleapis.com/tokeninfo?id_token=' + encodeURIComponent(idToken));
     if (!r.ok) return null;
     const p = await r.json();
-    if (!p || p.aud !== GOOGLE_CLIENT_ID || !p.sub) return null;
+    if (!p || !GOOGLE_AUDS.includes(p.aud) || !p.sub) return null;
     return { sub: p.sub, email: p.email || '', name: cleanName(p.name || p.email, 'Player'), picture: p.picture || '' };
   } catch (e) { return null; }
 }
@@ -984,7 +990,9 @@ async function autoClaimHandle(sub, baseName) {
   }
   return null;
 }
+const cors = require('./cors.js');
 module.exports = async (req, res) => {
+  if (cors(req, res)) return;
   if (!CONN) return res.status(500).json({ ok: false, error: 'Database not configured' });
   try {
     await ensure();

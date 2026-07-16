@@ -9,7 +9,9 @@ const crypto = require('crypto');
 const API_KEY = process.env.ABLY_API_KEY || '';
 const TTL_MS = 60 * 60 * 1000; // 1 hour
 
+const cors = require('./cors.js');
 module.exports = async (req, res) => {
+  if (cors(req, res)) return;
   if (!API_KEY || API_KEY.indexOf(':') === -1) {
     return res.status(500).json({ error: 'Ably not configured (set ABLY_API_KEY)' });
   }

@@ -73,7 +73,9 @@ async function authed(sub, token) {
   return !!u;
 }
 
+const cors = require('./cors.js');
 module.exports = async (req, res) => {
+  if (cors(req, res)) return;
   if (!process.env.TOURNAMENTS_ENABLED) return res.status(200).json({ ok: false, error: 'tournaments not enabled' });
   if (!CONN) return res.status(500).json({ ok: false, error: 'Database not configured' });
   try {

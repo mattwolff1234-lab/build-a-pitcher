@@ -31,7 +31,9 @@ async function authed(sub, sessionToken) {
   return !!(u && u.session_token && u.session_token === sessionToken);
 }
 
+const cors = require('./cors.js');
 module.exports = async (req, res) => {
+  if (cors(req, res)) return;
   if (req.method !== 'POST') return res.status(405).json({ ok: false, error: 'POST only' });
   if (!CONN) return res.status(500).json({ ok: false, error: 'Database not configured' });
   if (!STRIPE_KEY) return res.status(503).json({ ok: false, error: 'Purchases are not set up yet' });

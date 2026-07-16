@@ -46,7 +46,9 @@ function ensure() {
   return ready;
 }
 
+const cors = require('./cors.js');
 module.exports = async (req, res) => {
+  if (cors(req, res)) return;
   if (!CONN) return res.status(500).json({ ok: false, error: 'Database not configured' });
   try {
     await ensure();

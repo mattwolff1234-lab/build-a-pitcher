@@ -46,7 +46,9 @@ function careerLine(game, t) {
   return parts.join(' · ');
 }
 
+const cors = require('./cors.js');
 module.exports = async (req, res) => {
+  if (cors(req, res)) return;
   const id = parseInt(req.query && req.query.id, 10);
   const home = 'https://goat-lab.app';
   if (!id || id < 1 || !CONN) {
