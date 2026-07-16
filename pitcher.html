@@ -861,7 +861,7 @@
 
       <div id="preSim" class="pre-sim">
         <input id="nameInput" maxlength="20" placeholder="Name your pitcher" autocomplete="off">
-        <label class="dec-toggle"><input type="checkbox" id="decChk"> 🎬 Career Decisions <small>(shape the story mid-career)</small></label>
+        <label class="dec-toggle"><input type="checkbox" id="decChk"> <span id="decLbl"></span></label>
         <button id="simBtn" class="primary">▶ Simulate Career</button>
       </div>
 
@@ -1394,7 +1394,11 @@ async function init() {
   if (window.Ach) Ach.muted = Sound.isMuted();
   $('simBtn').onclick = runCareerPlaythrough;
   $('decChk').checked = careerEventsOn();
-  $('decChk').onchange = e => { try { localStorage.setItem('pl_careerEvents', e.target.checked ? '1' : '0'); } catch (err) {} Sound.click(); };
+  const paintDecLbl = () => { $('decLbl').innerHTML = $('decChk').checked
+    ? '🎬 Mid-career decisions: <b style="color:var(--accent2)">ON</b> <small>— you\'ll pause to make choices · <u>uncheck to auto-sim</u></small>'
+    : '⏩ Mid-career decisions: <b style="color:var(--dim)">OFF</b> <small>— straight to the result · check to make choices</small>'; };
+  paintDecLbl();
+  $('decChk').onchange = e => { try { localStorage.setItem('pl_careerEvents', e.target.checked ? '1' : '0'); } catch (err) {} paintDecLbl(); Sound.click(); };
   $('buildTab').onclick = () => Sound.click();
   $('submitBtn').onclick = submitScore;
   $('nameInput').addEventListener('keydown', e => { if (e.key === 'Enter') runCareerPlaythrough(); });
