@@ -130,7 +130,8 @@
   }
   .brand .mark { font-family:'Oswald',sans-serif; font-weight:700; font-size:30px; letter-spacing:3px;
     text-transform:uppercase; line-height:1; background:linear-gradient(180deg,#fff,#b9c6da);
-    -webkit-background-clip:text; background-clip:text; color:transparent; }
+    -webkit-background-clip:text; background-clip:text; color:transparent; text-decoration:none; cursor:pointer; }
+  .brand a.mark:hover { opacity:.85; }
   .brand .mark i { color:var(--accent); font-style:normal; }
   .brand .tag { font-family:'Oswald',sans-serif; font-size:11px; font-weight:600; letter-spacing:2px;
     color:var(--accent2); border:1px solid rgba(25,198,255,.4); padding:3px 8px 2px; border-radius:4px;
@@ -777,7 +778,7 @@
 
 <header>
   <div class="brand">
-    <span class="mark">Gridiron <i>Lab</i></span>
+    <a class="mark" href="/" title="Home">Gridiron <i>Lab</i></a>
     <span class="tag">Draft Mode</span>
     <span id="streakChip" class="streak-chip" title="Your daily streak" style="display:none">🔥 0</span>
     <span class="brand-rule"></span>
