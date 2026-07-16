@@ -385,6 +385,14 @@
   }
   @media (max-width: 620px) {
     .stage { padding:12px 12px 28px; }
+    /* Kill the see-through: on phones the animated stadium bg (light blobs, grid, drifting careers
+       text) must NOT show THROUGH the options/cards/panels — only in the gutters. Setting an opaque
+       background-COLOR under each element's existing translucent gradient keeps the look identical,
+       just solid, so nothing floats behind a card, banner, or the hook/badge pills. */
+    .sport-chip, .role-chip, .resume, .mtile, .pro-banner, .versus, .streak-banner, .daily-cta,
+    .hh-body, .how-hub summary, .stat-bar, .hero .kick {
+      background-color:#0b1220;
+    }
     /* tighten the hero so the sport chips + Daily card + modes surface above the fold sooner */
     .hero .kick { margin-bottom:12px; }
     .hero p { font-size:13.5px; margin-top:9px; line-height:1.42; }
