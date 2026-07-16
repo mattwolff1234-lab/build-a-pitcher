@@ -3360,7 +3360,9 @@ function franchiseDraft() {
   try {
     const F = JSON.parse(localStorage.getItem('pl_franchise_soccer') || 'null');
     if (F && F.id) {
-      F.pendingRookie = { name: rookieName, ovr: Math.round(state.finalOvr), game: 'keeper' };
+      if (!Array.isArray(F.bench)) F.bench = [];
+      if (F.pendingRookie) { F.bench.push(F.pendingRookie); F.pendingRookie = null; }   // migrate old single slot
+      if (F.bench.length < 15) F.bench.push({ name: rookieName, ovr: Math.round(state.finalOvr), game: 'keeper' });
       F.prog = (Number(F.prog) || 0) + 1;
       localStorage.setItem('pl_franchise_soccer', JSON.stringify(F));
     }

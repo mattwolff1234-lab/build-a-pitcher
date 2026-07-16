@@ -475,22 +475,30 @@ button.btn.danger { color:#ffdede; background:rgba(255,77,94,.14); border:1px so
     <div class="rsec">Player development · growth, decline, goodbyes</div>
     <div class="agelist" id="ageList"></div>
     <div class="rosterbar">
-      <button class="btn" id="toDraft">📋 Continue to the Draft</button>
+      <button class="btn" id="toDraft">📋 Enter the Draft</button>
     </div>
   </section>
 
   <!-- ============ 5. Draft ============ -->
   <section class="screen" id="scrDraft">
-    <div class="eyebrow">Amateur Draft</div>
+    <div class="eyebrow">Your Draft</div>
     <h1 class="h">Draft <i>Day</i></h1>
     <p class="sub" id="draftSub"></p>
+    <div class="panel" style="padding:14px;border-color:rgba(25,198,255,.35)">
+      <div class="eyebrow">🛠️ Build your draft pick</div>
+      <div class="sub" style="margin-top:6px">Make a player — <b>he's your draft pick</b> — then choose which open seat he takes. Or spin below to let the front office draft a prospect into the next opening.</div>
+      <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
+        <a class="btn cy" href="/hoops?franchise=1" style="text-decoration:none">🏀 Draft a Baller ↗</a>
+      </div>
+    </div>
+    <div id="draftBench" style="margin-top:12px"></div>
     <div class="reelwrap" id="reelWrap" style="display:none">
       <div class="ptr"></div>
       <div class="rtrack" id="rTrack"></div>
     </div>
     <div class="rosterbar">
-      <button class="btn" id="spinDraft">🎰 Spin for the pick</button>
-      <button class="btn cy" id="draftDone" style="display:none">→ To the Clubhouse</button>
+      <button class="btn" id="spinDraft">🎰 Auto-draft a prospect</button>
+      <button class="btn cy" id="draftDone">→ To the Clubhouse</button>
     </div>
   </section>
 </div>
@@ -613,6 +621,16 @@ button.btn.danger { color:#ffdede; background:rgba(255,77,94,.14); border:1px so
   </div>
 </div>
 
+<!-- your bench: built players waiting for a roster seat -->
+<div class="fr-ov" id="benchOv">
+  <div class="panel fr-card">
+    <div class="eyebrow">🎓 Your Bench</div>
+    <div class="sub" style="margin:4px 0 10px">Built players waiting for a spot · tap one to sign him to your roster.</div>
+    <div id="benchList"></div>
+    <button class="btn ghost" id="benchClose" style="width:100%;margin-top:6px">Close</button>
+  </div>
+</div>
+
 <!-- franchise legacy (end it all) -->
 <div class="fr-ov" id="legacyOv">
   <div class="panel fr-card trophy">
@@ -636,6 +654,16 @@ button.btn.danger { color:#ffdede; background:rgba(255,77,94,.14); border:1px so
     <div class="tn" id="champName"></div>
     <div class="tm" id="champMeta"></div>
     <button class="btn" id="champClose" style="margin-top:18px">🎉 To the Offseason</button>
+  </div>
+</div>
+
+<!-- playoff series result (win/lose made obvious) -->
+<div class="fr-ov" id="seriesOv">
+  <div class="panel fr-card">
+    <div style="font-size:54px;line-height:1" id="seriesResEmoji">✅</div>
+    <div class="tt" id="seriesResTitle" style="font-size:30px;margin-top:8px">SERIES WON</div>
+    <div class="tn" id="seriesResSub" style="color:var(--muted);margin-top:8px"></div>
+    <button class="btn" id="seriesResBtn" style="margin-top:18px">→ On to the Final</button>
   </div>
 </div>
 
@@ -1031,6 +1059,7 @@ function scrubSaves() {
     (f.rotation || []).forEach(fix);
     (f.lineup || []).forEach(fix);
     if (f.pendingRookie) fix(f.pendingRookie);
+    (f.bench || []).forEach(fix);
     (f.rivals || []).forEach(r => { fixTeam(r); (r.rot || []).forEach(fix); (r.line || []).forEach(fix); });
     (f.history || []).forEach(h => { if (h && h.mvp) fix(h.mvp); if (h && h.ace) fix(h.ace); });
     // log lines embed names in prose · drop any entry the filter flags
@@ -1205,16 +1234,25 @@ function seatHtml(p, where, i, withStats) {
     ${stat}
     <span class="ov ${tierCls(p.ovr)}">${p.ovr}</span></div>`;
 }
+// ---- the bench: built-but-unsigned players waiting for a roster seat (was a single pendingRookie) ----
+let activeBenchIdx = 0;
+function benchOf() {
+  if (!F) return [];
+  if (!Array.isArray(F.bench)) F.bench = [];
+  if (F.pendingRookie) { F.bench.push(F.pendingRookie); F.pendingRookie = null; }   // migrate the old single slot
+  return F.bench;
+}
+function curRookie() { return benchOf()[activeBenchIdx] || null; }
 function renderRoster() {
-  const rk = F.pendingRookie;
+  const bench = benchOf();
   const rb = $('rookieBanner');
-  if (rk) {
+  if (bench.length) {
     rb.style.display = '';
     rb.innerHTML = `<div class="panel" style="padding:12px 14px;margin-top:10px;border-color:rgba(67,233,123,.5);cursor:pointer" id="rookieBannerGo">
-      🎓 <b>${escapeHTML(rk.name)}</b> (${rk.ovr} OVR baller) went <b>#1 in your Franchise Draft</b> -
-      <span style="color:var(--accent2)">tap here to give him a spot</span>.</div>`;
+      🎓 <b>${bench.length}</b> built player${bench.length === 1 ? '' : 's'} on your <b>bench</b> -
+      <span style="color:var(--accent2)">tap to give ${bench.length === 1 ? 'him a spot' : 'them spots'}</span>.</div>`;
     const go = $('rookieBannerGo');
-    if (go) go.onclick = openAssign;
+    if (go) go.onclick = openBench;
   } else rb.style.display = 'none';
   $('rotSeats').innerHTML = F.rotation.map((p, i) => seatHtml(p, 'rot', i)).join('');
   $('lineSeats').innerHTML = F.lineup.map((p, i) => seatHtml(p, 'line', i)).join('');
@@ -1244,7 +1282,10 @@ async function openPicker(where, idx) {
   const list = $('pickList');
   const cur = (where === 'rot' ? F.rotation : F.lineup)[idx];
   const left = createSlotsLeft(cur);
-  const rk = (F.pendingRookie && F.pendingRookie.game === game && left > 0) ? F.pendingRookie : null;
+  const benchRows = (left > 0 ? benchOf() : []).map((rk, i) =>
+    rk.game === game ? `<div class="pickrow" data-bench="${i}" style="border-color:rgba(67,233,123,.5)">
+      <span class="nm">🎓 Sign ${escapeHTML(rk.name)}</span><span class="meta">age 22 · your build</span>
+      <span class="ov ${tierCls(rk.ovr)}">${rk.ovr}</span></div>` : '').join('');
   const buildRow = left > 0
     ? `<div class="pickrow" data-build="1" style="border-color:rgba(25,198,255,.5)">
         <span class="nm">🛠️ Build a brand-new baller</span>
@@ -1252,9 +1293,7 @@ async function openPicker(where, idx) {
     : `<div class="pickrow" style="opacity:.45;cursor:default">
         <span class="nm">🛠️ Build a new player</span>
         <span class="meta">creation plan full (${createdCount()}/${createLimit()}) · raise it in ⚙️ Settings</span></div>`;
-  list.innerHTML = `${rk ? `<div class="pickrow" data-rookie="1" style="border-color:rgba(67,233,123,.5)">
-      <span class="nm">🎓 Sign rookie ${escapeHTML(rk.name)}</span><span class="meta">age 22 · your build</span>
-      <span class="ov ${tierCls(rk.ovr)}">${rk.ovr}</span></div>` : ''}
+  list.innerHTML = `${benchRows}
     ${buildRow}
     <div class="pickrow" data-fa="1"><span class="nm">✍️ Replacement-level Free Agent</span><span class="meta">OVR 60–70 · age 23</span></div>
     ${cur ? '<div class="pickrow" data-cut="1"><span class="nm">🪓 Release this player</span><span class="meta">empties the seat</span></div>' : ''}
@@ -1299,7 +1338,7 @@ async function openPicker(where, idx) {
 // turn the pendingRookie into a real player and put him in a seat (any phase · if the
 // season's running he just gets a fresh stat line, like a trade arrival)
 function signRookieTo(where, idx) {
-  const rk = F.pendingRookie;
+  const rk = curRookie();
   if (!rk) return;
   const occupant = (where === 'rot' ? F.rotation : F.lineup)[idx];
   if (createSlotsLeft(occupant) <= 0) {
@@ -1313,7 +1352,7 @@ function signRookieTo(where, idx) {
   const arr = where === 'rot' ? F.rotation : F.lineup;
   const out = arr[idx];
   arr[idx] = p;
-  F.pendingRookie = null;
+  benchOf().splice(activeBenchIdx, 1);
   (F.gameLog = F.gameLog || []).push({ t: '🎓', note: `🎓 ${p.name} signs with ${F.name}${out ? ` · ${out.name} is released` : ''}. The Franchise Draft pick is official.` });
   bump(); save();
   toast(`${p.name} signed${out ? ` · ${out.name} released` : ''}.`);
@@ -1322,9 +1361,11 @@ function signRookieTo(where, idx) {
 // ceremony: fires once per visit when a fresh build arrives from the builder pages
 let rookieCeremonyShown = false;
 function maybeRookieCeremony() {
-  if (!F || !F.pendingRookie || rookieCeremonyShown) return;
+  const bench = benchOf();
+  if (!F || !bench.length || rookieCeremonyShown) return;
   rookieCeremonyShown = true;
-  const rk = F.pendingRookie;
+  activeBenchIdx = bench.length - 1;   // celebrate the most recent arrival
+  const rk = curRookie();
   $('rookieClub').textContent = F.name;
   $('rookieName').textContent = rk.name;
   $('rookieMeta').textContent = `${rk.ovr} OVR · Baller · age 22`;
@@ -1334,8 +1375,34 @@ function maybeRookieCeremony() {
 }
 $('rookieAssign').onclick = () => { closeOv('rookieOv'); openAssign(); };
 $('rookieLater').onclick = () => { closeOv('rookieOv'); toast('He\'ll wait · assign him from the roster banner anytime.'); };
-function openAssign() {
-  const rk = F.pendingRookie;
+// the bench list: every built-but-unsigned player · tap to place, ✕ to discard
+$('benchClose').onclick = () => closeOv('benchOv');
+$('benchOv').addEventListener('click', e => { if (e.target === $('benchOv')) closeOv('benchOv'); });
+function openBench() {
+  const bench = benchOf();
+  if (!bench.length) { closeOv('benchOv'); return; }
+  $('benchList').innerHTML = bench.map((rk, i) =>
+    `<div class="pickrow" data-benchassign="${i}">
+      <span class="nm">🎓 ${escapeHTML(rk.name)}</span>
+      <span class="meta">your build</span>
+      <span class="ov ${tierCls(rk.ovr)}">${rk.ovr}</span>
+      <button data-benchdrop="${i}" title="Discard this build" style="margin-left:8px;background:none;border:1px solid rgba(255,120,120,.4);color:#ff9a9a;border-radius:6px;cursor:pointer;font-size:12px;padding:2px 7px">✕</button></div>`).join('');
+  $('benchOv').classList.add('show');
+  document.querySelectorAll('#benchList [data-benchassign]').forEach(el => el.onclick = e => {
+    if (e.target.closest('[data-benchdrop]')) return;
+    closeOv('benchOv'); openAssign(Number(el.dataset.benchassign));
+  });
+  document.querySelectorAll('#benchList [data-benchdrop]').forEach(el => el.onclick = e => {
+    e.stopPropagation();
+    const rk = benchOf().splice(Number(el.dataset.benchdrop), 1)[0];
+    if (rk) toast(`${rk.name} discarded from your bench.`);
+    save();
+    if (benchOf().length) openBench(); else { closeOv('benchOv'); render(); }
+  });
+}
+function openAssign(benchIdx) {
+  if (benchIdx != null) activeBenchIdx = benchIdx;
+  const rk = curRookie();
   if (!rk) return;
   const where = 'rot';   // hoops: one position · the picker below lists starters AND bench
   const arr = F.rotation.concat(F.lineup);
@@ -1360,8 +1427,10 @@ function openAssign() {
 $('assignClose').onclick = () => closeOv('assignOv');
 $('assignOv').addEventListener('click', e => { if (e.target === $('assignOv')) closeOv('assignOv'); });
 function wirePickRows() {
-  const rw = document.querySelector('[data-rookie]');
-  if (rw) rw.onclick = () => { closeOv('pickOv'); signRookieTo(pickSeat.where, pickSeat.idx); };
+  document.querySelectorAll('[data-bench]').forEach(rw => rw.onclick = () => {
+    activeBenchIdx = Number(rw.dataset.bench);
+    closeOv('pickOv'); signRookieTo(pickSeat.where, pickSeat.idx);
+  });
   const bd = document.querySelector('[data-build]');
   if (bd) bd.onclick = () => {
     location.href = '/hoops?franchise=1';
@@ -1398,7 +1467,8 @@ function createdCount() {
 function createLimit() { return Math.min(8, Math.max(0, settingsOf(F).create)); }
 function createSlotsLeft(replacing) {
   const freed = replacing && (replacing.src === 'hof' || replacing.src === 'rookie') ? 1 : 0;
-  return createLimit() - createdCount() + freed;
+  // creation plan is only a season-1 minimum, never a cap; add your own up to roster size
+  return (F.rotation.length + F.lineup.length) - createdCount() + freed;
 }
 $('startSeason').onclick = () => {
   // unmet creation plan = a question, never a wall
@@ -1934,19 +2004,29 @@ function playPlayoffGame() {
   bump(); save();
   renderPlayoffs();
   if (P.myW === 3) {
-    if (P.round === 'semi') {
-      toast('Series won! On to the Final.');
-      F.playoffs = { round: 'final', seeds: P.seeds, myOppIdx: P.other.winner, myW: 0, oppW: 0, gameNo: 0, other: null, otherPair: [] };
-      bump(); save(); renderPlayoffs();
-    } else {
-      championship();
-    }
+    if (P.round === 'final') championship();
+    else showSeriesResult(true);
   } else if (P.oppW === 3) {
-    finishSeason(P.round === 'semi' ? 'lost-semis' : 'lost-final',
-      P.round === 'semi' ? `Swept out in the semis by the ${rivalName(P.myOppIdx)}.` : `So close · the ${rivalName(P.myOppIdx)} take the Final.`);
-    render();
+    showSeriesResult(false);
   }
 };
+// clear win/lose banner when a playoff series is decided; Continue runs the advance/finish.
+let pendingSeriesNext = null;
+function showSeriesResult(won) {
+  const P = F.playoffs; const oppNm = rivalName(P.myOppIdx); const isFinal = P.round === 'final';
+  pendingSeriesNext = won
+    ? () => { F.playoffs = { round: 'final', seeds: P.seeds, myOppIdx: P.other.winner, myW: 0, oppW: 0, gameNo: 0, other: null, otherPair: [] }; bump(); save(); renderPlayoffs(); }
+    : () => { finishSeason(isFinal ? 'lost-final' : 'lost-semis', isFinal ? `The ${oppNm} take the Final.` : `Eliminated in the semis by the ${oppNm}.`); render(); };
+  $('seriesResEmoji').textContent = won ? '✅' : '❌';
+  $('seriesResTitle').textContent = won ? 'SERIES WON' : 'ELIMINATED';
+  $('seriesResTitle').style.color = won ? 'var(--green)' : 'var(--silver)';
+  $('seriesResSub').textContent = won
+    ? `${F.name} beat the ${oppNm} ${P.myW}–${P.oppW}. On to the Final!`
+    : `The ${oppNm} beat ${F.name} ${P.oppW}–${P.myW}. Season over.`;
+  $('seriesResBtn').textContent = won ? '→ On to the Final' : '→ To the Offseason';
+  $('seriesOv').classList.add('show');
+}
+$('seriesResBtn').onclick = () => { closeOv('seriesOv'); const fn = pendingSeriesNext; pendingSeriesNext = null; if (fn) fn(); };
 function championship() {
   F.titles = (F.titles || 0) + 1;
   finishSeason('CHAMPIONS', 'CHAMPIONS!');
@@ -2016,11 +2096,21 @@ function vacancies() {
 function renderDraft() {
   const v = vacancies();
   $('draftSub').textContent = v.length
-    ? `${v.length} roster spot${v.length === 1 ? '' : 's'} to fill. Spin the reel · the pointer picks your prospect (watch the ★ potential). Every pick is final.`
-    : 'No vacancies · the whole squad is back. Straight to the clubhouse.';
+    ? `${v.length} open roster spot${v.length === 1 ? '' : 's'}. Draft your own picks above and choose their seat, or auto-draft a prospect into the next opening. Empty seats the front office fills at Opening Day.`
+    : 'Roster full · every seat taken. To the clubhouse!';
   $('spinDraft').style.display = v.length ? '' : 'none';
   $('reelWrap').style.display = 'none';
-  $('draftDone').style.display = v.length ? 'none' : '';
+  $('draftDone').style.display = '';   // always let you leave the draft (empty seats auto-fill)
+  const bench = benchOf();
+  const db = $('draftBench');
+  if (db) {
+    db.innerHTML = bench.length ? `<div class="panel" style="padding:12px 14px;border-color:rgba(67,233,123,.5)">
+      <div class="eyebrow" style="color:var(--green)">🎓 Your draft picks (${bench.length}) · tap to seat</div>
+      ${bench.map((rk, i) => `<div class="pickrow" data-draftbench="${i}" style="cursor:pointer">
+        <span class="nm">${escapeHTML(rk.name)}</span><span class="meta">your build</span>
+        <span class="ov ${tierCls(rk.ovr)}">${rk.ovr}</span></div>`).join('')}</div>` : '';
+    db.querySelectorAll('[data-draftbench]').forEach(el => el.onclick = () => openAssign(Number(el.dataset.draftbench)));
+  }
 }
 $('spinDraft').onclick = () => {
   if (spinning) return;
