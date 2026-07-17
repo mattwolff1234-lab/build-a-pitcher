@@ -30,7 +30,8 @@ const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID
 // Google project, so its id tokens carry a different `aud` but the SAME `sub` (Google
 // user id) — meaning a native sign-in lands on the exact same account as the web one.
 // Set GOOGLE_IOS_CLIENT_ID in Vercel to that iOS client id to accept those tokens.
-const GOOGLE_IOS_CLIENT_ID = process.env.GOOGLE_IOS_CLIENT_ID || '';
+const GOOGLE_IOS_CLIENT_ID = process.env.GOOGLE_IOS_CLIENT_ID
+  || '349698720898-3kkgcor4aoi0uhmeddugl2ao4vfh89ec.apps.googleusercontent.com';
 const GOOGLE_AUDS = [GOOGLE_CLIENT_ID, GOOGLE_IOS_CLIENT_ID].filter(Boolean);
 
 // Secret for the private balance-stats read (server-side only; not served to the browser).

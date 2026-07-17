@@ -43,7 +43,7 @@ for (const f of PAGES) {
   // 2. strip Playwire (comment marker through the ramp.js tag, plus the ad-safe style is harmless to keep)
   html = html.replace(/<!-- Playwire Ramp[\s\S]*?cdn\.intergient\.com[^>]*><\/script>/, '<!-- Playwire stripped for native build (web ad tags are invalid in apps) -->');
   // 3. strip Google Sign-In (web GSI is blocked inside app WebViews)
-  html = html.replace(/<script[^>]*accounts\.google\.com\/gsi\/client[^>]*><\/script>/, '<!-- GSI stripped for native build (Sign in with Apple lands in v1.1) -->');
+  html = html.replace(/<script[^>]*accounts\.google\.com\/gsi\/client[^>]*><\/script>/, '<!-- GSI stripped for native build (native Apple/Google sign-in via the shim instead) -->');
   // 4. strip the "powered by Playwire" footer badge (no ads in the app)
   html = html.replace(/<p>(?:(?!<\/p>)[\s\S])*playwire\.com(?:(?!<\/p>)[\s\S])*<\/p>/g, '');
   fs.writeFileSync(path.join(OUT, f), html);

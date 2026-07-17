@@ -9,6 +9,10 @@
     "preferredContentMode": "mobile"
   },
   "plugins": {
+    "GoogleAuth": {
+      "scopes": ["profile", "email"],
+      "iosClientId": "349698720898-3kkgcor4aoi0uhmeddugl2ao4vfh89ec.apps.googleusercontent.com"
+    },
     "SplashScreen": {
       "backgroundColor": "#0a1320",
       "launchAutoHide": true,

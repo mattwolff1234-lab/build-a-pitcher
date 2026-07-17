@@ -62,8 +62,8 @@ Primary: Games > Sports · Secondary: Games > Simulation
 
 ## App Privacy (the questionnaire in App Store Connect)
 Data types collected:
-- **Email Address + Name** - only if the user chooses Sign in with Apple. Linked to
-  identity. Purpose: App Functionality (account/save sync). Not used for tracking.
+- **Email Address + Name** - only if the user chooses Sign in with Apple or Google.
+  Linked to identity. Purpose: App Functionality (account/save sync). Not for tracking.
 - **User ID** - guest/device id or account id. Linked to identity (for account
   holders). Purpose: App Functionality. Not used for tracking.
 - **Gameplay Content** ("Other User Content"): builds/scores/handles shown on
@@ -77,7 +77,7 @@ Data types collected:
 
 ## Review notes (paste into "Notes" for the reviewer)
 - No account is required: tap "Play as guest" on first launch to access everything.
-- Sign in with Apple is optional and only syncs saves across devices.
+- Sign-in (Apple or Google) is optional and only syncs saves across devices.
 - IMPORTANT - "1v1 Live" is live-player matchmaking. If no other player is online
   at review time, matchmaking will keep searching; this is expected behavior, not a
   bug. Every other mode (build, career sim, Daily Challenge, Franchise, Collection)
