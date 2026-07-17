@@ -128,7 +128,7 @@
     "shop": {
       "_comment": "The traveling shop appears at 'shop' entries in layers. `once` items can be bought once per run. Prices are Cap Space. Training Camp caps at +4 per player (2 buys).",
       "items": [
-        { "id": "insurance", "icon": "🛟", "name": "Insurance Policy",  "price": 150, "once": true,  "desc": "When a loss would end your run, time rewinds to the game that killed you and the series re-flips from there. One use." },
+        { "id": "insurance", "icon": "🛟", "name": "Insurance Policy",  "price": 125, "once": true,  "desc": "When a loss would end your run, time rewinds to the game that killed you and the series re-flips from there. One use." },
         { "id": "camp",      "icon": "🏋️", "name": "Training Camp",     "price": 40, "once": false, "desc": "+2 OVR to one player. Max +4 per player." },
         { "id": "fa",        "icon": "🎰", "name": "Free-Agent Wheel",  "price": 50, "once": false, "desc": "Spin the whole NBA pool — sign who you freeze, somebody gets cut." },
         { "id": "token2",    "icon": "🎟️", "name": "Second-Stop Token", "price": 35, "once": true,  "desc": "Your next victory wheel: STOP twice, keep the better freeze." },
