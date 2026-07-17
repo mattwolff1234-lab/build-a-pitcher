@@ -79,6 +79,11 @@ configured in the RAMP dashboard — not in this repo.
 **New pages/games must get the head snippet** (and the `#game-ad` slot if they have a game
 area). Copy from any existing page.
 
+- `goatsquad.html` (goat-lab.app): head snippet ✅ + `#game-ad` ✅ — but the slot sits
+  **below the game sections** (end of `.wrap`), not at the top: Ramp injects a placeholder
+  wrapper even with no ad sold, and the reserved ~100px up top pushed the draft board
+  under the sticky STOP button on phones. Keep it below the game if this page is redesigned.
+
 ## ads.txt — dynamic (Playwire-hosted), zero upkeep
 - `vercel.json` has a **301 redirect**: `/ads.txt` → `https://config.playwire.com/dyn_ads/1025880/77906/ads.txt`
 - Playwire keeps that hosted file current; **never hand-edit the static `ads.txt`** in the

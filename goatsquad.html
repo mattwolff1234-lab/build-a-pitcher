@@ -222,7 +222,9 @@
     .slot.coach .s-face { width:40px; height:40px; }
     .slot.coach .s-avatar { font-size:.95rem; }
     .slot.coach .s-rate { font-size:1.05rem; }
-    #stopWrap { bottom:8px; margin-top:8px; }
+    /* board fits the fold now — static beats sticky (sticky lifted the button over
+       the coach row whenever the ad/footer below made the page scrollable) */
+    #stopWrap { position:static; margin-top:8px; }
     #stopBtn, #keepBtn, #dropBtn { min-height:48px; }
     #stopBtn { font-size:1.1rem; }
   }
@@ -475,9 +477,6 @@
 
 <div class="wrap">
 
-  <!-- Playwire in-page unit (fills only once RAMP maps a unit to it — see ads.md) -->
-  <div id="game-ad" style="min-height:100px;display:flex;align-items:center;justify-content:center;width:100%;max-width:970px;margin:6px auto 12px;"></div>
-
   <!-- ================= HOME ================= -->
   <section class="scr" id="scrHome">
     <div class="panel hero">
@@ -646,6 +645,12 @@
       </div>
     </div>
   </section>
+
+  <!-- Playwire in-page unit (fills only once RAMP maps a unit to it — see ads.md).
+       Sits BELOW the game screens: Ramp injects a placeholder wrapper even with no ad
+       sold, so at the top it reserved ~100px and pushed the board under the sticky
+       STOP button on phones. -->
+  <div id="game-ad" style="min-height:100px;display:flex;align-items:center;justify-content:center;width:100%;max-width:970px;margin:12px auto 6px;"></div>
 
 </div>
 
