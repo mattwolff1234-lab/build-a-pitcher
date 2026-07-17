@@ -359,6 +359,13 @@
   .game-row b.win { color:var(--gold); } .game-row b.loss { color:#ff6b6b; }
   #bossBanner { text-align:center; font-size:1.5rem; margin:12px 0 0; min-height:1.4em; letter-spacing:.06em; }
   .bossFoot { text-align:center; margin-top:12px; }
+  /* 🪪 Rent-A-Ring-Chaser — the Game 7 offer */
+  #rentBox { margin-top:12px; padding:12px 10px; border:1px solid var(--accent2); border-radius:10px; background:rgba(25,198,255,.06); text-align:center; }
+  .rentLead { font-size:1.05rem; letter-spacing:.05em; color:var(--accent2); }
+  .rentSub { color:var(--dim); font-size:.82rem; margin:6px 0 8px; }
+  .rentBtns { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
+  #rentCard { display:flex; justify-content:center; margin:8px 0; }
+  #rentCard .rr-card { animation:none; }
   .speedRow { display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:10px; color:var(--dim); }
   .speedRow input[type=range] { width:min(220px, 55vw); accent-color:var(--accent2); }
   .speedRow b { min-width:46px; text-align:left; color:var(--accent2); font-size:.92rem; }
@@ -568,6 +575,12 @@
       <div id="closeoutFlash" class="disp"></div>
       <div id="seriesLog"></div>
       <div id="bossBanner" class="disp"></div>
+      <div id="rentBox" style="display:none">
+        <div class="rentLead disp" id="rentLead"></div>
+        <p class="rentSub" id="rentSub"></p>
+        <div id="rentCard"></div>
+        <div class="rentBtns" id="rentBtns"></div>
+      </div>
     </div>
     <div class="bossFoot">
       <div class="speedRow">
@@ -1780,6 +1793,7 @@ function paintSeriesPips(w, l) {
 }
 function playSeries(sr, fromIdx) {
   fromIdx = fromIdx || 0;       // after an insurance rewind, games before this are already on the board
+  $('rentBox').style.display = 'none';
   let cw = 0, cl = 0;
   const steps = sr.games.map((g, gi) => {
     const closeout = (cw === 3 || cl === 3);
@@ -1807,6 +1821,8 @@ function playSeries(sr, fromIdx) {
         gsap.fromTo('#closeoutFlash', { opacity: 0 }, { opacity: 1, duration: .25, yoyo: true, repeat: 3 });
       }, null, t);
       t += 0.75;
+      // 🪪 Game 7 in the gauntlet → the Ring Chaser knocks (pauses the clock if the offer lands)
+      if (st.n === 7) { tl.call(offerRental, null, t); t += 0.1; }
     }
     // game intro
     tl.call(() => {
@@ -1945,6 +1961,82 @@ function rewindAndResim() {
     playSeries(resim, fromIdx);
   }, null, 2.3);
 }
+/* ---------- 🪪 Rent-A-Ring-Chaser — a Game 7 hired gun, gone after the buzzer ---------- */
+function offerRental() {
+  const R = CFG.gauntlet && CFG.gauntlet.rental;
+  if (!R || run.mode !== 'gauntlet' || run.rentalOffered || G.cash < (R.price || 100)) return;
+  run.rentalOffered = true;   // one knock per series — the insurance re-flip doesn't re-offer
+  bossTl.pause();
+  run._skipWas = $('bossSkip').style.display;   // ⏩ Skip could race a paid re-flip — bench it during the offer
+  $('bossSkip').style.display = 'none';
+  const ab = run.boss.ability;
+  const ovrEff = run.ovr - ((ab && ab.type === 'ovrDebuff') ? ab.value : 0);
+  const p = Math.round(100 * gameProb(ovrEff, run.boss, run.simOpts, 3, 3, 6));
+  $('rentLead').textContent = '🪪 RENT-A-RING-CHASER';
+  $('rentSub').innerHTML = `Winner takes all, and you're <b>${p}%</b> straight up. A <b>${R.minRating || 90}+ mercenary</b> — legends included, everyone at equal odds — suits up for Game 7 only. Then he's gone, win or lose.`;
+  $('rentCard').innerHTML = '';
+  $('rentBtns').innerHTML =
+    `<button class="btn" id="btnRent" type="button">🪪 Rent one · ${cash$(R.price)}</button>` +
+    `<button class="btn ghost" id="btnRentNo" type="button">Play it straight</button>`;
+  $('btnRent').addEventListener('click', rentChaser);
+  $('btnRentNo').addEventListener('click', () => {
+    $('rentBox').style.display = 'none';
+    $('bossSkip').style.display = run._skipWas || 'none';
+    bossTl.play();
+  });
+  $('rentBox').style.display = 'block';
+  Sound.q();
+  if (window.gsap) gsap.from('#rentBox', { y: 10, opacity: 0, duration: .25, ease: 'power2.out', clearProps: 'all' });
+}
+function rentChaser() {
+  const R = CFG.gauntlet.rental;
+  if (G.cash < R.price) return;
+  G.cash -= R.price;
+  saveG();
+  run.cashShown = G.cash;
+  $('bossCash').textContent = cash$(G.cash);
+  track('shop_use', { item: 'rental', stage: fightNum(run.stage) });
+  // every eligible player, legends included, at EVEN weight — no rarity bands here
+  const onSquad = new Set(run.locked.filter(e => e && !e.coach).map(e => e.name));
+  const elig = PLAYERS.filter(p => p.rating >= (R.minRating || 90) && !onSquad.has(p.name));
+  const hire = elig[Math.floor(Math.random() * elig.length)];
+  // he takes whichever eligible seat he upgrades most — position slot or 6th man — for ONE
+  // game; the real squad never changes. If he's worse than both, he rides the bench.
+  const pi = CFG.slots.findIndex(s => s.type === 'player' && s.positions.length === 1 && s.positions[0] === slotPositions(hire)[0]);
+  const si = CFG.slots.findIndex(s => s.type === 'player' && s.positions.length > 1);
+  const idx = run.locked[pi].rating <= run.locked[si].rating ? pi : si;
+  const gain = hire.rating - run.locked[idx].rating;
+  const temp = run.locked.slice();
+  if (gain > 0) temp[idx] = { name: hire.name, rating: hire.rating, pos: hire.pos, team: hire.team, img: hire.img, legend: hire.legend };
+  const newOvr = overallOf(temp) + relicSum('ovrBoost');
+  const ab = run.boss.ability;
+  const ovrEff = newOvr - ((ab && ab.type === 'ovrDebuff') ? ab.value : 0);
+  const p = Math.round(100 * gameProb(ovrEff, run.boss, run.simOpts, 3, 3, 6));
+  // re-flip Game 7 with the mercenary on the floor — games 1–6 stand
+  const roster = CFG.slots.map((s, i) => ({ key: s.key, label: s.label, e: temp[i] }))
+    .filter(x => !x.e.coach).map(x => ({ key: x.key, label: x.label, name: x.e.name, rating: x.e.rating }));
+  const rng = seededRandom('rr-rental|' + Date.now() + '|' + Math.random());
+  const resim = simSeries(ovrEff, run.boss, rng, roster, run.simOpts, { games: run.series.games.slice(0, 6) });
+  run.rentalNote = gain > 0
+    ? `🪪 ${lastName(hire.name)} (${hire.rating}) rented for Game 7`
+    : `🪪 ${lastName(hire.name)} (${hire.rating}) rented… and benched`;
+  const hex = hire.legend ? TIER_HEX.legend : TIER_HEX[tierKey(hire)];
+  const face = hire.img ? `<img src="${hire.img}" alt="" onerror="this.remove()">` : initials(hire.name);
+  $('rentCard').innerHTML = `<div class="rr-card" style="border-color:${hex}"><span class="rr-face">${face}<span class="rr-rate" style="color:${hex}">${hire.rating}</span></span><b>${lastName(hire.name)}</b><span class="rr-pos">${hire.pos[0]}${hire.legend ? ' · LEGEND' : ''}</span></div>`;
+  $('rentSub').innerHTML = gain > 0
+    ? `<b>${hire.name}</b> takes the ${CFG.slots[idx].label} spot for one night. Game 7 now: <b>${p}%</b>.`
+    : `<b>${hire.name}</b> showed up… and your ${CFG.slots[idx].label} is already better. He'll cheer from the bench. Game 7: <b>${p}%</b>.`;
+  $('rentBtns').innerHTML = `<button class="btn" id="btnRentGo" type="button">🏀 TIP OFF GAME 7</button>`;
+  Sound.lock();
+  if (window.gsap) gsap.from('#rentCard .rr-card', { scale: .7, opacity: 0, duration: .3, ease: 'back.out(1.7)', clearProps: 'all' });
+  $('btnRentGo').addEventListener('click', () => {
+    $('rentBox').style.display = 'none';
+    $('bossSkip').style.display = run._skipWas || 'none';
+    if (bossTl) bossTl.kill();
+    run.series = resim;
+    playSeries(resim, 6);
+  });
+}
 function showResult() {
   if (run.resultShown) return;   // skip can race the timeline tail
   if (run.mode === 'gauntlet' && !run.series.won && G.items.insurance && !run.insuranceUsed) {
@@ -2036,6 +2128,7 @@ function showResult() {
   $('resSub').textContent = `Series ${run.series.w}–${run.series.l} · ${run.ovr} OVR vs ${b.rating} boss · ` +
     (run.mode === 'daily' ? 'Daily · same spins worldwide' : `Gauntlet fight ${fightNum(run.stage)}/${totalFights()}`) +
     (run.mode !== 'daily' && earned ? ` · +${cash$(earned)} banked${run.interestPaid ? ` (incl. ${cash$(run.interestPaid)} interest)` : ''}` : '') +
+    (run.rentalNote ? ` · ${run.rentalNote}` : '') +
     (rookieNote ? ` · ${rookieNote}` : '');
 
   $('recap').innerHTML = CFG.slots.map((s, i) => {

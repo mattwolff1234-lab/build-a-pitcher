@@ -140,6 +140,12 @@
 
     "rookieMaxRating": 69,
 
+    "rental": {
+      "_comment": "🪪 Rent-A-Ring-Chaser — Game 7 only (gauntlet): pay `price` Cap Space and a hired gun rated ≥ minRating suits up for the winner-take-all game, replacing your weakest eligible slot for that ONE game. Every eligible player — legends included — lands at EQUAL odds (no rarity bands). He leaves after the buzzer, win or lose; the money is gone either way.",
+      "price": 100,
+      "minRating": 90
+    },
+
     "relicChance": 0.25,
     "maxRelics": 3,
     "_relics_comment": "Relics ride the victory-spoils wheel alongside players (~relicChance per card slot). Hold up to maxRelics; landing another means swapping one out. `weight` = draw odds within the relic pool (default 1) — the win-prob relics are weighted rare, the cash/economy ones common. Effect types the engine understands: gameEdge / elimEdge / firstGameEdge (win-prob bumps), noMomentumDrag, gameWinCash, interestCap, shopDiscount, upsetMult, ovrBoost.",
