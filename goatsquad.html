@@ -388,6 +388,10 @@
   .game-row b.win { color:var(--gold); } .game-row b.loss { color:#ff6b6b; }
   #bossBanner { text-align:center; font-size:1.5rem; margin:12px 0 0; min-height:1.4em; letter-spacing:.06em; }
   .bossFoot { text-align:center; margin-top:12px; }
+  /* ⚙️ settings overlay rows */
+  .setRow { padding:8px 2px 4px; }
+  .setLabel { font-weight:600; font-size:.95rem; margin-bottom:8px; }
+  .setLabel span { display:block; font-weight:400; font-size:.76rem; color:var(--dim); margin-top:2px; }
   /* 🪪 Rent-A-Ring-Chaser — the Game 7 offer */
   #rentBox { margin-top:12px; padding:12px 10px; border:1px solid var(--accent2); border-radius:10px; background:rgba(25,198,255,.06); text-align:center; }
   .rentLead { font-size:1.05rem; letter-spacing:.05em; color:var(--accent2); }
@@ -395,8 +399,8 @@
   .rentBtns { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
   #rentCard { display:flex; justify-content:center; margin:8px 0; }
   #rentCard .rr-card { animation:none; }
-  .speedRow { display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:10px; color:var(--dim); }
-  .speedRow input[type=range] { width:min(220px, 55vw); accent-color:var(--accent2); }
+  .speedRow { display:flex; align-items:center; gap:8px; color:var(--dim); }
+  .speedRow input[type=range] { flex:1; min-width:120px; accent-color:var(--accent2); }
   .speedRow b { min-width:46px; text-align:left; color:var(--accent2); font-size:.92rem; }
 
   /* ---------- result screen ---------- */
@@ -472,6 +476,7 @@
   <a class="back" href="/" aria-label="Back to GoatLab hub">◀</a>
   <div class="brand disp" id="brandTop">🐐 <em>GOAT</em> Squad</div>
   <div class="spacer"></div>
+  <button class="hbtn" id="setBtn" aria-label="Settings">⚙️</button>
   <button class="hbtn" id="muteBtn" aria-label="Toggle sound">🔊</button>
 </header>
 
@@ -609,12 +614,6 @@
       </div>
     </div>
     <div class="bossFoot">
-      <div class="speedRow">
-        <span title="Slower">🐢</span>
-        <input type="range" id="simSpeed" min="0.5" max="3" step="0.25" value="1" aria-label="Sim playback speed">
-        <span title="Faster">🐇</span>
-        <b class="disp" id="simSpeedVal">1×</b>
-      </div>
       <button class="btn ghost" id="bossSkip" style="display:none">⏩ Skip</button>
     </div>
   </section>
@@ -669,6 +668,22 @@
     <div class="ovhead"><h3 class="disp">🏆 GAUNTLET LEADERBOARD</h3><button class="x" id="lbClose">✕</button></div>
     <p class="lbLead">Deepest runs worldwide. Ties broken by squad overall.</p>
     <div id="lbBody"></div>
+  </div>
+</div>
+
+<!-- settings overlay -->
+<div class="ov" id="setOv">
+  <div class="panel ovp">
+    <div class="ovhead"><h3 class="disp">⚙️ SETTINGS</h3><button class="x" id="setClose">✕</button></div>
+    <div class="setRow">
+      <div class="setLabel">🎬 Sim speed<span>How fast boss series play out — applies live, even mid-series</span></div>
+      <div class="speedRow">
+        <span title="Slower">🐢</span>
+        <input type="range" id="simSpeed" min="0.5" max="3" step="0.25" value="1" aria-label="Sim playback speed">
+        <span title="Faster">🐇</span>
+        <b class="disp" id="simSpeedVal">1×</b>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -2850,6 +2865,10 @@ $('simSpeed').addEventListener('input', () => {
   paintSimSpeed(v);
   if (bossTl) bossTl.timeScale(v);
 });
+// ⚙️ settings — openable from any screen; speed changes land on the live series instantly
+$('setBtn').addEventListener('click', () => { Sound.unlock(); $('setOv').style.display = 'flex'; });
+$('setClose').addEventListener('click', () => { $('setOv').style.display = 'none'; });
+$('setOv').addEventListener('click', ev => { if (ev.target === $('setOv')) $('setOv').style.display = 'none'; });
 $('btnRetry').addEventListener('click', () => {
   track('retry', { attempt: run.attempt });
   if (run.mode === 'gauntlet' && run.series.won) {
