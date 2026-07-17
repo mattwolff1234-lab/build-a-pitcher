@@ -359,6 +359,9 @@
   .game-row b.win { color:var(--gold); } .game-row b.loss { color:#ff6b6b; }
   #bossBanner { text-align:center; font-size:1.5rem; margin:12px 0 0; min-height:1.4em; letter-spacing:.06em; }
   .bossFoot { text-align:center; margin-top:12px; }
+  .speedRow { display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:10px; color:var(--dim); }
+  .speedRow input[type=range] { width:min(220px, 55vw); accent-color:var(--accent2); }
+  .speedRow b { min-width:46px; text-align:left; color:var(--accent2); font-size:.92rem; }
 
   /* ---------- result screen ---------- */
   .resPanel { text-align:center; padding:22px 16px 20px; margin-top:10px; }
@@ -567,6 +570,12 @@
       <div id="bossBanner" class="disp"></div>
     </div>
     <div class="bossFoot">
+      <div class="speedRow">
+        <span title="Slower">🐢</span>
+        <input type="range" id="simSpeed" min="0.5" max="3" step="0.25" value="1" aria-label="Sim playback speed">
+        <span title="Faster">🐇</span>
+        <b class="disp" id="simSpeedVal">1×</b>
+      </div>
       <button class="btn ghost" id="bossSkip" style="display:none">⏩ Skip</button>
     </div>
   </section>
@@ -1621,42 +1630,64 @@ function boxScore(teamPts, roster, rng) {
   }));
   return { rows, benchPts, star };
 }
-function simSeries(ovr, boss, rng, roster, opts, resume) {
+// per-game win prob at series state (w, l), game index gi — ONE place for the math, shared
+// by the live sim AND the scouting report's exact odds so the two can never disagree
+function gameProb(ovr, boss, opts, w, l, gi) {
   const S = CFG.bossSim;
   // Home Court Deed flips the 2-2-1-1-1 pattern into YOUR building and adds a small edge there
   const hc = opts && opts.homeCourt;
   const pattern = hc ? [1, 1, 0, 0, 1, 0, 1] : [0, 0, 1, 1, 0, 1, 0];
-  const edge = (opts && opts.homeEdge) || 0;
+  const home = pattern[gi] === 1;
+  const ab = (opts && opts.ability) || null;   // the boss's signature quirk
+  // momentum: the trailing team plays desperate — series go deep, comebacks are real
+  let mom = (l - w) * (S.momentum || 0);
+  if (opts && opts.noMomentumDrag && mom < 0) mom = 0;              // 🍀 Rabbit's Foot
+  if (ab && ab.type === 'noPlayerMomentum' && mom > 0) mom = 0;     // '13 Heat never blink
+  const relicEdge = (opts ? (opts.gameEdge || 0) : 0)               // 🔥 The Microwave
+    + ((w === 3 || l === 3) ? (opts ? (opts.elimEdge || 0) : 0) : 0)   // 💍 The Ring
+    + (gi === 0 ? (opts ? (opts.firstGameEdge || 0) : 0) : 0);         // 🚀 Fast Starters
+  let p = .5 + (ovr - boss.rating) * S.perGameSlope + mom + (home && hc ? ((opts && opts.homeEdge) || 0) : 0) + relicEdge;
+  if (ab) {
+    if (ab.type === 'bossElimEdge' && (w === 3 || l === 3)) p -= ab.value;     // MJ closes
+    if (ab.type === 'bossFirstGameEdge' && gi === 0) p -= ab.value;  // Warriors start fast
+    if (ab.type === 'bossComeback' && w === 3 && l === 1) p -= ab.value;       // Cavs down 3-1
+  }
+  // the 3-1 rule: trailing and facing elimination, you fight harder (and it can pierce
+  // the normal per-game cap, otherwise momentum would clamp the boost into nothing).
+  // LeBron has literally been here before, so his squads get the bigger number.
+  const cb = S.comeback;
+  let cap = S.maxProb;
+  if (cb && l === 3 && w < 3) {
+    p += (opts && opts.hasHero) ? (cb.heroBoost || cb.boost || 0) : (cb.boost || 0);
+    cap = 0.95;
+  }
+  return Math.min(cap, Math.max(S.minProb, p));
+}
+// exact chance of taking the whole series from 0–0 — walks every (w, l) state
+function seriesOdds(ovr, boss, opts) {
+  const memo = {};
+  const from = (w, l) => {
+    if (w === 4) return 1;
+    if (l === 4) return 0;
+    const k = w * 5 + l;
+    if (memo[k] == null) {
+      const p = gameProb(ovr, boss, opts, w, l, w + l);
+      memo[k] = p * from(w + 1, l) + (1 - p) * from(w, l + 1);
+    }
+    return memo[k];
+  };
+  return from(0, 0);
+}
+function simSeries(ovr, boss, rng, roster, opts, resume) {
+  const hc = opts && opts.homeCourt;
+  const pattern = hc ? [1, 1, 0, 0, 1, 0, 1] : [0, 0, 1, 1, 0, 1, 0];
   // 🛟 insurance rewind: resume carries the games that stand, coin flips restart from there
   const games = (resume && resume.games) ? resume.games.slice() : [];
   let w = 0, l = 0;
   games.forEach(g => { if (g.win) w++; else l++; });
-  const ab = (opts && opts.ability) || null;   // the boss's signature quirk
   while (w < 4 && l < 4) {
     const home = pattern[games.length] === 1;
-    // momentum: the trailing team plays desperate — series go deep, comebacks are real
-    let mom = (l - w) * (S.momentum || 0);
-    if (opts && opts.noMomentumDrag && mom < 0) mom = 0;              // 🍀 Rabbit's Foot
-    if (ab && ab.type === 'noPlayerMomentum' && mom > 0) mom = 0;     // '13 Heat never blink
-    const relicEdge = (opts ? (opts.gameEdge || 0) : 0)               // 🔥 The Microwave
-      + ((w === 3 || l === 3) ? (opts ? (opts.elimEdge || 0) : 0) : 0)   // 💍 The Ring
-      + (games.length === 0 ? (opts ? (opts.firstGameEdge || 0) : 0) : 0); // 🚀 Fast Starters
-    let p = .5 + (ovr - boss.rating) * S.perGameSlope + mom + (home && hc ? edge : 0) + relicEdge;
-    if (ab) {
-      if (ab.type === 'bossElimEdge' && (w === 3 || l === 3)) p -= ab.value;     // MJ closes
-      if (ab.type === 'bossFirstGameEdge' && games.length === 0) p -= ab.value;  // Warriors start fast
-      if (ab.type === 'bossComeback' && w === 3 && l === 1) p -= ab.value;       // Cavs down 3-1
-    }
-    // the 3-1 rule: trailing and facing elimination, you fight harder (and it can pierce
-    // the normal per-game cap, otherwise momentum would clamp the boost into nothing).
-    // LeBron has literally been here before, so his squads get the bigger number.
-    const cb = S.comeback;
-    let cap = S.maxProb;
-    if (cb && l === 3 && w < 3) {
-      p += (opts && opts.hasHero) ? (cb.heroBoost || cb.boost || 0) : (cb.boost || 0);
-      cap = 0.95;
-    }
-    p = Math.min(cap, Math.max(S.minProb, p));
+    const p = gameProb(ovr, boss, opts, w, l, games.length);
     const win = rng() < p;
     const hi = 100 + Math.floor(rng() * 26);
     const lo = Math.max(84, hi - 2 - Math.floor(rng() * 16));
@@ -1758,6 +1789,7 @@ function playSeries(sr, fromIdx) {
   });
   const tl = gsap.timeline();
   bossTl = tl;
+  tl.timeScale(simSpeed());     // 🐢/🐇 the playback slider
   const QT = 0.34;              // per-checkpoint beat (end of 1st / half / 3rd / final)
   let t = 0.8;
   steps.forEach(st => {
@@ -1886,6 +1918,7 @@ function rewindAndResim() {
   Sound.rewind();
   const tl = gsap.timeline();
   bossTl = tl;
+  tl.timeScale(simSpeed());     // the rewind beat honors the playback slider too
   tl.call(() => {
     $('closeoutFlash').textContent = '· ⏪ REWINDING TIME ·';
     gsap.fromTo('#closeoutFlash', { opacity: 0 }, { opacity: 1, duration: .3, yoyo: true, repeat: 3 });
@@ -2088,27 +2121,31 @@ function buildTips() {
   const pick = a => a[Math.floor(Math.random() * a.length)];
   const wk = lastName(weakest.e.name), wkR = weakest.e.rating, wkPos = weakest.s.label, wkPpg = ppg(weakest.e.name);
   const stN = lastName(star.e.name), stR = star.e.rating;
+  // REAL pre-series odds from the exact sim math (relics, abilities, momentum, comeback and
+  // all) — the report quotes these instead of eyeballed "9 times out of 10" claims
+  const ovrEff = run.ovr - ((b.ability && b.ability.type === 'ovrDebuff') ? b.ability.value : 0);
+  const odds = Math.min(99, Math.max(1, Math.round(100 * seriesOdds(ovrEff, b, run.simOpts || buildSimOpts(b)))));
   if (!won) {
     if (gap >= 8) tips.push(['🚫', pick([
-      `You brought <b>${run.ovr}</b> to a <b>${b.rating}</b> fight. The math was never on your side.`,
-      `A ${run.ovr} squad against a ${b.rating} team. Vegas wouldn't even post a line on this one.`,
-      `They were <b>${gap} points better</b> on paper and it looked like more on the floor.`,
-      `${run.ovr} vs ${b.rating}. Some losses are scheduled before tipoff.`])]);
+      `You brought <b>${run.ovr}</b> to a <b>${b.rating}</b> fight — a <b>${odds}%</b> shot. The math was never on your side.`,
+      `A ${run.ovr} squad takes this series off a ${b.rating} team <b>${odds} times in 100</b>. Vegas wouldn't even post a line.`,
+      `They were <b>${gap} points better</b> on paper. Your real odds walking in: <b>${odds}%</b>.`,
+      `${run.ovr} vs ${b.rating}. Some losses are scheduled before tipoff — this one ${100 - odds} times out of 100.`])]);
     else if (gap >= 3) tips.push(['⚖️', pick([
-      `You were <b>${gap} short</b> on paper. One better lock and this series flips.`,
-      `A ${gap}-point talent gap is beatable. Just not tonight.`,
-      `${run.ovr} vs ${b.rating} means you need the bounces, and you didn't get them.`])]);
+      `You were <b>${gap} short</b> on paper — a <b>${odds}%</b> shot at the series. One better lock and it flips.`,
+      `A ${gap}-point talent gap is beatable: you win this <b>${odds} times in 100</b>. Just not tonight.`,
+      `${run.ovr} vs ${b.rating} is <b>${odds}%</b> your way — you needed the bounces and didn't get them.`])]);
     else if (gap > -3) tips.push(['🎲', pick([
-      `Even matchup, <b>${run.ovr}</b> to <b>${b.rating}</b>. Somebody had to lose the coin toss.`,
-      `Nothing wrong with the roster. This one came down to bounces.`,
-      `Dead heat on paper. Run it back and it goes the other way half the time.`])]);
+      `Even matchup, <b>${run.ovr}</b> to <b>${b.rating}</b> — <b>${odds}%</b> your way. Somebody had to lose the coin toss.`,
+      `Nothing wrong with the roster. Run it back and you take it <b>${odds} times in 100</b>.`,
+      `Near dead heat on paper (<b>${odds}%</b> to win the series). This one came down to bounces.`])]);
     else if (gap > -8) tips.push(['😬', pick([
-      `You were the better team by <b>${-gap}</b> and still dropped it. That one stings.`,
-      `Losing as a ${-gap}-point favorite? The talent showed up, the team didn't.`,
-      `${b.rating}-rated teams aren't supposed to beat ${run.ovr} squads. Somebody tell your locker room.`])]);
+      `You were the better team — <b>${odds}%</b> to take this series — and still dropped it. That one stings.`,
+      `Losing as a ${-gap}-point favorite? You win this <b>${odds} times in 100</b>. The talent showed up, the team didn't.`,
+      `A ${b.rating} team beats your ${run.ovr} squad just ${100 - odds} times in 100. Somebody tell your locker room.`])]);
     else tips.push(['🤯', pick([
-      `A <b>${run.ovr}</b> squad losing to a <b>${b.rating}</b>? Burn the tape.`,
-      `Up ${-gap} on paper and you lost the series. Historic stuff, honestly.`,
+      `A <b>${run.ovr}</b> squad losing to a <b>${b.rating}</b>? That's the <b>${100 - odds}-in-100</b> outcome. Burn the tape.`,
+      `You were <b>${odds}%</b> to win this series and lost it. Historic stuff, honestly.`,
       `One of the worst upsets this sim has ever produced. Congratulations?`])]);
     if (run.series.games.length === 7) tips.push(['💔', pick([
       `Game 7 and it slipped. One possession from a different story.`,
@@ -2135,13 +2172,13 @@ function buildTips() {
       `Scouts clocked <b>${lastName(up.best.name)} (${up.best.rating})</b> going by at ${up.s.label}. Just saying.`])]);
   } else {
     if (gap > 0) tips.push(['😤', pick([
-      `A <b>${run.ovr}</b> squad taking down a <b>${b.rating}</b> team. Nobody had that on their card.`,
-      `You stole one. ${run.ovr} beating ${b.rating} is house money.`,
-      `On paper you lose this series. Somebody forgot to tell your guys.`])]);
+      `A <b>${run.ovr}</b> squad taking down a <b>${b.rating}</b> team — a <b>${odds}%</b> shot, cashed. Nobody had that on their card.`,
+      `You stole one. ${run.ovr} beats ${b.rating} just <b>${odds} times in 100</b>. House money.`,
+      `On paper you win this <b>${odds}%</b> of the time. Somebody forgot to tell your guys.`])]);
     else tips.push(['💪', pick([
-      `<b>${run.ovr}</b> vs <b>${b.rating}</b>. Supposed to win, did win. Professional.`,
-      `Chalk result. The better team showed up and acted like it.`,
-      `No drama. ${run.ovr} beats ${b.rating} nine times out of ten.`])]);
+      `<b>${run.ovr}</b> vs <b>${b.rating}</b> — <b>${odds}%</b> your way. Supposed to win, did win. Professional.`,
+      `Chalk result. The better team takes this series <b>${odds} times in 100</b>, and it acted like it.`,
+      `No drama. ${run.ovr} beats ${b.rating} <b>${odds} times out of 100</b>.`])]);
     let topN = null;
     Object.keys(avgs).forEach(n => { if (!topN || avgs[n].pts / avgs[n].n > avgs[topN].pts / avgs[topN].n) topN = n; });
     if (topN) {
@@ -2675,6 +2712,19 @@ $('ovrGo').addEventListener('click', goBoss);
 $('keepBtn').addEventListener('click', keepSquad);
 $('dropBtn').addEventListener('click', startRedoPick);
 $('bossSkip').addEventListener('click', () => { if (bossTl) bossTl.progress(1); });
+// 🐢/🐇 sim speed — remembered on the device, applied live to the running series
+function simSpeed() {
+  try { const v = parseFloat(localStorage.getItem('pl_gs_speed')); return (v >= 0.5 && v <= 3) ? v : 1; } catch (e) { return 1; }
+}
+function paintSimSpeed(v) { $('simSpeedVal').textContent = (v % 1 ? v.toFixed(2).replace(/0$/, '') : v) + '×'; }
+$('simSpeed').value = simSpeed();
+paintSimSpeed(simSpeed());
+$('simSpeed').addEventListener('input', () => {
+  const v = parseFloat($('simSpeed').value) || 1;
+  try { localStorage.setItem('pl_gs_speed', String(v)); } catch (e) {}
+  paintSimSpeed(v);
+  if (bossTl) bossTl.timeScale(v);
+});
 $('btnRetry').addEventListener('click', () => {
   track('retry', { attempt: run.attempt });
   if (run.mode === 'gauntlet' && run.series.won) {
