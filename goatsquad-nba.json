@@ -1,0 +1,283 @@
+{
+  "_comment": "GOAT Squad sport config — EVERYTHING game-specific lives here. An NFL/NHL version is a copy of this file with a new dataFile + slots + coaches + bosses, plus pointing GAME_CONFIG_URL in a clone of goatsquad.html at it. No game logic in this file.",
+
+  "brand": "GOAT Squad",
+  "slug": "goatsquad",
+  "sport": "nba",
+  "sportEmoji": "🏀",
+  "tagline": "Stop the spin. Pick your guy. Beat the boss.",
+
+  "dataFile": "/ballers.json",
+  "adapter": {
+    "_comment": "How the engine reads the sport's data file. poolKey/legendsKey are top-level arrays; fields map onto {name, rating, pos, team, imgId}. pos is split on posSeparator and trimmed ('PG / SG' -> ['PG','SG']); with primaryPositionOnly a player belongs ONLY to their first-listed position (PGs in the PG slot, SGs in the SG slot). imageTemplate: {id} is replaced with the player's imgId; players whose image fails get an initials avatar on their team color.",
+    "primaryPositionOnly": true,
+    "poolKey": "pool",
+    "legendsKey": "legends",
+    "nameField": "name",
+    "ratingField": "ovr",
+    "posField": "pos",
+    "teamField": "team",
+    "imageIdField": "nbaId",
+    "posSeparator": "/",
+    "imageTemplate": "https://cdn.nba.com/headshots/nba/latest/260x190/{id}.png",
+    "_canvasProxy_comment": "The share-card canvas can't draw cdn.nba.com images directly (no CORS headers = tainted canvas), so it swaps this prefix for the same-origin /nba-headshots/ proxy (a vercel.json rewrite). In-game <img> tags keep the CDN.",
+    "canvasImageProxy": { "from": "https://cdn.nba.com/headshots/nba/latest/260x190/", "to": "/nba-headshots/" }
+  },
+
+  "slots": [
+    { "key": "pg",    "label": "PG",      "type": "player", "positions": ["PG"], "weight": 1 },
+    { "key": "sg",    "label": "SG",      "type": "player", "positions": ["SG"], "weight": 1 },
+    { "key": "sf",    "label": "SF",      "type": "player", "positions": ["SF"], "weight": 1 },
+    { "key": "pf",    "label": "PF",      "type": "player", "positions": ["PF"], "weight": 1 },
+    { "key": "c",     "label": "C",       "type": "player", "positions": ["C"],  "weight": 1 },
+    { "key": "six",   "label": "6TH MAN", "type": "player", "positions": ["PG", "SG", "SF", "PF", "C"], "weight": 0.75 },
+    { "key": "coach", "label": "COACH",   "type": "coach" }
+  ],
+
+  "spin": {
+    "_comment": "cycleHz = faces per second (fixed rate, no rubber-banding — skilled players can learn the STOP timing). resumeMs = beat between locking a player and the remaining slots respinning. reelLength = entries per slot reel; ticks only advance while spinning, so at 10Hz a 512-entry reel is ~51s of unique faces — a normal run never sees a repeat.",
+    "cycleHz": 10,
+    "resumeMs": 400,
+    "reelLength": 512
+  },
+
+  "rarity": {
+    "_comment": "Weighted draw odds by rating band [minRating, maxRating, weight] — higher weight = more common. legendMult multiplies a legend's band weight (legends are the rarest pulls — at 0.2 one freezes on your board roughly every 12 stops, about every other gauntlet build).",
+    "bands": [[0, 74, 2], [75, 79, 4.5], [80, 84, 6], [85, 89, 6], [90, 999, 4.5]],
+    "legendMult": 0.2,
+    "legendPity": 18
+  },
+
+  "coaches": [
+    { "name": "Phil Jackson", "nbaId": 77106,     "mod": 5,  "era": "90s–00s" },
+    { "name": "Red Auerbach",     "mod": 5,  "era": "50s–60s" },
+    { "name": "Gregg Popovich", "nbaId": 873,   "mod": 5,  "era": "00s–10s" },
+    { "name": "Pat Riley", "nbaId": 77962,        "mod": 4,  "era": "80s–90s" },
+    { "name": "Steve Kerr", "nbaId": 204005,       "mod": 4,  "era": "10s–20s" },
+    { "name": "Erik Spoelstra", "nbaId": 1787,   "mod": 4,  "era": "10s–20s" },
+    { "name": "Chuck Daly",       "mod": 3,  "era": "80s–90s" },
+    { "name": "Larry Brown",      "mod": 3,  "era": "90s–00s" },
+    { "name": "Rick Carlisle", "nbaId": 76342,    "mod": 3,  "era": "10s–20s" },
+    { "name": "Jerry Sloan", "nbaId": 78173,      "mod": 3,  "era": "90s–00s" },
+    { "name": "Mark Daigneault", "nbaId": 1627327,  "mod": 3,  "era": "20s" },
+    { "name": "Joe Mazzulla", "nbaId": 1628210,     "mod": 3,  "era": "20s" },
+    { "name": "Doc Rivers", "nbaId": 470,       "mod": 2,  "era": "00s–20s" },
+    { "name": "Nick Nurse", "nbaId": 203606,       "mod": 2,  "era": "10s–20s" },
+    { "name": "Ty Lue", "nbaId": 1731,           "mod": 2,  "era": "10s–20s" },
+    { "name": "George Karl", "nbaId": 77223,      "mod": 2,  "era": "90s–00s" },
+    { "name": "Don Nelson", "nbaId": 77700,       "mod": 2,  "era": "80s–00s" },
+    { "name": "Lenny Wilkens", "nbaId": 78530,    "mod": 2,  "era": "70s–90s" },
+    { "name": "Michael Malone", "nbaId": 2610,   "mod": 2,  "era": "20s" },
+    { "name": "Mike Budenholzer", "mod": 2,  "era": "10s–20s" },
+    { "name": "Mike D'Antoni", "nbaId": 76505,    "mod": 1,  "era": "00s–10s" },
+    { "name": "Tom Thibodeau", "nbaId": 1301,    "mod": 1,  "era": "10s–20s" },
+    { "name": "Billy Donovan", "nbaId": 76586,    "mod": 1,  "era": "10s–20s" },
+    { "name": "Quin Snyder", "nbaId": 202439,      "mod": 1,  "era": "10s–20s" },
+    { "name": "Frank Vogel", "nbaId": 2345,      "mod": 1,  "era": "10s–20s" },
+    { "name": "Jason Kidd", "nbaId": 467,       "mod": 0,  "era": "20s" },
+    { "name": "Monty Williams", "nbaId": 42,   "mod": 0,  "era": "20s" },
+    { "name": "Willie Green", "nbaId": 2584,     "mod": 0,  "era": "20s" },
+    { "name": "J.B. Bickerstaff", "nbaId": 2794, "mod": 0,  "era": "20s" },
+    { "name": "Mark Jackson", "nbaId": 349,     "mod": -1, "era": "10s" },
+    { "name": "Sam Mitchell", "nbaId": 417,     "mod": -1, "era": "00s" },
+    { "name": "Scott Brooks", "nbaId": 2623,     "mod": -2, "era": "10s" },
+    { "name": "The Interim Guy",  "mod": -2, "era": "Mid-season" },
+    { "name": "Byron Scott", "nbaId": 2,      "mod": -3, "era": "10s" },
+    { "name": "Player-Coach You", "mod": -3, "era": "Pickup run" },
+    { "name": "Fan From Sec 210", "mod": -4, "era": "Heckler" },
+    { "name": "The Team Mascot",  "mod": -5, "era": "Furry menace" }
+  ],
+
+  "bosses": [
+    { "name": "1996 Bulls",    "rating": 94, "logoId": 1610612741, "blurb": "72–10. MJ never lost a step.", "ability": { "type": "bossElimEdge", "value": 0.1, "desc": "MJ takes the closeouts. Bulls +10% in elimination games." } },
+    { "name": "2017 Warriors", "rating": 93, "logoId": 1610612744, "blurb": "KD joined the 73-win core.", "ability": { "type": "bossFirstGameEdge", "value": 0.15, "desc": "They jump on you early. Warriors +15% in Game 1." } },
+    { "name": "1987 Lakers",   "rating": 92, "logoId": 1610612747, "blurb": "Showtime at full sprint." },
+    { "name": "2001 Lakers",   "rating": 91, "logoId": 1610612747, "blurb": "Shaq + Kobe went 15–1 in the playoffs." },
+    { "name": "1986 Celtics",  "rating": 91, "logoId": 1610612738, "blurb": "Bird's best board. 40–1 at home." },
+    { "name": "2013 Heat",     "rating": 90, "logoId": 1610612748, "blurb": "27 straight wins. The Heatles.", "ability": { "type": "noPlayerMomentum", "value": 1, "desc": "The Heatles never blink. Your desperation boost is switched off." } },
+    { "name": "2016 Cavs",     "rating": 89, "logoId": 1610612739, "blurb": "Came back from 3–1. Ask Golden State.", "ability": { "type": "bossComeback", "value": 0.25, "desc": "Down 3–1? They have literally been here before. Cavs +25% when facing elimination." } },
+    { "name": "2014 Spurs",    "rating": 88, "logoId": 1610612759, "blurb": "The beautiful game. Ball never sticks." },
+    { "name": "2023 Nuggets",  "rating": 87, "logoId": 1610612743, "blurb": "The Joker's coronation." },
+    { "name": "2008 Celtics",  "rating": 87, "logoId": 1610612738, "blurb": "KG, Pierce, Ray. Anything is possible." },
+    { "name": "1989 Pistons",  "rating": 86, "logoId": 1610612765, "blurb": "Bad Boys. Bring bandages." },
+    { "name": "1994 Rockets",  "rating": 85, "logoId": 1610612745, "blurb": "The Dream Shake has no counter." },
+    { "name": "2021 Bucks",    "rating": 85, "logoId": 1610612749, "blurb": "Giannis dropped 50 in the closeout." },
+    { "name": "2011 Mavs",     "rating": 84, "logoId": 1610612742, "blurb": "Dirk's one-legged revenge tour." },
+    { "name": "2019 Raptors",  "rating": 83, "logoId": 1610612761, "blurb": "Kawhi's load-managed demolition." },
+    { "name": "2004 Pistons",  "rating": 82, "logoId": 1610612765, "blurb": "No stars, all defense.", "ability": { "type": "ovrDebuff", "value": 1, "desc": "The defense travels. Your squad plays at -1 overall." } }
+  ],
+
+  "gauntlet": {
+    "_comment": "Gauntlet mode: build ONE squad, one life — beat every layer of the map. Progress, squad, Cap Space and items persist in pl_rr_gauntlet until the run dies. Each team's `players` are that season's roster for the victory-spoils WHEEL (era-specific ratings — Ray Allen is an 87 on the '08 Celtics but a 79 on the '13 Heat). logoId feeds logoTemplate for the map node crest.",
+    "title": "THE GAUNTLET",
+    "subtitle": "One squad. One life. Beat them, sign their stars, spend your winnings.",
+    "logoTemplate": "https://cdn.nba.com/logos/nba/{id}/primary/L/logo.svg",
+
+    "economy": {
+      "_comment": "Cap Space — earned per GAME win (the counter ticks up live during the series), bonuses at the buzzer. Gone when the run dies. Interest (Balatro-style): +$1 per interestPer dollars HELD when a series is won, capped at interestCap — rewards keeping a float without making hoarding dominant. homeEdge = per-game win-prob bump in YOUR building when the Home Court Deed is owned.",
+      "currency": "$",
+      "gameWin": 5,
+      "seriesWin": 15,
+      "sweep": 10,
+      "upset": 20,
+      "interestPer": 5,
+      "interestCap": 10,
+      "homeEdge": 0.03
+    },
+
+    "shop": {
+      "_comment": "The traveling shop appears at 'shop' entries in layers. `once` items can be bought once per run. Prices are Cap Space. Training Camp caps at +4 per player (2 buys).",
+      "items": [
+        { "id": "insurance", "icon": "🛟", "name": "Insurance Policy",  "price": 80, "once": true,  "desc": "When a loss would end your run, time rewinds to the game that killed you and the series re-flips from there. One use." },
+        { "id": "camp",      "icon": "🏋️", "name": "Training Camp",     "price": 40, "once": false, "desc": "+2 OVR to one player. Max +4 per player." },
+        { "id": "fa",        "icon": "🎰", "name": "Free-Agent Wheel",  "price": 50, "once": false, "desc": "Spin the whole NBA pool — sign who you freeze, somebody gets cut." },
+        { "id": "token2",    "icon": "🎟️", "name": "Second-Stop Token", "price": 35, "once": true,  "desc": "Your next victory wheel: STOP twice, keep the better freeze." },
+        { "id": "coach",     "icon": "📋", "name": "Coach Carousel",    "price": 25, "once": false, "desc": "Respin your coach slot. Could be Phil. Could be the Mascot." },
+        { "id": "home",      "icon": "🏟️", "name": "Home Court Deed",   "price": 45, "once": true,  "desc": "Home court the rest of the run — games 1, 2, 5 and 7 in YOUR building, with an edge." },
+        { "id": "rookie",    "icon": "🎓", "name": "Draft Workout",     "price": 30, "once": true,  "desc": "Spin the under-70 prospect wheel. Raw now — but he gains +1 for EVERY game you win." }
+      ]
+    },
+
+    "rookieMaxRating": 69,
+
+    "relicChance": 0.25,
+    "maxRelics": 3,
+    "_relics_comment": "Relics ride the victory-spoils wheel alongside players (~relicChance per card slot). Hold up to maxRelics; landing another means swapping one out. Effect types the engine understands: gameEdge / elimEdge / firstGameEdge (win-prob bumps), noMomentumDrag, gameWinCash, interestCap, shopDiscount, upsetMult, ovrBoost.",
+    "relics": [
+      { "id": "ring",     "icon": "💍", "name": "The Ring",       "desc": "Been there before — +6% win chance in elimination games.", "effect": { "type": "elimEdge", "value": 0.06 } },
+      { "id": "rabbit",   "icon": "🍀", "name": "Rabbit's Foot",  "desc": "Momentum never swings against you.",                       "effect": { "type": "noMomentumDrag", "value": 1 } },
+      { "id": "microwave","icon": "🔥", "name": "The Microwave",  "desc": "Instant offense — +2% win chance in every game.",          "effect": { "type": "gameEdge", "value": 0.02 } },
+      { "id": "sponsor",  "icon": "💼", "name": "Sponsor Deal",   "desc": "+$3 for every game you win.",                              "effect": { "type": "gameWinCash", "value": 3 } },
+      { "id": "platinum", "icon": "🏦", "name": "Platinum Card",  "desc": "Interest cap raised by $10.",                              "effect": { "type": "interestCap", "value": 10 } },
+      { "id": "tickets",  "icon": "🎫", "name": "Season Tickets", "desc": "Shop prices 25% off.",                                     "effect": { "type": "shopDiscount", "value": 0.25 } },
+      { "id": "hypeman",  "icon": "📢", "name": "Hype Man",       "desc": "Upset bonuses pay triple.",                                "effect": { "type": "upsetMult", "value": 3 } },
+      { "id": "chemistry","icon": "🧬", "name": "Team Chemistry", "desc": "Squad overall +2 in every series.",                        "effect": { "type": "ovrBoost", "value": 2 } },
+      { "id": "jetlag",   "icon": "🚀", "name": "Fast Starters",  "desc": "+15% win chance in Game 1.",                               "effect": { "type": "firstGameEdge", "value": 0.15 } }
+    ],
+
+    "_layers_comment": "The map, bottom to top. Each layer is an array of 1 team key (straight road), 2 team keys (fork — pick your road: usually safe-and-modest vs harder-with-a-better-wheel), or the string 'shop' (the traveling shop). Beat every layer to finish.",
+    "layers": [
+      ["bobcats12"],
+      ["sixers16", "knicks19"],
+      ["pistons04"],
+      "shop",
+      ["mavs11", "celtics08"],
+      ["heat13"],
+      ["lakers87", "celtics86"],
+      "shop",
+      ["bulls96"],
+      ["warriors16"]
+    ],
+
+    "teams": {
+      "bobcats12": { "name": "2012 Bobcats",  "rating": 74, "abbr": "CHA", "logoId": 1610612766, "blurb": "7–59. The worst team ever assembled. A warm-up.",
+        "players": [
+          { "name": "Kemba Walker", "nbaId": 202689, "rating": 78, "pos": "PG" }, { "name": "Gerald Henderson", "nbaId": 201945, "rating": 74, "pos": "SG" },
+          { "name": "Corey Maggette", "nbaId": 1894, "rating": 73, "pos": "SF" }, { "name": "Bismack Biyombo", "nbaId": 202687, "rating": 72, "pos": "C" },
+          { "name": "D.J. Augustin", "nbaId": 201571, "rating": 71, "pos": "PG" }, { "name": "Byron Mullens", "nbaId": 201957, "rating": 70, "pos": "C" },
+          { "name": "Tyrus Thomas", "nbaId": 200748, "rating": 68, "pos": "PF" }, { "name": "Derrick Brown", "nbaId": 201974, "rating": 67, "pos": "SF" }] },
+      "sixers16": { "name": "2016 Sixers",   "rating": 77, "abbr": "PHI", "logoId": 1610612755, "blurb": "Trust the Process — they don't mind losing.",
+        "players": [
+          { "name": "Robert Covington", "nbaId": 203496, "rating": 78, "pos": "SF" }, { "name": "Jahlil Okafor", "nbaId": 1626143, "rating": 77, "pos": "C" },
+          { "name": "Nerlens Noel", "nbaId": 203457, "rating": 77, "pos": "C" }, { "name": "Ish Smith", "nbaId": 202397, "rating": 74, "pos": "PG" },
+          { "name": "Jerami Grant", "nbaId": 203924, "rating": 74, "pos": "PF" }, { "name": "Richaun Holmes", "nbaId": 1626158, "rating": 73, "pos": "PF" },
+          { "name": "T.J. McConnell", "nbaId": 204456, "rating": 72, "pos": "PG" }, { "name": "Hollis Thompson", "nbaId": 203138, "rating": 70, "pos": "SG" }] },
+      "knicks19": { "name": "2019 Knicks",   "rating": 79, "abbr": "NYK", "logoId": 1610612752, "blurb": "The Garden faithful deserve better.",
+        "players": [
+          { "name": "Mitchell Robinson", "nbaId": 1629011, "rating": 80, "pos": "C" }, { "name": "Tim Hardaway Jr.", "nbaId": 203501, "rating": 78, "pos": "SG" },
+          { "name": "DeAndre Jordan", "nbaId": 201599, "rating": 76, "pos": "C" }, { "name": "Emmanuel Mudiay", "nbaId": 1626144, "rating": 75, "pos": "PG" },
+          { "name": "Dennis Smith Jr.", "nbaId": 1628372, "rating": 74, "pos": "PG" }, { "name": "Noah Vonleh", "nbaId": 203943, "rating": 74, "pos": "PF" },
+          { "name": "Damyean Dotson", "nbaId": 1628422, "rating": 72, "pos": "SG" }, { "name": "Kevin Knox", "nbaId": 1628995, "rating": 72, "pos": "SF" }] },
+      "pistons04": { "name": "2004 Pistons",  "rating": 82, "abbr": "DET", "logoId": 1610612765, "blurb": "No superstars. All defense.",
+        "ability": { "type": "ovrDebuff", "value": 1, "desc": "The defense travels. Your squad plays at -1 overall." },
+        "players": [
+          { "name": "Ben Wallace", "nbaId": 1112, "rating": 87, "pos": "C" }, { "name": "Chauncey Billups", "nbaId": 1497, "rating": 86, "pos": "PG" },
+          { "name": "Rasheed Wallace", "nbaId": 739, "rating": 85, "pos": "PF" }, { "name": "Richard Hamilton", "nbaId": 1888, "rating": 84, "pos": "SG" },
+          { "name": "Tayshaun Prince", "nbaId": 2419, "rating": 82, "pos": "SF" }, { "name": "Mehmet Okur", "nbaId": 2246, "rating": 77, "pos": "C" },
+          { "name": "Corliss Williamson", "nbaId": 722, "rating": 76, "pos": "PF" }, { "name": "Lindsey Hunter", "nbaId": 283, "rating": 72, "pos": "PG" }] },
+      "mavs11": { "name": "2011 Mavs",     "rating": 84, "abbr": "DAL", "logoId": 1610612742, "blurb": "Dirk's one-legged revenge tour.",
+        "players": [
+          { "name": "Dirk Nowitzki", "nbaId": 1717, "rating": 92, "pos": "PF" }, { "name": "Jason Kidd", "nbaId": 467, "rating": 84, "pos": "PG" },
+          { "name": "Tyson Chandler", "nbaId": 2199, "rating": 84, "pos": "C" }, { "name": "Jason Terry", "nbaId": 1891, "rating": 83, "pos": "SG" },
+          { "name": "Shawn Marion", "nbaId": 1890, "rating": 82, "pos": "SF" }, { "name": "J.J. Barea", "nbaId": 200826, "rating": 78, "pos": "PG" },
+          { "name": "Peja Stojakovic", "nbaId": 978, "rating": 76, "pos": "SF" }, { "name": "Brendan Haywood", "nbaId": 2217, "rating": 75, "pos": "C" },
+          { "name": "DeShawn Stevenson", "nbaId": 2052, "rating": 72, "pos": "SG" }] },
+      "celtics08": { "name": "2008 Celtics",  "rating": 86, "abbr": "BOS", "logoId": 1610612738, "blurb": "KG, Pierce, Ray. Anything is possible.",
+        "players": [
+          { "name": "Kevin Garnett", "nbaId": 708, "rating": 92, "pos": "PF" }, { "name": "Paul Pierce", "nbaId": 1718, "rating": 89, "pos": "SF" },
+          { "name": "Ray Allen", "nbaId": 951, "rating": 87, "pos": "SG" }, { "name": "Rajon Rondo", "nbaId": 200765, "rating": 82, "pos": "PG" },
+          { "name": "Kendrick Perkins", "nbaId": 2570, "rating": 78, "pos": "C" }, { "name": "James Posey", "nbaId": 1899, "rating": 76, "pos": "SF" },
+          { "name": "Leon Powe", "nbaId": 200796, "rating": 74, "pos": "PF" }, { "name": "Tony Allen", "nbaId": 2754, "rating": 74, "pos": "SG" },
+          { "name": "Eddie House", "nbaId": 2067, "rating": 73, "pos": "PG" }] },
+      "heat13": { "name": "2013 Heat",     "rating": 88, "abbr": "MIA", "logoId": 1610612748, "blurb": "27 straight wins. The Heatles.",
+        "ability": { "type": "noPlayerMomentum", "value": 1, "desc": "The Heatles never blink. Your desperation boost is switched off." },
+        "players": [
+          { "name": "LeBron James", "nbaId": 2544, "rating": 97, "pos": "SF" }, { "name": "Dwyane Wade", "nbaId": 2548, "rating": 90, "pos": "SG" },
+          { "name": "Chris Bosh", "nbaId": 2547, "rating": 87, "pos": "PF" }, { "name": "Ray Allen", "nbaId": 951, "rating": 79, "pos": "SG" },
+          { "name": "Mario Chalmers", "nbaId": 201596, "rating": 77, "pos": "PG" }, { "name": "Chris Andersen", "nbaId": 2365, "rating": 76, "pos": "C" },
+          { "name": "Shane Battier", "nbaId": 2203, "rating": 76, "pos": "SF" }, { "name": "Udonis Haslem", "nbaId": 2617, "rating": 74, "pos": "PF" },
+          { "name": "Norris Cole", "nbaId": 202708, "rating": 72, "pos": "PG" }] },
+      "lakers87": { "name": "1987 Lakers",   "rating": 90, "abbr": "LAL", "logoId": 1610612747, "blurb": "Showtime at full sprint.",
+        "players": [
+          { "name": "Magic Johnson", "nbaId": 77142, "rating": 97, "pos": "PG" }, { "name": "Kareem Abdul-Jabbar", "nbaId": 76003, "rating": 92, "pos": "C" },
+          { "name": "James Worthy", "nbaId": 1460, "rating": 88, "pos": "SF" }, { "name": "Byron Scott", "nbaId": 2, "rating": 84, "pos": "SG" },
+          { "name": "A.C. Green", "nbaId": 920, "rating": 80, "pos": "PF" }, { "name": "Michael Cooper", "nbaId": 76444, "rating": 79, "pos": "SG" },
+          { "name": "Mychal Thompson", "nbaId": 78331, "rating": 78, "pos": "C" }, { "name": "Kurt Rambis", "nbaId": 77905, "rating": 74, "pos": "PF" }] },
+      "celtics86": { "name": "1986 Celtics",  "rating": 91, "abbr": "BOS", "logoId": 1610612738, "blurb": "Bird's best board. 40–1 at home.",
+        "players": [
+          { "name": "Larry Bird", "nbaId": 1449, "rating": 96, "pos": "SF" }, { "name": "Kevin McHale", "nbaId": 1450, "rating": 90, "pos": "PF" },
+          { "name": "Robert Parish", "nbaId": 305, "rating": 85, "pos": "C" }, { "name": "Dennis Johnson", "nbaId": 77141, "rating": 82, "pos": "PG" },
+          { "name": "Bill Walton", "nbaId": 78450, "rating": 80, "pos": "C" }, { "name": "Danny Ainge", "nbaId": 76017, "rating": 79, "pos": "SG" },
+          { "name": "Scott Wedman", "nbaId": 78482, "rating": 72, "pos": "SF" }, { "name": "Jerry Sichting", "nbaId": 78146, "rating": 70, "pos": "PG" }] },
+      "bulls96": { "name": "1996 Bulls",    "rating": 93, "abbr": "CHI", "logoId": 1610612741, "blurb": "72–10. MJ never lost a step.",
+        "ability": { "type": "bossElimEdge", "value": 0.1, "desc": "MJ takes the closeouts. Bulls +10% in elimination games." },
+        "players": [
+          { "name": "Michael Jordan", "nbaId": 893, "rating": 99, "pos": "SG" }, { "name": "Scottie Pippen", "nbaId": 937, "rating": 93, "pos": "SF" },
+          { "name": "Dennis Rodman", "nbaId": 23, "rating": 88, "pos": "PF" }, { "name": "Toni Kukoc", "nbaId": 389, "rating": 84, "pos": "SF" },
+          { "name": "Ron Harper", "nbaId": 1631199, "rating": 78, "pos": "PG" }, { "name": "Steve Kerr", "nbaId": 70, "rating": 77, "pos": "PG" },
+          { "name": "Luc Longley", "nbaId": 26, "rating": 76, "pos": "C" }, { "name": "Bill Wennington", "nbaId": 82, "rating": 70, "pos": "C" }] },
+      "warriors16": { "name": "2016 Warriors", "rating": 95, "abbr": "GSW", "logoId": 1610612744, "blurb": "73–9. The final boss. Don't blow a 3–1 lead.",
+        "ability": { "type": "bossFirstGameEdge", "value": 0.15, "desc": "They start 73–9 fast. Warriors +15% in Game 1." },
+        "players": [
+          { "name": "Stephen Curry", "nbaId": 201939, "rating": 98, "pos": "PG" }, { "name": "Klay Thompson", "nbaId": 202691, "rating": 91, "pos": "SG" },
+          { "name": "Draymond Green", "nbaId": 203110, "rating": 89, "pos": "PF" }, { "name": "Andre Iguodala", "nbaId": 2738, "rating": 82, "pos": "SF" },
+          { "name": "Andrew Bogut", "nbaId": 101106, "rating": 79, "pos": "C" }, { "name": "Harrison Barnes", "nbaId": 203084, "rating": 78, "pos": "SF" },
+          { "name": "Shaun Livingston", "nbaId": 2733, "rating": 76, "pos": "PG" }, { "name": "Festus Ezeli", "nbaId": 203105, "rating": 72, "pos": "C" },
+          { "name": "Leandro Barbosa", "nbaId": 2571, "rating": 72, "pos": "SG" }] }
+    }
+  },
+
+  "bossSim": {
+    "_comment": "Per-game win prob = 0.5 + (teamOvr - bossRating) * perGameSlope + momentum * (gamesTrailingBy), clamped to [minProb, maxProb], first to 4 wins. Momentum makes the trailing team dangerous, so series usually run 6-7 games and comebacks are real. Upsets happen both ways. comeback: when YOU are down 3-1 you get +boost per game; +heroBoost instead if `hero` is on your squad (he's been here before).",
+    "perGameSlope": 0.04,
+    "momentum": 0.09,
+    "minProb": 0.1,
+    "maxProb": 0.9,
+    "comeback": { "boost": 0.25, "heroBoost": 0.5, "hero": "LeBron James" }
+  },
+
+  "teamColors": {
+    "ATL": "#E03A3E", "BOS": "#007A33", "BKN": "#1D1D1D", "CHA": "#00788C", "CHI": "#CE1141",
+    "CLE": "#860038", "DAL": "#00538C", "DEN": "#0E2240", "DET": "#C8102E", "GSW": "#1D428A",
+    "HOU": "#CE1141", "IND": "#002D62", "LAC": "#C8102E", "LAL": "#552583", "MEM": "#5D76A9",
+    "MIA": "#98002E", "MIL": "#00471B", "MIN": "#0C2340", "NOP": "#0C2340", "NYK": "#006BB6",
+    "OKC": "#007AC1", "ORL": "#0077C0", "PHI": "#006BB6", "PHX": "#1D1160", "POR": "#E03A3E",
+    "SAC": "#5A2D81", "SAS": "#767A7F", "TOR": "#CE1141", "UTA": "#002B5C", "WAS": "#002B5C",
+    "FA": "#5b636e"
+  },
+
+  "tiers": {
+    "_comment": "Rating -> tier color + share-text emoji square. Matches the site-wide tier bands.",
+    "bands": [
+      { "min": 85,  "key": "diamond", "emoji": "🟦" },
+      { "min": 80,  "key": "gold",    "emoji": "🟨" },
+      { "min": 75,  "key": "silver",  "emoji": "⬜" },
+      { "min": 65,  "key": "bronze",  "emoji": "🟫" },
+      { "min": 0,   "key": "grey",    "emoji": "⬛" }
+    ],
+    "legendEmoji": "🟪"
+  },
+
+  "dailySeedPrefix": "pl-daily-",
+  "dailySeedSuffix": "-goatsquad-v1"
+}
