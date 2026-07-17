@@ -252,11 +252,15 @@
     wire(p + 'Google', plugins.GoogleAuth, signInGoogle);
   }
 
-  var SLIDES = [
-    { icon: '🐐', title: 'Welcome to GoatLab', body: 'Spin real pro cards, bolt their ratings onto your own player, and chase the perfect 99. Baseball, basketball, and soccer.' },
-    { icon: '🛠️', title: 'Build & simulate', body: 'Fill every slot on the body, then simulate a whole career: seasons, awards, rings, and a Hall of Fame verdict.' },
-    { icon: '🎯', title: 'Every day counts', body: 'The Daily Challenge gives everyone the same cards, one shot a day. Streaks, leaderboards, bragging rights.' },
-    { icon: '🏟️', title: 'Go bigger', body: 'Face real people in live 1v1s, and run a whole franchise: sign your builds, trade, draft, win titles.' },
+  // Tutorial slides: annotated real-gameplay screenshots (bundled at /tutorial/) with
+  // one-line lessons. The last screen (index TUT.length) is the sign-in / guest screen.
+  var TUT = [
+    { icon: '🐐', title: 'Welcome to GoatLab', body: 'Spin real pro cards, bolt their ratings onto your own player, and chase the perfect 99. Here’s how it works.' },
+    { img: 'tutorial/slide1.png', title: 'Spin the reel', body: 'Tap SPIN, then STOP. Wherever it lands — that’s your guy, a real pro with a real rating.' },
+    { img: 'tutorial/slide2.png', title: 'Land a real pro', body: 'The card shows the player’s true rating. Now that number needs a home on your build.' },
+    { img: 'tutorial/slide3.png', title: 'Tap a glowing body part', body: 'Each body part holds ONE rating, for good. Fill all 9 slots and your Overall locks in.' },
+    { img: 'tutorial/slide4.png', title: 'Spend your power-ups', body: 'One Re-spin, one Boost, one Snag per run. Boost upgrades a player to his Prime card.' },
+    { img: 'tutorial/slide5.png', title: 'Then live the career', body: 'Simulate every season — awards, rings, heartbreak — and chase a Hall of Fame verdict.' },
   ];
 
   function showOnboarding() {
@@ -268,30 +272,61 @@
     document.documentElement.appendChild(ov);
 
     var idx = 0;
+    var TOTAL = TUT.length + 1;   // tutorial screens + the sign-in screen
     function haptic() { try { if (plugins.Haptics) plugins.Haptics.impact({ style: 'LIGHT' }); } catch (e) {} }
 
+    // preload the screenshots so paging never shows a blank frame
+    TUT.forEach(function (s) { if (s.img) { var im = new Image(); im.src = s.img; } });
+
     function renderSlide() {
-      var last = idx === SLIDES.length - 1;
-      var s = SLIDES[idx];
+      var last = idx === TOTAL - 1;
+      var s = TUT[Math.min(idx, TUT.length - 1)];
       ov.innerHTML =
+        // top bar: ‹ back on the left, Skip on the right (neither on the sign-in screen)
+        '<div style="position:absolute;top:calc(10px + env(safe-area-inset-top));left:10px;right:10px;display:flex;justify-content:space-between;align-items:center">' +
+        (idx > 0 && !last ? '<button id="obBack" style="background:none;border:none;color:#56627a;font-size:30px;line-height:1;padding:6px 14px">‹</button>' : '<span></span>') +
+        (!last ? '<button id="obSkip" style="background:none;border:none;color:#56627a;font-size:13px;padding:10px 14px">Skip</button>' : '<span></span>') +
+        '</div>' +
         '<div style="flex:1"></div>' +
-        '<div style="font-size:74px;line-height:1">' + s.icon + '</div>' +
-        '<div style="font-size:24px;font-weight:800;margin-top:18px;letter-spacing:.3px">' + s.title + '</div>' +
-        '<div style="font-size:15px;color:#8ea2bd;line-height:1.55;margin-top:10px;max-width:320px">' + s.body + '</div>' +
+        (last ?
+          '<div style="font-size:74px;line-height:1">🐐</div>' +
+          '<div style="font-size:24px;font-weight:800;margin-top:18px;letter-spacing:.3px">Ready to build</div>' +
+          '<div style="font-size:15px;color:#8ea2bd;line-height:1.55;margin-top:10px;max-width:320px">Sign in to keep your legends — or jump straight in as a guest.</div>'
+        :
+          (s.img ?
+            '<img src="' + s.img + '" alt="" style="max-width:88%;max-height:44vh;border-radius:16px;border:1px solid #223148;box-shadow:0 18px 50px rgba(0,0,0,.55)">'
+          : '<div style="font-size:74px;line-height:1">' + s.icon + '</div>') +
+          '<div style="font-size:22px;font-weight:800;margin-top:16px;letter-spacing:.3px">' + s.title + '</div>' +
+          '<div style="font-size:14.5px;color:#8ea2bd;line-height:1.55;margin-top:8px;max-width:330px">' + s.body + '</div>') +
         '<div style="flex:1"></div>' +
-        '<div style="display:flex;gap:7px;margin-bottom:22px">' + SLIDES.map(function (_, i) {
+        '<div style="display:flex;gap:7px;margin-bottom:20px">' + Array.apply(null, Array(TOTAL)).map(function (_, i) {
           return '<span style="width:8px;height:8px;border-radius:50%;background:' + (i === idx ? '#ff7a18' : '#26344a') + '"></span>';
         }).join('') + '</div>' +
         (last ? authButtons() :
           '<button id="obNext" style="width:100%;max-width:340px;padding:16px;border-radius:14px;border:none;font-size:16px;' +
-          'font-weight:700;background:linear-gradient(180deg,#ffb02e,#ff7a18);color:#14202e">Continue</button>' +
-          '<button id="obSkip" style="margin-top:12px;background:none;border:none;color:#56627a;font-size:13px;padding:8px">Skip</button>');
+          'font-weight:700;background:linear-gradient(180deg,#ffb02e,#ff7a18);color:#14202e">Continue</button>');
       var next = document.getElementById('obNext');
       if (next) next.onclick = function () { haptic(); idx++; renderSlide(); };
+      var back = document.getElementById('obBack');
+      if (back) back.onclick = function () { haptic(); idx--; renderSlide(); };
       var skip = document.getElementById('obSkip');
-      if (skip) skip.onclick = function () { haptic(); idx = SLIDES.length - 1; renderSlide(); };
+      if (skip) skip.onclick = function () { haptic(); idx = TOTAL - 1; renderSlide(); };
       wireAuth();
     }
+
+    // swipe to page through (left = forward, right = back); ignored on the sign-in screen
+    var swipeX = null;
+    ov.addEventListener('touchstart', function (e) { swipeX = e.touches[0].clientX; }, { passive: true });
+    ov.addEventListener('touchend', function (e) {
+      if (swipeX == null) return;
+      var dx = e.changedTouches[0].clientX - swipeX;
+      swipeX = null;
+      if (idx >= TOTAL - 1 || Math.abs(dx) < 45) return;
+      haptic();
+      if (dx < 0) idx++;
+      else if (idx > 0) idx--;
+      renderSlide();
+    }, { passive: true });
 
     function authButtons() { return authButtonsHtml('ob', true); }
 

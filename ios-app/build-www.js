@@ -33,6 +33,15 @@ fs.mkdirSync(OUT, { recursive: true });
 // shim goes in first so pages can reference it
 fs.copyFileSync(path.join(__dirname, 'shim', 'native-shim.js'), path.join(OUT, 'native-shim.js'));
 
+// onboarding tutorial screenshots (app-only asset, lives in ios-app/assets/tutorial)
+const TUT_SRC = path.join(__dirname, 'assets', 'tutorial');
+if (fs.existsSync(TUT_SRC)) {
+  fs.mkdirSync(path.join(OUT, 'tutorial'), { recursive: true });
+  for (const f of fs.readdirSync(TUT_SRC)) {
+    if (f.endsWith('.png')) fs.copyFileSync(path.join(TUT_SRC, f), path.join(OUT, 'tutorial', f));
+  }
+}
+
 let pages = 0, assets = 0, skipped = [];
 for (const f of PAGES) {
   const src = path.join(ROOT, f);
