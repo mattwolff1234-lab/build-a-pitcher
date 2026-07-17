@@ -206,8 +206,9 @@
   .soc-sec { font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:2px; text-transform:uppercase; color:#8ea2bd;
     margin:4px 2px 0; }
   .soc-chal { border-color:rgba(255,176,46,.4); background:rgba(255,140,46,.08); }
-  .soc-close { position:absolute; top:9px; right:11px; background:none; border:none; color:#8ea2bd; font-size:20px;
-    cursor:pointer; padding:4px 8px; line-height:1; font-family:Inter,sans-serif; z-index:2; }
+  .soc-close { position:absolute; top:2px; right:2px; width:44px; height:44px; display:flex; align-items:center;
+    justify-content:center; background:none; border:none; color:#c8d6ea; font-size:22px;
+    cursor:pointer; line-height:1; font-family:Inter,sans-serif; z-index:2; }
   .soc-close:hover { color:#f2f6fb; }
   .soc-input { width:100%; box-sizing:border-box; font-family:'Oswald',sans-serif; font-size:16px; letter-spacing:2px;
     text-transform:uppercase; color:#f2f6fb; background:rgba(10,16,26,.8); border:1px solid rgba(120,170,220,.3);

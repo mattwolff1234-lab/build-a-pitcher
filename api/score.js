@@ -413,6 +413,9 @@ module.exports = async (req, res) => {
     const limit = Math.min(200, Math.max(1, parseInt(req.query && req.query.limit, 10) || 50));
     const daily = scope === 'daily';
     const game = gameOf(req.query && req.query.game);
+    // Optional CFB position filter (?pos=qb|rb|wr) · cfb builds store pos as 'QB'/'RB'/'WR'
+    const posRaw = req.query && req.query.pos ? String(req.query.pos).toUpperCase() : null;
+    const pos = game === 'cfb' && ['QB', 'RB', 'WR'].indexOf(posRaw) >= 0 ? posRaw : null;
     // Optional sort by a career-total stat (trust-the-client, same as ovr). Whitelisted keys map to build.career.totals fields.
     const SORT_FIELDS = { k: 'k', war: 'war', wins: 'wins', rings: 'rings', cyYoung: 'cyYoung', hr: 'hr', hits: 'h', mvp: 'mvp', pts: 'pts', reb: 'reb', ast: 'ast', goals: 'goals', assists: 'assists', cs: 'cs', saves: 'saves', yds: 'yds', td: 'td', heisman: 'heisman', natty: 'natty', g: 'g', p: 'p', w: 'w', sweeps: 'sweeps', badges: 'badges' };
     const sortField = SORT_FIELDS[req.query && req.query.sort] || null;
@@ -424,51 +427,51 @@ module.exports = async (req, res) => {
     if (worst) {
       rows = daily
         ? await sql`SELECT id, name, ovr,
-              CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots') ELSE build END AS build,
+              CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots', 'pos', build->>'pos') ELSE build END AS build,
               game, created_at FROM scores
-              WHERE game = ${game} AND created_at >= date_trunc('day', now())
+              WHERE game = ${game} AND (${pos}::text IS NULL OR build->>'pos' = ${pos}) AND created_at >= date_trunc('day', now())
               ORDER BY ovr ASC, created_at ASC LIMIT ${limit}`
         : await sql`SELECT id, name, ovr,
-              CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots') ELSE build END AS build,
+              CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots', 'pos', build->>'pos') ELSE build END AS build,
               game, created_at FROM scores
-              WHERE game = ${game}
+              WHERE game = ${game} AND (${pos}::text IS NULL OR build->>'pos' = ${pos})
               ORDER BY ovr ASC, created_at ASC LIMIT ${limit}`;
     } else if (sortField && asc) {
       // worst-first stat sort (dir=asc); NULLS LAST still ranks missing-career entries at the end
       rows = daily
         ? await sql`SELECT id, name, ovr,
-              CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots') ELSE build END AS build,
+              CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots', 'pos', build->>'pos') ELSE build END AS build,
               game, created_at, (build->'career'->'totals'->>${sortField})::numeric AS stat FROM scores
-              WHERE game = ${game} AND created_at >= date_trunc('day', now())
+              WHERE game = ${game} AND (${pos}::text IS NULL OR build->>'pos' = ${pos}) AND created_at >= date_trunc('day', now())
               ORDER BY (build->'career'->'totals'->>${sortField})::numeric ASC NULLS LAST, ovr ASC, created_at ASC LIMIT ${limit}`
         : await sql`SELECT id, name, ovr,
-              CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots') ELSE build END AS build,
+              CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots', 'pos', build->>'pos') ELSE build END AS build,
               game, created_at, (build->'career'->'totals'->>${sortField})::numeric AS stat FROM scores
-              WHERE game = ${game}
+              WHERE game = ${game} AND (${pos}::text IS NULL OR build->>'pos' = ${pos})
               ORDER BY (build->'career'->'totals'->>${sortField})::numeric ASC NULLS LAST, ovr ASC, created_at ASC LIMIT ${limit}`;
     } else if (sortField) {
       rows = daily
         ? await sql`SELECT id, name, ovr,
-              CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots') ELSE build END AS build,
+              CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots', 'pos', build->>'pos') ELSE build END AS build,
               game, created_at, (build->'career'->'totals'->>${sortField})::numeric AS stat FROM scores
-              WHERE game = ${game} AND created_at >= date_trunc('day', now())
+              WHERE game = ${game} AND (${pos}::text IS NULL OR build->>'pos' = ${pos}) AND created_at >= date_trunc('day', now())
               ORDER BY (build->'career'->'totals'->>${sortField})::numeric DESC NULLS LAST, ovr DESC, created_at ASC LIMIT ${limit}`
         : await sql`SELECT id, name, ovr,
-              CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots') ELSE build END AS build,
+              CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots', 'pos', build->>'pos') ELSE build END AS build,
               game, created_at, (build->'career'->'totals'->>${sortField})::numeric AS stat FROM scores
-              WHERE game = ${game}
+              WHERE game = ${game} AND (${pos}::text IS NULL OR build->>'pos' = ${pos})
               ORDER BY (build->'career'->'totals'->>${sortField})::numeric DESC NULLS LAST, ovr DESC, created_at ASC LIMIT ${limit}`;
     } else {
       rows = daily
         ? await sql`SELECT id, name, ovr,
-              CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots') ELSE build END AS build,
+              CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots', 'pos', build->>'pos') ELSE build END AS build,
               game, created_at FROM scores
-              WHERE game = ${game} AND created_at >= date_trunc('day', now())
+              WHERE game = ${game} AND (${pos}::text IS NULL OR build->>'pos' = ${pos}) AND created_at >= date_trunc('day', now())
               ORDER BY ovr DESC, created_at ASC LIMIT ${limit}`
         : await sql`SELECT id, name, ovr,
-              CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots') ELSE build END AS build,
+              CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots', 'pos', build->>'pos') ELSE build END AS build,
               game, created_at FROM scores
-              WHERE game = ${game}
+              WHERE game = ${game} AND (${pos}::text IS NULL OR build->>'pos' = ${pos})
               ORDER BY ovr DESC, created_at ASC LIMIT ${limit}`;
     }
 
@@ -477,9 +480,9 @@ module.exports = async (req, res) => {
     if (meId) {
       const statField = sortField || 'war'; // value only used when sortField is set
       const [row] = await sql`SELECT id, name, ovr,
-        CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots') ELSE build END AS build,
+        CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots', 'pos', build->>'pos') ELSE build END AS build,
         created_at, game, (build->'career'->'totals'->>${statField})::numeric AS stat FROM scores WHERE id = ${meId}`;
-      if (row && row.game === game) {
+      if (row && row.game === game && (!pos || String((row.build && row.build.pos) || '').toUpperCase() === pos)) {
         let ahead;
         if (sortField && asc) {
           // worst-first stat sort (dir=asc): rank counts entries with a LOWER stat. Missing careers
@@ -488,38 +491,38 @@ module.exports = async (req, res) => {
           const meVal = row.stat == null ? ASC_NULL : Number(row.stat);
           ahead = daily
             ? (await sql`SELECT count(*)::int AS ahead FROM scores
-                  WHERE game = ${game} AND created_at >= date_trunc('day', now())
+                  WHERE game = ${game} AND (${pos}::text IS NULL OR build->>'pos' = ${pos}) AND created_at >= date_trunc('day', now())
                     AND (COALESCE((build->'career'->'totals'->>${sortField})::numeric, ${ASC_NULL}) < ${meVal}
                       OR (COALESCE((build->'career'->'totals'->>${sortField})::numeric, ${ASC_NULL}) = ${meVal} AND created_at < ${row.created_at}))`)[0].ahead
             : (await sql`SELECT count(*)::int AS ahead FROM scores
-                  WHERE game = ${game}
+                  WHERE game = ${game} AND (${pos}::text IS NULL OR build->>'pos' = ${pos})
                     AND (COALESCE((build->'career'->'totals'->>${sortField})::numeric, ${ASC_NULL}) < ${meVal}
                       OR (COALESCE((build->'career'->'totals'->>${sortField})::numeric, ${ASC_NULL}) = ${meVal} AND created_at < ${row.created_at}))`)[0].ahead;
         } else if (sortField) {
           const meVal = row.stat == null ? NULL_SENTINEL : Number(row.stat);
           ahead = daily
             ? (await sql`SELECT count(*)::int AS ahead FROM scores
-                  WHERE game = ${game} AND created_at >= date_trunc('day', now())
+                  WHERE game = ${game} AND (${pos}::text IS NULL OR build->>'pos' = ${pos}) AND created_at >= date_trunc('day', now())
                     AND (COALESCE((build->'career'->'totals'->>${sortField})::numeric, ${NULL_SENTINEL}) > ${meVal}
                       OR (COALESCE((build->'career'->'totals'->>${sortField})::numeric, ${NULL_SENTINEL}) = ${meVal} AND created_at < ${row.created_at}))`)[0].ahead
             : (await sql`SELECT count(*)::int AS ahead FROM scores
-                  WHERE game = ${game}
+                  WHERE game = ${game} AND (${pos}::text IS NULL OR build->>'pos' = ${pos})
                     AND (COALESCE((build->'career'->'totals'->>${sortField})::numeric, ${NULL_SENTINEL}) > ${meVal}
                       OR (COALESCE((build->'career'->'totals'->>${sortField})::numeric, ${NULL_SENTINEL}) = ${meVal} AND created_at < ${row.created_at}))`)[0].ahead;
         } else if (worst) {
           ahead = daily
             ? (await sql`SELECT count(*)::int AS ahead FROM scores
-                  WHERE game = ${row.game} AND created_at >= date_trunc('day', now())
+                  WHERE game = ${row.game} AND (${pos}::text IS NULL OR build->>'pos' = ${pos}) AND created_at >= date_trunc('day', now())
                     AND (ovr < ${row.ovr} OR (ovr = ${row.ovr} AND created_at < ${row.created_at}))`)[0].ahead
             : (await sql`SELECT count(*)::int AS ahead FROM scores
-                  WHERE game = ${row.game} AND (ovr < ${row.ovr} OR (ovr = ${row.ovr} AND created_at < ${row.created_at}))`)[0].ahead;
+                  WHERE game = ${row.game} AND (${pos}::text IS NULL OR build->>'pos' = ${pos}) AND (ovr < ${row.ovr} OR (ovr = ${row.ovr} AND created_at < ${row.created_at}))`)[0].ahead;
         } else {
           ahead = daily
             ? (await sql`SELECT count(*)::int AS ahead FROM scores
-                  WHERE game = ${row.game} AND created_at >= date_trunc('day', now())
+                  WHERE game = ${row.game} AND (${pos}::text IS NULL OR build->>'pos' = ${pos}) AND created_at >= date_trunc('day', now())
                     AND (ovr > ${row.ovr} OR (ovr = ${row.ovr} AND created_at < ${row.created_at}))`)[0].ahead
             : (await sql`SELECT count(*)::int AS ahead FROM scores
-                  WHERE game = ${row.game} AND (ovr > ${row.ovr} OR (ovr = ${row.ovr} AND created_at < ${row.created_at}))`)[0].ahead;
+                  WHERE game = ${row.game} AND (${pos}::text IS NULL OR build->>'pos' = ${pos}) AND (ovr > ${row.ovr} OR (ovr = ${row.ovr} AND created_at < ${row.created_at}))`)[0].ahead;
         }
         const inScope = daily
           ? (await sql`SELECT 1 FROM scores WHERE id = ${meId} AND created_at >= date_trunc('day', now())`).length > 0

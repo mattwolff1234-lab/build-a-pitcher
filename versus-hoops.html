@@ -215,9 +215,9 @@
   }
   .role-card .rl { font-family:'Oswald',sans-serif; font-size:30px; font-weight:700; letter-spacing:2.5px; text-transform:uppercase; color:var(--rc); line-height:1.05; }
   .role-card.pitcher { --rc:var(--pitch); border-color:var(--pitch); }
-  .role-card.pitcher .role-fig { -webkit-mask-image:url(baller-figure.png); mask-image:url(baller-figure.png); }
+  .role-card.pitcher .role-fig { -webkit-mask-image:url(jersey-basketball-base.png); mask-image:url(jersey-basketball-base.png); }
   .role-card.batter { --rc:var(--bat); border-color:var(--bat); }
-  .role-card.batter .role-fig { -webkit-mask-image:url(baller-figure.png); mask-image:url(baller-figure.png); }
+  .role-card.batter .role-fig { -webkit-mask-image:url(jersey-basketball-base.png); mask-image:url(jersey-basketball-base.png); }
   .role-sub { color:var(--muted); margin-top:18px; font-size:14px; max-width:340px; }
   .hist-head { font-family:'Oswald',sans-serif; font-size:13px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin:22px 0 8px; }
   .hist-row { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--line); }
@@ -829,20 +829,24 @@ function tierBadgeHTML(elo, rank, size=20){
 // Both players build the same 9-slot hooper. The two ROLE keys (pitcher/batter) are kept only as
 // vestigial A/B side labels so the matchmaking/figure code needs no changes · both point at hoopers.
 const HOOPER_SLOTS = [
-  { key:'threept',    label:'3-Pointer',  part:'Shooting Hand', mask:'hoop-seg-threept.png',    ax:16, ay:50, lx:7,  ly:56 },
-  { key:'finishing',  label:'Finishing',  part:'Thighs',        mask:'hoop-seg-finishing.png',  ax:40, ay:61, lx:11, ly:74 },
-  { key:'dribble',    label:'Dribble',    part:'Forearms',      mask:'hoop-seg-dribble.png',    ax:27, ay:40, lx:8,  ly:38 },
-  { key:'playmaking', label:'Playmaking', part:'Off Hand',      mask:'hoop-seg-playmaking.png', ax:85, ay:55, lx:93, ly:60 },
-  { key:'defense',    label:'Defense',    part:'Shoulders',     mask:'hoop-seg-defense.png',    ax:70, ay:25, lx:92, ly:22 },
-  { key:'rebounding', label:'Rebounding', part:'Core',          mask:'hoop-seg-rebounding.png', ax:53, ay:46, lx:9,  ly:20 },
-  { key:'speed',      label:'Speed',      part:'Legs',          mask:'hoop-seg-speed.png',      ax:80, ay:76, lx:90, ly:82 },
-  { key:'clutch',     label:'Clutch',     part:'Head',          mask:'hoop-seg-clutch.png',     ax:58, ay:12, lx:86, ly:8 },
-  { key:'frame',      label:'Frame',      part:'Height',        mask:'hoop-seg-frame.png',      ax:54, ay:30, lx:93, ly:40, type:'height' },
+  { key:'threept',    label:'3-Pointer',  part:'Shooting Hand', ax:34, ay:42, lx:12, ly:63 },
+  { key:'finishing',  label:'Finishing',  part:'Thighs',        ax:46.4, ay:55.7, lx:12, ly:89 },
+  { key:'dribble',    label:'Dribble',    part:'Forearms',      ax:38, ay:44, lx:12, ly:37 },
+  { key:'playmaking', label:'Playmaking', part:'Off Hand',      ax:66, ay:52, lx:88, ly:70 },
+  { key:'defense',    label:'Defense',    part:'Shoulders',     ax:60, ay:26, lx:88, ly:30 },
+  { key:'rebounding', label:'Rebounding', part:'Core',          ax:53.6, ay:56.0, lx:12, ly:11 },
+  { key:'speed',      label:'Speed',      part:'Legs',          ax:57.4, ay:89.1, lx:88, ly:90 },
+  { key:'clutch',     label:'Clutch',     part:'Head',          ax:50, ay:12, lx:88, ly:10 },
+  { key:'frame',      label:'Frame',      part:'Height',        ax:50.1, ay:33.2, lx:88, ly:50, type:'height' },
 ];
 const WEIGHTS_HOOP = { threept:1.2, finishing:1.2, playmaking:1.2, dribble:1.1, defense:1.1, rebounding:1.1, clutch:1.1, speed:0.9, frame:1.0 };
 function heightToRatingHoop(inches){ return inches ? clamp(Math.round(50+(inches-70)*3.6),1,125) : 60; }
 
-const HOOP_CFG = () => ({ data:'ballers.json', figure:'baller-figure.png', slots:HOOPER_SLOTS,
+const SKIN_TONES = ['', '-tan', '-brown', '-dark'];   // '' = light · random per match
+const figSkin = SKIN_TONES[Math.floor(Math.random() * SKIN_TONES.length)];
+const HOOP_CFG = () => ({ data:'ballers.json', figBase:'jersey-basketball', slots:HOOPER_SLOTS,
+  regions:['jersey','lshort','rshort','shoes'],
+  regionSlot:{ jersey:'frame', lshort:'finishing', rshort:'rebounding', shoes:'speed' },
   h2r:heightToRatingHoop, slotWeight:(k,v)=>WEIGHTS_HOOP[k]||1 });
 const ROLE = { pitcher: HOOP_CFG(), batter: HOOP_CFG() };
 function slotNumeric(role,p,s){
@@ -1677,16 +1681,17 @@ function beginBuild(){
   $('powerups').classList.remove('show');
   $('respinBtn').onclick = respin; $('boostBtn').onclick = boost;
   $('snagLeftBtn').onclick = () => snag(-1); $('snagRightBtn').onclick = () => snag(1);
-  // figure base + segments for my role
-  $('figwrap').querySelector('.base').style.background = `url(${ROLE[myRole].figure}) center/contain no-repeat`;
-  $('figureShade').style.webkitMaskImage = `url(${ROLE[myRole].figure})`;
-  $('figureShade').style.maskImage = `url(${ROLE[myRole].figure})`;
+  // figure base + tintable jersey regions for my role (same stack as the solo games)
+  const figURL = `${ROLE[myRole].figBase}${figSkin}-base.png`;
+  $('figwrap').querySelector('.base').style.background = `url(${figURL}) center/contain no-repeat`;
+  $('figureShade').style.webkitMaskImage = `url(${figURL})`;
+  $('figureShade').style.maskImage = `url(${figURL})`;
   $('figureShade').style.webkitMaskPosition = $('figureShade').style.maskPosition = 'center';
   $('figureShade').style.webkitMaskSize = $('figureShade').style.maskSize = 'contain';
   $('figureShade').style.webkitMaskRepeat = $('figureShade').style.maskRepeat = 'no-repeat';
   const fw=$('figwrap'); fw.querySelectorAll('.seg').forEach(e=>e.remove());
   segEls={};
-  for (const s of ROLE[myRole].slots){ const d=document.createElement('div'); d.className='seg'; d.style.webkitMaskImage=`url(${s.mask})`; d.style.maskImage=`url(${s.mask})`; fw.appendChild(d); segEls[s.key]=d; }
+  for (const r of ROLE[myRole].regions){ const d=document.createElement('div'); d.className='seg'; const m=`${ROLE[myRole].figBase}-${r}.png`; d.style.webkitMaskImage=`url(${m})`; d.style.maskImage=`url(${m})`; fw.appendChild(d); segEls[r]=d; }
   renderSlots(); renderNodes(); updateFigure(); updateOvr(); idleReel();
   $('spinBtn').onclick = spin; $('spinBtn').disabled = false;  // re-enable after a previous match left it disabled
   $('landedLi').classList.remove('show'); $('powerups').classList.remove('show');
@@ -1772,7 +1777,8 @@ function renderNodes(){
   }
 }
 function updateFigure(){
-  for (const s of ROLE[myRole].slots){ const f=buildState.filled[s.key], el=segEls[s.key]; if(!el)continue;
+  const R = ROLE[myRole];
+  for (const r of R.regions){ const f=buildState.filled[R.regionSlot[r]], el=segEls[r]; if(!el)continue;
     if(f){ el.style.background = `url(jersey-fabric.png), ${teamColor(f.team)}`; el.style.backgroundSize='150px, auto'; el.style.backgroundBlendMode='overlay'; }
     else el.style.background='transparent';
   }

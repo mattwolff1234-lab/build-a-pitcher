@@ -222,9 +222,9 @@
   }
   .role-card .rl { font-family:'Oswald',sans-serif; font-size:30px; font-weight:700; letter-spacing:2.5px; text-transform:uppercase; color:var(--rc); line-height:1.05; }
   .role-card.striker { --rc:var(--pitch); border-color:var(--pitch); }
-  .role-card.striker .role-fig { -webkit-mask-image:url(striker-figure.png); mask-image:url(striker-figure.png); }
+  .role-card.striker .role-fig { -webkit-mask-image:url(jersey-striker-base.png); mask-image:url(jersey-striker-base.png); }
   .role-card.keeper { --rc:var(--bat); border-color:var(--bat); }
-  .role-card.keeper .role-fig { -webkit-mask-image:url(keeper-figure.png); mask-image:url(keeper-figure.png); }
+  .role-card.keeper .role-fig { -webkit-mask-image:url(jersey-keeper-base.png); mask-image:url(jersey-keeper-base.png); }
   .role-sub { color:var(--muted); margin-top:18px; font-size:14px; max-width:340px; }
   .hist-head { font-family:'Oswald',sans-serif; font-size:13px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin:22px 0 8px; }
   .hist-row { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--line); }
@@ -903,26 +903,26 @@ function renderSeasonBar(){ return;   // soccer: no seasons yet
 function startSeasonBar(){ /* soccer 1v1 has no Elo seasons (yet) · all-time rating only */ }
 
 const STRIKER_SLOTS = [
-  { key:'finishing', label:'Finishing', part:'Striking Boot', mask:'soc-seg-finishing.png', ax:80, ay:88, lx:89, ly:70 },
-  { key:'pace', label:'Pace', part:'Legs', mask:'soc-seg-pace.png', ax:24, ay:67, lx:9, ly:82 },
-  { key:'power', label:'Shot Power', part:'Thigh', mask:'soc-seg-power.png', ax:63, ay:61, lx:90, ly:58 },
-  { key:'dribbling', label:'Dribbling', part:'Close Control', mask:'soc-seg-dribbling.png', ax:69, ay:46, lx:92, ly:40 },
-  { key:'passing', label:'Passing', part:'Vision Arm', mask:'soc-seg-passing.png', ax:16, ay:24, lx:7, ly:36 },
-  { key:'heading', label:'Heading', part:'Head', mask:'soc-seg-heading.png', ax:53, ay:9, lx:84, ly:6 },
-  { key:'physical', label:'Physical', part:'Engine', mask:'soc-seg-physical.png', ax:52, ay:42, lx:92, ly:22 },
-  { key:'clutch', label:'Clutch', part:'Heart', mask:'soc-seg-clutch.png', ax:52, ay:29, lx:12, ly:8 },
-  { key:'frame', label:'Frame', part:'Height', mask:'soc-seg-frame.png', ax:51, ay:55, lx:9, ly:52, type:'height' },
+  { key:'finishing', label:'Finishing', part:'Striking Boot', ax:60, ay:90, lx:88, ly:90 },
+  { key:'pace', label:'Pace', part:'Legs', ax:43.4, ay:69.3, lx:12, ly:89 },
+  { key:'power', label:'Shot Power', part:'Thigh', ax:50.2, ay:54.4, lx:88, ly:70 },
+  { key:'dribbling', label:'Dribbling', part:'Close Control', ax:56, ay:64, lx:88, ly:50 },
+  { key:'passing', label:'Passing', part:'Vision Arm', ax:43.4, ay:28.9, lx:12, ly:37 },
+  { key:'heading', label:'Heading', part:'Head', ax:50, ay:10, lx:88, ly:10 },
+  { key:'physical', label:'Physical', part:'Engine', ax:58.1, ay:28.9, lx:88, ly:30 },
+  { key:'clutch', label:'Clutch', part:'Heart', ax:50, ay:26, lx:12, ly:11 },
+  { key:'frame', label:'Frame', part:'Height', ax:50.8, ay:34.3, lx:12, ly:63, type:'height' },
 ];
 const KEEPER_SLOTS = [
-  { key:'diving', label:'Diving', part:'Arms', mask:'kp-seg-diving.png', ax:21, ay:36, lx:8, ly:26 },
-  { key:'reflexes', label:'Reflexes', part:'Left Glove', mask:'kp-seg-reflexes.png', ax:9, ay:44, lx:8, ly:62 },
-  { key:'handling', label:'Handling', part:'Right Glove', mask:'kp-seg-handling.png', ax:91, ay:43, lx:92, ly:62 },
-  { key:'distribution', label:'Distribution', part:'Boots', mask:'kp-seg-distribution.png', ax:78, ay:88, lx:50, ly:90 },
-  { key:'positioning', label:'Positioning', part:'Head', mask:'kp-seg-positioning.png', ax:52, ay:9, lx:86, ly:6 },
-  { key:'agility', label:'Agility', part:'Legs', mask:'kp-seg-agility.png', ax:28, ay:74, lx:10, ly:80 },
-  { key:'command', label:'Command', part:'The Box', mask:'kp-seg-command.png', ax:52, ay:38, lx:92, ly:26 },
-  { key:'clutch', label:'Clutch', part:'Heart', mask:'kp-seg-clutch.png', ax:52, ay:25, lx:14, ly:7 },
-  { key:'frame', label:'Frame', part:'Height', mask:'kp-seg-frame.png', ax:51, ay:54, lx:50, ly:72, type:'height' },
+  { key:'diving', label:'Diving', part:'Arms', ax:30, ay:36, lx:12, ly:30 },
+  { key:'reflexes', label:'Reflexes', part:'Left Glove', ax:70, ay:44, lx:12, ly:50 },
+  { key:'handling', label:'Handling', part:'Right Glove', ax:29.9, ay:44.0, lx:88, ly:63 },
+  { key:'distribution', label:'Distribution', part:'Boots', ax:50, ay:90, lx:12, ly:90 },
+  { key:'positioning', label:'Positioning', part:'Head', ax:50, ay:10, lx:88, ly:11 },
+  { key:'agility', label:'Agility', part:'Legs', ax:64.6, ay:76.1, lx:12, ly:70 },
+  { key:'command', label:'Command', part:'The Box', ax:51.2, ay:55.9, lx:88, ly:37 },
+  { key:'clutch', label:'Clutch', part:'Heart', ax:50, ay:26, lx:12, ly:10 },
+  { key:'frame', label:'Frame', part:'Height', ax:50.7, ay:35.4, lx:88, ly:89, type:'height' },
 ];
 const WEIGHTS_S = { finishing:1.2, pace:1.2, dribbling:1.1, power:1.1, passing:1.1, clutch:1.1, heading:1.0, physical:1.0, frame:0.7 };
 const WEIGHTS_K = { reflexes:1.2, diving:1.2, positioning:1.1, handling:1.1, clutch:1.1, frame:1.1, command:1.0, distribution:1.0, agility:1.0 };
@@ -936,10 +936,18 @@ function heightToRatingK(inches){ return inches ? clamp(Math.round(38+(inches-64
 const KP_LIFT = { agility:0.62, distribution:0.36, command:0.36, clutch:0.29, handling:0.22, diving:0.15, positioning:0.15, reflexes:0.08 };
 function curveKp(k,v){ const f=KP_LIFT[k]||0; return Math.round(v + Math.max(0,110-v)*f); }
 
+// Same 2.5D jersey figure as the solo games: photoreal base (random skin tone per match)
+// + tintable clothing-region masks. Regions map to slots · skin regions aren't tinted.
+const SKIN_TONES = ['', '-tan', '-brown', '-dark'];   // '' = light
+const figSkin = SKIN_TONES[Math.floor(Math.random() * SKIN_TONES.length)];
 const ROLE = {
-  striker: { data:'strikers.json', figure:'striker-figure.png', slots:STRIKER_SLOTS,
+  striker: { data:'strikers.json', figBase:'jersey-striker', slots:STRIKER_SLOTS,
+    regions:['jersey','lsleeve','rsleeve','shorts','socks'],
+    regionSlot:{ jersey:'frame', lsleeve:'passing', rsleeve:'physical', shorts:'power', socks:'pace' },
     h2r:heightToRatingS, slotWeight:(k,v)=>WEIGHTS_S[k]||1 },
-  keeper: { data:'keepers.json', figure:'keeper-figure.png', slots:KEEPER_SLOTS,
+  keeper: { data:'keepers.json', figBase:'jersey-keeper', slots:KEEPER_SLOTS,
+    regions:['jersey','gloves','shorts','socks'],
+    regionSlot:{ jersey:'frame', gloves:'handling', shorts:'command', socks:'agility' },
     h2r:heightToRatingK, slotWeight:(k,v)=>WEIGHTS_K[k]||1 },
 };
 function slotNumeric(role,p,s){
@@ -1820,16 +1828,17 @@ function beginBuild(){
   $('powerups').classList.remove('show');
   $('respinBtn').onclick = respin; $('boostBtn').onclick = boost;
   $('snagLeftBtn').onclick = () => snag(-1); $('snagRightBtn').onclick = () => snag(1);
-  // figure base + segments for my role
-  $('figwrap').querySelector('.base').style.background = `url(${ROLE[myRole].figure}) center/contain no-repeat`;
-  $('figureShade').style.webkitMaskImage = `url(${ROLE[myRole].figure})`;
-  $('figureShade').style.maskImage = `url(${ROLE[myRole].figure})`;
+  // figure base + tintable jersey regions for my role (same stack as the solo games)
+  const figURL = `${ROLE[myRole].figBase}${figSkin}-base.png`;
+  $('figwrap').querySelector('.base').style.background = `url(${figURL}) center/contain no-repeat`;
+  $('figureShade').style.webkitMaskImage = `url(${figURL})`;
+  $('figureShade').style.maskImage = `url(${figURL})`;
   $('figureShade').style.webkitMaskPosition = $('figureShade').style.maskPosition = 'center';
   $('figureShade').style.webkitMaskSize = $('figureShade').style.maskSize = 'contain';
   $('figureShade').style.webkitMaskRepeat = $('figureShade').style.maskRepeat = 'no-repeat';
   const fw=$('figwrap'); fw.querySelectorAll('.seg').forEach(e=>e.remove());
   segEls={};
-  for (const s of ROLE[myRole].slots){ const d=document.createElement('div'); d.className='seg'; d.style.webkitMaskImage=`url(${s.mask})`; d.style.maskImage=`url(${s.mask})`; fw.appendChild(d); segEls[s.key]=d; }
+  for (const r of ROLE[myRole].regions){ const d=document.createElement('div'); d.className='seg'; const m=`${ROLE[myRole].figBase}-${r}.png`; d.style.webkitMaskImage=`url(${m})`; d.style.maskImage=`url(${m})`; fw.appendChild(d); segEls[r]=d; }
   renderSlots(); renderNodes(); updateFigure(); updateOvr(); idleReel();
   $('spinBtn').onclick = spin; $('spinBtn').disabled = false;  // re-enable after a previous match left it disabled
   $('landedLi').classList.remove('show'); $('powerups').classList.remove('show');
@@ -1915,7 +1924,8 @@ function renderNodes(){
   }
 }
 function updateFigure(){
-  for (const s of ROLE[myRole].slots){ const f=buildState.filled[s.key], el=segEls[s.key]; if(!el)continue;
+  const R = ROLE[myRole];
+  for (const r of R.regions){ const f=buildState.filled[R.regionSlot[r]], el=segEls[r]; if(!el)continue;
     if(f){ el.style.background = `url(jersey-fabric.png), ${teamColor(f.team)}`; el.style.backgroundSize='150px, auto'; el.style.backgroundBlendMode='overlay'; }
     else el.style.background='transparent';
   }

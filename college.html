@@ -18,10 +18,17 @@
 <meta name="twitter:card" content="summary">
 <meta name="twitter:image" content="/icon-512.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="/namefilter.js"></script>
 <script src="/achievements.js" defer></script>
 <script src="/xp.js" defer></script>
+<script src="/social.js" defer></script>
+<script src="/catalog.js" defer></script>
+<script src="/store.js" defer></script>
+<script src="/switcher.js?v=15" defer></script>
 <script src="/collection.js?v=4" defer></script>
 <script src="/quests.js" defer></script>
+<script src="/season-track.js" defer></script>
+<script src="/streak-pop.js" defer></script>
 <script src="/share-card.js" defer></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <!-- Google tag (gtag.js) -->
@@ -929,17 +936,22 @@
     <div class="overlay-head"><span class="overlay-title">Menu</span><button class="overlay-close" data-close="menu">✕</button></div>
     <div class="overlay-body">
       <div id="acctSlot"></div>
+      <div data-player-title></div>
       <div data-xp-bar></div>
+      <div data-coin-chip style="margin:4px 0"></div>
       <div class="menu-sec">Play</div>
       <a class="menu-item" href="/">🏠 Home</a>
       <button class="menu-item" id="miDaily">🎯 Daily Challenge</button>
       <button class="menu-item" id="miStreak">🔥 Streak Calendar</button>
       <button class="menu-item" id="miSwitchPos">🔁 Switch Position</button>
       <div class="menu-sec">Your Stuff</div>
+      <button class="menu-item" id="miFriends">👥 Friends<span class="mi-chev" data-social-badge></span></button>
       <button class="menu-item" id="miHof">🏛️ My Hall of Fame</button>
       <button class="menu-item" id="miAch">🏅 Achievements<span class="mi-chev" data-ach-count style="margin-left:auto;font-family:'Oswald',sans-serif;font-size:12px;color:var(--gold)">0/0</span></button>
       <button class="menu-item" id="miCol">📇 My Collection<span class="mi-chev" data-col-count style="margin-left:auto;font-family:'Oswald',sans-serif;font-size:12px;color:var(--gold)">0</span></button>
       <button class="menu-item" id="miQuests">📜 Daily Quests<span class="mi-chev" data-quest-count style="margin-left:auto;font-family:'Oswald',sans-serif;font-size:12px;color:var(--gold)">0/3</span></button>
+      <button class="menu-item" id="miTrack">🎟️ Season Track</button>
+      <button class="menu-item" id="miStore">🪙 Store &amp; Coins</button>
       <div class="menu-sec">Compete</div>
       <button class="menu-item" id="miLb">🏆 Leaderboard</button>
       <div class="menu-sec">Help</div>
@@ -1295,6 +1307,7 @@ let lbScope = 'global';
 let lbGame = LEADERBOARD_GAME;
 let lbSort = 'ovr';
 let lbDir = 'desc';
+let lbPos = null;   // cfb boards only: null = All · 'QB' · 'RB' · 'WR'
 let lbEntries = new Map();
 const SORT_OPTIONS = {
   pitcher: [{ key: 'ovr', label: 'OVR' }, { key: 'k', label: 'Strikeouts' }, { key: 'war', label: 'WAR' }, { key: 'wins', label: 'Wins' }, { key: 'rings', label: 'Rings' }, { key: 'cyYoung', label: 'Cy Youngs' }],
@@ -1329,6 +1342,13 @@ function renderLbNav() {
     if (s.id !== sport.id) loadLeaderboard(lbScope, s.games[0][0]);
   });
   const roles = $('lbRoleTabs');
+  if (sport.id === 'cfb') {
+    // one CFB game, four boards: All · QBs · RBs · WRs (server filters by build pos)
+    roles.innerHTML = [['', 'All'], ['QB', 'QBs'], ['RB', 'RBs'], ['WR', 'WRs']]
+      .map(([id, label]) => `<button class="lb-tab${(lbPos || '') === id ? ' active' : ''}" data-lbpos="${id}">${label}</button>`).join('');
+    roles.querySelectorAll('[data-lbpos]').forEach(b => b.onclick = () => { lbPos = b.dataset.lbpos || null; loadLeaderboard(lbScope, 'cfb'); });
+    return;
+  }
   roles.innerHTML = sport.games.length > 1
     ? sport.games.map(([id, label]) => `<button class="lb-tab${id === lbGame ? ' active' : ''}" data-lbgame="${id}">${label}</button>`).join('')
     : '';
@@ -1449,6 +1469,7 @@ async function init() {
   $('miAch').onclick = () => { closeOverlay('menu'); Sound.click(); window.Ach && Ach.open(); };
   $('miCol').onclick = () => { closeOverlay('menu'); Sound.click(); window.Collection && Collection.open(LEADERBOARD_GAME); };
   $('miQuests').onclick = () => { closeOverlay('menu'); Sound.click(); window.Quests && Quests.open(); };
+  $('miTrack').onclick = () => { closeOverlay('menu'); Sound.click(); window.SeasonTrack && SeasonTrack.open(); };
   $('saveHofBtn').onclick = () => saveToHof($('saveHofBtn'));
   $('miLb').onclick = () => { closeOverlay('menu'); openLeaderboard('global'); };
   $('miHow').onclick = () => { closeOverlay('menu'); openOverlay('howModal'); };
@@ -2611,7 +2632,7 @@ async function showDailyResults() {
 }
 function renderDailyResults(res, best, rows, name) {
   const ov = $('dailyResults');
-  const pct = res.total > 1 ? Math.max(1, Math.round((1 - (res.rank - 1) / res.total) * 100)) : 100;
+  const pct = res.total > 1 ? Math.max(1, Math.round((res.rank / res.total) * 100)) : 1;
   $('dResOvr').textContent = res.ovr;
   $('dResRank').textContent = '-';
   $('dResPct').textContent = '0';
@@ -2645,7 +2666,7 @@ function closeDailyResults(thenSim) {
 
 function rankReveal(ovr, rank, total, isPB, replay, frozeUsed) {
   const ov = $('dailyReveal'); if (!ov) return;
-  const pct = total > 1 ? Math.max(1, Math.round((1 - (rank - 1) / total) * 100)) : 100;
+  const pct = total > 1 ? Math.max(1, Math.round((rank / total) * 100)) : 1;
   $('drDailyOvr').textContent = ovr;
   $('drPctNum').textContent = '0';
   $('drRankNum').textContent = '-';
@@ -4198,7 +4219,9 @@ async function submitScore() {
 
 function lbRow(rank, entry, cls) {
   const sorted = lbSort !== 'ovr' && lbSort !== 'ovrAsc';
-  const sub = sorted ? ` <span class="nm-ovr">${entry.ovr} OVR</span>` : '';
+  const posTag = lbGame === 'cfb' && !lbPos && entry.build && entry.build.pos
+    ? ` <span class="nm-ovr">${escapeHTML(String(entry.build.pos))}</span>` : '';
+  const sub = posTag + (sorted ? ` <span class="nm-ovr">${entry.ovr} OVR</span>` : '');
   const right = sorted
     ? `<div class="ov lb-stat">${entry.stat == null ? '-' : fmtStat(entry.stat)}</div>`
     : `<div class="ov c-${tier(entry.ovr)}">${entry.ovr}</div>`;
@@ -4311,7 +4334,8 @@ async function loadLeaderboard(scope = lbScope, game = lbGame, sort = lbSort, di
   list.innerHTML = '<div class="lb-empty">Loading…</div>';
   try {
     const meParam = myEntryId ? `&me=${myEntryId}` : '';
-    const res = await fetch(`/api/score?scope=${lbScope}&limit=200&game=${lbGame}&sort=${lbSort === 'ovr' && lbDir === 'asc' ? 'ovrAsc' : lbSort}&dir=${lbDir}${meParam}`);
+    const posParam = lbGame === 'cfb' && lbPos ? `&pos=${lbPos.toLowerCase()}` : '';
+    const res = await fetch(`/api/score?scope=${lbScope}&limit=200&game=${lbGame}&sort=${lbSort === 'ovr' && lbDir === 'asc' ? 'ovrAsc' : lbSort}&dir=${lbDir}${meParam}${posParam}`);
     const data = await res.json();
     if (!data.ok) throw new Error();
     let html = '';

@@ -21,8 +21,13 @@
 <script src="/namefilter.js"></script>
 <script src="/achievements.js" defer></script>
 <script src="/xp.js" defer></script>
+<script src="/social.js" defer></script>
+<script src="/catalog.js" defer></script>
+<script src="/store.js" defer></script>
+<script src="/switcher.js?v=15" defer></script>
 <script src="/collection.js?v=4" defer></script>
 <script src="/quests.js" defer></script>
+<script src="/season-track.js" defer></script>
 <script src="/streak-pop.js" defer></script>
 <script src="/share-card.js" defer></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -857,15 +862,19 @@
       <div id="acctSlot"></div>
       <div data-player-title></div>
       <div data-xp-bar></div>
+      <div data-coin-chip style="margin:4px 0"></div>
       <div class="menu-sec">Play</div>
       <a class="menu-item" href="/">🏠 Home</a>
       <button class="menu-item" id="miDaily">🎯 Daily Challenge</button>
       <button class="menu-item" id="miStreak">🔥 Streak Calendar</button>
       <div class="menu-sec">Your Stuff</div>
+      <button class="menu-item" id="miFriends">👥 Friends<span class="mi-chev" data-social-badge></span></button>
       <button class="menu-item" id="miHof">🏛️ My Hall of Fame</button>
       <button class="menu-item" id="miAch">🏅 Achievements<span class="mi-chev" data-ach-count style="margin-left:auto;font-family:'Oswald',sans-serif;font-size:12px;color:var(--gold)">0/0</span></button>
       <button class="menu-item" id="miCol">📇 My Collection<span class="mi-chev" data-col-count style="margin-left:auto;font-family:'Oswald',sans-serif;font-size:12px;color:var(--gold)">0</span></button>
       <button class="menu-item" id="miQuests">📜 Daily Quests<span class="mi-chev" data-quest-count style="margin-left:auto;font-family:'Oswald',sans-serif;font-size:12px;color:var(--gold)">0/3</span></button>
+      <button class="menu-item" id="miTrack">🎟️ Season Track</button>
+      <button class="menu-item" id="miStore">🪙 Store &amp; Coins</button>
       <div class="menu-sec">Compete</div>
       <button class="menu-item" id="miLb">🏆 Leaderboard</button>
       <div class="menu-sec">Help</div>
@@ -1191,6 +1200,7 @@ let lbScope = 'global';
 let lbGame = LEADERBOARD_GAME;
 let lbSort = 'ovr';
 let lbDir = 'desc';
+let lbPos = null;   // cfb boards only: null = All · 'QB' · 'RB' · 'WR'
 let lbEntries = new Map();
 const SORT_OPTIONS = {
   pitcher: [{ key: 'ovr', label: 'OVR' }, { key: 'k', label: 'Strikeouts' }, { key: 'war', label: 'WAR' }, { key: 'wins', label: 'Wins' }, { key: 'rings', label: 'Rings' }, { key: 'cyYoung', label: 'Cy Youngs' }],
@@ -1198,6 +1208,7 @@ const SORT_OPTIONS = {
   baller: [{ key: 'ovr', label: 'OVR' }, { key: 'pts', label: 'Points' }, { key: 'reb', label: 'Rebounds' }, { key: 'ast', label: 'Assists' }, { key: 'war', label: 'Win Shares' }, { key: 'rings', label: 'Rings' }, { key: 'mvp', label: 'MVPs' }],
   hockey: [{ key: 'ovr', label: 'OVR' }, { key: 'g', label: 'Goals' }, { key: 'p', label: 'Points' }, { key: 'war', label: 'Point Shares' }, { key: 'rings', label: 'Cups' }, { key: 'mvp', label: 'Harts' }],
   mon: [{ key: 'ovr', label: 'OVR' }, { key: 'w', label: 'Wins' }, { key: 'badges', label: 'Badges' }, { key: 'war', label: 'Battle Rating' }, { key: 'rings', label: 'Leagues' }, { key: 'mvp', label: 'Worlds' }],
+  cfb: [{ key: 'ovr', label: 'OVR' }, { key: 'yds', label: 'Yards' }, { key: 'td', label: 'TDs' }, { key: 'wins', label: 'Team Wins' }, { key: 'heisman', label: 'Heismans' }, { key: 'natty', label: 'Titles' }],
   striker: [{ key: 'ovr', label: 'OVR' }, { key: 'goals', label: 'Goals' }, { key: 'assists', label: 'Assists' }, { key: 'war', label: 'Rating' }, { key: 'rings', label: 'UCLs' }, { key: 'mvp', label: "Ballons d'Or" }],
   keeper: [{ key: 'ovr', label: 'OVR' }, { key: 'cs', label: 'Clean Sheets' }, { key: 'saves', label: 'Saves' }, { key: 'war', label: 'Rating' }, { key: 'rings', label: 'UCLs' }, { key: 'mvp', label: 'Yashin Trophies' }],
 };
@@ -1211,6 +1222,7 @@ const LB_SPORTS = [
   { id: 'hoops',    icon: '🏀', label: 'Hoops',    games: [['baller', 'Hoopers']] },
   { id: 'soccer',   icon: '⚽', label: 'Soccer',   games: [['striker', 'Strikers'], ['keeper', 'Keepers']] },
   { id: 'hockey',   icon: '🏒', label: 'Hockey',   games: [['hockey', 'Skaters']] },
+  { id: 'cfb',      icon: '🏈', label: 'College',  games: [['cfb', 'College Football']] },
 ];
 const lbSportOf = g => LB_SPORTS.find(s => s.games.some(x => x[0] === g)) || LB_SPORTS[0];
 function renderLbNav() {
@@ -1223,6 +1235,13 @@ function renderLbNav() {
     if (s.id !== sport.id) loadLeaderboard(lbScope, s.games[0][0]);
   });
   const roles = $('lbRoleTabs');
+  if (sport.id === 'cfb') {
+    // one CFB game, four boards: All · QBs · RBs · WRs (server filters by build pos)
+    roles.innerHTML = [['', 'All'], ['QB', 'QBs'], ['RB', 'RBs'], ['WR', 'WRs']]
+      .map(([id, label]) => `<button class="lb-tab${(lbPos || '') === id ? ' active' : ''}" data-lbpos="${id}">${label}</button>`).join('');
+    roles.querySelectorAll('[data-lbpos]').forEach(b => b.onclick = () => { lbPos = b.dataset.lbpos || null; loadLeaderboard(lbScope, 'cfb'); });
+    return;
+  }
   roles.innerHTML = sport.games.length > 1
     ? sport.games.map(([id, label]) => `<button class="lb-tab${id === lbGame ? ' active' : ''}" data-lbgame="${id}">${label}</button>`).join('')
     : '';
@@ -1374,6 +1393,7 @@ async function init() {
   $('miAch').onclick = () => { closeOverlay('menu'); Sound.click(); window.Ach && Ach.open(); };
   $('miCol').onclick = () => { closeOverlay('menu'); Sound.click(); window.Collection && Collection.open(LEADERBOARD_GAME); };
   $('miQuests').onclick = () => { closeOverlay('menu'); Sound.click(); window.Quests && Quests.open(); };
+  $('miTrack').onclick = () => { closeOverlay('menu'); Sound.click(); window.SeasonTrack && SeasonTrack.open(); };
   const h = (location.hash || '').replace('#', '').toLowerCase();
   if (h === 'daily') setTimeout(startDailyChallenge, 350);
   else if (h === 'streak') setTimeout(openStreak, 200);
@@ -2374,8 +2394,11 @@ function maybeResumeDraft() {
   if (!d || d.v !== 1) return false;
   const nFilled = Object.keys(d.filled || {}).length;
   if (!nFilled && !d.landed) { draftClear(); return false; }
+  if (nFilled >= SLOTS.length) { draftClear(); return false; }   // draft already complete - nothing to resume
   if (Date.now() - (d.t || 0) > 48 * 3600e3) { draftClear(); return false; }             // stale draft
   if (d.daily && (d.daily.date !== todayUTC() || getDailyStatus())) { draftClear(); return false; }
+  const deepHash = (location.hash || '').replace('#', '').toLowerCase();
+  if (deepHash && deepHash !== 'daily') return false;   // deep-linked to a panel - don't interject (draft stays saved)
   const what = d.daily ? "today's Daily Challenge run" : 'your draft';
   if (!confirm(`Resume ${what}? (${nFilled}/${SLOTS.length} slots filled${d.landed ? ' · a card is waiting' : ''})\n\nOK resumes it · Cancel starts fresh.`)) { draftClear(); return false; }
   state.filled = d.filled || {};
@@ -2561,7 +2584,7 @@ async function showDailyResults() {
 }
 function renderDailyResults(res, best, rows, name) {
   const ov = $('dailyResults');
-  const pct = res.total > 1 ? Math.max(1, Math.round((1 - (res.rank - 1) / res.total) * 100)) : 100;
+  const pct = res.total > 1 ? Math.max(1, Math.round((res.rank / res.total) * 100)) : 1;
   $('dResOvr').textContent = res.ovr;
   $('dResRank').textContent = '-';
   $('dResPct').textContent = '0';
@@ -2595,7 +2618,7 @@ function closeDailyResults(thenSim) {
 
 function rankReveal(ovr, rank, total, isPB, replay, frozeUsed) {
   const ov = $('dailyReveal'); if (!ov) return;
-  const pct = total > 1 ? Math.max(1, Math.round((1 - (rank - 1) / total) * 100)) : 100;
+  const pct = total > 1 ? Math.max(1, Math.round((rank / total) * 100)) : 1;
   $('drDailyOvr').textContent = ovr;
   $('drPctNum').textContent = '0';
   $('drRankNum').textContent = '-';
@@ -3717,7 +3740,9 @@ async function submitScore() {
 
 function lbRow(rank, entry, cls) {
   const sorted = lbSort !== 'ovr' && lbSort !== 'ovrAsc';
-  const sub = sorted ? ` <span class="nm-ovr">${entry.ovr} OVR</span>` : '';
+  const posTag = lbGame === 'cfb' && !lbPos && entry.build && entry.build.pos
+    ? ` <span class="nm-ovr">${escapeHTML(String(entry.build.pos))}</span>` : '';
+  const sub = posTag + (sorted ? ` <span class="nm-ovr">${entry.ovr} OVR</span>` : '');
   const right = sorted
     ? `<div class="ov lb-stat">${entry.stat == null ? '-' : fmtStat(entry.stat)}</div>`
     : `<div class="ov c-${tier(entry.ovr)}">${entry.ovr}</div>`;
@@ -3812,7 +3837,7 @@ function openBuildDetails(entryId) {
 }
 async function loadLeaderboard(scope = lbScope, game = lbGame, sort = lbSort, dir = lbDir) {
   lbScope = scope === 'daily' ? 'daily' : 'global';
-  lbGame = (game === 'batter' || game === 'baller' || game === 'striker' || game === 'keeper' || game === 'hockey' || game === 'mon') ? game : 'pitcher';
+  lbGame = (game === 'batter' || game === 'baller' || game === 'striker' || game === 'keeper' || game === 'hockey' || game === 'mon' || game === 'cfb') ? game : 'pitcher';
   lbSort = sortOptionsFor(lbGame).some(o => o.key === sort) ? sort : 'ovr';
   lbDir = dir === 'asc' ? 'asc' : 'desc';
   document.querySelectorAll('.lb-scope-tab').forEach(t => t.classList.toggle('active', t.dataset.scope === lbScope));
@@ -3822,7 +3847,8 @@ async function loadLeaderboard(scope = lbScope, game = lbGame, sort = lbSort, di
   list.innerHTML = '<div class="lb-empty">Loading…</div>';
   try {
     const meParam = myEntryId ? `&me=${myEntryId}` : '';
-    const res = await fetch(`/api/score?scope=${lbScope}&limit=200&game=${lbGame}&sort=${lbSort === 'ovr' && lbDir === 'asc' ? 'ovrAsc' : lbSort}&dir=${lbDir}${meParam}`);
+    const posParam = lbGame === 'cfb' && lbPos ? `&pos=${lbPos.toLowerCase()}` : '';
+    const res = await fetch(`/api/score?scope=${lbScope}&limit=200&game=${lbGame}&sort=${lbSort === 'ovr' && lbDir === 'asc' ? 'ovrAsc' : lbSort}&dir=${lbDir}${meParam}${posParam}`);
     const data = await res.json();
     if (!data.ok) throw new Error();
     let html = '';

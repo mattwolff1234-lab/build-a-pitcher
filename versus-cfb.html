@@ -825,56 +825,64 @@ function tierBadgeHTML(elo, rank, size=20){
 // shared match seed. The pitcher/batter ROLE keys are vestigial A/B side labels · both point at one
 // position config so the matchmaking/figure/showdown code needs no changes. (POSITIONS is pasted
 // verbatim from college.html so the slots/weights/figures match the single-player CFB game exactly.)
+const SKIN_TONES = ['', '-tan', '-brown', '-dark'];   // '' = light · random per match
+const figSkin = SKIN_TONES[Math.floor(Math.random() * SKIN_TONES.length)];
 const POSITIONS = {
   qb: {
-    key: 'qb', label: 'Quarterback', short: 'QB', figure: 'cfb-qb-figure.png', aspect: '7/5',
+    key: 'qb', label: 'Quarterback', short: 'QB', aspect: '1/1',
+    figKey: 'footballqb', regions: ['helmet','jersey','lsleeve','rsleeve','lpant','rpant'],
+    regionSlot: { helmet:'iq', jersey:'frame', lsleeve:'armPower', rsleeve:'deepAcc', lpant:'wheels', rpant:'onRun' },
     slots: [
-      { key: 'shortAcc', label: 'Short Accuracy', part: 'Throwing Hand', mask: 'cfb-qb-seg-shortAcc.png', ax: 30, ay: 20, lx: 7,  ly: 6 },
-      { key: 'armPower', label: 'Arm Power',      part: 'Throwing Arm',  mask: 'cfb-qb-seg-armPower.png', ax: 40.8, ay: 29, lx: 8,  ly: 30 },
-      { key: 'iq',       label: 'Football IQ',    part: 'Helmet',        mask: 'cfb-qb-seg-iq.png',       ax: 49.1, ay: 15.4, lx: 88, ly: 7 },
-      { key: 'poise',    label: 'Poise',          part: 'Chest',         mask: 'cfb-qb-seg-poise.png',    ax: 49.8, ay: 30, lx: 90, ly: 21 },
-      { key: 'deepAcc',  label: 'Deep Ball',      part: 'Off Arm',       mask: 'cfb-qb-seg-deepAcc.png',  ax: 58, ay: 26.7, lx: 92, ly: 37 },
-      { key: 'midAcc',   label: 'Mid Accuracy',   part: 'Core',          mask: 'cfb-qb-seg-midAcc.png',   ax: 49.8, ay: 45, lx: 10, ly: 48 },
-      { key: 'frame',    label: 'Frame',          part: 'Height',        mask: 'cfb-qb-seg-frame.png',    ax: 49.8, ay: 34, lx: 90, ly: 56, type: 'height' },
-      { key: 'onRun',    label: 'On the Run',     part: 'Plant Leg',     mask: 'cfb-qb-seg-onRun.png',    ax: 58.7, ay: 62.2, lx: 91, ly: 79 },
-      { key: 'wheels',   label: 'Wheels',         part: 'Back Leg',      mask: 'cfb-qb-seg-wheels.png',   ax: 42.2, ay: 63.8, lx: 9,  ly: 81 },
+      { key: 'shortAcc', label: 'Short Accuracy', part: 'Throwing Hand', ax: 30, ay: 20, lx: 12,  ly: 11 },
+      { key: 'armPower', label: 'Arm Power',      part: 'Throwing Arm',  ax: 40.8, ay: 29, lx: 12,  ly: 37 },
+      { key: 'iq',       label: 'Football IQ',    part: 'Helmet',        ax: 49.1, ay: 15.4, lx: 88, ly: 10 },
+      { key: 'poise',    label: 'Poise',          part: 'Chest',         ax: 49.8, ay: 30, lx: 88, ly: 30 },
+      { key: 'deepAcc',  label: 'Deep Ball',      part: 'Off Arm',       ax: 58, ay: 26.7, lx: 88, ly: 50 },
+      { key: 'midAcc',   label: 'Mid Accuracy',   part: 'Core',          ax: 49.8, ay: 45, lx: 12, ly: 63 },
+      { key: 'frame',    label: 'Frame',          part: 'Height',        ax: 49.8, ay: 34, lx: 88, ly: 70, type: 'height' },
+      { key: 'onRun',    label: 'On the Run',     part: 'Plant Leg',     ax: 58.7, ay: 62.2, lx: 88, ly: 90 },
+      { key: 'wheels',   label: 'Wheels',         part: 'Back Leg',      ax: 42.2, ay: 63.8, lx: 12,  ly: 89 },
     ],
     weights: { shortAcc: 1.2, midAcc: 1.2, deepAcc: 1.2, armPower: 1.1, poise: 1.1, iq: 1.1, onRun: 1.0, wheels: 1.0, frame: 1.0 },
   },
   rb: {
-    key: 'rb', label: 'Running Back', short: 'RB', figure: 'cfb-rb-figure.png', aspect: '7/5',
+    key: 'rb', label: 'Running Back', short: 'RB', aspect: '1/1',
+    figKey: 'footballrb', regions: ['helmet','jersey','lsleeve','rsleeve','lpant','rpant','gloves'],
+    regionSlot: { helmet:'vision', jersey:'frame', lsleeve:'power', rsleeve:'breakTk', lpant:'speed', rpant:'burst', gloves:'hands' },
     slots: [
-      { key: 'vision',  label: 'Vision',        part: 'Eyes',       mask: 'cfb-rb-seg-vision.png',  ax: 51.9, ay: 17.5, lx: 85, ly: 5 },
-      { key: 'power',   label: 'Power',         part: 'Stiff Arm',  mask: 'cfb-rb-seg-power.png',   ax: 42.4, ay: 29.3, lx: 92, ly: 13 },
-      { key: 'breakTk', label: 'Break Tackle',  part: 'Pads',       mask: 'cfb-rb-seg-breakTk.png', ax: 62.3, ay: 28.4, lx: 8,  ly: 9 },
-      { key: 'ballSec', label: 'Ball Security', part: 'The Rock',   mask: 'cfb-rb-seg-ballSec.png', ax: 40, ay: 40, lx: 7,  ly: 23 },
-      { key: 'hands',   label: 'Catching',      part: 'Soft Hands', mask: 'cfb-rb-seg-hands.png',   ax: 59.4, ay: 44.1, lx: 8,  ly: 44 },
-      { key: 'frame',   label: 'Frame',         part: 'Height',     mask: 'cfb-rb-seg-frame.png',   ax: 52.4, ay: 33.4, lx: 90, ly: 40, type: 'height' },
-      { key: 'elusive', label: 'Elusiveness',   part: 'Hips',       mask: 'cfb-rb-seg-elusive.png', ax: 49, ay: 50, lx: 9,  ly: 60 },
-      { key: 'burst',   label: 'Burst',         part: 'Drive Knee', mask: 'cfb-rb-seg-burst.png',   ax: 55.8, ay: 64.1, lx: 91, ly: 62 },
-      { key: 'speed',   label: 'Speed',         part: 'Stride Leg', mask: 'cfb-rb-seg-speed.png',   ax: 45.3, ay: 59.7, lx: 12, ly: 86 },
+      { key: 'vision',  label: 'Vision',        part: 'Eyes',       ax: 51.9, ay: 17.5, lx: 88, ly: 11 },
+      { key: 'power',   label: 'Power',         part: 'Stiff Arm',  ax: 42.4, ay: 29.3, lx: 88, ly: 37 },
+      { key: 'breakTk', label: 'Break Tackle',  part: 'Pads',       ax: 62.3, ay: 28.4, lx: 12,  ly: 10 },
+      { key: 'ballSec', label: 'Ball Security', part: 'The Rock',   ax: 40, ay: 40, lx: 12,  ly: 30 },
+      { key: 'hands',   label: 'Catching',      part: 'Soft Hands', ax: 59.4, ay: 44.1, lx: 12,  ly: 50 },
+      { key: 'frame',   label: 'Frame',         part: 'Height',     ax: 52.4, ay: 33.4, lx: 88, ly: 63, type: 'height' },
+      { key: 'elusive', label: 'Elusiveness',   part: 'Hips',       ax: 49, ay: 50, lx: 12,  ly: 70 },
+      { key: 'burst',   label: 'Burst',         part: 'Drive Knee', ax: 55.8, ay: 64.1, lx: 88, ly: 89 },
+      { key: 'speed',   label: 'Speed',         part: 'Stride Leg', ax: 45.3, ay: 59.7, lx: 12, ly: 90 },
     ],
     weights: { speed: 1.2, breakTk: 1.2, vision: 1.2, burst: 1.1, elusive: 1.1, power: 1.1, ballSec: 1.0, hands: 1.0, frame: 1.0 },
   },
   wr: {
-    key: 'wr', label: 'Wide Receiver', short: 'WR', figure: 'cfb-wr-figure.png', aspect: '7/5',
+    key: 'wr', label: 'Wide Receiver', short: 'WR', aspect: '1/1',
+    figKey: 'footballwr', regions: ['helmet','jersey','lsleeve','rsleeve','lpant','rpant','gloves'],
+    regionSlot: { helmet:'routes', jersey:'frame', lsleeve:'release', rsleeve:'spectac', lpant:'speed', rpant:'agility', gloves:'hands' },
     slots: [
-      { key: 'routes',  label: 'Routes',      part: 'Helmet',         mask: 'cfb-wr-seg-routes.png',  ax: 52.4, ay: 16.4, lx: 10, ly: 9 },
-      { key: 'hands',   label: 'Hands',       part: 'Gloves',         mask: 'cfb-wr-seg-hands.png',   ax: 36.7, ay: 54.8, lx: 90, ly: 5 },
-      { key: 'spectac', label: 'Spectacular', part: 'Full Extension', mask: 'cfb-wr-seg-spectac.png', ax: 61.2, ay: 28.9, lx: 91, ly: 22 },
-      { key: 'release', label: 'Release',     part: 'Shoulders',      mask: 'cfb-wr-seg-release.png', ax: 42.5, ay: 28.5, lx: 9,  ly: 28 },
-      { key: 'traffic', label: 'In Traffic',  part: 'Chest',          mask: 'cfb-wr-seg-traffic.png', ax: 51, ay: 40, lx: 8,  ly: 45 },
-      { key: 'frame',   label: 'Frame',       part: 'Height',         mask: 'cfb-wr-seg-frame.png',   ax: 51.4, ay: 34.5, lx: 90, ly: 41, type: 'height' },
-      { key: 'leap',    label: 'Leaping',     part: 'Hips',           mask: 'cfb-wr-seg-leap.png',    ax: 49, ay: 50, lx: 9,  ly: 59 },
-      { key: 'agility', label: 'Agility',     part: 'Lead Leg',       mask: 'cfb-wr-seg-agility.png', ax: 58.2, ay: 59.2, lx: 92, ly: 72 },
-      { key: 'speed',   label: 'Speed',       part: 'Trail Leg',      mask: 'cfb-wr-seg-speed.png',   ax: 44.7, ay: 58.9, lx: 10, ly: 85 },
+      { key: 'routes',  label: 'Routes',      part: 'Helmet',         ax: 52.4, ay: 16.4, lx: 12, ly: 10 },
+      { key: 'hands',   label: 'Hands',       part: 'Gloves',         ax: 36.7, ay: 54.8, lx: 88, ly: 11 },
+      { key: 'spectac', label: 'Spectacular', part: 'Full Extension', ax: 61.2, ay: 28.9, lx: 88, ly: 37 },
+      { key: 'release', label: 'Release',     part: 'Shoulders',      ax: 42.5, ay: 28.5, lx: 12,  ly: 30 },
+      { key: 'traffic', label: 'In Traffic',  part: 'Chest',          ax: 51, ay: 40, lx: 12,  ly: 50 },
+      { key: 'frame',   label: 'Frame',       part: 'Height',         ax: 51.4, ay: 34.5, lx: 88, ly: 63, type: 'height' },
+      { key: 'leap',    label: 'Leaping',     part: 'Hips',           ax: 49, ay: 50, lx: 12,  ly: 70 },
+      { key: 'agility', label: 'Agility',     part: 'Lead Leg',       ax: 58.2, ay: 59.2, lx: 88, ly: 89 },
+      { key: 'speed',   label: 'Speed',       part: 'Trail Leg',      ax: 44.7, ay: 58.9, lx: 12, ly: 90 },
     ],
     weights: { hands: 1.2, speed: 1.2, routes: 1.2, release: 1.1, traffic: 1.1, spectac: 1.1, agility: 1.0, leap: 1.0, frame: 1.0 },
   },
 };
 function heightToRatingCfb(inches){ if(!inches) return 60; return clamp(Math.round(48+(inches-66)*3.4),1,110); }
 function CFB_CFG(posKey){ const P = POSITIONS[posKey];
-  return { posKey, data:'cfb.json', figure:P.figure, slots:P.slots,
+  return { posKey, data:'cfb.json', figBase:'jersey-'+P.figKey, regions:P.regions, regionSlot:P.regionSlot, slots:P.slots,
     h2r:heightToRatingCfb, slotWeight:(k,v)=>P.weights[k]||1 }; }
 let ROLE = { pitcher:null, batter:null };
 // Picked from the shared match seed so BOTH players land on the same position (no negotiation).
@@ -1645,7 +1653,7 @@ function beginRoleReveal(){
   const card = $('roleCard');
   card.className = 'role-card ' + myRole;
   const _posCfg = ROLE[myRole], _posLabel = (_posCfg && POSITIONS[_posCfg.posKey]) ? POSITIONS[_posCfg.posKey].label : 'Player';
-  if (_posCfg) $('roleFig').style.webkitMaskImage = $('roleFig').style.maskImage = 'url(' + _posCfg.figure + ')';
+  if (_posCfg) $('roleFig').style.webkitMaskImage = $('roleFig').style.maskImage = 'url(' + _posCfg.figBase + '-base.png)';
   $('roleLabel').textContent = "You're up! Build your " + _posLabel + "!";
   $('roleSub').textContent = 'Same position, same cards for both of you. Highest Overall wins the matchup.';
   updateOppChip();
@@ -1715,16 +1723,17 @@ function beginBuild(){
   $('powerups').classList.remove('show');
   $('respinBtn').onclick = respin; $('boostBtn').onclick = boost;
   $('snagLeftBtn').onclick = () => snag(-1); $('snagRightBtn').onclick = () => snag(1);
-  // figure base + segments for my role
-  $('figwrap').querySelector('.base').style.background = `url(${ROLE[myRole].figure}) center/contain no-repeat`;
-  $('figureShade').style.webkitMaskImage = `url(${ROLE[myRole].figure})`;
-  $('figureShade').style.maskImage = `url(${ROLE[myRole].figure})`;
+  // figure base + tintable jersey regions for my role (same stack as the solo games)
+  const figURL = `${ROLE[myRole].figBase}${figSkin}-base.png`;
+  $('figwrap').querySelector('.base').style.background = `url(${figURL}) center/contain no-repeat`;
+  $('figureShade').style.webkitMaskImage = `url(${figURL})`;
+  $('figureShade').style.maskImage = `url(${figURL})`;
   $('figureShade').style.webkitMaskPosition = $('figureShade').style.maskPosition = 'center';
   $('figureShade').style.webkitMaskSize = $('figureShade').style.maskSize = 'contain';
   $('figureShade').style.webkitMaskRepeat = $('figureShade').style.maskRepeat = 'no-repeat';
   const fw=$('figwrap'); fw.querySelectorAll('.seg').forEach(e=>e.remove());
   segEls={};
-  for (const s of ROLE[myRole].slots){ const d=document.createElement('div'); d.className='seg'; d.style.webkitMaskImage=`url(${s.mask})`; d.style.maskImage=`url(${s.mask})`; fw.appendChild(d); segEls[s.key]=d; }
+  for (const r of ROLE[myRole].regions){ const d=document.createElement('div'); d.className='seg'; const m=`${ROLE[myRole].figBase}-${r}.png`; d.style.webkitMaskImage=`url(${m})`; d.style.maskImage=`url(${m})`; fw.appendChild(d); segEls[r]=d; }
   renderSlots(); renderNodes(); updateFigure(); updateOvr(); idleReel();
   $('spinBtn').onclick = spin; $('spinBtn').disabled = false;  // re-enable after a previous match left it disabled
   $('landedLi').classList.remove('show'); $('powerups').classList.remove('show');
@@ -1810,7 +1819,8 @@ function renderNodes(){
   }
 }
 function updateFigure(){
-  for (const s of ROLE[myRole].slots){ const f=buildState.filled[s.key], el=segEls[s.key]; if(!el)continue;
+  const R = ROLE[myRole];
+  for (const r of R.regions){ const f=buildState.filled[R.regionSlot[r]], el=segEls[r]; if(!el)continue;
     if(f){ el.style.background = `url(jersey-fabric.png), ${teamColor(f.team)}`; el.style.backgroundSize='150px, auto'; el.style.backgroundBlendMode='overlay'; }
     else el.style.background='transparent';
   }

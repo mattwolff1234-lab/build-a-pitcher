@@ -126,7 +126,8 @@
   .dq-head .dt{ font-family:'Oswald',sans-serif; font-size:16px; letter-spacing:2px; text-transform:uppercase; }
   .dq-head .dt b{ color:var(--accent2,#19c6ff); }
   .dq-timer{ font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:1px; color:var(--muted,#7e8da3); }
-  .dq-x{ margin-left:auto; font-size:16px; line-height:1; padding:6px 11px; border-radius:8px; color:var(--ink,#eaf2fb);
+  .dq-x{ margin-left:auto; font-size:18px; line-height:1; min-width:44px; min-height:42px; padding:8px 14px;
+    display:grid; place-items:center; touch-action:manipulation; border-radius:8px; color:var(--ink,#eaf2fb);
     background:rgba(255,255,255,.04); border:1px solid var(--line,rgba(120,150,190,.16)); cursor:pointer; }
   .dq-x:hover{ border-color:var(--accent2,#19c6ff); }
   .dq-list{ padding:12px 14px; display:flex; flex-direction:column; gap:10px; overflow-y:auto; }

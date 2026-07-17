@@ -222,9 +222,9 @@
   }
   .role-card .rl { font-family:'Oswald',sans-serif; font-size:30px; font-weight:700; letter-spacing:2.5px; text-transform:uppercase; color:var(--rc); line-height:1.05; }
   .role-card.pitcher { --rc:var(--pitch); border-color:var(--pitch); }
-  .role-card.pitcher .role-fig { -webkit-mask-image:url(pitcher-figure.png); mask-image:url(pitcher-figure.png); }
+  .role-card.pitcher .role-fig { -webkit-mask-image:url(jersey-pitcher-base.png); mask-image:url(jersey-pitcher-base.png); }
   .role-card.batter { --rc:var(--bat); border-color:var(--bat); }
-  .role-card.batter .role-fig { -webkit-mask-image:url(batter-figure.png); mask-image:url(batter-figure.png); }
+  .role-card.batter .role-fig { -webkit-mask-image:url(jersey-batter-base.png); mask-image:url(jersey-batter-base.png); }
   .role-sub { color:var(--muted); margin-top:18px; font-size:14px; max-width:340px; }
   .hist-head { font-family:'Oswald',sans-serif; font-size:13px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin:22px 0 8px; }
   .hist-row { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--line); }
@@ -889,25 +889,25 @@ function renderSeasonBar(){
 function startSeasonBar(){ renderSeasonBar(); if (seasonBarTimer) clearInterval(seasonBarTimer); seasonBarTimer = setInterval(renderSeasonBar, 30000); }
 
 const PITCHER_SLOTS = [
-  { key:'hr_per_bf', label:'Ground Ball', part:'Ball', ax:30, ay:5, lx:13, ly:9 },
-  { key:'pitch_movement', label:'Break', part:'Wrist', ax:29, ay:11, lx:10, ly:27 },
-  { key:'k_per_bf', label:'Strikeout', part:'Forearm', ax:28, ay:18, lx:10, ly:45 },
-  { key:'pitch_velocity', label:'Velocity', part:'Bicep', ax:38, ay:23, lx:13, ly:63 },
-  { key:'pitch_control', label:'Command', part:'Shoulder', ax:48, ay:19, lx:90, ly:24 },
-  { key:'pitching_clutch', label:'Clutch', part:'Head', ax:53, ay:11, lx:90, ly:7 },
-  { key:'fielding_ability', label:'Defense', part:'Glove', ax:77, ay:33, lx:92, ly:41 },
-  { key:'frame', label:'Frame', part:'Body', ax:50, ay:37, lx:92, ly:58, type:'height' },
-  { key:'stamina', label:'Stamina', part:'Legs', ax:47, ay:67, lx:86, ly:80 },
-].map(s => ({ ...s, mask:`seg-${s.key}.png` }));
+  { key:'hr_per_bf', label:'Ground Ball', part:'Ball', ax:31, ay:24, lx:12, ly:10 },
+  { key:'pitch_movement', label:'Break', part:'Wrist', ax:34, ay:26, lx:12, ly:30 },
+  { key:'k_per_bf', label:'Strikeout', part:'Forearm', ax:38, ay:27, lx:12, ly:50 },
+  { key:'pitch_velocity', label:'Velocity', part:'Bicep', ax:41, ay:28, lx:12, ly:70 },
+  { key:'pitch_control', label:'Command', part:'Shoulder', ax:57, ay:28, lx:88, ly:37 },
+  { key:'pitching_clutch', label:'Clutch', part:'Head', ax:48, ay:13, lx:88, ly:11 },
+  { key:'fielding_ability', label:'Defense', part:'Glove', ax:64, ay:40, lx:88, ly:63 },
+  { key:'frame', label:'Frame', part:'Body', ax:49, ay:37, lx:88, ly:89, type:'height' },
+  { key:'stamina', label:'Stamina', part:'Legs', ax:43, ay:65, lx:12, ly:90 },
+];
 const BATTER_SLOTS = [
-  { key:'plate_vision', label:'Vision', part:'Eyes', mask:'bat-seg-plate_vision.png', ax:52, ay:20, lx:12, ly:13 },
-  { key:'power', label:'Power', part:'Bat', mask:'bat-seg-power.png', ax:39, ay:30, lx:10, ly:35 },
-  { key:'contact', label:'Contact', part:'Hands', mask:'bat-seg-contact.png', ax:44, ay:31, lx:10, ly:57 },
-  { key:'speed', label:'Speed', part:'Feet', mask:'bat-seg-speed.png', ax:35, ay:88, lx:14, ly:80 },
-  { key:'batting_clutch', label:'Clutch', part:'Helmet', mask:'bat-seg-batting_clutch.png', ax:53, ay:21, lx:90, ly:12 },
-  { key:'plate_discipline', label:'Discipline', part:'Head', mask:'bat-seg-plate_discipline.png', ax:58, ay:30, lx:90, ly:37 },
-  { key:'frame', label:'Frame', part:'Body', mask:'bat-seg-frame.png', ax:54, ay:49, lx:90, ly:58, type:'height' },
-  { key:'fielding_ability', label:'Defense', part:'Thigh', mask:'bat-seg-fielding_ability.svg', ax:58, ay:66, lx:90, ly:78 },
+  { key:'plate_vision', label:'Vision', part:'Eyes', ax:53.4, ay:28.3, lx:12, ly:11 },
+  { key:'power', label:'Power', part:'Bat', ax:40.5, ay:33.5, lx:12, ly:37 },
+  { key:'contact', label:'Contact', part:'Hands', ax:38.2, ay:26.2, lx:12, ly:63 },
+  { key:'speed', label:'Speed', part:'Feet', ax:43.7, ay:61.0, lx:12, ly:89 },
+  { key:'batting_clutch', label:'Clutch', part:'Helmet', ax:47.9, ay:13.6, lx:88, ly:11 },
+  { key:'plate_discipline', label:'Discipline', part:'Head', ax:56, ay:20, lx:88, ly:37 },
+  { key:'frame', label:'Frame', part:'Body', ax:50.3, ay:40.3, lx:88, ly:63, type:'height' },
+  { key:'fielding_ability', label:'Defense', part:'Thigh', ax:57.1, ay:58.3, lx:88, ly:89 },
 ];
 const WEIGHTS_P = { k_per_bf:1.2, hr_per_bf:1.2, pitch_control:1.2, pitch_velocity:1.1, pitch_movement:1.1, stamina:1.1, pitching_clutch:1.1, fielding_ability:1.0, frame:1.0 };
 const WEIGHTS_B = { contact:1.2, power:1.2, plate_discipline:1.1, plate_vision:1.1, batting_clutch:1.1, speed:1.0, fielding_ability:1.0, frame:1.0 };
@@ -922,10 +922,20 @@ function curvePitchDef(v){ return Math.max(1, Math.round(60 + (v - 48) * 1.4)); 
 function defWeightP(v){ return 0.3 + 0.9 * clamp((v - 70) / 22, 0, 1); }
 function slotWeightP(k,v){ const ramp=(lo,hi)=>0.4+0.9*clamp((v-lo)/(hi-lo),0,1); if(k==='frame')return ramp(78,92); if(k==='fielding_ability')return defWeightP(v); return WEIGHTS_P[k]||1; }
 
+// Same 2.5D jersey figure as the solo games: photoreal base (random skin tone per match)
+// + tintable clothing-region masks. Regions map to slots · skin regions aren't tinted.
+const SKIN_TONES = ['', '-tan', '-brown', '-dark'];   // '' = light
+const figSkin = SKIN_TONES[Math.floor(Math.random() * SKIN_TONES.length)];
 const ROLE = {
-  pitcher: { data:'pitchers.json', figure:'pitcher-figure.png', slots:PITCHER_SLOTS,
+  pitcher: { data:'pitchers.json', figBase:'jersey-pitcher', slots:PITCHER_SLOTS,
+    regions:['cap','jersey','lsleeve','rsleeve','lpant','rpant','glove'],
+    regionSlot:{ cap:'pitching_clutch', jersey:'frame', lsleeve:'pitch_velocity',
+      rsleeve:'pitch_control', lpant:'stamina', rpant:'hr_per_bf', glove:'fielding_ability' },
     h2r:heightToRatingP, slotWeight:slotWeightP },
-  batter: { data:'batters.json', figure:'batter-figure.png', slots:BATTER_SLOTS,
+  batter: { data:'batters.json', figBase:'jersey-batter', slots:BATTER_SLOTS,
+    regions:['helmet','jersey','lsleeve','rsleeve','lpant','rpant','gloves'],
+    regionSlot:{ helmet:'batting_clutch', jersey:'frame', lsleeve:'power',
+      rsleeve:'plate_vision', lpant:'speed', rpant:'fielding_ability', gloves:'contact' },
     h2r:heightToRatingB, slotWeight:(k,v)=>WEIGHTS_B[k]||1 },
 };
 function slotNumeric(role,p,s){
@@ -1806,16 +1816,17 @@ function beginBuild(){
   $('powerups').classList.remove('show');
   $('respinBtn').onclick = respin; $('boostBtn').onclick = boost;
   $('snagLeftBtn').onclick = () => snag(-1); $('snagRightBtn').onclick = () => snag(1);
-  // figure base + segments for my role
-  $('figwrap').querySelector('.base').style.background = `url(${ROLE[myRole].figure}) center/contain no-repeat`;
-  $('figureShade').style.webkitMaskImage = `url(${ROLE[myRole].figure})`;
-  $('figureShade').style.maskImage = `url(${ROLE[myRole].figure})`;
+  // figure base + tintable jersey regions for my role (same stack as the solo games)
+  const figURL = `${ROLE[myRole].figBase}${figSkin}-base.png`;
+  $('figwrap').querySelector('.base').style.background = `url(${figURL}) center/contain no-repeat`;
+  $('figureShade').style.webkitMaskImage = `url(${figURL})`;
+  $('figureShade').style.maskImage = `url(${figURL})`;
   $('figureShade').style.webkitMaskPosition = $('figureShade').style.maskPosition = 'center';
   $('figureShade').style.webkitMaskSize = $('figureShade').style.maskSize = 'contain';
   $('figureShade').style.webkitMaskRepeat = $('figureShade').style.maskRepeat = 'no-repeat';
   const fw=$('figwrap'); fw.querySelectorAll('.seg').forEach(e=>e.remove());
   segEls={};
-  for (const s of ROLE[myRole].slots){ const d=document.createElement('div'); d.className='seg'; d.style.webkitMaskImage=`url(${s.mask})`; d.style.maskImage=`url(${s.mask})`; fw.appendChild(d); segEls[s.key]=d; }
+  for (const r of ROLE[myRole].regions){ const d=document.createElement('div'); d.className='seg'; const m=`${ROLE[myRole].figBase}-${r}.png`; d.style.webkitMaskImage=`url(${m})`; d.style.maskImage=`url(${m})`; fw.appendChild(d); segEls[r]=d; }
   renderSlots(); renderNodes(); updateFigure(); updateOvr(); idleReel();
   $('spinBtn').onclick = spin; $('spinBtn').disabled = false;  // re-enable after a previous match left it disabled
   $('landedLi').classList.remove('show'); $('powerups').classList.remove('show');
@@ -1901,7 +1912,8 @@ function renderNodes(){
   }
 }
 function updateFigure(){
-  for (const s of ROLE[myRole].slots){ const f=buildState.filled[s.key], el=segEls[s.key]; if(!el)continue;
+  const R = ROLE[myRole];
+  for (const r of R.regions){ const f=buildState.filled[R.regionSlot[r]], el=segEls[r]; if(!el)continue;
     if(f){ el.style.background = `url(jersey-fabric.png), ${teamColor(f.team)}`; el.style.backgroundSize='150px, auto'; el.style.backgroundBlendMode='overlay'; }
     else el.style.background='transparent';
   }

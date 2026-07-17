@@ -72,9 +72,14 @@
   .hotb-foot { padding:11px 18px 14px; border-top:1px solid rgba(120,170,220,.16); font-family:Inter,system-ui,sans-serif;
     font-size:11px; color:#8ea2bd; line-height:1.45; }
   .hotb-foot b { color:#ff9c4a; }
-  .hotb-x { position:absolute; top:9px; right:11px; background:none; border:none; color:#8ea2bd; font-size:20px;
-    cursor:pointer; padding:4px 8px; line-height:1; font-family:Inter,sans-serif; }
+  .hotb-x { position:absolute; top:2px; right:2px; width:44px; height:44px; display:flex; align-items:center;
+    justify-content:center; background:none; border:none; color:#c8d6ea; font-size:22px;
+    cursor:pointer; line-height:1; font-family:Inter,sans-serif; }
   .hotb-x:hover { color:#f2f6fb; }
+  .hotb-close { flex:0 0 auto; margin:0 12px 12px; padding:12px; border-radius:10px; border:1px solid rgba(120,170,220,.28);
+    background:rgba(30,45,66,.6); color:#c8d6ea; font-family:'Oswald',sans-serif; font-size:13px; font-weight:600;
+    letter-spacing:2px; text-transform:uppercase; cursor:pointer; }
+  .hotb-close:hover { background:rgba(40,58,84,.75); color:#f2f6fb; }
   @media (max-width:480px) { .hotb-who .ln { font-size:10.5px; } .hotb-title { font-size:21px; } }`;
 
   function injectCss() {
@@ -135,8 +140,10 @@
            <div class="hotb-foot">These players are running hot <b>today only</b>: better spin odds and a
            <b>+5 to +10 rating boost</b> on their card in the reel. Catch them before midnight.</div>`
         : `<div class="hotb-empty">No studs posted yet · check back after tonight's games wrap up. ⚾</div>`}
+      <button class="hotb-close">Close</button>
     </div>`;
     overlay.querySelector('.hotb-x').onclick = close;
+    overlay.querySelector('.hotb-close').onclick = close;
   }
   function open() { ready.then(() => { build(); overlay.classList.add('show'); }); }
   function close() { if (overlay) overlay.classList.remove('show'); }

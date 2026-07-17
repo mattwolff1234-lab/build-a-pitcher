@@ -85,7 +85,8 @@
   .gc-overlay.show { display:flex; }
   .gc-panel { width:100%; max-width:560px; max-height:88vh; overflow:auto; background:linear-gradient(165deg,#131f2d,#0b1119);
     border:1px solid rgba(255,210,63,.3); border-radius:16px; padding:18px; font-family:Inter,sans-serif; position:relative; }
-  .gc-close { position:absolute; top:10px; right:10px; background:none; border:none; color:#8ea2bd; font-size:18px; cursor:pointer; }
+  .gc-close { position:absolute; top:2px; right:2px; width:44px; height:44px; display:flex; align-items:center;
+    justify-content:center; background:none; border:none; color:#c8d6ea; font-size:22px; cursor:pointer; }
   .gc-eyebrow { font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:2.5px; color:#ffd23f; text-transform:uppercase; }
   .gc-title { font-family:'Oswald',sans-serif; font-size:24px; color:#fff; letter-spacing:.5px; }
   .gc-bal { font-family:'Oswald',sans-serif; font-size:15px; color:#ffd23f; margin-top:2px; }
