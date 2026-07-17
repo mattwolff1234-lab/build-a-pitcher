@@ -500,6 +500,20 @@
   .lb-tab { font-family:'Oswald',sans-serif; font-size:12px; letter-spacing:1.5px; padding:8px 18px; border-radius:8px;
     text-transform:uppercase; background:rgba(255,255,255,.03); border:1px solid var(--line); color:var(--muted); }
   .lb-tab.active { color:#1a1004; background:linear-gradient(180deg,#ff9038,#f06a0c); border-color:#ffae6a; }
+  /* sport row: scrolls sideways when it overflows (phones) · on small screens only the
+     active chip keeps its label, the rest collapse to icons */
+  .lb-sport-tabs { justify-content:flex-start; overflow-x:auto; scrollbar-width:none; -webkit-overflow-scrolling:touch;
+    -webkit-mask-image:linear-gradient(90deg, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%);
+    mask-image:linear-gradient(90deg, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%); }
+  .lb-sport-tabs::-webkit-scrollbar { display:none; }
+  .lb-sport-tabs .lb-tab { flex:0 0 auto; white-space:nowrap; }
+  .lb-sport-tabs > :first-child { margin-left:auto; }   /* auto margins = centered when it fits,
+  scrollable when it doesn't */
+  .lb-sport-tabs > :last-child { margin-right:auto; }
+  @media (max-width:520px) {
+    .lb-sport-tabs .lb-tab { padding:8px 12px; }
+    .lb-sport-tabs .lb-tab:not(.active) .lb-sport-name { display:none; }
+  }
   .lb-sort-tabs { flex-wrap:wrap; margin-bottom:12px; }
   .lb-sort-tabs .lb-tab { font-size:10.5px; letter-spacing:1px; padding:6px 12px; }
   .lb-role-tabs:empty { display:none; }
@@ -1271,7 +1285,9 @@ function renderLbNav() {
   const wrap = $('lbSportTabs'); if (!wrap) return;
   const sport = lbSportOf(lbGame);
   wrap.innerHTML = LB_SPORTS.map(s =>
-    `<button class="lb-tab${s.id === sport.id ? ' active' : ''}" data-lbsport="${s.id}">${s.icon} ${s.label}</button>`).join('');
+    `<button class="lb-tab${s.id === sport.id ? ' active' : ''}" data-lbsport="${s.id}">${s.icon}<span class="lb-sport-name"> ${s.label}</span></button>`).join('');
+  const onTab = wrap.querySelector('.lb-tab.active');
+  if (onTab && onTab.scrollIntoView) onTab.scrollIntoView({ block: 'nearest', inline: 'center' });
   wrap.querySelectorAll('[data-lbsport]').forEach(b => b.onclick = () => {
     const s = LB_SPORTS.find(x => x.id === b.dataset.lbsport);
     if (s.id !== sport.id) loadLeaderboard(lbScope, s.games[0][0]);
