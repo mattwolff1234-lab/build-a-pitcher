@@ -253,7 +253,7 @@
     "momentum": 0.09,
     "minProb": 0.1,
     "maxProb": 0.9,
-    "comeback": { "boost": 0.25, "heroBoost": 0.5, "hero": "LeBron James" }
+    "comeback": { "boost": 0.1, "heroBoost": 0.2, "hero": "LeBron James" }
   },
 
   "teamColors": {
