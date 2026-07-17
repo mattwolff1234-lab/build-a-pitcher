@@ -2193,9 +2193,13 @@ function openWheel(kind, entries, title, sub) {
     const chance = CFG.gauntlet.relicChance || 0.1;
     const owned = new Set((G.relics || []).map(r => r.id));
     const avail = CFG.gauntlet.relics.filter(r => !owned.has(r.id));
+    // weighted pick — the game-winning relics carry a low `weight`, so most relic
+    // cards are the economy ones and Chemistry/The Ring stay chase pulls
+    const relicW = avail.reduce((a, r) => a + (r.weight || 1), 0);
     for (let i = 3; i < cards.length && avail.length; i++) {
       if (Math.random() < chance) {
-        const r = avail[Math.floor(Math.random() * avail.length)];
+        let roll = Math.random() * relicW, r = avail[avail.length - 1];
+        for (const x of avail) { if ((roll -= (x.weight || 1)) < 0) { r = x; break; } }
         cards[i] = { relic: true, id: r.id, icon: r.icon, name: r.name, desc: r.desc, effect: r.effect };
       }
     }

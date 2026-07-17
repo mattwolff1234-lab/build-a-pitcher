@@ -140,19 +140,19 @@
 
     "rookieMaxRating": 69,
 
-    "relicChance": 0.15,
+    "relicChance": 0.25,
     "maxRelics": 3,
-    "_relics_comment": "Relics ride the victory-spoils wheel alongside players (~relicChance per card slot). Hold up to maxRelics; landing another means swapping one out. Effect types the engine understands: gameEdge / elimEdge / firstGameEdge (win-prob bumps), noMomentumDrag, gameWinCash, interestCap, shopDiscount, upsetMult, ovrBoost.",
+    "_relics_comment": "Relics ride the victory-spoils wheel alongside players (~relicChance per card slot). Hold up to maxRelics; landing another means swapping one out. `weight` = draw odds within the relic pool (default 1) — the win-prob relics are weighted rare, the cash/economy ones common. Effect types the engine understands: gameEdge / elimEdge / firstGameEdge (win-prob bumps), noMomentumDrag, gameWinCash, interestCap, shopDiscount, upsetMult, ovrBoost.",
     "relics": [
-      { "id": "ring",     "icon": "💍", "name": "The Ring",       "desc": "Been there before — +6% win chance in elimination games.", "effect": { "type": "elimEdge", "value": 0.06 } },
-      { "id": "rabbit",   "icon": "🍀", "name": "Rabbit's Foot",  "desc": "Momentum never swings against you.",                       "effect": { "type": "noMomentumDrag", "value": 1 } },
-      { "id": "microwave","icon": "🔥", "name": "The Microwave",  "desc": "Instant offense — +2% win chance in every game.",          "effect": { "type": "gameEdge", "value": 0.02 } },
-      { "id": "sponsor",  "icon": "💼", "name": "Sponsor Deal",   "desc": "+$3 for every game you win.",                              "effect": { "type": "gameWinCash", "value": 3 } },
-      { "id": "platinum", "icon": "🏦", "name": "Platinum Card",  "desc": "Interest cap raised by $10.",                              "effect": { "type": "interestCap", "value": 10 } },
-      { "id": "tickets",  "icon": "🎫", "name": "Season Tickets", "desc": "Shop prices 25% off.",                                     "effect": { "type": "shopDiscount", "value": 0.25 } },
-      { "id": "hypeman",  "icon": "📢", "name": "Hype Man",       "desc": "Upset bonuses pay triple.",                                "effect": { "type": "upsetMult", "value": 3 } },
-      { "id": "chemistry","icon": "🧬", "name": "Team Chemistry", "desc": "Squad overall +2 in every series.",                        "effect": { "type": "ovrBoost", "value": 2 } },
-      { "id": "jetlag",   "icon": "🚀", "name": "Fast Starters",  "desc": "+15% win chance in Game 1.",                               "effect": { "type": "firstGameEdge", "value": 0.15 } }
+      { "id": "ring",     "icon": "💍", "name": "The Ring",       "weight": 1, "desc": "Been there before — +6% win chance in elimination games.", "effect": { "type": "elimEdge", "value": 0.06 } },
+      { "id": "rabbit",   "icon": "🍀", "name": "Rabbit's Foot",  "weight": 1, "desc": "Momentum never swings against you.",                       "effect": { "type": "noMomentumDrag", "value": 1 } },
+      { "id": "microwave","icon": "🔥", "name": "The Microwave",  "weight": 1, "desc": "Instant offense — +2% win chance in every game.",          "effect": { "type": "gameEdge", "value": 0.02 } },
+      { "id": "sponsor",  "icon": "💼", "name": "Sponsor Deal",   "weight": 3, "desc": "+$3 for every game you win.",                              "effect": { "type": "gameWinCash", "value": 3 } },
+      { "id": "platinum", "icon": "🏦", "name": "Platinum Card",  "weight": 3, "desc": "Interest cap raised by $10.",                              "effect": { "type": "interestCap", "value": 10 } },
+      { "id": "tickets",  "icon": "🎫", "name": "Season Tickets", "weight": 3, "desc": "Shop prices 25% off.",                                     "effect": { "type": "shopDiscount", "value": 0.25 } },
+      { "id": "hypeman",  "icon": "📢", "name": "Hype Man",       "weight": 3, "desc": "Upset bonuses pay triple.",                                "effect": { "type": "upsetMult", "value": 3 } },
+      { "id": "chemistry","icon": "🧬", "name": "Team Chemistry", "weight": 1, "desc": "Squad overall +2 in every series.",                        "effect": { "type": "ovrBoost", "value": 2 } },
+      { "id": "jetlag",   "icon": "🚀", "name": "Fast Starters",  "weight": 2, "desc": "+15% win chance in Game 1.",                               "effect": { "type": "firstGameEdge", "value": 0.15 } }
     ],
 
     "_layers_comment": "The map, bottom to top. Each layer is an array of 1 team key (straight road), 2 team keys (fork — pick your road: usually safe-and-modest vs harder-with-a-better-wheel), or the string 'shop' (the traveling shop). Beat every layer to finish.",
