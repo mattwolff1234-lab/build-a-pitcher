@@ -892,13 +892,12 @@ function openMap() {
     });
   });
   $('mapNodes').innerHTML = html;
-  // hover a node → tooltip · tap a CURRENT fork node → that's your road
+  // hover a node → tooltip · TAP a current fork node → that's your road (a drag scrolls, never picks)
   [...$('mapNodes').children].forEach(node => {
     const li = +node.dataset.layer, ti = +node.dataset.ti;
     const tip = () => showMapTip(node.dataset.tip, parseFloat(node.style.left), parseFloat(node.style.top));
     node.addEventListener('mouseenter', tip);
-    node.addEventListener('pointerdown', ev => {
-      ev.preventDefault();
+    onTap(node, () => {
       const forkOpen = !G.done && li === G.stage && Array.isArray(gLayers()[li]) && layerTeams(li).length === 2 && (G.route[li] == null);
       if (forkOpen) chooseRoad(ti); else tip();
     });
@@ -1136,6 +1135,26 @@ function preload(url) {
 // ≈ several MB) — the in-spin look-ahead in frame() keeps the rest warm just in time.
 function preloadReels(reels, limit) { reels.forEach(r => r.slice(0, limit || r.length).forEach(e => preload(e.img))); }
 
+/* ---------- tap detection — fires only on a genuine tap, never on a scroll drag ---------- */
+function onTap(el, fn) {
+  let start = null;
+  el.addEventListener('pointerdown', ev => {
+    if (ev.button > 0) return;
+    Sound.unlock();
+    start = { x: ev.clientX, y: ev.clientY };
+  });
+  el.addEventListener('pointermove', ev => {
+    if (start && Math.hypot(ev.clientX - start.x, ev.clientY - start.y) > 12) start = null;
+  });
+  el.addEventListener('pointercancel', () => { start = null; });   // the browser claimed it for scrolling
+  el.addEventListener('pointerup', ev => {
+    if (!start) return;
+    const moved = Math.hypot(ev.clientX - start.x, ev.clientY - start.y);
+    start = null;
+    if (moved <= 12) fn();
+  });
+}
+
 /* ---------- slot grid ---------- */
 function buildGrid() {
   $('slotGrid').innerHTML = CFG.slots.map((s, i) => s.type === 'coach' ? `
@@ -1152,13 +1171,10 @@ function buildGrid() {
     </button>`).join('');
   CFG.slots.forEach((s, i) => {
     const el = $('slot' + i);
-    // pointerdown (not click) — pick the frozen face with minimal input latency on mobile
-    el.addEventListener('pointerdown', ev => {
-      if (ev.button > 0) return;
-      ev.preventDefault();
-      Sound.unlock();
-      tryLock(i);
-    }, { passive: false });
+    // A real TAP picks (down + up without moving) — a drag that starts on a card must scroll
+    // the page, not lock a player. The board is frozen during the pick phase, so waiting for
+    // pointerup costs nothing timing-wise.
+    onTap(el, () => tryLock(i));
     $('sImg' + i).addEventListener('error', () => { $('sImg' + i).style.display = 'none'; $('sAv' + i).style.display = 'flex'; });
   });
 }
@@ -2349,9 +2365,11 @@ async function openBoard() {
   }
 }
 function renderSubmitRow() {
-  const show = run && run.mode === 'gauntlet' && run.summary;
-  $('lbSubmitRow').style.display = show ? 'flex' : 'none';
-  if (!show) return;
+  // only when the RUN is actually over: you died, or you ran the whole table —
+  // mid-run wins don't get to post partial scores
+  const over = run && run.mode === 'gauntlet' && run.summary && (!run.series.won || run.summary.champion);
+  $('lbSubmitRow').style.display = over ? 'flex' : 'none';
+  if (!over) return;
   $('lbSubmitRow').innerHTML =
     `<input id="lbNameInput" maxlength="20" placeholder="Your name" value="${escapeHtml(lbName())}">` +
     `<button class="btn" id="btnLbSubmit" type="button">🏆 Submit run</button>`;
