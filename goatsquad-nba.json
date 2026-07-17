@@ -128,7 +128,7 @@
     "shop": {
       "_comment": "The traveling shop appears at 'shop' entries in layers. `once` items can be bought once per run. Prices are Cap Space. Training Camp caps at +4 per player (2 buys).",
       "items": [
-        { "id": "insurance", "icon": "🛟", "name": "Insurance Policy",  "price": 80, "once": true,  "desc": "When a loss would end your run, time rewinds to the game that killed you and the series re-flips from there. One use." },
+        { "id": "insurance", "icon": "🛟", "name": "Insurance Policy",  "price": 150, "once": true,  "desc": "When a loss would end your run, time rewinds to the game that killed you and the series re-flips from there. One use." },
         { "id": "camp",      "icon": "🏋️", "name": "Training Camp",     "price": 40, "once": false, "desc": "+2 OVR to one player. Max +4 per player." },
         { "id": "fa",        "icon": "🎰", "name": "Free-Agent Wheel",  "price": 50, "once": false, "desc": "Spin the whole NBA pool — sign who you freeze, somebody gets cut." },
         { "id": "token2",    "icon": "🎟️", "name": "Second-Stop Token", "price": 35, "once": true,  "desc": "Your next victory wheel: STOP twice, keep the better freeze." },
@@ -140,7 +140,7 @@
 
     "rookieMaxRating": 69,
 
-    "relicChance": 0.25,
+    "relicChance": 0.15,
     "maxRelics": 3,
     "_relics_comment": "Relics ride the victory-spoils wheel alongside players (~relicChance per card slot). Hold up to maxRelics; landing another means swapping one out. Effect types the engine understands: gameEdge / elimEdge / firstGameEdge (win-prob bumps), noMomentumDrag, gameWinCash, interestCap, shopDiscount, upsetMult, ovrBoost.",
     "relics": [
@@ -176,40 +176,40 @@
           { "name": "Corey Maggette", "nbaId": 1894, "rating": 73, "pos": "SF" }, { "name": "Bismack Biyombo", "nbaId": 202687, "rating": 72, "pos": "C" },
           { "name": "D.J. Augustin", "nbaId": 201571, "rating": 71, "pos": "PG" }, { "name": "Byron Mullens", "nbaId": 201957, "rating": 70, "pos": "C" },
           { "name": "Tyrus Thomas", "nbaId": 200748, "rating": 68, "pos": "PF" }, { "name": "Derrick Brown", "nbaId": 201974, "rating": 67, "pos": "SF" }] },
-      "sixers16": { "name": "2016 Sixers",   "rating": 77, "abbr": "PHI", "logoId": 1610612755, "blurb": "Trust the Process — they don't mind losing.",
+      "sixers16": { "name": "2016 Sixers",   "rating": 78, "abbr": "PHI", "logoId": 1610612755, "blurb": "Trust the Process — they don't mind losing.",
         "players": [
           { "name": "Robert Covington", "nbaId": 203496, "rating": 78, "pos": "SF" }, { "name": "Jahlil Okafor", "nbaId": 1626143, "rating": 77, "pos": "C" },
           { "name": "Nerlens Noel", "nbaId": 203457, "rating": 77, "pos": "C" }, { "name": "Ish Smith", "nbaId": 202397, "rating": 74, "pos": "PG" },
           { "name": "Jerami Grant", "nbaId": 203924, "rating": 74, "pos": "PF" }, { "name": "Richaun Holmes", "nbaId": 1626158, "rating": 73, "pos": "PF" },
           { "name": "T.J. McConnell", "nbaId": 204456, "rating": 72, "pos": "PG" }, { "name": "Hollis Thompson", "nbaId": 203138, "rating": 70, "pos": "SG" }] },
-      "knicks19": { "name": "2019 Knicks",   "rating": 79, "abbr": "NYK", "logoId": 1610612752, "blurb": "The Garden faithful deserve better.",
+      "knicks19": { "name": "2019 Knicks",   "rating": 80, "abbr": "NYK", "logoId": 1610612752, "blurb": "The Garden faithful deserve better.",
         "players": [
           { "name": "Mitchell Robinson", "nbaId": 1629011, "rating": 80, "pos": "C" }, { "name": "Tim Hardaway Jr.", "nbaId": 203501, "rating": 78, "pos": "SG" },
           { "name": "DeAndre Jordan", "nbaId": 201599, "rating": 76, "pos": "C" }, { "name": "Emmanuel Mudiay", "nbaId": 1626144, "rating": 75, "pos": "PG" },
           { "name": "Dennis Smith Jr.", "nbaId": 1628372, "rating": 74, "pos": "PG" }, { "name": "Noah Vonleh", "nbaId": 203943, "rating": 74, "pos": "PF" },
           { "name": "Damyean Dotson", "nbaId": 1628422, "rating": 72, "pos": "SG" }, { "name": "Kevin Knox", "nbaId": 1628995, "rating": 72, "pos": "SF" }] },
-      "pistons04": { "name": "2004 Pistons",  "rating": 82, "abbr": "DET", "logoId": 1610612765, "blurb": "No superstars. All defense.",
+      "pistons04": { "name": "2004 Pistons",  "rating": 84, "abbr": "DET", "logoId": 1610612765, "blurb": "No superstars. All defense.",
         "ability": { "type": "ovrDebuff", "value": 1, "desc": "The defense travels. Your squad plays at -1 overall." },
         "players": [
           { "name": "Ben Wallace", "nbaId": 1112, "rating": 87, "pos": "C" }, { "name": "Chauncey Billups", "nbaId": 1497, "rating": 86, "pos": "PG" },
           { "name": "Rasheed Wallace", "nbaId": 739, "rating": 85, "pos": "PF" }, { "name": "Richard Hamilton", "nbaId": 1888, "rating": 84, "pos": "SG" },
           { "name": "Tayshaun Prince", "nbaId": 2419, "rating": 82, "pos": "SF" }, { "name": "Mehmet Okur", "nbaId": 2246, "rating": 77, "pos": "C" },
           { "name": "Corliss Williamson", "nbaId": 722, "rating": 76, "pos": "PF" }, { "name": "Lindsey Hunter", "nbaId": 283, "rating": 72, "pos": "PG" }] },
-      "mavs11": { "name": "2011 Mavs",     "rating": 84, "abbr": "DAL", "logoId": 1610612742, "blurb": "Dirk's one-legged revenge tour.",
+      "mavs11": { "name": "2011 Mavs",     "rating": 87, "abbr": "DAL", "logoId": 1610612742, "blurb": "Dirk's one-legged revenge tour.",
         "players": [
           { "name": "Dirk Nowitzki", "nbaId": 1717, "rating": 92, "pos": "PF" }, { "name": "Jason Kidd", "nbaId": 467, "rating": 84, "pos": "PG" },
           { "name": "Tyson Chandler", "nbaId": 2199, "rating": 84, "pos": "C" }, { "name": "Jason Terry", "nbaId": 1891, "rating": 83, "pos": "SG" },
           { "name": "Shawn Marion", "nbaId": 1890, "rating": 82, "pos": "SF" }, { "name": "J.J. Barea", "nbaId": 200826, "rating": 78, "pos": "PG" },
           { "name": "Peja Stojakovic", "nbaId": 978, "rating": 76, "pos": "SF" }, { "name": "Brendan Haywood", "nbaId": 2217, "rating": 75, "pos": "C" },
           { "name": "DeShawn Stevenson", "nbaId": 2052, "rating": 72, "pos": "SG" }] },
-      "celtics08": { "name": "2008 Celtics",  "rating": 86, "abbr": "BOS", "logoId": 1610612738, "blurb": "KG, Pierce, Ray. Anything is possible.",
+      "celtics08": { "name": "2008 Celtics",  "rating": 89, "abbr": "BOS", "logoId": 1610612738, "blurb": "KG, Pierce, Ray. Anything is possible.",
         "players": [
           { "name": "Kevin Garnett", "nbaId": 708, "rating": 92, "pos": "PF" }, { "name": "Paul Pierce", "nbaId": 1718, "rating": 89, "pos": "SF" },
           { "name": "Ray Allen", "nbaId": 951, "rating": 87, "pos": "SG" }, { "name": "Rajon Rondo", "nbaId": 200765, "rating": 82, "pos": "PG" },
           { "name": "Kendrick Perkins", "nbaId": 2570, "rating": 78, "pos": "C" }, { "name": "James Posey", "nbaId": 1899, "rating": 76, "pos": "SF" },
           { "name": "Leon Powe", "nbaId": 200796, "rating": 74, "pos": "PF" }, { "name": "Tony Allen", "nbaId": 2754, "rating": 74, "pos": "SG" },
           { "name": "Eddie House", "nbaId": 2067, "rating": 73, "pos": "PG" }] },
-      "heat13": { "name": "2013 Heat",     "rating": 88, "abbr": "MIA", "logoId": 1610612748, "blurb": "27 straight wins. The Heatles.",
+      "heat13": { "name": "2013 Heat",     "rating": 90, "abbr": "MIA", "logoId": 1610612748, "blurb": "27 straight wins. The Heatles.",
         "ability": { "type": "noPlayerMomentum", "value": 1, "desc": "The Heatles never blink. Your desperation boost is switched off." },
         "players": [
           { "name": "LeBron James", "nbaId": 2544, "rating": 97, "pos": "SF" }, { "name": "Dwyane Wade", "nbaId": 2548, "rating": 90, "pos": "SG" },
@@ -217,26 +217,26 @@
           { "name": "Mario Chalmers", "nbaId": 201596, "rating": 77, "pos": "PG" }, { "name": "Chris Andersen", "nbaId": 2365, "rating": 76, "pos": "C" },
           { "name": "Shane Battier", "nbaId": 2203, "rating": 76, "pos": "SF" }, { "name": "Udonis Haslem", "nbaId": 2617, "rating": 74, "pos": "PF" },
           { "name": "Norris Cole", "nbaId": 202708, "rating": 72, "pos": "PG" }] },
-      "lakers87": { "name": "1987 Lakers",   "rating": 90, "abbr": "LAL", "logoId": 1610612747, "blurb": "Showtime at full sprint.",
+      "lakers87": { "name": "1987 Lakers",   "rating": 92, "abbr": "LAL", "logoId": 1610612747, "blurb": "Showtime at full sprint.",
         "players": [
           { "name": "Magic Johnson", "nbaId": 77142, "rating": 97, "pos": "PG" }, { "name": "Kareem Abdul-Jabbar", "nbaId": 76003, "rating": 92, "pos": "C" },
           { "name": "James Worthy", "nbaId": 1460, "rating": 88, "pos": "SF" }, { "name": "Byron Scott", "nbaId": 2, "rating": 84, "pos": "SG" },
           { "name": "A.C. Green", "nbaId": 920, "rating": 80, "pos": "PF" }, { "name": "Michael Cooper", "nbaId": 76444, "rating": 79, "pos": "SG" },
           { "name": "Mychal Thompson", "nbaId": 78331, "rating": 78, "pos": "C" }, { "name": "Kurt Rambis", "nbaId": 77905, "rating": 74, "pos": "PF" }] },
-      "celtics86": { "name": "1986 Celtics",  "rating": 91, "abbr": "BOS", "logoId": 1610612738, "blurb": "Bird's best board. 40–1 at home.",
+      "celtics86": { "name": "1986 Celtics",  "rating": 93, "abbr": "BOS", "logoId": 1610612738, "blurb": "Bird's best board. 40–1 at home.",
         "players": [
           { "name": "Larry Bird", "nbaId": 1449, "rating": 96, "pos": "SF" }, { "name": "Kevin McHale", "nbaId": 1450, "rating": 90, "pos": "PF" },
           { "name": "Robert Parish", "nbaId": 305, "rating": 85, "pos": "C" }, { "name": "Dennis Johnson", "nbaId": 77141, "rating": 82, "pos": "PG" },
           { "name": "Bill Walton", "nbaId": 78450, "rating": 80, "pos": "C" }, { "name": "Danny Ainge", "nbaId": 76017, "rating": 79, "pos": "SG" },
           { "name": "Scott Wedman", "nbaId": 78482, "rating": 72, "pos": "SF" }, { "name": "Jerry Sichting", "nbaId": 78146, "rating": 70, "pos": "PG" }] },
-      "bulls96": { "name": "1996 Bulls",    "rating": 93, "abbr": "CHI", "logoId": 1610612741, "blurb": "72–10. MJ never lost a step.",
+      "bulls96": { "name": "1996 Bulls",    "rating": 96, "abbr": "CHI", "logoId": 1610612741, "blurb": "72–10. MJ never lost a step.",
         "ability": { "type": "bossElimEdge", "value": 0.1, "desc": "MJ takes the closeouts. Bulls +10% in elimination games." },
         "players": [
           { "name": "Michael Jordan", "nbaId": 893, "rating": 99, "pos": "SG" }, { "name": "Scottie Pippen", "nbaId": 937, "rating": 93, "pos": "SF" },
           { "name": "Dennis Rodman", "nbaId": 23, "rating": 88, "pos": "PF" }, { "name": "Toni Kukoc", "nbaId": 389, "rating": 84, "pos": "SF" },
           { "name": "Ron Harper", "nbaId": 1631199, "rating": 78, "pos": "PG" }, { "name": "Steve Kerr", "nbaId": 70, "rating": 77, "pos": "PG" },
           { "name": "Luc Longley", "nbaId": 26, "rating": 76, "pos": "C" }, { "name": "Bill Wennington", "nbaId": 82, "rating": 70, "pos": "C" }] },
-      "warriors16": { "name": "2016 Warriors", "rating": 95, "abbr": "GSW", "logoId": 1610612744, "blurb": "73–9. The final boss. Don't blow a 3–1 lead.",
+      "warriors16": { "name": "2016 Warriors", "rating": 100, "abbr": "GSW", "logoId": 1610612744, "blurb": "73–9. The final boss. Don't blow a 3–1 lead.",
         "ability": { "type": "bossFirstGameEdge", "value": 0.15, "desc": "They start 73–9 fast. Warriors +15% in Game 1." },
         "players": [
           { "name": "Stephen Curry", "nbaId": 201939, "rating": 98, "pos": "PG" }, { "name": "Klay Thompson", "nbaId": 202691, "rating": 91, "pos": "SG" },
