@@ -684,6 +684,10 @@
         <b class="disp" id="simSpeedVal">1×</b>
       </div>
     </div>
+    <div class="setRow">
+      <div class="setLabel">🗑️ Reset Gauntlet run<span id="resetInfo">Wipes squad, Cap Space, relics and map progress. The Daily is untouched.</span></div>
+      <button class="btn ghost" id="resetRunBtn" type="button">🗑️ Reset run</button>
+    </div>
   </div>
 </div>
 
@@ -2865,8 +2869,44 @@ $('simSpeed').addEventListener('input', () => {
   paintSimSpeed(v);
   if (bossTl) bossTl.timeScale(v);
 });
+// 🗑️ reset the gauntlet run — two taps (arm, then confirm); daily state is never touched
+let resetArm = 0;
+function paintResetRow() {
+  if (!CFG || !CFG.gauntlet || !G) return;
+  const has = G.squad || G.stage > 0 || G.cash > 0 || G.done;
+  $('resetInfo').textContent = !has ? 'No run in progress. The Daily is untouched either way.'
+    : (G.done ? `Current run: 👑 gauntlet complete · ${cash$(G.cash)} banked.`
+              : `Current run: fight ${fightNum(G.stage)}/${totalFights()} · ${cash$(G.cash)} banked.`)
+      + ' Wipes squad, Cap Space, relics and map progress — the Daily is untouched.';
+}
+$('resetRunBtn').addEventListener('click', () => {
+  if (!G) return;
+  if (!resetArm || Date.now() - resetArm > 4000) {   // first tap arms, 4s to confirm
+    resetArm = Date.now();
+    $('resetRunBtn').textContent = '⚠️ Tap again to wipe it';
+    return;
+  }
+  resetArm = 0;
+  if (bossTl) { bossTl.kill(); bossTl = null; }      // mid-series reset can't leave callbacks firing
+  run = null;
+  travelFrom = null;
+  G = freshG();
+  saveG();
+  $('resetRunBtn').textContent = '🗑️ Reset run';
+  paintResetRow();
+  $('setOv').style.display = 'none';
+  toast('Gauntlet run wiped — fresh map');
+  track('gauntlet_reset', {});
+  renderHome();
+});
 // ⚙️ settings — openable from any screen; speed changes land on the live series instantly
-$('setBtn').addEventListener('click', () => { Sound.unlock(); $('setOv').style.display = 'flex'; });
+$('setBtn').addEventListener('click', () => {
+  Sound.unlock();
+  resetArm = 0;
+  $('resetRunBtn').textContent = '🗑️ Reset run';
+  paintResetRow();
+  $('setOv').style.display = 'flex';
+});
 $('setClose').addEventListener('click', () => { $('setOv').style.display = 'none'; });
 $('setOv').addEventListener('click', ev => { if (ev.target === $('setOv')) $('setOv').style.display = 'none'; });
 $('btnRetry').addEventListener('click', () => {
