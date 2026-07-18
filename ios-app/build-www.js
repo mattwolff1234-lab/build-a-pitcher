@@ -13,8 +13,9 @@ const OUT = path.resolve(__dirname, 'www');
 const PAGES = [
   'index.html', 'pitcher.html', 'build-a-batter.html', 'build-a-baller.html',
   'build-a-striker.html', 'build-a-keeper.html', 'versus.html', 'versus-hoops.html',
-  'versus-soccer.html', 'franchise.html', 'franchise-hoops.html', 'franchise-soccer.html',
-  'college.html', 'privacy.html',
+  'versus-soccer.html', 'versus-cfb.html', 'franchise.html', 'franchise-hoops.html',
+  'franchise-soccer.html', 'college.html', 'hockey.html', 'monster.html',
+  'goatsquad.html', 'privacy.html', 'terms.html',
 ];
 const SCRIPTS = [
   'switcher.js', 'social.js', 'xp.js', 'achievements.js', 'hotboard.js', 'quests.js',
@@ -23,7 +24,8 @@ const SCRIPTS = [
   // shell (window.Capacitor check — Apple requires IAP for digital currency); spending stays.
   'catalog.js', 'store.js',
 ];
-const DATA = ['pitchers.json', 'batters.json', 'ballers.json', 'strikers.json', 'keepers.json', 'cfb.json'];
+const DATA = ['pitchers.json', 'batters.json', 'ballers.json', 'strikers.json', 'keepers.json',
+  'cfb.json', 'hockey.json', 'pokemon.json', 'goatsquad-nba.json'];
 const ASSET_DIRS = ['avatars', 'baseball-anim', 'hoops-anim', 'soccer-anim'];
 const ASSET_GLOBS = ['.png', '.webp', '.svg', '.webmanifest', '.ico'];
 
