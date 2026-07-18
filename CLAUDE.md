@@ -86,6 +86,13 @@ in the header. Audio unlocks on first click (autoplay policy).
 Reachable anytime from the ☰ menu (and auto-opens after you submit). **Global (all-time)** +
 **Today** tabs, **top 200**, top-3 medal coloring. After submitting, your entry is **pinned at the
 top with your exact rank even if you're outside the top 200**.
+- **Real-world greats (`real-legends.js`)**: on career-stat sorts (never OVR), the top ~5–10
+  real record holders (Bonds 762 HR, Nolan Ryan 5,714 K, Gretzky 2,857 P, …) are woven in by
+  stat value as **legend-purple ★ rows** with a league chip (MLB/NBA/NHL/NCAA). Client-side
+  only — Global scope + "Best" direction only, non-clickable, and they never consume a rank
+  (user ranks/`me` pin match the server exactly). One shared drop-in on all 8 leaderboard
+  pages (identical merge block in each `loadLeaderboard`); no entries for `mon` (fictional)
+  or sim-only stats. Active players' totals are static snapshots — nudge them occasionally.
 
 ---
 
