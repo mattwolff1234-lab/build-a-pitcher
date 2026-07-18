@@ -555,6 +555,117 @@ Defense/Speed + Frame=size).
 
 ---
 
+## 🐐 GOAT Squad (LIVE 2026-07-17) — `goatsquad.html` at `/goatsquad`, game key `goatsquad`
+Roguelike slot-machine **roster builder** (a different genre from the build games — no figure, no
+career sim). Front door: **squad.goat-lab.app** (root 307-redirects to `/goatsquad`). Hub tile on
+every sport in `index.html` (replaced the dev-era "Roster Rush" tile — that was this game's old
+name, which is why **every localStorage key is `pl_rr_*`** (`pl_rr_day/gauntlet/bossSeen/mute/name`)
+and internal CSS/fn names say `rr-`).
+
+- **Sport-agnostic engine + config split:** ALL game content — brand, slots, spin speed, rarity,
+  coaches, bosses, gauntlet map/shop/relics/economy, sim constants, tier bands, team colors — lives
+  in **`goatsquad-nba.json`** (`GAME_CONFIG_URL` const at the top of the HTML). A new sport (NFL/NHL)
+  = a copy of that JSON + a clone of the HTML pointing at it; zero engine changes. The config reads
+  the existing **`/ballers.json`** through a declarative `adapter` (poolKey/legendsKey/field maps;
+  `primaryPositionOnly` → a "PG / SG" player belongs ONLY to the PG slot).
+- **Core loop:** 7 slots (PG/SG/SF/PF/C · 6TH MAN any-position weight 0.75 · COACH −5..+5 mod).
+  Every open slot spins at once (fixed **10 faces/sec, NO easing — STOP timing is a learnable
+  skill**), STOP freezes all → **tap-lock exactly ONE** → rest respin. One **mulligan** after the
+  last lock (drop one + respin, STOP locks instantly, ratings stay hidden). Team OVR = weighted avg
+  + coach mod, **unclamped**. Taps use the `onTap` helper (pointerup within 12px — a drag scrolls,
+  never picks); the STOP buttons fire on **pointerdown** on purpose (latency = skill).
+- **Determinism:** reels are fixed 512-entry sequences drawn up-front (FNV-1a→mulberry32);
+  `run.tick` only advances while spinning, so pauses don't desync. **Daily** seed
+  `pl-daily-<local date>-goatsquad-v1` → same reels + boss worldwide; attempts count **at start**
+  (no refresh-scumming); the boss series RNG is seeded from date+attempt+ovr. Boss rotates daily
+  through the 16-team `bosses` list. **Gauntlet spins are Math.random** (not seeded).
+  Rarity: banded weights + `legendMult` 0.2; a **legend pity timer** (gauntlet only, 18 dry stops)
+  forces a legend onto an open position slot; legends are filtered out of the 6th-man slot unless
+  they'd be wasted otherwise (`sixLegendOk`).
+- **Boss series:** first to 4. Per-game P(win) = .5 + (ovr−boss)·`perGameSlope .04` + momentum
+  (.09 × games trailing), clamped [.1,.9]; **down 3–1 = +25% comeback boost, +50% if LeBron is on
+  your squad** (`comeback.hero`), pierces the cap to .95. Boss abilities: `bossElimEdge` ('96
+  Bulls), `bossFirstGameEdge` ('17 Warriors), `noPlayerMomentum` ('13 Heat), `bossComeback` ('16
+  Cavs), `ovrDebuff` ('04 Pistons — hits the sim, not the display). Cinematic GSAP playthrough:
+  quarter checkpoints with lead-swing shaping (`addSwing` — most games see a lead change), box
+  scores (points share ∝ rating^1.6), star lines, elimination-game flashes, ⏩ skip once you've
+  seen one series. Result screen ends with a **scouting report** (`buildTips` — trash-talk lines
+  incl. "the wheel offered X and you never grabbed him", computed from what actually flew past).
+- **The Gauntlet (roguelike mode):** 10-layer map in config `layers` (8 fights + 2 shops; 1-key
+  layer = straight road, 2-key = **fork** (tap a city — safe vs harder-with-better-spoils), `'shop'`
+  = traveling shop), plane flies you city to city. Build the squad ONCE at fight 1; it persists in
+  `pl_rr_gauntlet` (forever, not daily). **One life** — a series loss wipes the run (`freshG`),
+  no refresh-scumming. Beat a team → **victory spoils wheel**: their era-rated roster (Ray Allen is
+  87 on the '08 Celtics, 79 on the '13 Heat), sign one by cutting the position incumbent or 6th man
+  (squad stays 7) — or pass. **Relics** ride that wheel (`relicChance` .25/card, max 3, land more →
+  swap): elimEdge/noMomentumDrag/gameEdge/gameWinCash/interestCap/shopDiscount/upsetMult(×3 upset
+  pay)/ovrBoost/firstGameEdge.
+- **Economy (Balatro-style Cap Space):** $5/game win, +$15 series, +$10 sweep, +$20 upset; interest
+  on series wins ($1 per $5 held, cap $10) rewards a float. All cash rules live in ONE place
+  (`payPerGameWin`/`buzzerBonus`/`interestFor`) shared by the live in-series counter and the result
+  payout so they can never disagree. **Shop items:** 🛟 Insurance (one-use — a fatal loss rewinds to
+  the killing game and re-flips from there), 🏋️ Training Camp +2 (max +4/player), 🎰 FA wheel,
+  🎟️ Second-Stop Token, 📋 Coach Carousel, 🏟️ Home Court Deed (flips the 2-2-1-1-1 pattern + 3%
+  home edge), 🎓 Draft Workout (≤69 rookie who grows +1 per game win, cap 99).
+- **Leaderboard:** shared `/api/score`, `game='goatsquad'`. Posts `{ovr, build:{career:{totals:{w:
+  <fights beaten>}}, rr:{total, champion, cash, relics}}}`; board fetches `?sort=w` (distance
+  first, squad OVR tiebreak; 👑 CHAMPION at 8/8). Submit row appears **only when the run is over**
+  (death or championship — mid-run wins can't post partials). **No `SLOT_MAX['goatsquad']` →
+  `checkBuild` passes through; no CAREER_MAX entry either — fully trust-the-client** (accepted,
+  same posture as the rest).
+- **Share card:** 1000×1230 canvas, 3×2 headshot grid + coach row + cash/fights/relics rail.
+  cdn.nba.com has no CORS headers → canvas draws via the same-origin **`/nba-headshots/` proxy**
+  (a `vercel.json` rewrite); in-game `<img>` tags keep the CDN. Mobile share-sheet / desktop
+  download; emoji-square copy text.
+- **Ads:** Playwire ramp IS on this page (full ads.md 3-piece contract) + mobile rail-containment
+  CSS. ⚠️ **Louis must be told this page + the squad.goat-lab.app subdomain exist or no units
+  serve.**
+- **Scope:** page loads ONLY GSAP + namefilter + GA + ramp — **no accounts/XP/achievements/
+  collection/quests/switcher/store** (deliberate: guest-first, own daily via `pl_rr_day`, not part
+  of the cross-game daily streak).
+
+### ⚾ GOAT Squad Baseball (built 2026-07-18, NOT yet pushed) — `goatsquad-baseball.html` at `/squad-baseball`, game key `squadball`
+Baseball edition of the engine. **Generated from `goatsquad.html` by an anchored transform**
+(session-scratch script, see this file's first commit) — NOT hand-cloned; regen = re-run the
+transform against the current NBA engine. Config `goatsquad-mlb.json` + data `squadball-mlb.json`
+(`node fetch-squadball.js` — merges batters.json + pitchers.json, pulls **secondary positions**
+from The Show API, drops novelty "Home Run Derby X" cards that leak pitchers into hitter slots,
+and era-patches `mlbamId` onto gauntlet rosters/managers via statsapi people-search — the '62
+Mets Frank Thomas resolves to the 1951 debut, not the Big Hurt).
+- **11 slots on a faint SVG ballpark** (config slots carry x/y coords; `.slot-pin` wrappers own
+  the translate so GSAP scale tweens keep the button transform): C/1B/2B/3B/SS/LF/CF/RF around
+  the diamond, P on the mound (weight **1.25**), DH on the bench (any hitter, weight 0.9),
+  MANAGER · DUGOUT card bottom-left. STOP is static below the field (sticky covered the C row).
+- **Secondary-position eligibility + hard no-duplicate guard** (the baseball-only engine deltas):
+  `primaryPositionOnly:false` — a "SS/3B" player rides both reels — so `entryFor` skips names
+  locked anywhere, `stopAll` dedupes the frozen board (later slots advance to the next clean reel
+  entry — deterministic, daily-safe), the pity legend / FA wheel / rookie wheel / victory spoils
+  all filter squad names, and the Game-7 rental handles DH-primary hires (pi −1 → DH seat).
+  Name-based, so the two Will Smiths (C vs P) can't co-roster — accepted quirk.
+- **Baseball series presentation:** runs (winner avg ~5.0 / loser ~2.6, max 13, no ties —
+  harness-tuned 2026-07-18 after Matt's "too high"), line-score checkpoints END 3RD/6TH/8TH/FINAL,
+  2-3-2 home pattern, box = H·HR·RBI per hitter (kept in the engine's pts/reb/ast fields so render
+  code is untouched) + a pitcher line (IP·K·ER), FIRST PITCH copy. **Box coherence contract:**
+  hits roll first, homers come out of the hits (≤ team runs), RBIs distribute to the guys who hit
+  with per-player caps (HR·4 + other hits·2 + 1) and RBI ≤ runs team-wide — keeps "1-for-4 with
+  6 RBI" lines impossible; ~8.6 team hits / 1.08 HR per game. Pool = current big-leaguers only
+  (`fetch-squadball.js` drops FA + sub-60 cards; 1,073 pool + 215 legends). The board + STOP fit
+  ONE screen (`#slotGrid` height clamps to the viewport via dvh; STOP static below the field).
+- **Gauntlet ladder (Matt-approved):** '62 Mets 74 → '02 Angels 78/'05 White Sox 80 → '90 Reds 84
+  (ovrDebuff "Nasty Boys") → shop → '84 Tigers 87/'16 Cubs 89 → '72 A's 90 (noPlayerMomentum) →
+  '63 Dodgers 92/'29 A's 93 → shop → '98 Yankees 96 (bossElimEdge = Mariano) → **'27 Yankees 100**
+  (bossFirstGameEdge). 16-boss daily rotation incl. '17 Astros (Game-1 edge) + '04 Red Sox
+  (bossComeback; **comeback hero = David Ortiz**). Balance mirrors the NBA 2026-07-17 pass
+  (insurance 125, rental 100/90+, weighted relics, comeback .1/.2).
+- **Wiring:** `/squad-baseball` + `/mlb-headshots/:id/spots/:size` proxy (midfield.mlbstatic has
+  no CORS — share-card canvas) in vercel.json; `squadball` in score.js gameOf; baseball sports'
+  hub tile points here. localStorage ns **`pl_sb_*`** (NBA keeps pl_rr_*; sim-speed `pl_gs_speed`
+  is shared). Verified: headless Node harness (dup guard across randomized drafts, daily
+  determinism, 800-series sim stats, 300-hire rental sweep) + browser smoke on the dev server.
+  ⚠️ Same Louis/Playwire note: this page + route need unit mapping.
+
+---
+
 ## 1v1 "Face Off" mode (LIVE) — `versus.html` + `api/match.js` + `api/ably-token.js`
 Live online PvP. Two real players match; one is randomly assigned **Pitcher**, the other **Batter**;
 each **quick-builds** their guy under a shot clock; a seeded GSAP **at-bat** plays on both screens;

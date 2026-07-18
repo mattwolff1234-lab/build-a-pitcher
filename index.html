@@ -682,7 +682,9 @@ gsap.from('.hero p', { y: 10, opacity: 0, duration: .35, delay: .1, ease: 'power
     const tiles = [
       { i: '🎯', b: 'Daily', s: (playedToday ? '<span class="done">✅ Done today</span>' : `Today: ${D.icon} ${D.name}`) + '<span id="dcCount" style="display:block;color:var(--accent2)"></span>', href: D.path + '#daily' },
       { i: '🛠️', b: 'Build', s: sport.id === 'cfb' ? 'Draft a QB, RB, or WR · sim the college career' : `Draft a ${g.name.toLowerCase()}, sim the career`, href: g.path },
-      { i: '🐐', b: 'GOAT Squad', s: '<span style="color:var(--accent2)">NEW</span> · stop the spin, lock your five, survive the gauntlet', href: LOCAL ? '/goatsquad.html' : '/goatsquad' },
+      sport.id === 'baseball'
+        ? { i: '🐐', b: 'GOAT Squad', s: '<span style="color:var(--accent2)">NEW</span> · stop the spin, fill your lineup, survive the gauntlet', href: LOCAL ? '/goatsquad-baseball.html' : '/squad-baseball' }
+        : { i: '🐐', b: 'GOAT Squad', s: '<span style="color:var(--accent2)">NEW</span> · stop the spin, lock your five, survive the gauntlet', href: LOCAL ? '/goatsquad.html' : '/goatsquad' },
       sport.vs ? { i: '⚔️', b: '1v1 Live', s: 'Real players, live builds', href: sport.vs, cls: ' mtile-vs' }
                : { i: '⚔️', b: '1v1 Live', s: `${sport.name} 1v1 · coming soon`, lock: true },
       sport.id === 'cfb'

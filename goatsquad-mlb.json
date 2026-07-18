@@ -1,0 +1,1603 @@
+{
+  "_comment": "GOAT Squad BASEBALL config — everything game-specific for goatsquad-baseball.html (clone of the goatsquad.html engine with a field layout + baseball series sim). Data comes from squadball-mlb.json (bake with `node fetch-squadball.js` — it also patches mlbamId onto the gauntlet rosters + managers below). Slots carry x/y (percent) coords for the on-field layout; the manager sits in the dugout.",
+  "brand": "GOAT Squad",
+  "slug": "squadball",
+  "sport": "mlb",
+  "sportEmoji": "⚾",
+  "tagline": "Stop the spin. Fill your lineup. Beat the boss.",
+  "dataFile": "/squadball-mlb.json",
+  "adapter": {
+    "_comment": "primaryPositionOnly:false — a '3B/1B' player is eligible for BOTH slots (his primary is listed first). The engine adds a hard no-duplicate guard so the same name can never occupy two slots. Headshots: MLB official mugs by mlbamId; the share-card canvas swaps the prefix for the same-origin /mlb-headshots/ proxy (vercel.json rewrite).",
+    "primaryPositionOnly": false,
+    "poolKey": "pool",
+    "legendsKey": "legends",
+    "nameField": "name",
+    "ratingField": "ovr",
+    "posField": "pos",
+    "teamField": "team",
+    "imageIdField": "mlbamId",
+    "posSeparator": "/",
+    "imageTemplate": "https://midfield.mlbstatic.com/v1/people/{id}/spots/180",
+    "canvasImageProxy": {
+      "from": "https://midfield.mlbstatic.com/v1/people/",
+      "to": "/mlb-headshots/"
+    }
+  },
+  "slots": [
+    {
+      "key": "p",
+      "label": "P",
+      "type": "player",
+      "positions": [
+        "P"
+      ],
+      "weight": 1.25,
+      "x": 50,
+      "y": 54
+    },
+    {
+      "key": "c",
+      "label": "C",
+      "type": "player",
+      "positions": [
+        "C"
+      ],
+      "weight": 1,
+      "x": 50,
+      "y": 81
+    },
+    {
+      "key": "first",
+      "label": "1B",
+      "type": "player",
+      "positions": [
+        "1B"
+      ],
+      "weight": 1,
+      "x": 86,
+      "y": 56
+    },
+    {
+      "key": "second",
+      "label": "2B",
+      "type": "player",
+      "positions": [
+        "2B"
+      ],
+      "weight": 1,
+      "x": 66,
+      "y": 37
+    },
+    {
+      "key": "third",
+      "label": "3B",
+      "type": "player",
+      "positions": [
+        "3B"
+      ],
+      "weight": 1,
+      "x": 14,
+      "y": 56
+    },
+    {
+      "key": "ss",
+      "label": "SS",
+      "type": "player",
+      "positions": [
+        "SS"
+      ],
+      "weight": 1,
+      "x": 34,
+      "y": 37
+    },
+    {
+      "key": "lf",
+      "label": "LF",
+      "type": "player",
+      "positions": [
+        "LF"
+      ],
+      "weight": 1,
+      "x": 16,
+      "y": 17
+    },
+    {
+      "key": "cf",
+      "label": "CF",
+      "type": "player",
+      "positions": [
+        "CF"
+      ],
+      "weight": 1,
+      "x": 50,
+      "y": 13
+    },
+    {
+      "key": "rf",
+      "label": "RF",
+      "type": "player",
+      "positions": [
+        "RF"
+      ],
+      "weight": 1,
+      "x": 84,
+      "y": 17
+    },
+    {
+      "key": "dh",
+      "label": "DH",
+      "type": "player",
+      "positions": [
+        "DH",
+        "C",
+        "1B",
+        "2B",
+        "3B",
+        "SS",
+        "LF",
+        "CF",
+        "RF"
+      ],
+      "weight": 0.9,
+      "x": 86,
+      "y": 84
+    },
+    {
+      "key": "coach",
+      "label": "MANAGER",
+      "type": "coach",
+      "x": 14,
+      "y": 84
+    }
+  ],
+  "spin": {
+    "cycleHz": 10,
+    "resumeMs": 400,
+    "reelLength": 512
+  },
+  "rarity": {
+    "_comment": "The MLB pool runs deeper into the low ratings than the NBA one (1,700+ cards incl. far-off prospects), so sub-65 weight is squeezed harder. legendMult 0.2 keeps purple pulls rare; legendPity forces one after 18 legend-free stops (gauntlet only).",
+    "bands": [
+      [
+        0,
+        64,
+        1
+      ],
+      [
+        65,
+        74,
+        3.5
+      ],
+      [
+        75,
+        79,
+        5.5
+      ],
+      [
+        80,
+        84,
+        6
+      ],
+      [
+        85,
+        89,
+        5.5
+      ],
+      [
+        90,
+        999,
+        4
+      ]
+    ],
+    "legendMult": 0.2,
+    "legendPity": 18
+  },
+  "coaches": [
+    {
+      "name": "Casey Stengel",
+      "mod": 5,
+      "era": "40s–60s",
+      "mlbamId": 122737
+    },
+    {
+      "name": "Joe McCarthy",
+      "mod": 5,
+      "era": "30s–40s",
+      "mlbamId": 118553
+    },
+    {
+      "name": "John McGraw",
+      "mod": 5,
+      "era": "Dead Ball",
+      "mlbamId": 118726
+    },
+    {
+      "name": "Connie Mack",
+      "mod": 4,
+      "era": "1901–50",
+      "mlbamId": 118082
+    },
+    {
+      "name": "Joe Torre",
+      "mod": 4,
+      "era": "90s–00s",
+      "mlbamId": 123406
+    },
+    {
+      "name": "Tony La Russa",
+      "mod": 4,
+      "era": "80s–10s",
+      "mlbamId": 117517
+    },
+    {
+      "name": "Bobby Cox",
+      "mod": 4,
+      "era": "90s–00s",
+      "mlbamId": 112764
+    },
+    {
+      "name": "Sparky Anderson",
+      "mod": 4,
+      "era": "70s–80s",
+      "mlbamId": 110238
+    },
+    {
+      "name": "Earl Weaver",
+      "mod": 4,
+      "era": "60s–80s",
+      "mlbamId": null
+    },
+    {
+      "name": "Miller Huggins",
+      "mod": 3,
+      "era": "1910s–20s",
+      "mlbamId": 116275
+    },
+    {
+      "name": "Walter Alston",
+      "mod": 3,
+      "era": "50s–70s",
+      "mlbamId": 110193
+    },
+    {
+      "name": "Tommy Lasorda",
+      "mod": 3,
+      "era": "70s–90s",
+      "mlbamId": 117524
+    },
+    {
+      "name": "Whitey Herzog",
+      "mod": 3,
+      "era": "70s–80s",
+      "mlbamId": 115865
+    },
+    {
+      "name": "Bruce Bochy",
+      "mod": 3,
+      "era": "00s–20s",
+      "mlbamId": 111136
+    },
+    {
+      "name": "Terry Francona",
+      "mod": 3,
+      "era": "00s–20s",
+      "mlbamId": 114378
+    },
+    {
+      "name": "Dick Williams",
+      "mod": 3,
+      "era": "60s–80s",
+      "mlbamId": 124335
+    },
+    {
+      "name": "Billy Martin",
+      "mod": 2,
+      "era": "70s–80s",
+      "mlbamId": 118356
+    },
+    {
+      "name": "Leo Durocher",
+      "mod": 2,
+      "era": "40s–60s",
+      "mlbamId": 113664
+    },
+    {
+      "name": "Davey Johnson",
+      "mod": 2,
+      "era": "80s–90s",
+      "mlbamId": 116576
+    },
+    {
+      "name": "Lou Piniella",
+      "mod": 2,
+      "era": "90s–00s",
+      "mlbamId": 120586
+    },
+    {
+      "name": "Joe Maddon",
+      "mod": 2,
+      "era": "10s",
+      "mlbamId": null
+    },
+    {
+      "name": "Kevin Cash",
+      "mod": 2,
+      "era": "20s",
+      "mlbamId": 408211
+    },
+    {
+      "name": "Dusty Baker",
+      "mod": 1,
+      "era": "90s–20s",
+      "mlbamId": 110481
+    },
+    {
+      "name": "Dave Roberts",
+      "mod": 1,
+      "era": "10s–20s",
+      "mlbamId": 121277
+    },
+    {
+      "name": "Mike Scioscia",
+      "mod": 1,
+      "era": "00s–10s",
+      "mlbamId": 121919
+    },
+    {
+      "name": "Buck Showalter",
+      "mod": 1,
+      "era": "90s–20s",
+      "mlbamId": null
+    },
+    {
+      "name": "Craig Counsell",
+      "mod": 1,
+      "era": "20s",
+      "mlbamId": 112736
+    },
+    {
+      "name": "Brian Snitker",
+      "mod": 1,
+      "era": "10s–20s",
+      "mlbamId": null
+    },
+    {
+      "name": "Aaron Boone",
+      "mod": 0,
+      "era": "20s",
+      "mlbamId": 111213
+    },
+    {
+      "name": "Bud Black",
+      "mod": 0,
+      "era": "10s–20s",
+      "mlbamId": 111039
+    },
+    {
+      "name": "Ron Washington",
+      "mod": 0,
+      "era": "10s–20s",
+      "mlbamId": 123965
+    },
+    {
+      "name": "Torey Lovullo",
+      "mod": 0,
+      "era": "20s",
+      "mlbamId": 117950
+    },
+    {
+      "name": "A.J. Hinch",
+      "mod": 0,
+      "era": "10s–20s",
+      "mlbamId": 134460
+    },
+    {
+      "name": "Grady Little",
+      "mod": -1,
+      "era": "Left Pedro in",
+      "mlbamId": null
+    },
+    {
+      "name": "The Analytics Intern",
+      "mod": -1,
+      "era": "Launch angles",
+      "mlbamId": null
+    },
+    {
+      "name": "The Interim Guy",
+      "mod": -2,
+      "era": "Mid-season",
+      "mlbamId": null
+    },
+    {
+      "name": "Player-Manager You",
+      "mod": -3,
+      "era": "Beer league",
+      "mlbamId": null
+    },
+    {
+      "name": "Guy From The Bleachers",
+      "mod": -4,
+      "era": "Heckler",
+      "mlbamId": null
+    },
+    {
+      "name": "The Team Mascot",
+      "mod": -5,
+      "era": "Furry menace",
+      "mlbamId": null
+    }
+  ],
+  "bosses": [
+    {
+      "name": "1927 Yankees",
+      "rating": 95,
+      "logoId": 147,
+      "blurb": "Murderers' Row. 110–44.",
+      "ability": {
+        "type": "bossFirstGameEdge",
+        "value": 0.15,
+        "desc": "Murderers' Row sets the tone. Yankees +15% in Game 1."
+      }
+    },
+    {
+      "name": "1998 Yankees",
+      "rating": 93,
+      "logoId": 147,
+      "blurb": "114 wins. No weaknesses.",
+      "ability": {
+        "type": "bossElimEdge",
+        "value": 0.1,
+        "desc": "Enter Sandman. Mariano closes: Yankees +10% in elimination games."
+      }
+    },
+    {
+      "name": "1975 Reds",
+      "rating": 92,
+      "logoId": 113,
+      "blurb": "The Big Red Machine at full roar."
+    },
+    {
+      "name": "1929 A's",
+      "rating": 91,
+      "logoId": 133,
+      "blurb": "Foxx, Simmons, Grove. Mack's masterpiece."
+    },
+    {
+      "name": "1970 Orioles",
+      "rating": 90,
+      "logoId": 110,
+      "blurb": "Pitching, defense and three-run homers."
+    },
+    {
+      "name": "1963 Dodgers",
+      "rating": 90,
+      "logoId": 119,
+      "blurb": "Koufax at the absolute peak."
+    },
+    {
+      "name": "2017 Astros",
+      "rating": 89,
+      "logoId": 117,
+      "blurb": "The banging scheme cometh.",
+      "ability": {
+        "type": "bossFirstGameEdge",
+        "value": 0.15,
+        "desc": "They know what's coming. Astros +15% in Game 1."
+      }
+    },
+    {
+      "name": "1986 Mets",
+      "rating": 89,
+      "logoId": 121,
+      "blurb": "108 wins and twice the swagger."
+    },
+    {
+      "name": "2001 Mariners",
+      "rating": 88,
+      "logoId": 136,
+      "blurb": "116 wins. Ichiro never stopped running."
+    },
+    {
+      "name": "2004 Red Sox",
+      "rating": 88,
+      "logoId": 111,
+      "blurb": "The Idiots. Cursed no more.",
+      "ability": {
+        "type": "bossComeback",
+        "value": 0.25,
+        "desc": "Down 3–1? They came back from 3–0. Red Sox +25% when facing elimination."
+      }
+    },
+    {
+      "name": "1995 Braves",
+      "rating": 88,
+      "logoId": 144,
+      "blurb": "Maddux, Glavine, Smoltz. Pick your poison."
+    },
+    {
+      "name": "1972 A's",
+      "rating": 87,
+      "logoId": 133,
+      "blurb": "Three straight titles start here.",
+      "ability": {
+        "type": "noPlayerMomentum",
+        "value": 1,
+        "desc": "The Mustache Gang never blinks. Your desperation boost is switched off."
+      }
+    },
+    {
+      "name": "2016 Cubs",
+      "rating": 87,
+      "logoId": 112,
+      "blurb": "108 years of waiting, over."
+    },
+    {
+      "name": "1989 A's",
+      "rating": 87,
+      "logoId": 133,
+      "blurb": "The Bash Brothers."
+    },
+    {
+      "name": "1984 Tigers",
+      "rating": 86,
+      "logoId": 116,
+      "blurb": "35–5 out of the gate. Wire to wire."
+    },
+    {
+      "name": "1990 Reds",
+      "rating": 84,
+      "logoId": 113,
+      "blurb": "Wire-to-wire and nasty about it.",
+      "ability": {
+        "type": "ovrDebuff",
+        "value": 1,
+        "desc": "The Nasty Boys shorten the game. Your squad plays at -1 overall."
+      }
+    }
+  ],
+  "gauntlet": {
+    "_comment": "Same shape as the NBA gauntlet: one lineup, one life, layered map with forks + traveling shops. Each team's `players` are that season's roster for the victory-spoils wheel, rated as they were THAT year (Paul O'Neill is a 78 on the '90 Reds and an 84 on the '98 Yankees). mlbamId on roster players is patched by fetch-squadball.js (era-aware people-search).",
+    "title": "THE GAUNTLET",
+    "subtitle": "One lineup. One life. Beat them, sign their stars, spend your winnings.",
+    "logoTemplate": "https://www.mlbstatic.com/team-logos/{id}.svg",
+    "economy": {
+      "currency": "$",
+      "gameWin": 5,
+      "seriesWin": 15,
+      "sweep": 10,
+      "upset": 20,
+      "interestPer": 5,
+      "interestCap": 10,
+      "homeEdge": 0.03
+    },
+    "shop": {
+      "items": [
+        {
+          "id": "insurance",
+          "icon": "🛟",
+          "name": "Insurance Policy",
+          "price": 125,
+          "once": true,
+          "desc": "When a loss would end your run, time rewinds to the game that killed you and the series re-flips from there. One use."
+        },
+        {
+          "id": "camp",
+          "icon": "🌵",
+          "name": "Spring Training",
+          "price": 40,
+          "once": false,
+          "desc": "+2 OVR to one player. Max +4 per player."
+        },
+        {
+          "id": "fa",
+          "icon": "🎰",
+          "name": "Free-Agent Wheel",
+          "price": 50,
+          "once": false,
+          "desc": "Spin the whole league — legends included. Sign who you freeze, somebody gets cut."
+        },
+        {
+          "id": "token2",
+          "icon": "🎟️",
+          "name": "Second-Stop Token",
+          "price": 35,
+          "once": true,
+          "desc": "Your next victory wheel: STOP twice, keep the better freeze."
+        },
+        {
+          "id": "coach",
+          "icon": "📋",
+          "name": "Manager Carousel",
+          "price": 25,
+          "once": false,
+          "desc": "Respin your manager slot. Could be Casey. Could be the Mascot."
+        },
+        {
+          "id": "home",
+          "icon": "🏟️",
+          "name": "Home Field Deed",
+          "price": 45,
+          "once": true,
+          "desc": "Home field the rest of the run — Games 1, 2, 6 and 7 in YOUR park, with an edge."
+        },
+        {
+          "id": "rookie",
+          "icon": "🎓",
+          "name": "Draft Workout",
+          "price": 30,
+          "once": true,
+          "desc": "Spin the raw-prospect wheel. Rough now — but he gains +1 for EVERY game you win."
+        }
+      ]
+    },
+    "rookieMaxRating": 64,
+    "relicChance": 0.25,
+    "maxRelics": 3,
+    "relics": [
+      {
+        "id": "ring",
+        "icon": "💍",
+        "name": "The Ring",
+        "desc": "Been there before — +6% win chance in elimination games.",
+        "effect": {
+          "type": "elimEdge",
+          "value": 0.06
+        },
+        "weight": 1
+      },
+      {
+        "id": "rabbit",
+        "icon": "🍀",
+        "name": "Rabbit's Foot",
+        "desc": "Momentum never swings against you.",
+        "effect": {
+          "type": "noMomentumDrag",
+          "value": 1
+        },
+        "weight": 1
+      },
+      {
+        "id": "sparkplug",
+        "icon": "🔥",
+        "name": "The Spark Plug",
+        "desc": "Instant offense off the bench — +2% win chance in every game.",
+        "effect": {
+          "type": "gameEdge",
+          "value": 0.02
+        },
+        "weight": 1
+      },
+      {
+        "id": "sponsor",
+        "icon": "💼",
+        "name": "Sponsor Deal",
+        "desc": "+$3 for every game you win.",
+        "effect": {
+          "type": "gameWinCash",
+          "value": 3
+        },
+        "weight": 3
+      },
+      {
+        "id": "platinum",
+        "icon": "🏦",
+        "name": "Platinum Card",
+        "desc": "Interest cap raised by $10.",
+        "effect": {
+          "type": "interestCap",
+          "value": 10
+        },
+        "weight": 3
+      },
+      {
+        "id": "tickets",
+        "icon": "🎫",
+        "name": "Season Tickets",
+        "desc": "Shop prices 25% off.",
+        "effect": {
+          "type": "shopDiscount",
+          "value": 0.25
+        },
+        "weight": 3
+      },
+      {
+        "id": "hypeman",
+        "icon": "📢",
+        "name": "Hype Man",
+        "desc": "Upset bonuses pay triple.",
+        "effect": {
+          "type": "upsetMult",
+          "value": 3
+        },
+        "weight": 3
+      },
+      {
+        "id": "chemistry",
+        "icon": "🧬",
+        "name": "Clubhouse Chemistry",
+        "desc": "Lineup overall +2 in every series.",
+        "effect": {
+          "type": "ovrBoost",
+          "value": 2
+        },
+        "weight": 1
+      },
+      {
+        "id": "jetlag",
+        "icon": "🚀",
+        "name": "Fast Starters",
+        "desc": "+15% win chance in Game 1.",
+        "effect": {
+          "type": "firstGameEdge",
+          "value": 0.15
+        },
+        "weight": 2
+      }
+    ],
+    "layers": [
+      [
+        "mets62"
+      ],
+      [
+        "angels02",
+        "whitesox05"
+      ],
+      [
+        "reds90"
+      ],
+      "shop",
+      [
+        "tigers84",
+        "cubs16"
+      ],
+      [
+        "as72"
+      ],
+      [
+        "dodgers63",
+        "as29"
+      ],
+      "shop",
+      [
+        "yankees98"
+      ],
+      [
+        "yankees27"
+      ]
+    ],
+    "teams": {
+      "mets62": {
+        "name": "1962 Mets",
+        "rating": 74,
+        "abbr": "NYM",
+        "logoId": 121,
+        "blurb": "40–120. Marvelous Marv. A warm-up.",
+        "players": [
+          {
+            "name": "Richie Ashburn",
+            "rating": 77,
+            "pos": "CF",
+            "mlbamId": 110349
+          },
+          {
+            "name": "Frank Thomas",
+            "rating": 74,
+            "pos": "LF",
+            "mlbamId": 123246
+          },
+          {
+            "name": "Gil Hodges",
+            "rating": 71,
+            "pos": "1B",
+            "mlbamId": 116008
+          },
+          {
+            "name": "Charlie Neal",
+            "rating": 70,
+            "pos": "2B",
+            "mlbamId": 119675
+          },
+          {
+            "name": "Felix Mantilla",
+            "rating": 68,
+            "pos": "SS",
+            "mlbamId": 118257
+          },
+          {
+            "name": "Roger Craig",
+            "rating": 68,
+            "pos": "P",
+            "mlbamId": 112783
+          },
+          {
+            "name": "Al Jackson",
+            "rating": 67,
+            "pos": "P",
+            "mlbamId": 116419
+          },
+          {
+            "name": "Marv Throneberry",
+            "rating": 65,
+            "pos": "1B",
+            "mlbamId": 123322
+          },
+          {
+            "name": "Chris Cannizzaro",
+            "rating": 63,
+            "pos": "C",
+            "mlbamId": 111959
+          }
+        ]
+      },
+      "angels02": {
+        "name": "2002 Angels",
+        "rating": 78,
+        "abbr": "LAA",
+        "logoId": 108,
+        "blurb": "The Rally Monkey demands blood.",
+        "players": [
+          {
+            "name": "Troy Glaus",
+            "rating": 83,
+            "pos": "3B",
+            "mlbamId": 136267
+          },
+          {
+            "name": "Garret Anderson",
+            "rating": 82,
+            "pos": "LF",
+            "mlbamId": 110236
+          },
+          {
+            "name": "Troy Percival",
+            "rating": 81,
+            "pos": "P",
+            "mlbamId": 120401
+          },
+          {
+            "name": "Tim Salmon",
+            "rating": 80,
+            "pos": "RF",
+            "mlbamId": 121640
+          },
+          {
+            "name": "Darin Erstad",
+            "rating": 79,
+            "pos": "CF",
+            "mlbamId": 113889
+          },
+          {
+            "name": "Jarrod Washburn",
+            "rating": 78,
+            "pos": "P",
+            "mlbamId": 132220
+          },
+          {
+            "name": "David Eckstein",
+            "rating": 74,
+            "pos": "SS",
+            "mlbamId": 275930
+          },
+          {
+            "name": "Adam Kennedy",
+            "rating": 74,
+            "pos": "2B",
+            "mlbamId": 150456
+          },
+          {
+            "name": "Bengie Molina",
+            "rating": 73,
+            "pos": "C",
+            "mlbamId": 134260
+          },
+          {
+            "name": "Scott Spiezio",
+            "rating": 73,
+            "pos": "1B",
+            "mlbamId": 122596
+          }
+        ]
+      },
+      "whitesox05": {
+        "name": "2005 White Sox",
+        "rating": 80,
+        "abbr": "CWS",
+        "logoId": 145,
+        "blurb": "11–1 in October. Nobody remembers.",
+        "players": [
+          {
+            "name": "Paul Konerko",
+            "rating": 84,
+            "pos": "1B",
+            "mlbamId": 117244
+          },
+          {
+            "name": "Mark Buehrle",
+            "rating": 84,
+            "pos": "P",
+            "mlbamId": 279824
+          },
+          {
+            "name": "Jermaine Dye",
+            "rating": 82,
+            "pos": "RF",
+            "mlbamId": 113679
+          },
+          {
+            "name": "Jose Contreras",
+            "rating": 81,
+            "pos": "P",
+            "mlbamId": 425747
+          },
+          {
+            "name": "Aaron Rowand",
+            "rating": 77,
+            "pos": "CF",
+            "mlbamId": 400023
+          },
+          {
+            "name": "A.J. Pierzynski",
+            "rating": 76,
+            "pos": "C",
+            "mlbamId": 150229
+          },
+          {
+            "name": "Joe Crede",
+            "rating": 76,
+            "pos": "3B",
+            "mlbamId": 150317
+          },
+          {
+            "name": "Tadahito Iguchi",
+            "rating": 75,
+            "pos": "2B",
+            "mlbamId": 435338
+          },
+          {
+            "name": "Scott Podsednik",
+            "rating": 74,
+            "pos": "LF",
+            "mlbamId": 325392
+          },
+          {
+            "name": "Juan Uribe",
+            "rating": 74,
+            "pos": "SS",
+            "mlbamId": 346874
+          }
+        ]
+      },
+      "reds90": {
+        "name": "1990 Reds",
+        "rating": 84,
+        "abbr": "CIN",
+        "logoId": 113,
+        "blurb": "Wire-to-wire and nasty about it.",
+        "ability": {
+          "type": "ovrDebuff",
+          "value": 1,
+          "desc": "The Nasty Boys shorten the game. Your squad plays at -1 overall."
+        },
+        "players": [
+          {
+            "name": "Barry Larkin",
+            "rating": 86,
+            "pos": "SS",
+            "mlbamId": 117501
+          },
+          {
+            "name": "Eric Davis",
+            "rating": 85,
+            "pos": "CF",
+            "mlbamId": 113102
+          },
+          {
+            "name": "Jose Rijo",
+            "rating": 84,
+            "pos": "P",
+            "mlbamId": 121206
+          },
+          {
+            "name": "Rob Dibble",
+            "rating": 82,
+            "pos": "P",
+            "mlbamId": 113333
+          },
+          {
+            "name": "Chris Sabo",
+            "rating": 80,
+            "pos": "3B",
+            "mlbamId": 121606
+          },
+          {
+            "name": "Paul O'Neill",
+            "rating": 78,
+            "pos": "RF",
+            "mlbamId": 120028
+          },
+          {
+            "name": "Hal Morris",
+            "rating": 76,
+            "pos": "1B",
+            "mlbamId": 119406
+          },
+          {
+            "name": "Billy Hatcher",
+            "rating": 75,
+            "pos": "LF",
+            "mlbamId": 115602
+          },
+          {
+            "name": "Mariano Duncan",
+            "rating": 74,
+            "pos": "2B",
+            "mlbamId": 113620
+          },
+          {
+            "name": "Joe Oliver",
+            "rating": 72,
+            "pos": "C",
+            "mlbamId": 119987
+          }
+        ]
+      },
+      "tigers84": {
+        "name": "1984 Tigers",
+        "rating": 87,
+        "abbr": "DET",
+        "logoId": 116,
+        "blurb": "35–5 out of the gate. Wire to wire.",
+        "players": [
+          {
+            "name": "Alan Trammell",
+            "rating": 86,
+            "pos": "SS",
+            "mlbamId": 123437
+          },
+          {
+            "name": "Lou Whitaker",
+            "rating": 85,
+            "pos": "2B",
+            "mlbamId": 124154
+          },
+          {
+            "name": "Willie Hernandez",
+            "rating": 85,
+            "pos": "P",
+            "mlbamId": 115822
+          },
+          {
+            "name": "Kirk Gibson",
+            "rating": 84,
+            "pos": "RF",
+            "mlbamId": 114752
+          },
+          {
+            "name": "Jack Morris",
+            "rating": 84,
+            "pos": "P",
+            "mlbamId": 119399
+          },
+          {
+            "name": "Lance Parrish",
+            "rating": 83,
+            "pos": "C",
+            "mlbamId": 120248
+          },
+          {
+            "name": "Chet Lemon",
+            "rating": 80,
+            "pos": "CF",
+            "mlbamId": 117669
+          },
+          {
+            "name": "Darrell Evans",
+            "rating": 77,
+            "pos": "1B",
+            "mlbamId": 113935
+          },
+          {
+            "name": "Larry Herndon",
+            "rating": 75,
+            "pos": "LF",
+            "mlbamId": 115836
+          },
+          {
+            "name": "Howard Johnson",
+            "rating": 72,
+            "pos": "3B",
+            "mlbamId": 116593
+          }
+        ]
+      },
+      "cubs16": {
+        "name": "2016 Cubs",
+        "rating": 89,
+        "abbr": "CHC",
+        "logoId": 112,
+        "blurb": "108 years of waiting, over.",
+        "players": [
+          {
+            "name": "Kris Bryant",
+            "rating": 89,
+            "pos": "3B",
+            "mlbamId": 592178
+          },
+          {
+            "name": "Anthony Rizzo",
+            "rating": 87,
+            "pos": "1B",
+            "mlbamId": 519203
+          },
+          {
+            "name": "Jon Lester",
+            "rating": 85,
+            "pos": "P",
+            "mlbamId": 452657
+          },
+          {
+            "name": "Kyle Hendricks",
+            "rating": 84,
+            "pos": "P",
+            "mlbamId": 543294
+          },
+          {
+            "name": "Ben Zobrist",
+            "rating": 80,
+            "pos": "2B",
+            "mlbamId": 450314
+          },
+          {
+            "name": "Dexter Fowler",
+            "rating": 80,
+            "pos": "CF",
+            "mlbamId": 451594
+          },
+          {
+            "name": "Willson Contreras",
+            "rating": 78,
+            "pos": "C",
+            "mlbamId": 575929
+          },
+          {
+            "name": "Javier Baez",
+            "rating": 78,
+            "pos": "SS",
+            "mlbamId": 595879
+          },
+          {
+            "name": "Jason Heyward",
+            "rating": 76,
+            "pos": "RF",
+            "mlbamId": 518792
+          },
+          {
+            "name": "Kyle Schwarber",
+            "rating": 74,
+            "pos": "LF",
+            "mlbamId": 656941
+          }
+        ]
+      },
+      "as72": {
+        "name": "1972 A's",
+        "rating": 90,
+        "abbr": "OAK",
+        "logoId": 133,
+        "blurb": "Three straight titles start here.",
+        "ability": {
+          "type": "noPlayerMomentum",
+          "value": 1,
+          "desc": "The Mustache Gang never blinks. Your desperation boost is switched off."
+        },
+        "players": [
+          {
+            "name": "Reggie Jackson",
+            "rating": 88,
+            "pos": "RF",
+            "mlbamId": 116439
+          },
+          {
+            "name": "Catfish Hunter",
+            "rating": 86,
+            "pos": "P",
+            "mlbamId": 116334
+          },
+          {
+            "name": "Rollie Fingers",
+            "rating": 83,
+            "pos": "P",
+            "mlbamId": 114129
+          },
+          {
+            "name": "Joe Rudi",
+            "rating": 82,
+            "pos": "LF",
+            "mlbamId": 121533
+          },
+          {
+            "name": "Sal Bando",
+            "rating": 82,
+            "pos": "3B",
+            "mlbamId": 110526
+          },
+          {
+            "name": "Bert Campaneris",
+            "rating": 79,
+            "pos": "SS",
+            "mlbamId": 111916
+          },
+          {
+            "name": "Gene Tenace",
+            "rating": 76,
+            "pos": "C",
+            "mlbamId": 123183
+          },
+          {
+            "name": "Mike Epstein",
+            "rating": 75,
+            "pos": "1B",
+            "mlbamId": 113871
+          },
+          {
+            "name": "Dick Green",
+            "rating": 70,
+            "pos": "2B",
+            "mlbamId": 115093
+          }
+        ]
+      },
+      "dodgers63": {
+        "name": "1963 Dodgers",
+        "rating": 92,
+        "abbr": "LAD",
+        "logoId": 119,
+        "blurb": "Koufax at the absolute peak.",
+        "players": [
+          {
+            "name": "Sandy Koufax",
+            "rating": 97,
+            "pos": "P",
+            "mlbamId": 117277
+          },
+          {
+            "name": "Don Drysdale",
+            "rating": 87,
+            "pos": "P",
+            "mlbamId": 113581
+          },
+          {
+            "name": "Tommy Davis",
+            "rating": 84,
+            "pos": "LF",
+            "mlbamId": 113112
+          },
+          {
+            "name": "Maury Wills",
+            "rating": 82,
+            "pos": "SS",
+            "mlbamId": 124371
+          },
+          {
+            "name": "Frank Howard",
+            "rating": 82,
+            "pos": "RF",
+            "mlbamId": 116205
+          },
+          {
+            "name": "Willie Davis",
+            "rating": 78,
+            "pos": "CF",
+            "mlbamId": 113146
+          },
+          {
+            "name": "Jim Gilliam",
+            "rating": 76,
+            "pos": "3B",
+            "mlbamId": 114810
+          },
+          {
+            "name": "John Roseboro",
+            "rating": 76,
+            "pos": "C",
+            "mlbamId": 121456
+          },
+          {
+            "name": "Ron Fairly",
+            "rating": 75,
+            "pos": "1B",
+            "mlbamId": 113984
+          }
+        ]
+      },
+      "as29": {
+        "name": "1929 A's",
+        "rating": 93,
+        "abbr": "OAK",
+        "logoId": 133,
+        "blurb": "Foxx, Simmons, Grove. Mack's masterpiece.",
+        "players": [
+          {
+            "name": "Lefty Grove",
+            "rating": 95,
+            "pos": "P",
+            "mlbamId": 115201
+          },
+          {
+            "name": "Jimmie Foxx",
+            "rating": 94,
+            "pos": "1B",
+            "mlbamId": 114367
+          },
+          {
+            "name": "Al Simmons",
+            "rating": 93,
+            "pos": "LF",
+            "mlbamId": 122240
+          },
+          {
+            "name": "Mickey Cochrane",
+            "rating": 90,
+            "pos": "C",
+            "mlbamId": 112437
+          },
+          {
+            "name": "George Earnshaw",
+            "rating": 82,
+            "pos": "P",
+            "mlbamId": 113700
+          },
+          {
+            "name": "Bing Miller",
+            "rating": 80,
+            "pos": "RF",
+            "mlbamId": 119067
+          },
+          {
+            "name": "Jimmy Dykes",
+            "rating": 78,
+            "pos": "3B",
+            "mlbamId": 113685
+          },
+          {
+            "name": "Mule Haas",
+            "rating": 78,
+            "pos": "CF",
+            "mlbamId": 115277
+          },
+          {
+            "name": "Max Bishop",
+            "rating": 76,
+            "pos": "2B",
+            "mlbamId": 111020
+          }
+        ]
+      },
+      "yankees98": {
+        "name": "1998 Yankees",
+        "rating": 96,
+        "abbr": "NYY",
+        "logoId": 147,
+        "blurb": "114 wins. No weaknesses.",
+        "ability": {
+          "type": "bossElimEdge",
+          "value": 0.1,
+          "desc": "Enter Sandman. Mariano closes: Yankees +10% in elimination games."
+        },
+        "players": [
+          {
+            "name": "Mariano Rivera",
+            "rating": 91,
+            "pos": "P",
+            "mlbamId": 121250
+          },
+          {
+            "name": "Derek Jeter",
+            "rating": 88,
+            "pos": "SS",
+            "mlbamId": 116539
+          },
+          {
+            "name": "Bernie Williams",
+            "rating": 88,
+            "pos": "CF",
+            "mlbamId": 124288
+          },
+          {
+            "name": "David Cone",
+            "rating": 85,
+            "pos": "P",
+            "mlbamId": 112552
+          },
+          {
+            "name": "Paul O'Neill",
+            "rating": 84,
+            "pos": "RF",
+            "mlbamId": 120028
+          },
+          {
+            "name": "Tino Martinez",
+            "rating": 83,
+            "pos": "1B",
+            "mlbamId": 118362
+          },
+          {
+            "name": "Chuck Knoblauch",
+            "rating": 80,
+            "pos": "2B",
+            "mlbamId": 117197
+          },
+          {
+            "name": "Jorge Posada",
+            "rating": 80,
+            "pos": "C",
+            "mlbamId": 120691
+          },
+          {
+            "name": "Scott Brosius",
+            "rating": 79,
+            "pos": "3B",
+            "mlbamId": 111515
+          }
+        ]
+      },
+      "yankees27": {
+        "name": "1927 Yankees",
+        "rating": 100,
+        "abbr": "NYY",
+        "logoId": 147,
+        "blurb": "Murderers' Row. The final boss. 110–44.",
+        "ability": {
+          "type": "bossFirstGameEdge",
+          "value": 0.15,
+          "desc": "Murderers' Row sets the tone. Yankees +15% in Game 1."
+        },
+        "players": [
+          {
+            "name": "Babe Ruth",
+            "rating": 99,
+            "pos": "RF",
+            "mlbamId": 121578
+          },
+          {
+            "name": "Lou Gehrig",
+            "rating": 97,
+            "pos": "1B",
+            "mlbamId": 114680
+          },
+          {
+            "name": "Waite Hoyt",
+            "rating": 87,
+            "pos": "P",
+            "mlbamId": 116241
+          },
+          {
+            "name": "Earle Combs",
+            "rating": 86,
+            "pos": "CF",
+            "mlbamId": 112533
+          },
+          {
+            "name": "Tony Lazzeri",
+            "rating": 84,
+            "pos": "2B",
+            "mlbamId": 117577
+          },
+          {
+            "name": "Herb Pennock",
+            "rating": 84,
+            "pos": "P",
+            "mlbamId": 120386
+          },
+          {
+            "name": "Bob Meusel",
+            "rating": 83,
+            "pos": "LF",
+            "mlbamId": 119006
+          },
+          {
+            "name": "Mark Koenig",
+            "rating": 74,
+            "pos": "SS",
+            "mlbamId": 117230
+          },
+          {
+            "name": "Joe Dugan",
+            "rating": 73,
+            "pos": "3B",
+            "mlbamId": 113601
+          },
+          {
+            "name": "Pat Collins",
+            "rating": 70,
+            "pos": "C",
+            "mlbamId": 112520
+          }
+        ]
+      }
+    },
+    "rental": {
+      "_comment": "🪪 Rent-A-Ring-Chaser — Game 7 only (gauntlet): pay price and a hired gun rated ≥ minRating suits up for the winner-take-all game, replacing your weakest eligible slot for that ONE game. Everyone eligible — legends included — at EQUAL odds. Gone after the final out, win or lose.",
+      "price": 100,
+      "minRating": 90
+    }
+  },
+  "bossSim": {
+    "_comment": "Same engine constants as the NBA game (they were tuned for first-to-4 series pacing, not sport flavor). comeback.hero: if David Ortiz is on YOUR lineup, the down-3-1 boost doubles — he has literally been here before.",
+    "perGameSlope": 0.04,
+    "momentum": 0.09,
+    "minProb": 0.1,
+    "maxProb": 0.9,
+    "comeback": {
+      "boost": 0.1,
+      "heroBoost": 0.2,
+      "hero": "David Ortiz"
+    }
+  },
+  "teamColors": {
+    "ARI": "#A71930",
+    "ATL": "#CE1141",
+    "BAL": "#DF4601",
+    "BOS": "#BD3039",
+    "CHC": "#0E3386",
+    "CWS": "#27251F",
+    "CIN": "#C6011F",
+    "CLE": "#00385D",
+    "COL": "#33006F",
+    "DET": "#0C2340",
+    "HOU": "#002D62",
+    "KC": "#004687",
+    "LAA": "#BA0021",
+    "LAD": "#005A9C",
+    "MIA": "#00A3E0",
+    "MIL": "#12284B",
+    "MIN": "#002B5C",
+    "NYM": "#002D72",
+    "NYY": "#003087",
+    "OAK": "#003831",
+    "PHI": "#E81828",
+    "PIT": "#27251F",
+    "SD": "#2F241D",
+    "SEA": "#0C2C56",
+    "SF": "#FD5A1E",
+    "STL": "#C41E3A",
+    "TB": "#092C5C",
+    "TEX": "#003278",
+    "TOR": "#134A8E",
+    "WSH": "#AB0003",
+    "FA": "#5b636e"
+  },
+  "tiers": {
+    "bands": [
+      {
+        "min": 85,
+        "key": "diamond",
+        "emoji": "🟦"
+      },
+      {
+        "min": 80,
+        "key": "gold",
+        "emoji": "🟨"
+      },
+      {
+        "min": 75,
+        "key": "silver",
+        "emoji": "⬜"
+      },
+      {
+        "min": 65,
+        "key": "bronze",
+        "emoji": "🟫"
+      },
+      {
+        "min": 0,
+        "key": "grey",
+        "emoji": "⬛"
+      }
+    ],
+    "legendEmoji": "🟪"
+  },
+  "dailySeedPrefix": "pl-daily-",
+  "dailySeedSuffix": "-squadball-v1"
+}
