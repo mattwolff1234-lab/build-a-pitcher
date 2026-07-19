@@ -329,6 +329,13 @@
   .done h2 { font-family:'Oswald',sans-serif; margin:0 0 6px; font-size:24px; letter-spacing:1px; text-transform:uppercase; }
   .done .total { font-family:'Oswald',sans-serif; font-size:52px; font-weight:700; color:var(--gold); line-height:1; }
   .done-sub { color:var(--muted); font-size:12px; margin:4px 0 16px; letter-spacing:1px; text-transform:uppercase; }
+  .done-comp { display:none; align-items:center; justify-content:center; gap:8px; margin:-6px auto 14px;
+    font-family:'Oswald',sans-serif; font-size:12px; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); }
+  .done-comp img { width:30px; height:30px; border-radius:50%; object-fit:cover; background:#11161d; border:1px solid rgba(120,160,210,.35); }
+  .done-comp b { color:var(--ink); }
+  .done-comp b.legend { color:#c084fc; }
+  .done-comp .pct { color:var(--accent2); }
+  .cc-comp { font-family:'Oswald',sans-serif; font-size:10px; letter-spacing:1.5px; text-transform:uppercase; opacity:.8; margin-top:2px; }
   .career { margin:14px auto 18px; max-width:680px; text-align:left; border:1px solid rgba(120,160,210,.18); border-radius:10px;
     background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.025)); overflow:hidden; }
   .career-top { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 14px;
@@ -861,6 +868,7 @@
       <h2>Hitter Complete</h2>
       <div class="total" id="doneOvr">-</div>
       <div class="done-sub">Weighted overall rating</div>
+      <div id="doneComp" class="done-comp"></div>
 
       <div id="preSim" class="pre-sim">
         <input id="nameInput" maxlength="20" placeholder="Name your hitter" autocomplete="off">
@@ -1441,6 +1449,16 @@ async function init() {
   // .locked overlays (mid-career decisions) can't be dismissed · the player must choose
   document.querySelectorAll('.overlay').forEach(o => o.addEventListener('click', e => { if (e.target === o && !o.classList.contains('locked')) closeOverlay(o.id); }));
   document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.overlay.show:not(.locked)').forEach(o => closeOverlay(o.id)); });
+  // Space = Spin from the keyboard (desktop): skipped while typing, while a control has focus,
+  // or while any overlay is open (leaderboard rows / slot nodes handle Space themselves).
+  document.addEventListener('keydown', e => {
+    if (e.code !== 'Space' || e.repeat) return;
+    const a = document.activeElement;
+    if (a && a !== document.body && a.matches('button, input, textarea, select, a, [tabindex]')) return;
+    if (document.querySelector('.overlay.show')) return;
+    e.preventDefault();
+    $('spinBtn').click();
+  });
   renderAcct();
   initGoogle();
 
@@ -3641,6 +3659,37 @@ function trophyParts(t) {
   return trophies;
 }
 
+// Player comp: the real hitter (pool + legends) whose slot profile sits closest to the finished
+// build - weighted RMS distance over the same slots, mapped onto a 40-99 "match" score
+// (calibrated so a typical build reads ~75-85% and a near-clone 95%+).
+function playerComp() {
+  const cands = ((DATA && DATA.pool) || []).concat((DATA && DATA.legends) || []);
+  let best = null, bestD = Infinity;
+  for (const p of cands) {
+    let d = 0, wsum = 0;
+    for (const s of SLOTS) {
+      const w = WEIGHTS[s.key] || 1;
+      const diff = Number(state.filled[s.key].value) - Number(slotNumeric(p, s));
+      d += w * diff * diff; wsum += w;
+    }
+    d = Math.sqrt(d / wsum);
+    if (d < bestD) { bestD = d; best = p; }
+  }
+  if (!best) return null;
+  return { name: best.name, img: headshot(best), legend: !!best.legend, pct: clamp(Math.round(99 - bestD * 2.2), 40, 99) };
+}
+
+function renderDoneComp() {
+  const el = $('doneComp');
+  if (!el) return;
+  if (!state.comp) { el.style.display = 'none'; return; }
+  el.innerHTML = `<img src="${state.comp.img}" alt="" onerror="this.style.display='none'">`
+    + `Player comp: <b class="${state.comp.legend ? 'legend' : ''}">${escapeHTML(state.comp.name)}</b>`
+    + `&nbsp;<span class="pct">${state.comp.pct}% match</span>`;
+  el.style.display = 'flex';
+  gsap.fromTo(el, { opacity: 0 }, { opacity: 1, duration: .6, delay: 1.05 });
+}
+
 // Pure career-card markup · used for YOUR card and for cards arriving via /p/<id> share links.
 // d = { career, verdict, voteLine, name, ovr, teamAb }
 function careerCardHTML(d) {
@@ -3658,6 +3707,7 @@ function careerCardHTML(d) {
       <div class="cc-meta">
         <div class="cc-team">${escapeHTML(team.name)}</div>
         <div class="cc-name">${escapeHTML(d.name)}</div>
+        ${d.compName ? `<div class="cc-comp">🧬 Comp: ${escapeHTML(d.compName)}</div>` : ''}
         <div class="cc-role">${roleLine}</div>
       </div>
       <div class="cc-badge">
@@ -3685,6 +3735,7 @@ function buildCard(career, verdict, voteLine) {
   $('careerCard').innerHTML = careerCardHTML({
     career, verdict, voteLine,
     name: state.simName, ovr: state.finalOvr,
+    compName: state.comp ? state.comp.name : '',
     teamAb: (state.simTeam && state.simTeam.abbr) || state.draftTeamAb,
   }) + `
     <div class="cc-share-row"><button id="ccShareBtn" class="primary">📤 Share this card</button></div>
@@ -3711,7 +3762,7 @@ async function shareCareerCard() {
     ovr: state.finalOvr,
     verdict: verdict.txt, verdictColor: verdictColor(verdict.cls),
     voteLine: hofVoteLine(t, state.finalOvr).voteLine,
-    subtitle: '',
+    subtitle: state.comp ? `Comp: ${state.comp.name}` : '',
     metaLine: `${state.career.role} · ${state.career.seasons.length} seasons`,
     stats: [[t.avg.toFixed(3).replace(/^0\./, '.'), 'AVG'], [String(t.hr), 'HR'], [t.rbi.toLocaleString(), 'RBI'],
       [t.war.toFixed(1), 'WAR'], [t.h.toLocaleString(), 'Hits'], [(t.r || 0).toLocaleString(), 'Runs'],
@@ -3788,6 +3839,8 @@ function finish() {
   myEntryId = null;
   checkBuildAchievements();
   $('doneOvr').className = 'total c-' + tier(avg);
+  state.comp = playerComp();
+  renderDoneComp();
   $('preSim').style.display = 'flex';
   $('simBtn').disabled = false;
   $('career').style.display = 'none';
@@ -4026,8 +4079,10 @@ function reset() {
   state.career = null;
   state.scoutTarget = null; state.resimSalt = ''; state.resimN = 0;
   updateScoutUI(); if ($('resimBtn')) $('resimBtn').style.display = 'none';
+  state.comp = null;
   state.draftTeamAb = null;
   $('done').classList.remove('show');
+  $('doneComp').style.display = 'none';
   $('career').style.display = 'none';
   $('landed').classList.remove('show');
   $('spinBtn').textContent = 'Spin';

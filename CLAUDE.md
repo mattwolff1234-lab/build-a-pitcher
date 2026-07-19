@@ -345,10 +345,29 @@ under Node):
   NO-NO / PG / 💍) sit on their own line so the stat line never truncates. Log + headlines stack on
   phones (≤720px).
 
+### Player comp (shipped 2026-07-19 — pitcher + batter pages)
+`playerComp()` in both `pitcher.html` and `build-a-batter.html`: the real player (pool + legends)
+whose slot profile sits closest to the finished build — weighted RMS distance over the game's own
+SLOTS/WEIGHTS via `slotNumeric`, mapped to a 40–99 "match" score (`clamp(99 − dist·2.2, 40, 99)`,
+calibrated so a typical build reads ~75–85% and a single-player clone 99%). Shown on the done panel
+(`#doneComp` — headshot chip + "Player comp: NAME · nn% match", legend names purple) right under the
+OVR/archetype, on the career card (`cc-comp` line, own card only — shared-link cards omit it), and as
+the batter share-card subtitle (pitcher subtitle stays the archetype). `state.comp` set in `finish()`,
+cleared in `reset()`. Client-only, nothing posted to the server. Sibling games (hoops/striker/keeper/
+hockey/mon/cfb) don't have it yet — the function is generic over SLOTS/WEIGHTS, so porting is a
+copy-paste per page.
+
+### Keyboard spin (shipped 2026-07-19 — pitcher + batter pages)
+**Space = Spin** on desktop: document-level keydown in init that clicks `#spinBtn` (so it respects
+disabled state). Skipped while an `.overlay.show` is open, while any control has focus
+(`button/input/textarea/select/a/[tabindex]` — leaderboard rows + slot nodes handle Space
+themselves), and on key repeat.
+
 ### Still open / ideas
 - Leaderboard still ranks by **draft OVR**, not career → could add a career-score board (and a
   server-side re-sim would also close the anti-cheat hole). Optional **re-sim** toggle. Trades / free
-  agency across teams. Player comp ("most similar to …"). Auto nickname from the build.
+  agency across teams. Auto nickname from the build (archetypes partly cover this).
+  Port player comp + Space-to-spin to the sibling build games.
 
 ---
 
