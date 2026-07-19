@@ -19,6 +19,7 @@
 <meta name="twitter:image" content="/icon-512.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="/namefilter.js"></script>
+<script src="/real-legends.js" defer></script>
 <script src="/achievements.js" defer></script>
 <script src="/xp.js" defer></script>
 <script src="/social.js" defer></script>
@@ -3955,16 +3956,26 @@ async function loadLeaderboard(scope = lbScope, game = lbGame, sort = lbSort, di
       lbEntries.set(String(data.me.id), data.me);
       html += `<div class="lb-pin">${lbRow('#' + data.me.rank, { ...data.me, name: data.me.name + ' (you)' }, 'mine pinned')}</div>`;
     }
+    // Real-world greats (real-legends.js) woven in by stat value on career-stat sorts —
+    // global scope + "Best" direction only; ★ rank rows never shift anyone's real rank.
+    const realRows = (window.RealLegends && lbScope === 'global' && lbDir === 'desc' && lbSort !== 'ovr')
+      ? RealLegends.forBoard(lbGame, lbSort, lbGame === 'cfb' ? lbPos : null) : [];
+    let ri = 0;
+    const statOf = r => (r.stat == null ? -Infinity : Number(r.stat));
     if (!data.rows.length) {
       html += '<div class="lb-empty">No entries yet - be the first!</div>';
+      html += realRows.map(RealLegends.rowHTML).join('');
     } else {
       html += data.rows.map((r, i) => {
         const rank = i + 1;
         r._rank = rank;
         lbEntries.set(String(r.id), r);
+        let real = '';
+        while (ri < realRows.length && realRows[ri].stat >= statOf(r)) real += RealLegends.rowHTML(realRows[ri++]);
         const cls = [rank <= 3 ? 'top' + rank : '', r.id === myEntryId ? 'mine' : ''].filter(Boolean).join(' ');
-        return lbRow(rank, r, cls);
+        return real + lbRow(rank, r, cls);
       }).join('');
+      while (ri < realRows.length) html += RealLegends.rowHTML(realRows[ri++]);
     }
     list.innerHTML = html;
     list.onclick = e => { const row = e.target.closest('.lb-row[data-entry-id]'); if (row) openBuildDetails(row.dataset.entryId); };
