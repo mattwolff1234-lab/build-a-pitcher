@@ -1,0 +1,1634 @@
+{
+  "_comment": "GOAT Squad FOOTBALL config — everything game-specific for goatsquad-football.html (the goatsquad-baseball.html engine with a gridiron slot layout + a football series sim). Data comes from squadfoot-nfl.json (bake with `node fetch-squadfoot.js` — it also verifies + patches img onto the gauntlet rosters and coaches below via ESPN/Wikidata, wrong faces impossible). Slots carry x/y (percent) coords; the head coach works the sideline. Slot coords deliberately reuse the baseball layout's proven collision-free grid.",
+  "brand": "GOAT Squad",
+  "slug": "squadfoot",
+  "sport": "nfl",
+  "sportEmoji": "🏈",
+  "tagline": "Stop the spin. Field your eleven. Beat the boss.",
+  "dataFile": "/squadfoot-nfl.json",
+  "adapter": {
+    "_comment": "img on every player is a FULL URL (EA Madden portrait for the pool, ESPN/Wikipedia for retired greats) — imageTemplate '{id}' passes it straight through. canvasImageProxies (list — three image origins) keeps the share-card canvas exportable; each entry maps to a same-origin vercel.json rewrite.",
+    "primaryPositionOnly": false,
+    "poolKey": "pool",
+    "legendsKey": "legends",
+    "nameField": "name",
+    "ratingField": "ovr",
+    "posField": "pos",
+    "teamField": "team",
+    "imageIdField": "img",
+    "posSeparator": "/",
+    "imageTemplate": "{id}",
+    "canvasImageProxies": [
+      {
+        "from": "https://ratings-images-prod.pulse.ea.com/",
+        "to": "/nfl-headshots/"
+      },
+      {
+        "from": "https://a.espncdn.com/",
+        "to": "/espn-img/"
+      },
+      {
+        "from": "https://upload.wikimedia.org/",
+        "to": "/wiki-img/"
+      }
+    ]
+  },
+  "slots": [
+    {
+      "key": "qb",
+      "label": "QB",
+      "type": "player",
+      "positions": [
+        "QB"
+      ],
+      "weight": 1.25,
+      "x": 50,
+      "y": 54
+    },
+    {
+      "key": "rb",
+      "label": "RB",
+      "type": "player",
+      "positions": [
+        "RB"
+      ],
+      "weight": 1.1,
+      "x": 50,
+      "y": 81
+    },
+    {
+      "key": "wr1",
+      "label": "WR1",
+      "type": "player",
+      "positions": [
+        "WR"
+      ],
+      "weight": 1.1,
+      "x": 14,
+      "y": 56
+    },
+    {
+      "key": "wr2",
+      "label": "WR2",
+      "type": "player",
+      "positions": [
+        "WR"
+      ],
+      "weight": 1,
+      "x": 86,
+      "y": 56
+    },
+    {
+      "key": "te",
+      "label": "TE",
+      "type": "player",
+      "positions": [
+        "TE"
+      ],
+      "weight": 1,
+      "x": 66,
+      "y": 37
+    },
+    {
+      "key": "dl",
+      "label": "DL",
+      "type": "player",
+      "positions": [
+        "DL"
+      ],
+      "weight": 1.05,
+      "x": 34,
+      "y": 37
+    },
+    {
+      "key": "cb",
+      "label": "CB",
+      "type": "player",
+      "positions": [
+        "CB"
+      ],
+      "weight": 1.05,
+      "x": 16,
+      "y": 17
+    },
+    {
+      "key": "s",
+      "label": "S",
+      "type": "player",
+      "positions": [
+        "S"
+      ],
+      "weight": 0.95,
+      "x": 50,
+      "y": 13
+    },
+    {
+      "key": "lb",
+      "label": "LB",
+      "type": "player",
+      "positions": [
+        "LB"
+      ],
+      "weight": 0.95,
+      "x": 84,
+      "y": 17
+    },
+    {
+      "key": "flex",
+      "label": "FLEX",
+      "type": "player",
+      "positions": [
+        "RB",
+        "WR",
+        "TE"
+      ],
+      "weight": 0.9,
+      "x": 86,
+      "y": 84
+    },
+    {
+      "key": "coach",
+      "label": "COACH",
+      "type": "coach",
+      "x": 14,
+      "y": 84
+    }
+  ],
+  "spin": {
+    "cycleHz": 10,
+    "resumeMs": 400,
+    "reelLength": 512
+  },
+  "rarity": {
+    "_comment": "Madden pool histogram is MLB-shaped (deep 65-74 middle: 758 of 1,496), so the MLB band weights carry over. legendMult 0.2 keeps purple pulls rare; legendPity forces one after 18 legend-free stops (gauntlet only).",
+    "bands": [
+      [
+        0,
+        64,
+        1
+      ],
+      [
+        65,
+        74,
+        3.5
+      ],
+      [
+        75,
+        79,
+        5.5
+      ],
+      [
+        80,
+        84,
+        6
+      ],
+      [
+        85,
+        89,
+        5.5
+      ],
+      [
+        90,
+        999,
+        4
+      ]
+    ],
+    "legendMult": 0.2,
+    "legendPity": 18
+  },
+  "coaches": [
+    {
+      "name": "Vince Lombardi",
+      "mod": 5,
+      "era": "60s",
+      "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Vince_Lombardi_%281913-1970%29_in_1964.jpg/250px-Vince_Lombardi_%281913-1970%29_in_1964.jpg"
+    },
+    {
+      "name": "Bill Belichick",
+      "mod": 5,
+      "era": "00s–20s",
+      "img": "https://upload.wikimedia.org/wikipedia/commons/b/ba/Photo_of_the_Day-_4-20_%2834163554775%29_%28cropped%29.jpg"
+    },
+    {
+      "name": "Bill Walsh",
+      "mod": 5,
+      "era": "80s",
+      "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/Walsh_and_tomey.jpg/250px-Walsh_and_tomey.jpg"
+    },
+    {
+      "name": "Don Shula",
+      "mod": 4,
+      "era": "70s–90s",
+      "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/43/Don-Shula_USO-Tour-USS-Reagan-Address_July-13-2009.jpg/250px-Don-Shula_USO-Tour-USS-Reagan-Address_July-13-2009.jpg"
+    },
+    {
+      "name": "Chuck Noll",
+      "mod": 4,
+      "era": "70s",
+      "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Chuck_Noll_1954.jpg/250px-Chuck_Noll_1954.jpg"
+    },
+    {
+      "name": "Tom Landry",
+      "mod": 4,
+      "era": "60s–80s",
+      "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ad/Tom_Landry_Jan_1997.jpg/250px-Tom_Landry_Jan_1997.jpg"
+    },
+    {
+      "name": "George Halas",
+      "mod": 4,
+      "era": "Papa Bear",
+      "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5b/George_Halas_in_1918.jpg/250px-George_Halas_in_1918.jpg"
+    },
+    {
+      "name": "Paul Brown",
+      "mod": 4,
+      "era": "40s–60s",
+      "img": null
+    },
+    {
+      "name": "John Madden",
+      "mod": 4,
+      "era": "Boom!",
+      "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/75/John_Madden_in_2007.jpg/250px-John_Madden_in_2007.jpg"
+    },
+    {
+      "name": "Joe Gibbs",
+      "mod": 3,
+      "era": "80s–90s",
+      "img": null
+    },
+    {
+      "name": "Bill Parcells",
+      "mod": 3,
+      "era": "80s–90s",
+      "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/40/Bill_Parcells_%28cropped%29.jpg/250px-Bill_Parcells_%28cropped%29.jpg"
+    },
+    {
+      "name": "Jimmy Johnson",
+      "mod": 3,
+      "era": "90s",
+      "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Jimmy_Johnson_signs_autographs_in_Jan_2014.jpg/250px-Jimmy_Johnson_signs_autographs_in_Jan_2014.jpg"
+    },
+    {
+      "name": "Andy Reid",
+      "mod": 3,
+      "era": "00s–20s",
+      "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/Andy_Reid_%28Kansas_City_Chiefs_at_Washington_Football_Team%2C_October_17%2C_2021%29_%28cropped%29.jpg/250px-Andy_Reid_%28Kansas_City_Chiefs_at_Washington_Football_Team%2C_October_17%2C_2021%29_%28cropped%29.jpg"
+    },
+    {
+      "name": "Mike Shanahan",
+      "mod": 3,
+      "era": "90s–00s",
+      "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/08/Mike_Shanahan_OCT2021_%28cropped%29.jpg/250px-Mike_Shanahan_OCT2021_%28cropped%29.jpg"
+    },
+    {
+      "name": "Tony Dungy",
+      "mod": 3,
+      "era": "00s",
+      "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/26/Tony_Dungy_%282021%29_B.jpg/250px-Tony_Dungy_%282021%29_B.jpg"
+    },
+    {
+      "name": "Bill Cowher",
+      "mod": 3,
+      "era": "90s–00s",
+      "img": "https://upload.wikimedia.org/wikipedia/commons/f/f1/Bill_Cowher.jpg"
+    },
+    {
+      "name": "Mike Tomlin",
+      "mod": 2,
+      "era": "Never below .500",
+      "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/52/Mike_Tomlin.jpg/250px-Mike_Tomlin.jpg"
+    },
+    {
+      "name": "Pete Carroll",
+      "mod": 2,
+      "era": "10s",
+      "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/be/Pete_Carroll%2C_Sept._2025.jpg/250px-Pete_Carroll%2C_Sept._2025.jpg"
+    },
+    {
+      "name": "Sean Payton",
+      "mod": 2,
+      "era": "00s–10s",
+      "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Sean_Payton_2021.jpg/250px-Sean_Payton_2021.jpg"
+    },
+    {
+      "name": "Tom Coughlin",
+      "mod": 2,
+      "era": "00s–10s",
+      "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Army.Coughlin.jpg/250px-Army.Coughlin.jpg"
+    },
+    {
+      "name": "Mike Holmgren",
+      "mod": 2,
+      "era": "90s–00s",
+      "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/Mike_Holmgren_2004.jpg/250px-Mike_Holmgren_2004.jpg"
+    },
+    {
+      "name": "Dick Vermeil",
+      "mod": 2,
+      "era": "Cries when he wins",
+      "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/Dickvermeil.jpg/250px-Dickvermeil.jpg"
+    },
+    {
+      "name": "Sean McVay",
+      "mod": 2,
+      "era": "10s–20s",
+      "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/70/Sean_McVay_2019_%28cropped2%29.jpg/250px-Sean_McVay_2019_%28cropped2%29.jpg"
+    },
+    {
+      "name": "John Harbaugh",
+      "mod": 2,
+      "era": "10s–20s",
+      "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/JohnHarbaugh2009.jpg/250px-JohnHarbaugh2009.jpg"
+    },
+    {
+      "name": "Kyle Shanahan",
+      "mod": 1,
+      "era": "20s",
+      "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9f/Kyle_Shanahan_July_2016.jpg/250px-Kyle_Shanahan_July_2016.jpg"
+    },
+    {
+      "name": "Marv Levy",
+      "mod": 1,
+      "era": "Four straight tries",
+      "img": "https://upload.wikimedia.org/wikipedia/commons/3/3b/Marv_Levy_%28cropped%29.jpg"
+    },
+    {
+      "name": "Bud Grant",
+      "mod": 1,
+      "era": "70s",
+      "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/Bud_Grant_1968.jpg/250px-Bud_Grant_1968.jpg"
+    },
+    {
+      "name": "Dan Campbell",
+      "mod": 1,
+      "era": "Kneecap bites",
+      "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/20/Dan_Campbell.jpg/250px-Dan_Campbell.jpg"
+    },
+    {
+      "name": "Marty Schottenheimer",
+      "mod": 1,
+      "era": "Regular season only",
+      "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a3/MartySchottenheimer8-15-2013.jpg/250px-MartySchottenheimer8-15-2013.jpg"
+    },
+    {
+      "name": "Jeff Fisher",
+      "mod": 0,
+      "era": "7–9",
+      "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/Jeff_Fisher_2014.jpg/250px-Jeff_Fisher_2014.jpg"
+    },
+    {
+      "name": "Jason Garrett",
+      "mod": 0,
+      "era": "👏👏",
+      "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/Dallas_Cowboys_host_baby_shower_%283%29_%28cropped%29.jpg/250px-Dallas_Cowboys_host_baby_shower_%283%29_%28cropped%29.jpg"
+    },
+    {
+      "name": "Rex Ryan",
+      "mod": 0,
+      "era": "Feet-first bravado",
+      "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Rex_Ryan_06112013_2.jpg/250px-Rex_Ryan_06112013_2.jpg"
+    },
+    {
+      "name": "Norv Turner",
+      "mod": 0,
+      "era": "Coordinator forever",
+      "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6d/Norv_Turner_from_Washington_Football_Team_Rookie_Minicamp%2C_at_Inova_Sports_and_Performance_Center%2C_Ashburn%2C_VA%2C_May_15%2C_2021.png/250px-Norv_Turner_from_Washington_Football_Team_Rookie_Minicamp%2C_at_Inova_Sports_and_Performance_Center%2C_Ashburn%2C_VA%2C_May_15%2C_2021.png"
+    },
+    {
+      "name": "Wade Phillips",
+      "mod": 0,
+      "era": "Son of Bum",
+      "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/28/Wade_Phillips.jpg/250px-Wade_Phillips.jpg"
+    },
+    {
+      "name": "Adam Gase",
+      "mod": -1,
+      "era": "The eyes",
+      "img": null
+    },
+    {
+      "name": "The Analytics Intern",
+      "mod": -1,
+      "era": "Went for it on 4th & 9",
+      "img": null
+    },
+    {
+      "name": "The Interim Guy",
+      "mod": -2,
+      "era": "Mid-season",
+      "img": null
+    },
+    {
+      "name": "Player-Coach You",
+      "mod": -3,
+      "era": "Flag league",
+      "img": null
+    },
+    {
+      "name": "Guy From The Tailgate",
+      "mod": -4,
+      "era": "Six beers deep",
+      "img": null
+    },
+    {
+      "name": "The Team Mascot",
+      "mod": -5,
+      "era": "Furry menace",
+      "img": null
+    }
+  ],
+  "bosses": [
+    {
+      "name": "1985 Bears",
+      "rating": 95,
+      "logoId": "chi",
+      "blurb": "The 46 defense. 46–10 wasn't close.",
+      "ability": {
+        "type": "bossElimEdge",
+        "value": 0.1,
+        "desc": "The 46 defense smells blood: Bears +10% in elimination games."
+      }
+    },
+    {
+      "name": "2007 Patriots",
+      "rating": 94,
+      "logoId": "ne",
+      "blurb": "16–0. Fifty touchdowns for Brady.",
+      "ability": {
+        "type": "bossFirstGameEdge",
+        "value": 0.15,
+        "desc": "They've seen your walkthrough tape. Patriots +15% in Game 1."
+      }
+    },
+    {
+      "name": "1972 Dolphins",
+      "rating": 93,
+      "logoId": "mia",
+      "blurb": "17–0. The champagne is on ice.",
+      "ability": {
+        "type": "noPlayerMomentum",
+        "value": 1,
+        "desc": "Perfect teams don't blink. Your desperation boost is switched off."
+      }
+    },
+    {
+      "name": "2016 Patriots",
+      "rating": 93,
+      "logoId": "ne",
+      "blurb": "28–3 means nothing to them.",
+      "ability": {
+        "type": "bossComeback",
+        "value": 0.25,
+        "desc": "They came back from 28–3. Patriots +25% when facing elimination."
+      }
+    },
+    {
+      "name": "1989 49ers",
+      "rating": 92,
+      "logoId": "sf",
+      "blurb": "Montana to Rice, on a loop."
+    },
+    {
+      "name": "1978 Steelers",
+      "rating": 92,
+      "logoId": "pit",
+      "blurb": "The Steel Curtain doesn't move."
+    },
+    {
+      "name": "1992 Cowboys",
+      "rating": 91,
+      "logoId": "dal",
+      "blurb": "The Triplets. How 'bout them Cowboys."
+    },
+    {
+      "name": "2013 Seahawks",
+      "rating": 90,
+      "logoId": "sea",
+      "blurb": "The Legion of Boom eats quarterbacks."
+    },
+    {
+      "name": "1986 Giants",
+      "rating": 90,
+      "logoId": "nyg",
+      "blurb": "LT hunts whoever you start at QB."
+    },
+    {
+      "name": "1996 Packers",
+      "rating": 90,
+      "logoId": "gb",
+      "blurb": "Favre at full gunslinger."
+    },
+    {
+      "name": "2019 Chiefs",
+      "rating": 90,
+      "logoId": "kc",
+      "blurb": "Down 24? Mahomes needs ten minutes."
+    },
+    {
+      "name": "1999 Rams",
+      "rating": 89,
+      "logoId": "lar",
+      "blurb": "The Greatest Show on Turf."
+    },
+    {
+      "name": "1998 Broncos",
+      "rating": 89,
+      "logoId": "den",
+      "blurb": "Elway rides off with the hardware."
+    },
+    {
+      "name": "2000 Ravens",
+      "rating": 88,
+      "logoId": "bal",
+      "blurb": "Ten points a game. That's all you get.",
+      "ability": {
+        "type": "ovrDebuff",
+        "value": 1,
+        "desc": "That defense shortens the game. Your squad plays at -1 overall."
+      }
+    },
+    {
+      "name": "1990 Bills",
+      "rating": 88,
+      "logoId": "buf",
+      "blurb": "The K-Gun never huddles."
+    },
+    {
+      "name": "2017 Eagles",
+      "rating": 87,
+      "logoId": "phi",
+      "blurb": "They will run the Philly Special."
+    }
+  ],
+  "gauntlet": {
+    "_comment": "Same shape as the NBA/MLB gauntlets: one squad, one life, layered map with forks + traveling shops. Each team's `players` are that season's roster for the victory-spoils wheel, rated as they were THAT year (Shannon Sharpe is an 84 on the '00 Ravens and an 88 on the '98 Broncos). img is patched by fetch-squadfoot.js (ESPN identity-verified, Wikipedia portrait fallback).",
+    "title": "THE GAUNTLET",
+    "subtitle": "One squad. One life. Beat them, sign their stars, spend your winnings.",
+    "logoTemplate": "https://a.espncdn.com/i/teamlogos/nfl/500/{id}.png",
+    "economy": {
+      "currency": "$",
+      "gameWin": 5,
+      "seriesWin": 15,
+      "sweep": 10,
+      "upset": 20,
+      "interestPer": 5,
+      "interestCap": 10,
+      "homeEdge": 0.03
+    },
+    "shop": {
+      "items": [
+        {
+          "id": "insurance",
+          "icon": "🛟",
+          "name": "Insurance Policy",
+          "price": 125,
+          "once": true,
+          "desc": "When a loss would end your run, time rewinds to the game that killed you and the series re-flips from there. One use."
+        },
+        {
+          "id": "camp",
+          "icon": "🏋️",
+          "name": "Training Camp",
+          "price": 40,
+          "once": false,
+          "desc": "+2 OVR to one player. Max +4 per player."
+        },
+        {
+          "id": "fa",
+          "icon": "🎰",
+          "name": "Free-Agent Wheel",
+          "price": 50,
+          "once": false,
+          "desc": "Spin the whole league — legends included. Sign who you freeze, somebody gets cut."
+        },
+        {
+          "id": "token2",
+          "icon": "🎟️",
+          "name": "Second-Stop Token",
+          "price": 35,
+          "once": true,
+          "desc": "Your next victory wheel: STOP twice, keep the better freeze."
+        },
+        {
+          "id": "coach",
+          "icon": "📋",
+          "name": "Coaching Carousel",
+          "price": 25,
+          "once": false,
+          "desc": "Respin your coach slot. Could be Lombardi. Could be the Mascot."
+        },
+        {
+          "id": "home",
+          "icon": "🏟️",
+          "name": "Home Field Deed",
+          "price": 45,
+          "once": true,
+          "desc": "Home field the rest of the run — Games 1, 2, 6 and 7 in YOUR stadium, with an edge."
+        },
+        {
+          "id": "rookie",
+          "icon": "🎓",
+          "name": "Draft Workout",
+          "price": 30,
+          "once": true,
+          "desc": "Spin the raw-prospect wheel. Rough now — but he gains +1 for EVERY game you win."
+        }
+      ]
+    },
+    "rookieMaxRating": 64,
+    "relicChance": 0.25,
+    "maxRelics": 3,
+    "relics": [
+      {
+        "id": "ring",
+        "icon": "💍",
+        "name": "The Ring",
+        "desc": "Been there before — +6% win chance in elimination games.",
+        "effect": {
+          "type": "elimEdge",
+          "value": 0.06
+        },
+        "weight": 1
+      },
+      {
+        "id": "rabbit",
+        "icon": "🍀",
+        "name": "Rabbit's Foot",
+        "desc": "Momentum never swings against you.",
+        "effect": {
+          "type": "noMomentumDrag",
+          "value": 1
+        },
+        "weight": 1
+      },
+      {
+        "id": "sparkplug",
+        "icon": "🔥",
+        "name": "The Spark Plug",
+        "desc": "Instant offense off the bench — +2% win chance in every game.",
+        "effect": {
+          "type": "gameEdge",
+          "value": 0.02
+        },
+        "weight": 1
+      },
+      {
+        "id": "sponsor",
+        "icon": "💼",
+        "name": "Sponsor Deal",
+        "desc": "+$3 for every game you win.",
+        "effect": {
+          "type": "gameWinCash",
+          "value": 3
+        },
+        "weight": 3
+      },
+      {
+        "id": "platinum",
+        "icon": "🏦",
+        "name": "Platinum Card",
+        "desc": "Interest cap raised by $10.",
+        "effect": {
+          "type": "interestCap",
+          "value": 10
+        },
+        "weight": 3
+      },
+      {
+        "id": "tickets",
+        "icon": "🎫",
+        "name": "Season Tickets",
+        "desc": "Shop prices 25% off.",
+        "effect": {
+          "type": "shopDiscount",
+          "value": 0.25
+        },
+        "weight": 3
+      },
+      {
+        "id": "hypeman",
+        "icon": "📢",
+        "name": "Hype Man",
+        "desc": "Upset bonuses pay triple.",
+        "effect": {
+          "type": "upsetMult",
+          "value": 3
+        },
+        "weight": 3
+      },
+      {
+        "id": "chemistry",
+        "icon": "🧬",
+        "name": "Locker-Room Chemistry",
+        "desc": "Squad overall +2 in every series.",
+        "effect": {
+          "type": "ovrBoost",
+          "value": 2
+        },
+        "weight": 1
+      },
+      {
+        "id": "jetlag",
+        "icon": "🚀",
+        "name": "Fast Starters",
+        "desc": "+15% win chance in Game 1.",
+        "effect": {
+          "type": "firstGameEdge",
+          "value": 0.15
+        },
+        "weight": 2
+      }
+    ],
+    "layers": [
+      [
+        "bucs76"
+      ],
+      [
+        "patriots01",
+        "giants11"
+      ],
+      [
+        "ravens00"
+      ],
+      "shop",
+      [
+        "cowboys92",
+        "broncos98"
+      ],
+      [
+        "dolphins72"
+      ],
+      [
+        "seahawks13",
+        "niners89"
+      ],
+      "shop",
+      [
+        "patriots07"
+      ],
+      [
+        "bears85"
+      ]
+    ],
+    "teams": {
+      "bucs76": {
+        "name": "1976 Buccaneers",
+        "rating": 74,
+        "abbr": "TB",
+        "logoId": "tb",
+        "blurb": "0–14. The only winless team anyone remembers. A warm-up.",
+        "players": [
+          {
+            "name": "Lee Roy Selmon",
+            "rating": 78,
+            "pos": "DL",
+            "img": null
+          },
+          {
+            "name": "Steve Spurrier",
+            "rating": 65,
+            "pos": "QB",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/Steve_Spurrier_ESPNWeekend2010-056.jpg/250px-Steve_Spurrier_ESPNWeekend2010-056.jpg"
+          },
+          {
+            "name": "Louis Carter",
+            "rating": 66,
+            "pos": "RB",
+            "img": null
+          },
+          {
+            "name": "Morris Owens",
+            "rating": 68,
+            "pos": "WR",
+            "img": null
+          },
+          {
+            "name": "Bob Moore",
+            "rating": 64,
+            "pos": "TE",
+            "img": null
+          },
+          {
+            "name": "Richard Wood",
+            "rating": 70,
+            "pos": "LB",
+            "img": null
+          },
+          {
+            "name": "Mike Washington",
+            "rating": 68,
+            "pos": "CB",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/92/1986_Jeno%27s_Pizza_-_20_-_Cecil_Johnson_%28Mike_Washington_crop%29.jpg/250px-1986_Jeno%27s_Pizza_-_20_-_Cecil_Johnson_%28Mike_Washington_crop%29.jpg"
+          },
+          {
+            "name": "Mark Cotney",
+            "rating": 67,
+            "pos": "S",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/4/48/Mark_Cotney_1982_%28cropped%29.png"
+          },
+          {
+            "name": "Council Rudolph",
+            "rating": 65,
+            "pos": "DL",
+            "img": null
+          }
+        ]
+      },
+      "patriots01": {
+        "name": "2001 Patriots",
+        "rating": 78,
+        "abbr": "NE",
+        "logoId": "ne",
+        "blurb": "A 6th-round pick takes over at QB. Nobody saw it coming.",
+        "players": [
+          {
+            "name": "Tom Brady",
+            "rating": 78,
+            "pos": "QB",
+            "img": "https://a.espncdn.com/i/headshots/nfl/players/full/2330.png"
+          },
+          {
+            "name": "Ty Law",
+            "rating": 84,
+            "pos": "CB",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/Ty_Law.JPG/250px-Ty_Law.JPG"
+          },
+          {
+            "name": "Lawyer Milloy",
+            "rating": 82,
+            "pos": "S",
+            "img": null
+          },
+          {
+            "name": "Troy Brown",
+            "rating": 80,
+            "pos": "WR",
+            "img": null
+          },
+          {
+            "name": "Tedy Bruschi",
+            "rating": 80,
+            "pos": "LB",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6d/Tedy_Bruschi_2010.jpg/250px-Tedy_Bruschi_2010.jpg"
+          },
+          {
+            "name": "Willie McGinest",
+            "rating": 79,
+            "pos": "DL",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cc/Willie_McGinest_at_ESPN_Weekend_2008.jpg/250px-Willie_McGinest_at_ESPN_Weekend_2008.jpg"
+          },
+          {
+            "name": "Mike Vrabel",
+            "rating": 78,
+            "pos": "LB",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/95/Super_Bowl_2008_-_XLII_with_Mike_Vrabel_%28cropped%29.JPG/250px-Super_Bowl_2008_-_XLII_with_Mike_Vrabel_%28cropped%29.JPG"
+          },
+          {
+            "name": "Antowain Smith",
+            "rating": 76,
+            "pos": "RB",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3c/Antowain_Smith_in_2006.jpg/250px-Antowain_Smith_in_2006.jpg"
+          },
+          {
+            "name": "David Patten",
+            "rating": 74,
+            "pos": "WR",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Davidpattenbrowns2009_%28cropped%29.jpg/250px-Davidpattenbrowns2009_%28cropped%29.jpg"
+          },
+          {
+            "name": "Jermaine Wiggins",
+            "rating": 70,
+            "pos": "TE",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Jermaine_Wiggins_%2814538520125%29_%28cropped%29.jpg/250px-Jermaine_Wiggins_%2814538520125%29_%28cropped%29.jpg"
+          }
+        ]
+      },
+      "giants11": {
+        "name": "2011 Giants",
+        "rating": 79,
+        "abbr": "NYG",
+        "logoId": "nyg",
+        "blurb": "9–7 in December. Unbeatable in February.",
+        "players": [
+          {
+            "name": "Jason Pierre-Paul",
+            "rating": 85,
+            "pos": "DL",
+            "img": "https://a.espncdn.com/i/headshots/nfl/players/full/13256.png"
+          },
+          {
+            "name": "Victor Cruz",
+            "rating": 83,
+            "pos": "WR",
+            "img": "https://a.espncdn.com/i/headshots/nfl/players/full/13553.png"
+          },
+          {
+            "name": "Justin Tuck",
+            "rating": 83,
+            "pos": "DL",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Justin_Tuck_at_the_NY_Knicks_vs_Miami_Heat_%28May_2012%29.JPG/250px-Justin_Tuck_at_the_NY_Knicks_vs_Miami_Heat_%28May_2012%29.JPG"
+          },
+          {
+            "name": "Eli Manning",
+            "rating": 82,
+            "pos": "QB",
+            "img": "https://a.espncdn.com/i/headshots/nfl/players/full/5526.png"
+          },
+          {
+            "name": "Hakeem Nicks",
+            "rating": 81,
+            "pos": "WR",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/Hakeem_Nicks.JPG/250px-Hakeem_Nicks.JPG"
+          },
+          {
+            "name": "Osi Umenyiora",
+            "rating": 81,
+            "pos": "DL",
+            "img": null
+          },
+          {
+            "name": "Antrel Rolle",
+            "rating": 78,
+            "pos": "S",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/Antrel_Rolle_2014.jpg/250px-Antrel_Rolle_2014.jpg"
+          },
+          {
+            "name": "Ahmad Bradshaw",
+            "rating": 76,
+            "pos": "RB",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b2/Ahmad_Bradshaw_%2838947238651%29_%28cropped%29.jpg/250px-Ahmad_Bradshaw_%2838947238651%29_%28cropped%29.jpg"
+          },
+          {
+            "name": "Corey Webster",
+            "rating": 76,
+            "pos": "CB",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/10/Corey_Webster_stretch.jpg/250px-Corey_Webster_stretch.jpg"
+          },
+          {
+            "name": "Jake Ballard",
+            "rating": 70,
+            "pos": "TE",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5b/Jake_Ballard.jpg/250px-Jake_Ballard.jpg"
+          }
+        ]
+      },
+      "ravens00": {
+        "name": "2000 Ravens",
+        "rating": 84,
+        "abbr": "BAL",
+        "logoId": "bal",
+        "blurb": "Ten points a game allowed. That's all you get.",
+        "ability": {
+          "type": "ovrDebuff",
+          "value": 1,
+          "desc": "That defense shortens the game. Your squad plays at -1 overall."
+        },
+        "players": [
+          {
+            "name": "Ray Lewis",
+            "rating": 97,
+            "pos": "LB",
+            "img": "https://a.espncdn.com/i/headshots/nfl/players/full/964.png"
+          },
+          {
+            "name": "Rod Woodson",
+            "rating": 88,
+            "pos": "S",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/4/41/Rod_Woodson_20010607-4.jpg"
+          },
+          {
+            "name": "Chris McAlister",
+            "rating": 84,
+            "pos": "CB",
+            "img": null
+          },
+          {
+            "name": "Shannon Sharpe",
+            "rating": 84,
+            "pos": "TE",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Shannon_Sharpe_at_Super_Bowl_XLI_pre-game_show_in_Miami.jpg/250px-Shannon_Sharpe_at_Super_Bowl_XLI_pre-game_show_in_Miami.jpg"
+          },
+          {
+            "name": "Sam Adams",
+            "rating": 84,
+            "pos": "DL",
+            "img": null
+          },
+          {
+            "name": "Peter Boulware",
+            "rating": 83,
+            "pos": "LB",
+            "img": null
+          },
+          {
+            "name": "Jamal Lewis",
+            "rating": 80,
+            "pos": "RB",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e7/Jamal_Lewis.jpg/250px-Jamal_Lewis.jpg"
+          },
+          {
+            "name": "Tony Siragusa",
+            "rating": 80,
+            "pos": "DL",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/17/Tony_Siragusa.jpg/250px-Tony_Siragusa.jpg"
+          },
+          {
+            "name": "Qadry Ismail",
+            "rating": 74,
+            "pos": "WR",
+            "img": null
+          },
+          {
+            "name": "Trent Dilfer",
+            "rating": 68,
+            "pos": "QB",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d5/Trent_Dilfer_49ers.jpg/250px-Trent_Dilfer_49ers.jpg"
+          }
+        ]
+      },
+      "cowboys92": {
+        "name": "1992 Cowboys",
+        "rating": 87,
+        "abbr": "DAL",
+        "logoId": "dal",
+        "blurb": "The Triplets. How 'bout them Cowboys.",
+        "players": [
+          {
+            "name": "Emmitt Smith",
+            "rating": 93,
+            "pos": "RB",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/EmmittSmith2007.jpg/250px-EmmittSmith2007.jpg"
+          },
+          {
+            "name": "Michael Irvin",
+            "rating": 91,
+            "pos": "WR",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/Michael_Irvin.jpg/250px-Michael_Irvin.jpg"
+          },
+          {
+            "name": "Troy Aikman",
+            "rating": 89,
+            "pos": "QB",
+            "img": null
+          },
+          {
+            "name": "Charles Haley",
+            "rating": 88,
+            "pos": "DL",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/Charles_Haley.jpg/250px-Charles_Haley.jpg"
+          },
+          {
+            "name": "Ken Norton Jr.",
+            "rating": 84,
+            "pos": "LB",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/34/Ken_Norton_Jr._2025.jpg/250px-Ken_Norton_Jr._2025.jpg"
+          },
+          {
+            "name": "Darren Woodson",
+            "rating": 82,
+            "pos": "S",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a4/Darren_Woodson_at_380th_AEW.jpg/250px-Darren_Woodson_at_380th_AEW.jpg"
+          },
+          {
+            "name": "Jay Novacek",
+            "rating": 82,
+            "pos": "TE",
+            "img": null
+          },
+          {
+            "name": "Russell Maryland",
+            "rating": 79,
+            "pos": "DL",
+            "img": null
+          },
+          {
+            "name": "Alvin Harper",
+            "rating": 76,
+            "pos": "WR",
+            "img": null
+          },
+          {
+            "name": "Larry Brown",
+            "rating": 74,
+            "pos": "CB",
+            "img": null
+          }
+        ]
+      },
+      "broncos98": {
+        "name": "1998 Broncos",
+        "rating": 89,
+        "abbr": "DEN",
+        "logoId": "den",
+        "blurb": "Elway rides off with back-to-back rings.",
+        "players": [
+          {
+            "name": "Terrell Davis",
+            "rating": 95,
+            "pos": "RB",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Terrell_Davis_1-31-05_050131-N-8102J-020.jpg/250px-Terrell_Davis_1-31-05_050131-N-8102J-020.jpg"
+          },
+          {
+            "name": "John Elway",
+            "rating": 90,
+            "pos": "QB",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/71/John_Elway.jpg/250px-John_Elway.jpg"
+          },
+          {
+            "name": "Shannon Sharpe",
+            "rating": 88,
+            "pos": "TE",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Shannon_Sharpe_at_Super_Bowl_XLI_pre-game_show_in_Miami.jpg/250px-Shannon_Sharpe_at_Super_Bowl_XLI_pre-game_show_in_Miami.jpg"
+          },
+          {
+            "name": "Steve Atwater",
+            "rating": 86,
+            "pos": "S",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/be/Steve_Atwater_%28250130-M-LM126-1122%29_%28cropped%29.jpg/250px-Steve_Atwater_%28250130-M-LM126-1122%29_%28cropped%29.jpg"
+          },
+          {
+            "name": "Rod Smith",
+            "rating": 84,
+            "pos": "WR",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/11/Rod_Smith_%28American_football%29.JPG/250px-Rod_Smith_%28American_football%29.JPG"
+          },
+          {
+            "name": "Bill Romanowski",
+            "rating": 83,
+            "pos": "LB",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/1/13/Bill_Romanowski.jpg"
+          },
+          {
+            "name": "Ed McCaffrey",
+            "rating": 82,
+            "pos": "WR",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/32/Ed_McCaffrey_1.jpg/250px-Ed_McCaffrey_1.jpg"
+          },
+          {
+            "name": "Neil Smith",
+            "rating": 82,
+            "pos": "DL",
+            "img": null
+          },
+          {
+            "name": "Ray Crockett",
+            "rating": 76,
+            "pos": "CB",
+            "img": null
+          },
+          {
+            "name": "Howard Griffith",
+            "rating": 72,
+            "pos": "RB",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3b/2026-0119_CFP_NCG_pregame_-_Howard_Griffith.jpeg/250px-2026-0119_CFP_NCG_pregame_-_Howard_Griffith.jpeg"
+          }
+        ]
+      },
+      "dolphins72": {
+        "name": "1972 Dolphins",
+        "rating": 90,
+        "abbr": "MIA",
+        "logoId": "mia",
+        "blurb": "17–0. The champagne is on ice.",
+        "ability": {
+          "type": "noPlayerMomentum",
+          "value": 1,
+          "desc": "Perfect teams don't blink. Your desperation boost is switched off."
+        },
+        "players": [
+          {
+            "name": "Larry Csonka",
+            "rating": 90,
+            "pos": "RB",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Larry_Csonka_1972.jpg/250px-Larry_Csonka_1972.jpg"
+          },
+          {
+            "name": "Paul Warfield",
+            "rating": 90,
+            "pos": "WR",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/6/63/Paul_Warfield_2013.jpg"
+          },
+          {
+            "name": "Bob Griese",
+            "rating": 86,
+            "pos": "QB",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/Bob_Griese_with_soldier_CROP.jpg/250px-Bob_Griese_with_soldier_CROP.jpg"
+          },
+          {
+            "name": "Nick Buoniconti",
+            "rating": 86,
+            "pos": "LB",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/7/71/Nick_Buoniconti.jpg"
+          },
+          {
+            "name": "Jake Scott",
+            "rating": 85,
+            "pos": "S",
+            "img": "https://a.espncdn.com/i/headshots/nfl/players/full/5666.png"
+          },
+          {
+            "name": "Mercury Morris",
+            "rating": 84,
+            "pos": "RB",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d5/Mercury_Morris_2013.jpg/250px-Mercury_Morris_2013.jpg"
+          },
+          {
+            "name": "Manny Fernandez",
+            "rating": 84,
+            "pos": "DL",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/56/Manny_Fernandez_1967.jpeg/250px-Manny_Fernandez_1967.jpeg"
+          },
+          {
+            "name": "Dick Anderson",
+            "rating": 83,
+            "pos": "S",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/37/Dick_Anderson_at_2014_MIFF.jpg/250px-Dick_Anderson_at_2014_MIFF.jpg"
+          },
+          {
+            "name": "Bill Stanfill",
+            "rating": 82,
+            "pos": "DL",
+            "img": null
+          },
+          {
+            "name": "Jim Kiick",
+            "rating": 78,
+            "pos": "RB",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/b/ba/1986_Jeno%27s_Pizza_-_33_-_Jim_Kiick_%28Jim_Kiick_crop%29.jpg"
+          }
+        ]
+      },
+      "seahawks13": {
+        "name": "2013 Seahawks",
+        "rating": 91,
+        "abbr": "SEA",
+        "logoId": "sea",
+        "blurb": "The Legion of Boom eats quarterbacks.",
+        "players": [
+          {
+            "name": "Richard Sherman",
+            "rating": 94,
+            "pos": "CB",
+            "img": "https://a.espncdn.com/i/headshots/nfl/players/full/14086.png"
+          },
+          {
+            "name": "Earl Thomas",
+            "rating": 93,
+            "pos": "S",
+            "img": "https://a.espncdn.com/i/headshots/nfl/players/full/13251.png"
+          },
+          {
+            "name": "Marshawn Lynch",
+            "rating": 92,
+            "pos": "RB",
+            "img": "https://a.espncdn.com/i/headshots/nfl/players/full/10456.png"
+          },
+          {
+            "name": "Bobby Wagner",
+            "rating": 89,
+            "pos": "LB",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/Bobby_Wagner_-_2025_Commanders_at_Chargers_%28cropped%29.jpg/250px-Bobby_Wagner_-_2025_Commanders_at_Chargers_%28cropped%29.jpg"
+          },
+          {
+            "name": "Kam Chancellor",
+            "rating": 89,
+            "pos": "S",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/99/Kam_Chancellor_2014_2.jpg/250px-Kam_Chancellor_2014_2.jpg"
+          },
+          {
+            "name": "Russell Wilson",
+            "rating": 87,
+            "pos": "QB",
+            "img": "https://a.espncdn.com/i/headshots/nfl/players/full/14881.png"
+          },
+          {
+            "name": "Michael Bennett",
+            "rating": 84,
+            "pos": "DL",
+            "img": null
+          },
+          {
+            "name": "Cliff Avril",
+            "rating": 82,
+            "pos": "DL",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/99/Cliff_Avril_2014.JPG/250px-Cliff_Avril_2014.JPG"
+          },
+          {
+            "name": "Doug Baldwin",
+            "rating": 79,
+            "pos": "WR",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a0/Doug_Baldwin_%28American_football%29.JPG/250px-Doug_Baldwin_%28American_football%29.JPG"
+          },
+          {
+            "name": "Golden Tate",
+            "rating": 78,
+            "pos": "WR",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/Golden_Tate_vs._Rams_2013.jpg/250px-Golden_Tate_vs._Rams_2013.jpg"
+          }
+        ]
+      },
+      "niners89": {
+        "name": "1989 49ers",
+        "rating": 93,
+        "abbr": "SF",
+        "logoId": "sf",
+        "blurb": "Montana to Rice, on a loop.",
+        "players": [
+          {
+            "name": "Joe Montana",
+            "rating": 97,
+            "pos": "QB",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/8/8c/Joe_Montana_ESPN_cropped2.jpg"
+          },
+          {
+            "name": "Jerry Rice",
+            "rating": 97,
+            "pos": "WR",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fb/Jerry_Rice.jpg/250px-Jerry_Rice.jpg"
+          },
+          {
+            "name": "Ronnie Lott",
+            "rating": 93,
+            "pos": "S",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/a/ac/Ronnie_Lott.jpg"
+          },
+          {
+            "name": "Roger Craig",
+            "rating": 88,
+            "pos": "RB",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e8/Roger_Craig_at_Super_Bowl_43.jpg/250px-Roger_Craig_at_Super_Bowl_43.jpg"
+          },
+          {
+            "name": "Charles Haley",
+            "rating": 86,
+            "pos": "DL",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/Charles_Haley.jpg/250px-Charles_Haley.jpg"
+          },
+          {
+            "name": "John Taylor",
+            "rating": 84,
+            "pos": "WR",
+            "img": null
+          },
+          {
+            "name": "Michael Carter",
+            "rating": 80,
+            "pos": "DL",
+            "img": null
+          },
+          {
+            "name": "Brent Jones",
+            "rating": 78,
+            "pos": "TE",
+            "img": null
+          },
+          {
+            "name": "Don Griffin",
+            "rating": 76,
+            "pos": "CB",
+            "img": null
+          },
+          {
+            "name": "Matt Millen",
+            "rating": 74,
+            "pos": "LB",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c9/Matt_Millen_NFL_Network.jpg/250px-Matt_Millen_NFL_Network.jpg"
+          }
+        ]
+      },
+      "patriots07": {
+        "name": "2007 Patriots",
+        "rating": 96,
+        "abbr": "NE",
+        "logoId": "ne",
+        "blurb": "16–0 in the regular season. Fifty touchdowns.",
+        "ability": {
+          "type": "bossFirstGameEdge",
+          "value": 0.15,
+          "desc": "They've seen your walkthrough tape. Patriots +15% in Game 1."
+        },
+        "players": [
+          {
+            "name": "Tom Brady",
+            "rating": 98,
+            "pos": "QB",
+            "img": "https://a.espncdn.com/i/headshots/nfl/players/full/2330.png"
+          },
+          {
+            "name": "Randy Moss",
+            "rating": 97,
+            "pos": "WR",
+            "img": "https://a.espncdn.com/i/headshots/nfl/players/full/1433.png"
+          },
+          {
+            "name": "Wes Welker",
+            "rating": 88,
+            "pos": "WR",
+            "img": "https://a.espncdn.com/i/headshots/nfl/players/full/5941.png"
+          },
+          {
+            "name": "Vince Wilfork",
+            "rating": 88,
+            "pos": "DL",
+            "img": "https://a.espncdn.com/i/headshots/nfl/players/full/5546.png"
+          },
+          {
+            "name": "Asante Samuel",
+            "rating": 86,
+            "pos": "CB",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d1/Asante-Samuel-2008-Camp-Military-Appreciation.jpg/250px-Asante-Samuel-2008-Camp-Military-Appreciation.jpg"
+          },
+          {
+            "name": "Mike Vrabel",
+            "rating": 85,
+            "pos": "LB",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/95/Super_Bowl_2008_-_XLII_with_Mike_Vrabel_%28cropped%29.JPG/250px-Super_Bowl_2008_-_XLII_with_Mike_Vrabel_%28cropped%29.JPG"
+          },
+          {
+            "name": "Rodney Harrison",
+            "rating": 84,
+            "pos": "S",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ad/Rodney_Harrison.jpg/250px-Rodney_Harrison.jpg"
+          },
+          {
+            "name": "Tedy Bruschi",
+            "rating": 82,
+            "pos": "LB",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6d/Tedy_Bruschi_2010.jpg/250px-Tedy_Bruschi_2010.jpg"
+          },
+          {
+            "name": "Laurence Maroney",
+            "rating": 76,
+            "pos": "RB",
+            "img": null
+          },
+          {
+            "name": "Kevin Faulk",
+            "rating": 75,
+            "pos": "RB",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3d/Kevin_Faulk_2009.jpg/250px-Kevin_Faulk_2009.jpg"
+          }
+        ]
+      },
+      "bears85": {
+        "name": "1985 Bears",
+        "rating": 100,
+        "abbr": "CHI",
+        "logoId": "chi",
+        "blurb": "The final boss. 46–10 wasn't close.",
+        "ability": {
+          "type": "bossElimEdge",
+          "value": 0.1,
+          "desc": "The 46 defense smells blood: Bears +10% in elimination games."
+        },
+        "players": [
+          {
+            "name": "Walter Payton",
+            "rating": 98,
+            "pos": "RB",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cc/1986_Jeno%27s_Pizza_-_12_-_Walter_Payton_%28Walter_Payton_crop%29.jpg/250px-1986_Jeno%27s_Pizza_-_12_-_Walter_Payton_%28Walter_Payton_crop%29.jpg"
+          },
+          {
+            "name": "Mike Singletary",
+            "rating": 95,
+            "pos": "LB",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/61/Mike_Singletary_at_49ers_Family_Day_2009_2.JPG/250px-Mike_Singletary_at_49ers_Family_Day_2009_2.JPG"
+          },
+          {
+            "name": "Richard Dent",
+            "rating": 94,
+            "pos": "DL",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/Richard_Dent_%28250130-M-LM126-1263%29_%28cropped%29.jpg/250px-Richard_Dent_%28250130-M-LM126-1263%29_%28cropped%29.jpg"
+          },
+          {
+            "name": "Dan Hampton",
+            "rating": 92,
+            "pos": "DL",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b4/Dan_Hampton.JPG/250px-Dan_Hampton.JPG"
+          },
+          {
+            "name": "Wilber Marshall",
+            "rating": 90,
+            "pos": "LB",
+            "img": null
+          },
+          {
+            "name": "Otis Wilson",
+            "rating": 88,
+            "pos": "LB",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Otis_Wilson.jpg/250px-Otis_Wilson.jpg"
+          },
+          {
+            "name": "Jim McMahon",
+            "rating": 84,
+            "pos": "QB",
+            "img": "https://upload.wikimedia.org/wikipedia/commons/4/48/Jim_McMahon_%28cropped%29_%281%29.jpg"
+          },
+          {
+            "name": "Willie Gault",
+            "rating": 84,
+            "pos": "WR",
+            "img": null
+          },
+          {
+            "name": "Gary Fencik",
+            "rating": 84,
+            "pos": "S",
+            "img": null
+          },
+          {
+            "name": "William Perry",
+            "rating": 80,
+            "pos": "DL",
+            "img": null
+          }
+        ]
+      }
+    },
+    "rental": {
+      "_comment": "🪪 Rent-A-Ring-Chaser — Game 7 only (gauntlet): pay price and a hired gun rated ≥ minRating suits up for the winner-take-all game, replacing your weakest eligible slot for that ONE game. Everyone eligible — legends included — at EQUAL odds. Gone after the final whistle, win or lose.",
+      "price": 100,
+      "minRating": 90
+    }
+  },
+  "bossSim": {
+    "_comment": "Same engine constants as the NBA/MLB games (tuned for first-to-4 series pacing, not sport flavor). comeback.hero: if Tom Brady is on YOUR squad, the down-3-1 boost doubles — the man was down 28-3.",
+    "perGameSlope": 0.04,
+    "momentum": 0.09,
+    "minProb": 0.1,
+    "maxProb": 0.9,
+    "comeback": {
+      "boost": 0.1,
+      "heroBoost": 0.2,
+      "hero": "Tom Brady"
+    }
+  },
+  "teamColors": {
+    "ARI": "#97233F",
+    "ATL": "#A71930",
+    "BAL": "#241773",
+    "BUF": "#00338D",
+    "CAR": "#0085CA",
+    "CHI": "#0B162A",
+    "CIN": "#FB4F14",
+    "CLE": "#311D00",
+    "DAL": "#041E42",
+    "DEN": "#002244",
+    "DET": "#0076B6",
+    "GB": "#203731",
+    "HOU": "#03202F",
+    "IND": "#002C5F",
+    "JAX": "#006778",
+    "KC": "#E31837",
+    "LV": "#101820",
+    "LAC": "#0080C6",
+    "LAR": "#003594",
+    "MIA": "#008E97",
+    "MIN": "#4F2683",
+    "NE": "#002244",
+    "NO": "#101820",
+    "NYG": "#0B2265",
+    "NYJ": "#125740",
+    "PHI": "#004C54",
+    "PIT": "#FFB612",
+    "SF": "#AA0000",
+    "SEA": "#69BE28",
+    "TB": "#D50A0A",
+    "TEN": "#0C2340",
+    "WAS": "#5A1414",
+    "FA": "#5b636e"
+  },
+  "tiers": {
+    "bands": [
+      {
+        "min": 85,
+        "key": "diamond",
+        "emoji": "🟦"
+      },
+      {
+        "min": 80,
+        "key": "gold",
+        "emoji": "🟨"
+      },
+      {
+        "min": 75,
+        "key": "silver",
+        "emoji": "⬜"
+      },
+      {
+        "min": 65,
+        "key": "bronze",
+        "emoji": "🟫"
+      },
+      {
+        "min": 0,
+        "key": "grey",
+        "emoji": "⬛"
+      }
+    ],
+    "legendEmoji": "🟪"
+  },
+  "dailySeedPrefix": "pl-daily-",
+  "dailySeedSuffix": "-squadfoot-v1"
+}

@@ -255,6 +255,14 @@ async function patchConfigImgs() {
       await new Promise(r => setTimeout(r, 100));
     }
   }
+  // coaches too (baseball patched its managers the same way) — novelty coaches are
+  // authored with img:null and skipped; real ones get the Wikipedia portrait
+  for (const c of (cfg.coaches || [])) {
+    if (c.img !== undefined) continue;
+    c.img = await verifyEspn(c.name, undefined);
+    c.img ? hits++ : misses++;
+    await new Promise(r => setTimeout(r, 100));
+  }
   fs.writeFileSync(CFG_FILE, JSON.stringify(cfg, null, 2) + '\n');
   console.log(`config roster imgs: ${hits} verified, ${misses} initials-fallback`);
 }
