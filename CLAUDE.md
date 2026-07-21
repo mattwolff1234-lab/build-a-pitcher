@@ -345,6 +345,17 @@ append-only `coin_ledger` whose UNIQUE `ref` is the idempotency key for every mo
   webhook sends a **Resend welcome email** on first subscribe (`pro_welcomed` dedupe, no-op until
   `RESEND_API_KEY` env — setup steps in GO-LIVE.md).
 
+## SEO metadata pass (2026-07-21)
+Search-tuned `<title>` + `meta description` + `rel=canonical` on all 20 routed pages, plus
+`sitemap.xml` (20 URLs) + a Sitemap line in robots.txt. Language chosen from SERP research
+(career simulator · player builder · create a player · GM game · free browser · daily) and
+GA4 priorities (batting > pitching > hoops > home; organic = 36% of sessions). **Canonicals
+point at `goat-lab.app`** — both domains serve identical content, so this starts consolidating
+authority onto the brand domain (reversible: swap the canonical hrefs + sitemap host).
+og:title/og:description are kept in sync. gen-versus-cfb.js carries the meta through regens
+(title/desc soft transforms + the `/versus-hoops` blanket count is now 5). New pages: copy the
+head pattern + add a sitemap line. GSC: both domains verified 2026-07-21; submit sitemap.xml.
+
 ## Career simulation (shipped)
 
 After the draft: **name the pitcher, pick a team, and "Simulate Career"** → a season-by-season

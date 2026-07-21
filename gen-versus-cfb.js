@@ -307,7 +307,7 @@ must(`game: 'baller', role: 'hooper'`, `game: 'cfb', role: 'cfb'`, 1);   // pvpL
 must(`role: 'hooper'`, `role: 'cfb'`, 1);          // pendingResult (the pvpLock one already swapped)
 must(`action=ghost&game=baller&min=87&max=95`, `action=ghost&game=cfb&min=80&max=99`, 1);
 must(`if (!b || b.game !== 'baller'){`, `if (!b || b.game !== 'cfb'){`, 1);   // ?gb= build challenge guard
-must(`/versus-hoops`, `/versus-cfb`, 4);            // challenge-share links + dev-harness comments
+must(`/versus-hoops`, `/versus-cfb`, 5);            // challenge-share links + dev-harness comments + canonical tag
 must(`let statsView = 'hoops';`, `let statsView = 'cfb';`, 1);
 soft(`statsView==='hoops'?'🏀 Hoops':'⚾ Baseball'`, `'🏈 College FB'`);
 soft(`game: 'versus_hoops'`, `game: 'versus_cfb'`);          // gtag events (all)
@@ -318,6 +318,11 @@ soft(`        <button class="stab active" data-sport="hoops">🏀 Hoops</button>
      `        <button class="stab active" data-sport="cfb">🏈 College FB</button>`);
 
 /* ---------- T: copy / title / brand ---------- */
+// SEO metadata (2026-07-21 search-tuned heads) — keep these in sync with versus-hoops.html
+soft(`<title>1v1 Basketball Face Off — Live NBA Build Battles | GoatLab</title>`,
+     `<title>1v1 College Football Face Off — Live CFB Build Battles | GoatLab</title>`);
+soft(`Live 1v1 hoops: build your NBA player against a real opponent under the shot clock and settle it on the court. Free ranked browser game with an Elo ladder.`,
+     `Live 1v1 college football: both players build the same position under the clock — higher overall takes the game. Free ranked browser game with an Elo ladder.`);
 soft(`<title>Hoops Face Off · GoatLab 1v1</title>`, `<title>College Football Face Off · GoatLab 1v1</title>`);
 soft(`Build your hooper fast - highest Overall wins the 1-on-1.`,
      `Build your QB, RB or WR fast - highest Overall wins the 1-on-1.`);

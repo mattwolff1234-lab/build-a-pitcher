@@ -11,3 +11,5 @@ Allow: /
 
 User-agent: Mediapartners-Google
 Allow: /
+
+Sitemap: https://goat-lab.app/sitemap.xml
