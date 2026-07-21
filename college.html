@@ -472,6 +472,16 @@
   .draft-skip { margin-top:28px; font-size:11px; color:var(--dim); letter-spacing:2px; text-transform:uppercase;
     pointer-events:none; opacity:0; transition:opacity .4s; }
   .draft-skip.show { opacity:.55; }
+  .hat-row { display:none; gap:10px; justify-content:center; flex-wrap:wrap; margin:18px 0 4px; }
+  .hat-row.show { display:flex; }
+  .hat-btn { display:flex; flex-direction:column; align-items:center; gap:6px; min-width:104px; max-width:150px;
+    padding:12px 10px 10px; border-radius:14px; border:1px solid #2a3648; cursor:pointer; color:var(--ink);
+    font-family:'Oswald',sans-serif; letter-spacing:.5px; transition:transform .15s ease; }
+  .hat-btn:hover { transform:translateY(-3px); }
+  .hat-cap { font-size:26px; line-height:1; }
+  .hat-name { font-size:13px; text-transform:uppercase; }
+  .hat-ivy { font-size:9px; letter-spacing:2px; color:#ffd23f; }
+  .hat-btn .team-logo img { width:26px; height:26px; }
   /* cinematic stage: spotlight + confetti (elements created by runDraftAnimation) */
   .draft-spot { position:absolute; top:-25%; left:50%; margin-left:-23vmax; width:46vmax; height:150%;
     pointer-events:none; opacity:0;
@@ -1430,6 +1440,9 @@ async function init() {
   try {
     const res = await fetch('cfb.json');
     CFB = await res.json();
+    // Ivy League: choosable Signing Day schools only — never in the player pool (EA's
+    // data is FBS-only). Injected page-side so a fetch-cfb.js regen can't wipe them.
+    for (const nm of Object.keys(IVY_TEAMS)) if (!CFB.teams[nm]) CFB.teams[nm] = IVY_TEAMS[nm];
   } catch (e) {
     $('loading').textContent = 'Could not load cfb.json. Run "node fetch-cfb.js" first and serve over http.';
     return;
@@ -2797,8 +2810,22 @@ const BLUE_BLOODS = new Set(['Alabama', 'Georgia', 'Ohio State', 'Michigan', 'Te
 function schoolPrestige(name) {
   if (BLUE_BLOODS.has(name)) return 0.14;
   const t = CFB.teams[name];
+  if (t && t.ivy) return -0.08;   // FCS football, no athletic scholarships — a brutal road
   return t && t.color ? 0.05 : -0.03;
 }
+
+// Ivy League — hand-authored Signing Day wildcard schools (crests via ESPN's open CDN,
+// ids verified against site.api.espn.com; colors are each school's official primary).
+const IVY_TEAMS = {
+  Harvard:   { color: '#990000', ivy: true, img: 'https://a.espncdn.com/i/teamlogos/ncaa/500/108.png' },
+  Yale:      { color: '#004a81', ivy: true, img: 'https://a.espncdn.com/i/teamlogos/ncaa/500/43.png' },
+  Princeton: { color: '#ff6000', ivy: true, img: 'https://a.espncdn.com/i/teamlogos/ncaa/500/163.png' },
+  Penn:      { color: '#082a74', ivy: true, img: 'https://a.espncdn.com/i/teamlogos/ncaa/500/219.png' },
+  Brown:     { color: '#411e09', ivy: true, img: 'https://a.espncdn.com/i/teamlogos/ncaa/500/225.png' },
+  Columbia:  { color: '#7ba4db', ivy: true, img: 'https://a.espncdn.com/i/teamlogos/ncaa/500/171.png' },
+  Cornell:   { color: '#b31b1b', ivy: true, img: 'https://a.espncdn.com/i/teamlogos/ncaa/500/172.png' },
+  Dartmouth: { color: '#005730', ivy: true, img: 'https://a.espncdn.com/i/teamlogos/ncaa/500/159.png' },
+};
 
 /* ---- mid-career decision events (college edition) --------------------------
    Same engine as the other games: a separate |cfb-decisions-v1 stream plans which events
@@ -3095,7 +3122,7 @@ function simulateCareer(filled, finalOvr, school, choices) {
                                : ['First Round', 'Quarterfinal', 'Semifinal', 'National Championship'];
       const pGame = clamp(0.50 + curPrestige * 0.9 + (warScore - 8) * 0.022 + (5 - Math.min(seed, 5)) * 0.015, 0.30, 0.80);
       const bbPool = [...BLUE_BLOODS].filter(t => t !== curSchool && CFB.teams[t]);
-      const anyPool = Object.keys(CFB.teams).filter(t => t !== curSchool);
+      const anyPool = Object.keys(CFB.teams).filter(t => t !== curSchool && !CFB.teams[t].ivy);
       const oppPick = () => (rng() < 0.6 && bbPool.length ? bbPool[Math.floor(rng() * bbPool.length)] : anyPool[Math.floor(rng() * anyPool.length)]);
       const perGame = () => {
         if (POS.key === 'qb') {
@@ -3144,7 +3171,7 @@ function simulateCareer(filled, finalOvr, school, choices) {
 
     // NIL money (it's 2026 - the bag is real). Stars at brand schools print.
     let nil = (40e3 + Math.max(0, finalOvr - 62) * 30e3) * (1 + yr * 0.45)
-      * (BLUE_BLOODS.has(curSchool) ? 1.7 : (CFB.teams[curSchool] && CFB.teams[curSchool].color) ? 1.15 : 1)
+      * (BLUE_BLOODS.has(curSchool) ? 1.7 : (CFB.teams[curSchool] && CFB.teams[curSchool].ivy) ? 0.55 : (CFB.teams[curSchool] && CFB.teams[curSchool].color) ? 1.15 : 1)
       * (starter ? 1 : 0.25) * clamp(warScore / 8, 0.3, 1.6);
     if (heisman) nil *= 3.2;
     else if (monster || allAmerican) nil *= 1.5;
@@ -3218,31 +3245,37 @@ function starsFor(ovr) { return ovr >= 90 ? 5 : ovr >= 85 ? 4 : ovr >= 78 ? 3 : 
 
 // Signing Day ceremony - the college analog of draft night: hats on the table, the hat grab,
 // crest + school colors. Same GSAP timeline skeleton as the other games' draft reveal.
-function runDraftAnimation({ stars, school, tColor, hitter, ovr, role }, onDone) {
+function runDraftAnimation({ stars, hats, hitter, ovr, role }, onDone) {
   const overlay = $('draftOverlay');
-  const bColor = brightColor(tColor);
   $('draftRoundTag').textContent = stars > 0 ? `${'⭐'.repeat(stars)} ${stars}-Star Recruit` : 'Preferred Walk-On';
   $('draftSelecting').textContent = '';
-  $('draftSelecting').style.color = bColor;
   const reveal = $('draftReveal');
-  const logo = $('drLogo');
-  const logoImg = logo && logo.querySelector('img');
-  if (logo && logoImg) {
-    const logoUrl = teamLogoUrl(school);
-    logo.style.display = logoUrl ? 'inline-grid' : 'none';
-    logoImg.src = logoUrl || '';
-    logoImg.alt = `${school} logo`;
-    logoImg.onerror = () => { logo.style.display = 'none'; };
+  // the reveal card is armed only after a hat is grabbed, in the chosen school's colors
+  function armReveal(school) {
+    const bColor = brightColor(teamColor(school));
+    $('draftSelecting').style.color = bColor;
+    const logo = $('drLogo');
+    const logoImg = logo && logo.querySelector('img');
+    if (logo && logoImg) {
+      const logoUrl = teamLogoUrl(school);
+      logo.style.display = logoUrl ? 'inline-grid' : 'none';
+      logoImg.src = logoUrl || '';
+      logoImg.alt = `${school} logo`;
+      logoImg.onerror = () => { logo.style.display = 'none'; };
+    }
+    $('drTeam').textContent = school.toUpperCase();
+    $('drName').textContent = hitter;
+    $('drName').style.textShadow = `0 0 36px ${bColor}80`;
+    $('drOvr').textContent = `${ovr} OVR`;
+    $('drOvr').style.color = bColor;
+    $('drArch').textContent = role || '';
+    $('drArch').style.background = bColor + '1a';
+    $('drArch').style.border = `1px solid ${bColor}55`;
+    $('drArch').style.color = bColor;
+    reveal.style.cssText = `margin-top:22px; padding:20px 18px 22px; border-radius:16px; border:1px solid ${bColor}66;` +
+      `background:linear-gradient(165deg, ${bColor}24, rgba(10,16,26,.92) 58%); box-shadow:0 24px 70px rgba(0,0,0,.55), 0 0 46px -12px ${bColor}aa;`;
+    return bColor;
   }
-  $('drTeam').textContent = school.toUpperCase();
-  $('drName').textContent = hitter;
-  $('drName').style.textShadow = `0 0 36px ${bColor}80`;
-  $('drOvr').textContent = `${ovr} OVR`;
-  $('drOvr').style.color = bColor;
-  $('drArch').textContent = role || '';
-  $('drArch').style.background = bColor + '1a';
-  $('drArch').style.border = `1px solid ${bColor}55`;
-  $('drArch').style.color = bColor;
   $('draftSkip').classList.remove('show');
 
   const league = overlay.querySelector('.draft-league');
@@ -3258,10 +3291,27 @@ function runDraftAnimation({ stars, school, tColor, hitter, ovr, role }, onDone)
   confetti.innerHTML = '';
   const callText = stars > 0
     ? `Three hats sit on the table. A ${stars}-star ${POS.label.toLowerCase()} leans into the mic...`
-    : `No stars. No offers. One walk-on tryout - and a chip on the shoulder...`;
+    : `No stars. No scholarship. Three walk-on tryouts - and a chip on the shoulder...`;
   call.textContent = '';
-  reveal.style.cssText = `margin-top:22px; padding:20px 18px 22px; border-radius:16px; border:1px solid ${bColor}66;` +
-    `background:linear-gradient(165deg, ${bColor}24, rgba(10,16,26,.92) 58%); box-shadow:0 24px 70px rgba(0,0,0,.55), 0 0 46px -12px ${bColor}aa;`;
+
+  // the three hats — tap one to sign there (the reveal plays in that school's colors)
+  let hatRow = overlay.querySelector('.hat-row');
+  if (!hatRow) { hatRow = document.createElement('div'); hatRow.className = 'hat-row'; selecting.before(hatRow); }
+  hatRow.innerHTML = '';
+  const hatBtns = hats.map((school) => {
+    const b = document.createElement('button');
+    b.className = 'hat-btn';
+    b.dataset.school = school;
+    const c = teamColor(school);
+    b.style.borderColor = c + '88';
+    b.style.background = `linear-gradient(160deg, ${c}2e, rgba(10,16,26,.9))`;
+    b.innerHTML = `<span class="hat-cap">🧢</span>${teamLogoHTML(school, 'sm')}<span class="hat-name">${escapeHTML(school)}</span>${CFB.teams[school] && CFB.teams[school].ivy ? '<span class="hat-ivy">🎓 IVY LEAGUE</span>' : ''}`;
+    b.onclick = (e) => { e.stopPropagation(); pickHat(school); };
+    hatRow.appendChild(b);
+    return b;
+  });
+  gsap.set(hatRow, { opacity: 0 });
+
   gsap.set([league, headline, roundTag, divider, call, selecting, reveal], { opacity: 0, y: 0 });
   gsap.set(spot, { opacity: 0, x: '-38%' });
 
@@ -3275,7 +3325,7 @@ function runDraftAnimation({ stars, school, tColor, hitter, ovr, role }, onDone)
       if (k !== el.__tw) { el.__tw = k; el.textContent = text.slice(0, k); if (k % 3 === 1 && Sound.tick) Sound.tick(0.12); }
     } });
   };
-  const confettiBurst = () => {
+  const confettiBurst = (bColor) => {
     const n = window.innerWidth < 600 ? 30 : 54;
     const colors = [bColor, '#ffd23f', '#ffffff'];
     for (let i = 0; i < n; i++) {
@@ -3300,30 +3350,51 @@ function runDraftAnimation({ stars, school, tColor, hitter, ovr, role }, onDone)
     .to(divider,   { opacity: 1, duration: .5 }, 1.05)
     .to(call,      { opacity: 1, duration: .2 }, 1.3)
     .add(typeText(call, callText, 1.3), 1.35)
-    .add(() => { selecting.textContent = `He's taking his talents to...`; if (Sound.whoosh) Sound.whoosh(); }, 3.0)
-    .fromTo(selecting, { opacity: 0, y: 8, scale: .96 }, { opacity: 1, y: 0, scale: 1, duration: .45, ease: 'power2.out' }, 3.0)
-    .fromTo(reveal, { rotationY: 90, opacity: 0, transformPerspective: 800 }, { rotationY: 0, opacity: 1, duration: .7, ease: 'back.out(1.4)' }, 3.9)
     .add(() => {
-      if (ovr >= 90) Sound.legend(); else if (ovr >= 85) Sound.diamond(); else Sound.gold();
-      confettiBurst();
-      gsap.fromTo(reveal, { scale: .94 }, { scale: 1, duration: .5, ease: 'back.out(2)' });
-    }, 4.0)
-    .add(() => { $('draftSkip').classList.add('show'); }, 4.8);
+      hatRow.classList.add('show');
+      gsap.to(hatRow, { opacity: 1, duration: .25 });
+      gsap.fromTo(hatBtns, { y: 14, opacity: 0, scale: .92 }, { y: 0, opacity: 1, scale: 1, duration: .4, stagger: .12, ease: 'back.out(1.6)' });
+      if (Sound.whoosh) Sound.whoosh();
+    }, 3.0);
 
-  let done = false;
+  let done = false, picked = null, tl2 = null;
+  function pickHat(school) {
+    if (picked || done) return;
+    picked = school;
+    clearTimeout(autoTimer);
+    if (Sound.click) Sound.click();
+    hatBtns.forEach(b => { if (b.dataset.school !== school) gsap.to(b, { opacity: .22, scale: .93, duration: .3 }); });
+    const bColor = armReveal(school);
+    tl2 = gsap.timeline();
+    tl2.add(() => { selecting.textContent = `He's taking his talents to...`; if (Sound.whoosh) Sound.whoosh(); }, 0.4)
+      .fromTo(selecting, { opacity: 0, y: 8, scale: .96 }, { opacity: 1, y: 0, scale: 1, duration: .45, ease: 'power2.out' }, 0.4)
+      .to(hatRow, { opacity: 0, y: -10, duration: .35 }, 1.0)
+      .add(() => { hatRow.classList.remove('show'); hatRow.innerHTML = ''; }, 1.35)
+      .fromTo(reveal, { rotationY: 90, opacity: 0, transformPerspective: 800 }, { rotationY: 0, opacity: 1, duration: .7, ease: 'back.out(1.4)' }, 1.3)
+      .add(() => {
+        if (ovr >= 90) Sound.legend(); else if (ovr >= 85) Sound.diamond(); else Sound.gold();
+        confettiBurst(bColor);
+        gsap.fromTo(reveal, { scale: .94 }, { scale: 1, duration: .5, ease: 'back.out(2)' });
+      }, 1.4)
+      .add(() => { $('draftSkip').classList.add('show'); }, 2.2);
+    overlay.onclick = () => complete();
+    setTimeout(complete, 6800);
+  }
   function complete() {
-    if (done) return;
+    if (done || !picked) return;
     done = true;
     tl.kill();
+    if (tl2) tl2.kill();
     $('draftSkip').classList.remove('show');
     gsap.to(overlay, { opacity: 0, duration: .38, onComplete: () => {
       overlay.classList.remove('show');
       gsap.set(overlay, { opacity: '' });
-      onDone();
+      onDone(picked);
     }});
   }
-  const autoTimer = setTimeout(complete, 7400);
-  overlay.onclick = () => { clearTimeout(autoTimer); complete(); };
+  // left alone long enough: the expected school (hat 1) grabs itself — the old auto-pick
+  const autoTimer = setTimeout(() => pickHat(hats[0]), 24000);
+  overlay.onclick = null;
 }
 
 function countUp(el, to, places, comma) {
@@ -3355,7 +3426,10 @@ function seasonHeadlines(s, idx, total, P, school) {
   if (s.decNote) h.push({ text: s.decNote, big: true });
   if (s.breakout) h.push({ text: `${P} takes over the starting job at ${s.team || school}.`, big: true });
   if (s.monster) h.push({ text: `${P} goes nuclear: <b>${s.line}</b>.`, big: true });
-  if (s.heisman) h.push({ text: `🏆 ${P} strikes the pose in New York - he wins the <b>Heisman Trophy</b>!`, big: true });
+  if (s.heisman) {
+    h.push({ text: `🏆 ${P} strikes the pose in New York - he wins the <b>Heisman Trophy</b>!`, big: true });
+    if (CFB.teams[school] && CFB.teams[school].ivy) h.push({ text: `🎓 An Ivy Leaguer takes the Heisman - first since Princeton's Dick Kazmaier in 1951.`, big: true });
+  }
   else if (s.heismanFinalist) h.push({ text: `${P} gets the invite to New York as a <b>Heisman finalist</b>.` });
   if (s.playoff) h.push({ text: `${school} punches its ticket to the <b>College Football Playoff</b> as the <b>№${s.seed} seed</b>${s.seed <= 4 ? ' (first-round bye)' : ''}.` });
   for (const g of s.cfpGames || []) {
@@ -3363,7 +3437,10 @@ function seasonHeadlines(s, idx, total, P, school) {
     if (g.win) h.push({ text: `🏈 <b>${rd}:</b> ${school} ${g.us}, ${g.opp} ${g.them} - ${P}: <b>${g.line}</b>.`, big: g.round !== 'First Round' });
     else h.push({ text: `💔 <b>${rd}:</b> ${g.opp} ends the run, ${g.them}-${g.us}. ${P}: ${g.line}.`, big: true });
   }
-  if (s.natty) h.push({ text: `💍 Confetti rains - ${school} wins the <b>National Championship</b>!`, big: true });
+  if (s.natty) {
+    h.push({ text: `💍 Confetti rains - ${school} wins the <b>National Championship</b>!`, big: true });
+    if (CFB.teams[school] && CFB.teams[school].ivy) h.push({ text: `🎓 The nerds did it. An <b>Ivy League national champion</b> in the CFP era.`, big: true });
+  }
   else if (s.runnerUp) h.push({ text: `So close. ${school} finishes the year as the <b>national runner-up</b>.`, big: true });
   if (s.confTitle) h.push({ text: `${school} wins the <b>conference championship</b>.` });
   if (s.bowlWin && !s.playoff) h.push({ text: `${school} takes its bowl game behind ${P}.` });
@@ -3386,17 +3463,30 @@ function randomPlayerName() {
 }
 
 
-function pickSchool(rng) {
-  // Signing Day goes to the school with the most players in your build (ties: seeded pick) -
-  // stack a build with Buckeyes and you're going to Columbus.
+function hatOptions(rng) {
+  // Signing Day is now a CHOICE: three hats on the table, seeded from the build so the
+  // same build always offers the same three schools.
+  //   Hat 1 - the school with the most players in your build (ties: seeded pick). Drawn
+  //           with exactly the old auto-pick's rolls, so it IS the pre-choice school and
+  //           doubles as the timeout default.
+  //   Hat 2 - the runner-up school in the build (or a seeded alternative if none).
+  //   Hat 3 - a seeded wildcard from the full FBS list... or, 25% of the time, an Ivy.
   const counts = {};
   for (const s of SLOTS) { const t = state.filled[s.key].team; if (t) counts[t] = (counts[t] || 0) + 1; }
   const names = Object.keys(counts);
-  if (!names.length) { const all = Object.keys(CFB.teams); return all[Math.floor(rng() * all.length)]; }
-  let max = 0;
-  for (const n of names) if (counts[n] > max) max = counts[n];
-  const top = names.filter(n => counts[n] === max);
-  return top[Math.floor(rng() * top.length)];
+  const fbs = Object.keys(CFB.teams).filter(n => !CFB.teams[n].ivy);
+  const draw = (pool) => pool[Math.floor(rng() * pool.length)];
+  let h1;
+  if (!names.length) h1 = draw(fbs);
+  else {
+    let max = 0;
+    for (const n of names) if (counts[n] > max) max = counts[n];
+    h1 = draw(names.filter(n => counts[n] === max));
+  }
+  const runnersUp = names.filter(n => n !== h1).sort((a, b) => counts[b] - counts[a]);
+  const h2 = runnersUp.length ? runnersUp[0] : draw(fbs.filter(n => n !== h1));
+  const h3 = rng() < 0.25 ? draw(Object.keys(IVY_TEAMS)) : draw(fbs.filter(n => n !== h1 && n !== h2));
+  return [h1, h2, h3];
 }
 
 function runCareerPlaythrough() {
@@ -3409,15 +3499,13 @@ function runCareerPlaythrough() {
   const role = positionRole(vals);
   const draftSeed = SLOTS.map(s => `${s.key}:${state.filled[s.key].value}:${state.filled[s.key].name}`).join('|');
   const draftRng = seededRandom(draftSeed + '|cfb-signing-v1');
-  state.draftTeamAb = pickSchool(draftRng);
+  const hats = hatOptions(draftRng);
   const hitter = $('nameInput').value.trim() || 'Your player';
 
   runDraftAnimation({
     stars: starsFor(state.finalOvr),
-    school: state.draftTeamAb,
-    tColor: teamColor(state.draftTeamAb),
-    hitter, ovr: state.finalOvr, role,
-  }, _doCareerSim);
+    hats, hitter, ovr: state.finalOvr, role,
+  }, (school) => { state.draftTeamAb = school; _doCareerSim(); });
 }
 
 // Mid-career decision prompt: a locked overlay (no backdrop/Escape dismissal -
