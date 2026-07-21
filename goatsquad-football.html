@@ -2264,11 +2264,18 @@ function haltAtBreak(qi) {
   $('rentBtns').innerHTML =
     `<button class="btn" id="btnQNext" type="button">${['▶ 2ND QUARTER', '▶ SECOND HALF', '▶ 4TH QUARTER'][qi]}</button>` +
     (offer ? `<button class="btn ghost" id="btnRent" type="button">🪪 Rent one · ${cash$(R.price)}</button>` : '');
-  $('btnQNext').addEventListener('click', () => {
+  // breaks auto-continue after a breath — the clock only truly waits when there is a
+  // decision on the table (the halftime rental). ▶ hurries it along either way.
+  const tl = bossTl;
+  const go = () => {
+    if (run._breakTimer) { run._breakTimer.kill(); run._breakTimer = null; }
     $('rentBox').style.display = 'none';
-    bossTl.play();
-  });
+    tl.play();
+  };
+  if (run._breakTimer) { run._breakTimer.kill(); run._breakTimer = null; }
+  $('btnQNext').addEventListener('click', go);
   if (offer) $('btnRent').addEventListener('click', rentChaser);
+  else run._breakTimer = gsap.delayedCall(2.4 / Math.max(.25, simSpeed()), go);
   $('rentBox').style.display = 'block';
   Sound.q();
   if (window.gsap) gsap.from('#rentBox', { y: 10, opacity: 0, duration: .25, ease: 'power2.out', clearProps: 'all' });
@@ -2611,6 +2618,9 @@ function showSteal() {
     legend: false
   }));
   if (!roster.length) { openMap(); return; }   // already signed everyone worth stealing
+  // 🏆 spoils skew slightly toward the stars you just beat: the roster's top three
+  // ride the wheel twice — enough to matter, not enough to make the duds vanish
+  roster.slice().sort((a, b) => b.rating - a.rating).slice(0, 3).forEach(p => roster.push({ ...p }));
   openWheel('steal', roster, 'SPIN THEIR ROSTER', `You beat the ${stop.name}. Their roster's on the wheel, rated as they were that season. One STOP.`);
 }
 function openWheel(kind, entries, title, sub) {

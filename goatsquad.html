@@ -2423,6 +2423,9 @@ function showSteal() {
     img: p.nbaId != null ? CFG.adapter.imageTemplate.replace('{id}', p.nbaId) : imgByName(p.name),
     legend: false
   }));
+  // 🏆 spoils skew slightly toward the stars you just beat: the roster's top three
+  // ride the wheel twice — enough to matter, not enough to make the duds vanish
+  roster.slice().sort((a, b) => b.rating - a.rating).slice(0, 3).forEach(p => roster.push({ ...p }));
   openWheel('steal', roster, 'SPIN THEIR ROSTER', `You beat the ${stop.name}. Their roster's on the wheel, rated as they were that season. One STOP.`);
 }
 function openWheel(kind, entries, title, sub) {
