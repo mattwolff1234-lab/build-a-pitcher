@@ -22,7 +22,8 @@
     { "source": "/", "has": [{ "type": "host", "value": "squad.goat-lab.app" }], "destination": "/goatsquad", "statusCode": 307 }
   ],
   "crons": [
-    { "path": "/api/push-cron", "schedule": "0 21 * * *" }
+    { "path": "/api/push-cron", "schedule": "0 21 * * *" },
+    { "path": "/api/discord-daily", "schedule": "10 13 * * *" }
   ],
   "rewrites": [
     { "source": "/batting", "destination": "/build-a-batter.html" },
