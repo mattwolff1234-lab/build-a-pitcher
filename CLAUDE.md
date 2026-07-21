@@ -402,7 +402,8 @@ Same game as Pitching Lab, translated to **hitters**. Single file `build-a-batte
   Verify any change with a Node harness that extracts `simulateCareer` from the HTML (see the git
   history of this fix). `api/score.js` also strips impossible careers on submit (`CAREER_MAX` —
   keep in sync with verified sim maxima; re-based 2026-07-11 for hot-boosted builds under the
-  soft-capped sims: batter hr>850/h>4250/rbi>3600/r>2300/sb>730, pitcher k>7100/ip>4650/wins>390)
+  soft-capped sims: batter hr>850/h>4250/rbi>3600/r>2300/sb>730, pitcher k>7500/ip>4650/wins>390;
+  pitcher k raised 7100→7500 2026-07-21 per player request)
   and has a token-gated `redactCareers` admin action (STATS_TOKEN) that stripped careers from the
   inflated window (criterion: Power slot > 99 + created_at ≥ 2026-07-10T05:37Z).
 - **Over-99 soft-cap (2026-07-11, both sims):** the 🔥 hot boost stacks past 99 (card display is

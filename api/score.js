@@ -47,7 +47,7 @@ const Catalog = require('../catalog.js');   // EARN.daily — the Goat Coins dai
 // pitcher K 6794 IP 4401 W 370 · batter HR 808 H 4037 RBI 3395 R 2182 SB 690).
 const CAREER_MAX = {
   batter: { hr: 850, h: 4250, rbi: 3600, r: 2300, sb: 730 },
-  pitcher: { k: 7100, ip: 4650, wins: 390 },
+  pitcher: { k: 7500, ip: 4650, wins: 390 },
   cfb: { yds: 17000, td: 170 },
   // Verified sim maxima (Node harness, 400 maxed hot-boosted all-105 builds: g 1009 · p 2262) + ~5%.
   hockey: { g: 1060, p: 2380 },
@@ -398,6 +398,14 @@ module.exports = async (req, res) => {
       const chk = checkBuild(game, body.ovr, body.build);
       if (!chk.ok) return res.status(400).json({ ok: false, error: 'Invalid build - ratings exceed what any real card can have' });
       const ovr = chk.ovr;
+      // Equipped cosmetics ride along for display only (trust-the-client, id-shape whitelisted):
+      // build.style = { av, fx } → leaderboards render the avatar chip + name effect.
+      if (body.build && typeof body.build === 'object' && body.style && typeof body.style === 'object') {
+        const style = {};
+        if (/^av_[a-z0-9_]{1,30}$/.test(String(body.style.av || ''))) style.av = String(body.style.av);
+        if (/^fx_[a-z0-9_]{1,30}$/.test(String(body.style.fx || ''))) style.fx = String(body.style.fx);
+        if (Object.keys(style).length) body.build.style = style;
+      }
       const build = body.build && typeof body.build === 'object' ? JSON.stringify(stripInsaneCareer(game, body.build)) : null;
 
       const [row] = await sql`
@@ -423,16 +431,29 @@ module.exports = async (req, res) => {
     const worst = (req.query && req.query.sort) === 'ovrAsc'; // ascending OVR ("worst overall")
     const NULL_SENTINEL = -1e30; // ranks missing-career entries last under a stat sort
 
+    // scope=yesterday → the finished day's board (the ranks page crowns row 1 as
+    // Yesterday's Champion). OVR-sorted only, no me-pin.
+    if (scope === 'yesterday') {
+      const yrows = await sql`SELECT id, name, ovr,
+          CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots', 'pos', build->>'pos', 'style', build->'style') ELSE build END AS build,
+          game, created_at FROM scores
+          WHERE game = ${game} AND (${pos}::text IS NULL OR build->>'pos' = ${pos})
+            AND created_at >= date_trunc('day', now()) - interval '1 day' AND created_at < date_trunc('day', now())
+          ORDER BY ovr DESC, created_at ASC LIMIT ${limit}`;
+      return res.status(200).json({ ok: true, sort: null,
+        rows: yrows.map(r => ({ ...r, id: Number(r.id), name: NameFilter.clean(r.name, 'Anonymous') })), me: null });
+    }
+
     let rows;
     if (worst) {
       rows = daily
         ? await sql`SELECT id, name, ovr,
-              CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots', 'pos', build->>'pos') ELSE build END AS build,
+              CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots', 'pos', build->>'pos', 'style', build->'style') ELSE build END AS build,
               game, created_at FROM scores
               WHERE game = ${game} AND (${pos}::text IS NULL OR build->>'pos' = ${pos}) AND created_at >= date_trunc('day', now())
               ORDER BY ovr ASC, created_at ASC LIMIT ${limit}`
         : await sql`SELECT id, name, ovr,
-              CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots', 'pos', build->>'pos') ELSE build END AS build,
+              CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots', 'pos', build->>'pos', 'style', build->'style') ELSE build END AS build,
               game, created_at FROM scores
               WHERE game = ${game} AND (${pos}::text IS NULL OR build->>'pos' = ${pos})
               ORDER BY ovr ASC, created_at ASC LIMIT ${limit}`;
@@ -440,36 +461,36 @@ module.exports = async (req, res) => {
       // worst-first stat sort (dir=asc); NULLS LAST still ranks missing-career entries at the end
       rows = daily
         ? await sql`SELECT id, name, ovr,
-              CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots', 'pos', build->>'pos') ELSE build END AS build,
+              CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots', 'pos', build->>'pos', 'style', build->'style') ELSE build END AS build,
               game, created_at, (build->'career'->'totals'->>${sortField})::numeric AS stat FROM scores
               WHERE game = ${game} AND (${pos}::text IS NULL OR build->>'pos' = ${pos}) AND created_at >= date_trunc('day', now())
               ORDER BY (build->'career'->'totals'->>${sortField})::numeric ASC NULLS LAST, ovr ASC, created_at ASC LIMIT ${limit}`
         : await sql`SELECT id, name, ovr,
-              CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots', 'pos', build->>'pos') ELSE build END AS build,
+              CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots', 'pos', build->>'pos', 'style', build->'style') ELSE build END AS build,
               game, created_at, (build->'career'->'totals'->>${sortField})::numeric AS stat FROM scores
               WHERE game = ${game} AND (${pos}::text IS NULL OR build->>'pos' = ${pos})
               ORDER BY (build->'career'->'totals'->>${sortField})::numeric ASC NULLS LAST, ovr ASC, created_at ASC LIMIT ${limit}`;
     } else if (sortField) {
       rows = daily
         ? await sql`SELECT id, name, ovr,
-              CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots', 'pos', build->>'pos') ELSE build END AS build,
+              CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots', 'pos', build->>'pos', 'style', build->'style') ELSE build END AS build,
               game, created_at, (build->'career'->'totals'->>${sortField})::numeric AS stat FROM scores
               WHERE game = ${game} AND (${pos}::text IS NULL OR build->>'pos' = ${pos}) AND created_at >= date_trunc('day', now())
               ORDER BY (build->'career'->'totals'->>${sortField})::numeric DESC NULLS LAST, ovr DESC, created_at ASC LIMIT ${limit}`
         : await sql`SELECT id, name, ovr,
-              CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots', 'pos', build->>'pos') ELSE build END AS build,
+              CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots', 'pos', build->>'pos', 'style', build->'style') ELSE build END AS build,
               game, created_at, (build->'career'->'totals'->>${sortField})::numeric AS stat FROM scores
               WHERE game = ${game} AND (${pos}::text IS NULL OR build->>'pos' = ${pos})
               ORDER BY (build->'career'->'totals'->>${sortField})::numeric DESC NULLS LAST, ovr DESC, created_at ASC LIMIT ${limit}`;
     } else {
       rows = daily
         ? await sql`SELECT id, name, ovr,
-              CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots', 'pos', build->>'pos') ELSE build END AS build,
+              CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots', 'pos', build->>'pos', 'style', build->'style') ELSE build END AS build,
               game, created_at FROM scores
               WHERE game = ${game} AND (${pos}::text IS NULL OR build->>'pos' = ${pos}) AND created_at >= date_trunc('day', now())
               ORDER BY ovr DESC, created_at ASC LIMIT ${limit}`
         : await sql`SELECT id, name, ovr,
-              CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots', 'pos', build->>'pos') ELSE build END AS build,
+              CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots', 'pos', build->>'pos', 'style', build->'style') ELSE build END AS build,
               game, created_at FROM scores
               WHERE game = ${game} AND (${pos}::text IS NULL OR build->>'pos' = ${pos})
               ORDER BY ovr DESC, created_at ASC LIMIT ${limit}`;
@@ -480,7 +501,7 @@ module.exports = async (req, res) => {
     if (meId) {
       const statField = sortField || 'war'; // value only used when sortField is set
       const [row] = await sql`SELECT id, name, ovr,
-        CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots', 'pos', build->>'pos') ELSE build END AS build,
+        CASE WHEN jsonb_typeof(build) = 'object' THEN jsonb_build_object('slots', build->'slots', 'pos', build->>'pos', 'style', build->'style') ELSE build END AS build,
         created_at, game, (build->'career'->'totals'->>${statField})::numeric AS stat FROM scores WHERE id = ${meId}`;
       if (row && row.game === game && (!pos || String((row.build && row.build.pos) || '').toUpperCase() === pos)) {
         let ahead;
@@ -531,7 +552,11 @@ module.exports = async (req, res) => {
           stat: sortField && row.stat != null ? Number(row.stat) : null };
       }
     }
-    return res.status(200).json({ ok: true, sort: sortField, rows: rows.map(r => ({ ...r, id: Number(r.id), name: NameFilter.clean(r.name, 'Anonymous'), stat: r.stat == null ? null : Number(r.stat) })), me });
+    // board size for the ranks-page banner ("N builds posted")
+    const [{ total }] = daily
+      ? await sql`SELECT count(*)::int AS total FROM scores WHERE game = ${game} AND (${pos}::text IS NULL OR build->>'pos' = ${pos}) AND created_at >= date_trunc('day', now())`
+      : await sql`SELECT count(*)::int AS total FROM scores WHERE game = ${game} AND (${pos}::text IS NULL OR build->>'pos' = ${pos})`;
+    return res.status(200).json({ ok: true, sort: sortField, total: Number(total), rows: rows.map(r => ({ ...r, id: Number(r.id), name: NameFilter.clean(r.name, 'Anonymous'), stat: r.stat == null ? null : Number(r.stat) })), me });
   } catch (e) {
     return res.status(500).json({ ok: false, error: String((e && e.message) || e) });
   }
