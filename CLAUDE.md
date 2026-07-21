@@ -299,6 +299,52 @@ append-only `coin_ledger` whose UNIQUE `ref` is the idempotency key for every mo
 - Deferred: franchise perk SKUs (engine determinism — needs its own pass), Discord OAuth
   verification, Apple IAP, refund/ToS page + Stripe Tax before LIVE mode.
 
+## 2026-07-21 — Battle pass open · Pro cosmetics · /ranks page (supersedes stale bits above)
+- **Coin economy OPEN**: `store.js` `PRO_ONLY` is gone — Shop always sells coin items; real-money
+  packs gated by **`SELL_PACKS = true`** (web only, hidden in-app). **`pass_cur`** SKU (1500 🪙,
+  `season:'current'`) resolved server-side in `coinSpend` via the shared season clock; blocked
+  while Pro is active ("Included ⭐").
+- **Named the "GOAT Pass"** (was Battle Pass — blanket-renamed across track/store/catalog/terms/
+  webhook email/menus). **Homepage banner** (`#goatPassBanner` in index.html, between the Pro
+  banner and resume card): season name, days left, live SXP progress bar, gold 🪙 price CTA (or
+  "Open →" when owned) → opens the track panel. **Jerseys ride the pass**: jr_pinstripe (1800) +
+  jr_gold (4000) on S1, jr_blackout (1400) + jr_chrome (4900) on S2 — type 'jersey' in COSMETICS,
+  Equip button calls `Jerseys.equip()` (pl_jersey); pass unlocks write the same
+  `pl_track.unlocked` the store SKUs use, so `Jerseys.owns()` works from either source (jerseys
+  stay buyable in the store as the no-grind shortcut).
+- **PAID-ONLY GOAT PASS (Matt's call, same day)**: the free lane is GONE — each season is ONE
+  merged track in `SEASONS[n].tiers` where EVERY tier (cosmetics AND coin payouts) needs the pass
+  or Pro. SXP accrues for everyone; non-owners see the full track as a 🔒 locked teaser with an
+  Unlock header; buying mid-season retro-drops everything earned (`sweepUnlocks` now no-ops
+  without `hasPass`). Items unlocked before the switch stay owned/equipable (`cosRow` checks
+  `unlocked` before the lock). Server: `trackClaimCoins` requires pass/Pro for BOTH lanes now;
+  catalog `TRACK_COINS[1]` keeps its free/premium split (existing claim-ledger refs stay stable),
+  S2+ = single `premium` lane, ~1450 🪙 back on the 1500 pass. ☰ menu item renamed "🎟️ Battle
+  Pass" on all 9 pages.
+- **Name Effects (`fx` cosmetic type)** in season-track.js: glow/particle styles on player names
+  (`SeasonTrack.applyFx/fxClass/equippedFx`, CSS `st-fx-*`). S2 premium lane grew to 8 tiers
+  (fx_neon_pulse · fx_ember · frame_prism). **Pro exclusives (`pro:true` — active while
+  `pro_until`, lapse = auto-unequip)**: fx_gold_aura "Midas Glow" + trail_gold "Golden Reel
+  Trail"; a "⭐ GoatLab Pro exclusives" section renders at the bottom of the track panel.
+  `trackSync` equipped whitelist now includes 'fx'.
+- **Cosmetics travel**: score POST accepts `style:{av,fx}` (id-shape whitelisted) → stored as
+  `build.style`, projected in every GET row; game pages submit it and render avatar chip + fx on
+  lb popup rows. 1v1: `fx` rides presence/build/forfeit messages next to `avatar` (all 3 source
+  versus pages + regenerated versus-cfb).
+- **`/ranks` full page** (`ranks.html`, in dev-server + vercel.json + ios build-www): two-dial
+  sport/game nav, scopes All-time/Today/Daily-Challenge, sort dropdown, 👑 champion spotlight
+  (today's leader + **yesterday's locked champion** via new `scope=yesterday`), board-size banner
+  (new `total` in GET), expandable rows rendering `build.slots` chips, ⚔️ 1v1 Elo ladder tab
+  (`pvpLeaderboard`). Switcher Ranks tab + hub tiles + game ☰ miLb now point here; the in-game
+  popup stays for post-submit (pinned rank + "Full rankings ↗" link). Games persist
+  `pl_lastEntry_<game>` so /ranks pins "(you)". Rows tap-expand to a FULL attribute breakdown
+  (slot · player · value, tier-colored). **Playwire intentionally NOT on /ranks** — unmapped
+  units covered the phone layout; Louis must map units for the route before re-adding the tag
+  (see ads.md).
+- **Pro polish**: richer perks list + `checkoutDesc` in catalog (shown on Stripe Checkout);
+  webhook sends a **Resend welcome email** on first subscribe (`pro_welcomed` dedupe, no-op until
+  `RESEND_API_KEY` env — setup steps in GO-LIVE.md).
+
 ## Career simulation (shipped)
 
 After the draft: **name the pitcher, pick a team, and "Simulate Career"** → a season-by-season

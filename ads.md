@@ -83,6 +83,9 @@ area). Copy from any existing page.
   **below the game sections** (end of `.wrap`), not at the top: Ramp injects a placeholder
   wrapper even with no ad sold, and the reserved ~100px up top pushed the draft board
   under the sticky STOP button on phones. Keep it below the game if this page is redesigned.
+- `ranks.html` (`/ranks`): **deliberately NO tag** (2026-07-21) — with no units mapped for the
+  route, the injected anchor/placeholder covered the whole board on phones for zero revenue.
+  To monetize: have Louis map units for `/ranks` FIRST, then add the 3-piece contract back.
 
 ## ads.txt — dynamic (Playwire-hosted), zero upkeep
 - `vercel.json` has a **301 redirect**: `/ads.txt` → `https://config.playwire.com/dyn_ads/1025880/77906/ads.txt`

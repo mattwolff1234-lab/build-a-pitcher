@@ -41,13 +41,13 @@
   // .pro_until (= no_ads_until) to each paid period's end (works for month OR year) and lapses on cancel.
   const PRO = {
     id: 'pro', name: 'GoatLab Pro', icon: '⭐',
-    tagline: 'No ads · every Battle Pass included · exclusive golden cosmetics',
+    tagline: 'No ads · every GOAT Pass included · exclusive golden cosmetics',
     // What the buyer reads on the Stripe Checkout page itself (api/buy.js sends it as the
     // line-item description) — sell the full package, not just "no ads".
-    checkoutDesc: 'Zero ads across every GoatLab game · every season’s full Battle Pass included (~1450 coins back per season) · exclusive Midas Glow name effect + Golden Reel Trail · Pro star on your name. More Pro perks landing every season — cancel anytime.',
+    checkoutDesc: 'Zero ads across every GoatLab game · every season’s full GOAT Pass included (~1450 coins back per season) · exclusive Midas Glow name effect + Golden Reel Trail · Pro star on your name. More Pro perks landing every season — cancel anytime.',
     perks: [
       'Zero ads across every GoatLab game',
-      'Every season’s FULL Battle Pass included (every tier: frames, avatars, name effects + ~1450 🪙 back per season)',
+      'Every season’s FULL GOAT Pass included (every tier: frames, avatars, name effects + ~1450 🪙 back per season)',
       '✨ Midas Glow — exclusive golden name effect with particles, shown in 1v1 and on the leaderboards',
       '⭐ Pro star on your name everywhere',
       'Golden Reel Trail on every spin',
@@ -63,8 +63,8 @@
   // with Pro OR sold here for coins — season:'current' resolves server-side via the shared
   // season clock, so this one SKU always sells the pass for whatever season is live.)
   const SKUS = {
-    pass_cur: { type: 'pass', season: 'current', price: 1500, name: 'Battle Pass — this season', icon: '🎫',  // TUNE
-      desc: 'Unlock this season’s Battle Pass — EVERY tier: exclusive cosmetics + 🪙 coins back. Included free with GoatLab Pro.' },
+    pass_cur: { type: 'pass', season: 'current', price: 1500, name: 'GOAT Pass — this season', icon: '🎫',  // TUNE
+      desc: 'Unlock this season’s GOAT Pass — EVERY tier: exclusive cosmetics + 🪙 coins back. Included free with GoatLab Pro.' },
 
     // Cosmetics — ids live in social.js AVATARS (track:'future' art, already rendered + equippable).
     av_robot_ump:   { type: 'cosmetic', price: 350, name: 'Robo Ump Avatar', icon: '🤖', desc: 'Beep. Strike three.' },        // TUNE
@@ -135,7 +135,7 @@
         { req: 5000, coins: 400 },   // TUNE — ~1000 coins back over a season of Pro
       ],
     },
-    // Season 2+ — paid-only Battle Pass (2026-07-21): ONE lane ('premium', pass/Pro required —
+    // Season 2+ — paid-only GOAT Pass (2026-07-21): ONE lane ('premium', pass/Pro required —
     // trackClaimCoins now gates BOTH lanes anyway; S1 keeps its old split so existing claim
     // refs stay stable). S2 pays ~1450 back across the season on the 1500 pass.
     2: {

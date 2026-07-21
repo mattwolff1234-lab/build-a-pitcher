@@ -267,6 +267,29 @@ async function patchConfigImgs() {
   console.log(`config roster imgs: ${hits} verified, ${misses} initials-fallback`);
 }
 
+// ---- 🎨 Scorigami (h/t Jon Bois): bake the set of every final score that HAS happened
+// in real NFL history (nflscorigami.com's matrix). The sim flags any game whose final
+// is NOT in this set. Refresh each season; fetch failure keeps the existing baked set.
+async function patchScorigami() {
+  if (!fs.existsSync(CFG_FILE)) return;
+  try {
+    const d = await get('https://nflscorigami.com/data');
+    const scores = [];
+    for (const row of (d.matrix || [])) for (const c of row) {
+      if (c && c.count > 0) scores.push(c.pts_win + '-' + c.pts_lose);
+    }
+    if (scores.length < 500) throw new Error('suspiciously small set: ' + scores.length);
+    const cfg = JSON.parse(fs.readFileSync(CFG_FILE, 'utf8'));
+    cfg.scorigami = {
+      _comment: 'every winner-loser final that has occurred in real NFL history — a sim final missing from this list is a SCORIGAMI. Refreshed by fetch-squadfoot.js from nflscorigami.com/data.',
+      asOf: new Date().toISOString().slice(0, 10),
+      scores: scores.sort()
+    };
+    fs.writeFileSync(CFG_FILE, JSON.stringify(cfg, null, 2) + '\n');
+    console.log(`scorigami set baked: ${scores.length} real NFL finals (as of ${cfg.scorigami.asOf})`);
+  } catch (e) { console.log('scorigami fetch failed (' + e.message.slice(0, 60) + ') — keeping existing set'); }
+}
+
 (async function main() {
   const items = (!FRESH && fs.existsSync(RAW_FILE))
     ? JSON.parse(fs.readFileSync(RAW_FILE, 'utf8'))
@@ -311,4 +334,5 @@ async function patchConfigImgs() {
   console.log('pool without portrait:', noImg);
 
   await patchConfigImgs();
+  await patchScorigami();
 })();

@@ -96,57 +96,70 @@
     // cross-sport championship (server grants unlocked[] at crowning, api/discord-daily.js) ----
     fx_champion:    { type: 'fx',     name: 'Champion Gold',        icon: '🏆', cls: 'st-fx-champ', champ: 'weekly' },
     av_champ_goat:  { type: 'avatar', name: 'The Champ',            icon: '👑', champ: 'monthly' },
+    // ---- Jerseys (jr_ ids — registry/CSS in jerseys.js; the FIGURE wears them in every game).
+    // Pass tiers write the same pl_track.unlocked store the 🪙 Store SKUs use, so
+    // Jerseys.owns() lights up either way; equip toggles pl_jersey via Jerseys.equip().
+    jr_pinstripe:  { type: 'jersey', name: 'Pinstripes Jersey',     icon: '🦓' },
+    jr_gold:       { type: 'jersey', name: 'All-Gold Jersey',       icon: '🏆' },
+    jr_blackout:   { type: 'jersey', name: 'Blackout Jersey',       icon: '🌑' },
+    jr_chrome:     { type: 'jersey', name: 'Diamond Chrome Jersey', icon: '💎' },
   };
   // "frame" = the CAREER card (the shareable trophy) — never the reel cards, whose
   // borders are tier information (grey→legend) that cosmetics must not repaint.
   // "item" = consumables (Scout = peek the next spin; Re-sim = re-roll a finished career).
-  const TYPE_LABEL = { frame: 'Career Card Frame', title: 'Title', trail: 'Reel Effect', item: 'Consumable', avatar: 'Profile Avatar', fx: 'Name Effect' };
+  const TYPE_LABEL = { frame: 'Career Card Frame', title: 'Title', trail: 'Reel Effect', item: 'Consumable', avatar: 'Profile Avatar', fx: 'Name Effect', jersey: 'Figure Jersey' };
   // Define SEASONS[2] before 2026-08-15 — an undefined month falls back to re-running
   // this track (already-owned rewards just show as unlocked, nothing new to earn).
+  // ⚠️ PAID-ONLY GOAT PASS (Matt's call, 2026-07-21): ONE track per season, EVERY tier
+  // gated behind the Premium Pass (pass_cur, 🪙 1500) or GoatLab Pro. SXP accrues for
+  // everyone — non-owners see the full track as a locked teaser and buying mid-season
+  // retro-unlocks everything already earned (sweepUnlocks runs on render). Rewards
+  // unlocked back when a free lane existed stay owned (unlocked is permanent inventory).
   const SEASONS = {
     1: { name: 'Opening Day', icon: '⚾', tiers: [
       { req: 100,  id: 'title_original' },
       { req: 200,  id: 'av_goat_crown' },
+      { req: 250,  id: 'title_pro_charter' },
       { req: 300,  id: 'frame_cyan' },
       { req: 600,  id: 'scout_2' },
       { req: 1000, id: 'title_grinder' },
+      { req: 1200, id: 'scout_s1p' },
       { req: 1250, id: 'av_flame_ball' },
       { req: 1500, id: 'frame_gold' },
+      { req: 1800, id: 'jr_pinstripe' },
       { req: 2100, id: 'trail_comet' },
       { req: 2800, id: 'resim_2' },
+      { req: 3000, id: 'resim_s1p' },
       { req: 3200, id: 'av_octo_keeper' },
       { req: 3600, id: 'title_goat' },
+      { req: 4000, id: 'jr_gold' },
       { req: 4500, id: 'scout_3' },
+      { req: 5000, id: 'title_pro_elite' },
       { req: 5500, id: 'frame_holo' },
       { req: 6200, id: 'av_golden_goat' },
-    ], premium: [
-      { req: 200,  id: 'title_pro_charter' },
-      { req: 1200, id: 'scout_s1p' },
-      { req: 2800, id: 'resim_s1p' },
-      { req: 5000, id: 'title_pro_elite' },
     ] },
-    // Season 2 (Aug): first season WITH a premium lane (Premium Pass SKU in the 🪙 Store).
-    // Coin payout tiers live in catalog.js TRACK_COINS (server-validated claims) and render
-    // interleaved with these; premium cosmetics auto-unlock only while the pass is owned.
+    // Season 2 (Aug) — coin payout tiers live in catalog.js TRACK_COINS (server-validated
+    // claims, all on the 'premium' lane now) and render interleaved with these.
     2: { name: 'Dog Days', icon: '🌭', tiers: [
       { req: 100,  id: 'title_dog_days' },
+      { req: 150,  id: 'av_eagle_glove' },
       { req: 300,  id: 'av_bull_bat' },
+      { req: 600,  id: 'fx_neon_pulse' },
       { req: 700,  id: 'scout_s2' },
+      { req: 950,  id: 'scout_s2p' },
       { req: 1100, id: 'frame_ember' },
+      { req: 1400, id: 'jr_blackout' },
       { req: 1700, id: 'resim_s2' },
+      { req: 1800, id: 'av_lightning_bat' },
       { req: 2400, id: 'av_rhino_bat' },
+      { req: 2600, id: 'fx_ember' },
+      { req: 3000, id: 'resim_s2p' },
       { req: 3200, id: 'title_dog_star' },
       { req: 4200, id: 'scout_s2b' },
-      { req: 5600, id: 'frame_frost' },
-    ], premium: [
-      { req: 150,  id: 'av_eagle_glove' },
-      { req: 600,  id: 'fx_neon_pulse' },
-      { req: 900,  id: 'scout_s2p' },
-      { req: 1800, id: 'av_lightning_bat' },
-      { req: 2400, id: 'fx_ember' },
-      { req: 3000, id: 'resim_s2p' },
       { req: 4600, id: 'title_high_roller' },
+      { req: 4900, id: 'jr_chrome' },
       { req: 5200, id: 'frame_prism' },
+      { req: 5600, id: 'frame_frost' },
     ] },
   };
   const seasonDef = n => SEASONS[n] || { name: `Season ${n}`, icon: '🏟️', tiers: SEASONS[1].tiers };
@@ -249,6 +262,13 @@
     padding:6px 11px; border-radius:8px; cursor:pointer; color:var(--accent2,#19c6ff);
     border:1px solid rgba(25,198,255,.45); background:rgba(25,198,255,.07); }
   .st-eq.on{ color:#0a1220; background:var(--gold,#ffce3a); border-color:var(--gold,#ffce3a); }
+  /* GOAT Pass buy button — the PRICE is the button (Matt: make it obvious) */
+  .st-eq.st-pass-buy{ display:flex; flex-direction:column; align-items:center; gap:2px; padding:8px 16px;
+    font-size:16px; font-weight:700; letter-spacing:.5px; color:var(--gold,#ffce3a);
+    border-color:rgba(255,206,58,.6); background:rgba(255,206,58,.1);
+    box-shadow:0 0 14px rgba(255,206,58,.22); }
+  .st-eq.st-pass-buy small{ font-size:9px; font-weight:600; letter-spacing:2px; text-transform:uppercase;
+    color:var(--accent2,#19c6ff); }
   .st-toast{ position:fixed; top:18px; right:18px; z-index:340; display:none; align-items:center; gap:13px;
     padding:13px 18px 13px 14px; min-width:290px; border-radius:13px; border:1px solid rgba(255,206,58,.55);
     background:linear-gradient(180deg, rgba(20,31,48,.94), rgba(9,15,25,.96)); backdrop-filter:blur(6px);
@@ -387,7 +407,8 @@
 
     teaseEl.style.display = active ? 'none' : 'block';
     teaseEl.innerHTML = `<b>Season 1 kicks off soon.</b> Once it starts, every XP you earn — builds, careers,
-      quests, achievements, 1v1 — also fills this track. Rewards you unlock are yours forever.`;
+      quests, achievements, 1v1 — fills this track. Unlock the <b>GOAT Pass</b> (🪙 coins or GoatLab Pro)
+      and every tier you reach is yours forever.`;
 
     // live "your card look" preview — instant feedback the moment a frame/title/fx is equipped
     const fId = equippedOf('frame'), tId = equippedOf('title'), fxId = equippedOf('fx');
@@ -403,8 +424,9 @@
       </div>`;
     if (fxId) fxBurst(prevEl.querySelector('.st-prev-name'), fxId);
 
-    // retro-unlock earned tiers first (covers "just bought the Premium Pass" mid-season)
+    // retro-unlock earned tiers first (covers "just bought the GOAT Pass" mid-season)
     if (active && sweepUnlocks(s)) { save(s); queueSync(); }
+    const ownedPass = hasPass(showN);
     const tiers = def.tiers;
     const nextTier = tiers.find(t => !s.unlocked[t.id] && t.req > s.sxp);
     const inv = [['scout', '🔭 Scout'], ['resim', '🔁 Re-sim']]
@@ -412,27 +434,30 @@
       .map(([k, lbl]) => `${lbl} ×${s.items[k]}`).join(' · ');
     sumEl.innerHTML = active ? `
       <div class="ss-top"><span class="ss-sxp">${s.sxp.toLocaleString()}</span><span class="ss-lbl">Season XP</span>
-        <span class="ss-next">${nextTier ? `next reward at ${nextTier.req.toLocaleString()}` : 'track complete!'}</span></div>
+        <span class="ss-next">${nextTier ? `next ${ownedPass ? 'reward' : 'tier'} at ${nextTier.req.toLocaleString()}` : 'track complete!'}</span></div>
       <div class="ss-track"><div class="ss-fill" style="width:${nextTier ? Math.min(100, (s.sxp / nextTier.req) * 100) : 100}%"></div></div>
       ${inv ? `<div class="ss-inv">Inventory: ${inv}</div>` : ''}` : '';
 
-    // ---- rows: cosmetic tiers (either lane) + server-claimed coin tiers (catalog.js) ----
-    const ownedPass = hasPass(showN);
+    // ---- rows: ONE paid GOAT Pass track — cosmetic tiers + server-claimed coin tiers ----
     const coinDefs = (window.Catalog && window.Catalog.TRACK_COINS && window.Catalog.TRACK_COINS[showN]) || {};
     const coinClaims = (s.coinClaims && typeof s.coinClaims === 'object') ? s.coinClaims : {};
     const cosRow = (t, i, lockedLane) => {
       const c = COSMETICS[t.id] || { type: 'skin', name: t.id, icon: '🎁' };
-      const got = !!s.unlocked[t.id] && !lockedLane;
-      const isNext = !lockedLane && nextTier && nextTier.id === t.id;
+      // Owned = owned forever, pass or not (covers rewards earned before the paid-only switch).
+      const got = !!s.unlocked[t.id];
+      const isNext = nextTier && nextTier.id === t.id;
       const equipable = got && !c.soon && EQUIPABLE[c.type];
       const on = equipable && s.equipped[c.type] === t.id;
-      const right = lockedLane ? '<span class="st-soon">🔒 PASS</span>'
-        : got
-          ? (c.soon ? '<span class="st-soon">SOON</span>'
-            : c.type === 'avatar' ? '<button class="st-eq" data-av-open="1">Use in Profile</button>'
-            : equipable ? `<button class="st-eq${on ? ' on' : ''}" data-eq="${t.id}">${on ? 'Equipped' : 'Equip'}</button>` : '✅')
-          : `<span class="st-req">${t.req.toLocaleString()} SXP</span>`;
-      return `<div class="st-row${got ? ' got' : ''}${isNext ? ' next' : ''}"${lockedLane ? ' style="opacity:.65"' : ''}>
+      const right = got
+        ? (c.soon ? '<span class="st-soon">SOON</span>'
+          : c.type === 'avatar' ? '<button class="st-eq" data-av-open="1">Use in Profile</button>'
+          : c.type === 'jersey' ? (window.Jerseys && Jerseys.equippedId() === t.id
+            ? '<button class="st-eq on" data-jr="">Equipped</button>'
+            : `<button class="st-eq" data-jr="${t.id}">Equip</button>`)
+          : equipable ? `<button class="st-eq${on ? ' on' : ''}" data-eq="${t.id}">${on ? 'Equipped' : 'Equip'}</button>` : '✅')
+        : lockedLane ? '<span class="st-soon">🔒 PASS</span>'
+        : `<span class="st-req">${t.req.toLocaleString()} SXP</span>`;
+      return `<div class="st-row${got ? ' got' : ''}${isNext ? ' next' : ''}"${lockedLane && !got ? ' style="opacity:.65"' : ''}>
         <span class="st-tier">${i + 1}</span>
         <span class="st-ico">${c.icon}</span>
         <div class="st-body"><div class="st-name">${c.name}</div><div class="st-kind">${TYPE_LABEL[c.type] || c.type}${c.soon ? ' · coming soon' : ''}</div></div>
@@ -454,25 +479,21 @@
         <div class="st-right">${right}</div>
       </div>`;
     };
-    // free lane: cosmetic + coin tiers interleaved by SXP requirement
-    const freeRows = tiers.map((t, i) => ({ req: t.req, html: cosRow(t, i, false) }))
-      .concat(((coinDefs.free) || []).map((t, i) => ({ req: t.req, html: coinRow('free', i, t, false) })))
-      .sort((a, b) => a.req - b.req).map(r => r.html).join('');
-    // premium lane (Season 2+): locked behind the Premium Pass from the 🪙 Store
-    let premRows = '';
-    if (def.premium && def.premium.length) {
-      const head = ownedPass
-        ? `<div class="st-row got"><span class="st-ico">🎫</span>
-            <div class="st-body"><div class="st-name">Premium Pass lane</div><div class="st-kind">unlocked — rewards drop automatically as you earn SXP</div></div>
-            <div class="st-right">✅</div></div>`
-        : `<div class="st-row next"><span class="st-ico">🎫</span>
-            <div class="st-body"><div class="st-name">Premium Pass lane</div><div class="st-kind">avatars · name effects · frames · 🪙 coins back — 🪙 ${(window.Catalog && window.Catalog.SKUS && window.Catalog.SKUS.pass_cur && window.Catalog.SKUS.pass_cur.price) || 1500} or free with GoatLab Pro ⭐</div></div>
-            <div class="st-right"><button class="st-eq" data-get-pass="1">Unlock in Store</button></div></div>`;
-      premRows = head
-        + def.premium.map((t, i) => ({ req: t.req, html: cosRow(t, i, !ownedPass) }))
-          .concat(((coinDefs.premium) || []).map((t, i) => ({ req: t.req, html: coinRow('premium', i, t, !ownedPass) })))
-          .sort((a, b) => a.req - b.req).map(r => r.html).join('');
-    }
+    // Every tier is pass-gated. Non-owners still see the FULL track (locked teaser) and their
+    // SXP keeps counting — unlocking mid-season retro-drops everything already earned.
+    const passPrice = (window.Catalog && window.Catalog.SKUS && window.Catalog.SKUS.pass_cur && window.Catalog.SKUS.pass_cur.price) || 1500;
+    const head = ownedPass
+      ? `<div class="st-row got"><span class="st-ico">🎫</span>
+          <div class="st-body"><div class="st-name">GOAT Pass unlocked</div><div class="st-kind">rewards drop automatically as you earn Season XP</div></div>
+          <div class="st-right">✅</div></div>`
+      : `<div class="st-row next"><span class="st-ico">🎫</span>
+          <div class="st-body"><div class="st-name">Season ${showN} GOAT Pass</div><div class="st-kind">unlocks EVERY tier below · free with GoatLab Pro ⭐. Your SXP already counts: unlock anytime and everything you've earned drops instantly.</div></div>
+          <div class="st-right"><button class="st-eq st-pass-buy" data-get-pass="1">🪙 ${passPrice.toLocaleString()}<small>Unlock</small></button></div></div>`;
+    const trackRows = head
+      + tiers.map((t, i) => ({ req: t.req, html: cosRow(t, i, !ownedPass) }))
+        .concat(((coinDefs.premium) || []).map((t, i) => ({ req: t.req, html: coinRow('premium', i, t, !ownedPass) })))
+        .concat(((coinDefs.free) || []).map((t, i) => ({ req: t.req, html: coinRow('free', i, t, !ownedPass) })))   // legacy S1 lane — same gate
+        .sort((a, b) => a.req - b.req).map(r => r.html).join('');
     // ---- ⭐ GoatLab Pro exclusives — usable while the subscription is active ----
     const isPro = proActive();
     const proRows = `<div class="st-row${isPro ? ' got' : ''}"><span class="st-ico">⭐</span>
@@ -514,11 +535,15 @@
           <div class="st-right">${right}</div>
         </div>`;
       }).join('');
-    listEl.innerHTML = freeRows + premRows + proRows + champRows;
+    listEl.innerHTML = trackRows + proRows + champRows;
     listEl.querySelectorAll('[data-eq]').forEach(b => { b.onclick = () => equip(b.dataset.eq); });
     // avatars equip in the profile's Style tab (social.js owns the server-visible avatar)
     listEl.querySelectorAll('[data-av-open]').forEach(b => {
       b.onclick = () => { close(); if (window.Social) Social.openProfile(null, 'style'); };
+    });
+    // jerseys equip globally via jerseys.js (pl_jersey; tap Equipped again to take it off)
+    listEl.querySelectorAll('[data-jr]').forEach(b => {
+      b.onclick = () => { if (window.Jerseys) Jerseys.equip(b.dataset.jr || ''); render(); };
     });
     const gp = listEl.querySelector('[data-get-pass]');
     if (gp) gp.onclick = () => { close(); if (window.Store) window.Store.open('shop'); };
@@ -641,12 +666,13 @@
     }
     return changed;
   }
-  // Runs on XP gain AND on every render — so buying the pass mid-season retro-unlocks
-  // everything already earned on the premium lane.
+  // Runs on XP gain AND on every render. Paid-only GOAT Pass: nothing drops without the
+  // pass — SXP accrues regardless, so buying mid-season retro-unlocks everything earned.
   function sweepUnlocks(s) {
+    if (!hasPass(s.season)) return false;
     const def = seasonDef(s.season);
-    let changed = sweepLane(s, def.tiers, 'Free');
-    if (def.premium && hasPass(s.season)) changed = sweepLane(s, def.premium, 'Premium') || changed;
+    let changed = sweepLane(s, def.tiers, 'GOAT Pass');
+    if (def.premium) changed = sweepLane(s, def.premium, 'GOAT Pass') || changed;   // legacy defs
     return changed;
   }
   function addSxp(amount) {

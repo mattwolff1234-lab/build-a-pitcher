@@ -63,7 +63,7 @@ module.exports = async (req, res) => {
         'line_items[0][price_data][unit_amount]': String(plan.usd),
         'line_items[0][price_data][recurring][interval]': plan.interval,
         'line_items[0][price_data][product_data][name]': PRO.name + (cycle === 'yearly' ? ' (Annual)' : ''),
-        'line_items[0][price_data][product_data][description]': PRO.tagline,
+        'line_items[0][price_data][product_data][description]': PRO.checkoutDesc || PRO.tagline,
         'metadata[player_key]': playerKey,
         'metadata[plan]': 'pro',
         'metadata[cycle]': cycle,

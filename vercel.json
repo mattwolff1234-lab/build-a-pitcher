@@ -26,6 +26,7 @@
     { "path": "/api/discord-daily", "schedule": "10 13 * * *" }
   ],
   "rewrites": [
+    { "source": "/ranks", "destination": "/ranks.html" },
     { "source": "/batting", "destination": "/build-a-batter.html" },
     { "source": "/pitching", "destination": "/pitcher.html" },
     { "source": "/versus", "destination": "/versus.html" },

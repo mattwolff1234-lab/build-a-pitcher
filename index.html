@@ -162,6 +162,9 @@
   .sport-chip.on i { filter:none; opacity:1; }
   .sport-chip .sp-new { position:absolute; top:-7px; right:-4px; font-size:8.5px; font-weight:700; letter-spacing:1px; color:#04140a;
     padding:2px 7px; border-radius:10px; background:linear-gradient(90deg,#43e97b,#38f9d7); box-shadow:0 0 10px rgba(67,233,123,.5); }
+  .sport-chip.gp-chip { border-color:rgba(255,206,58,.45); color:#ffd23f; }
+  .sport-chip.gp-chip i { filter:none; opacity:1; }
+  .sport-chip.gp-chip:hover { border-color:#ffd23f; box-shadow:0 0 16px -4px rgba(255,206,58,.7); color:#ffd23f; }
   .roleseg { display:flex; justify-content:center; gap:6px; margin-top:10px; min-height:34px; }
   .role-chip { padding:8px 20px; border-radius:999px; cursor:pointer; border:1px solid var(--line); background:rgba(255,255,255,.03);
     font-family:'Oswald',sans-serif; font-size:12px; font-weight:600; letter-spacing:1.4px; text-transform:uppercase; color:var(--muted); }
@@ -460,7 +463,7 @@
       <a class="menu-item" href="/pitching#hof">🏛️ My Hall of Fame</a>
       <a class="menu-item" href="/pitching#achievements">🏅 Achievements</a>
       <a class="menu-item" href="/pitching#collection">📇 My Collection</a>
-      <button class="menu-item" id="miTrack">🎟️ Battle Pass</button>
+      <button class="menu-item" id="miTrack">🎟️ GOAT Pass</button>
       <button class="menu-item" id="miStore">🪙 Store &amp; Coins</button>
       <div class="menu-sec">Compete</div>
       <a class="menu-item" href="/ranks">🏆 Ranks</a>
@@ -558,6 +561,8 @@
       })();
     </script>
 
+
+
     <a class="resume" id="resumeCard" href="/pitching#daily">
       <div class="rz-txt">
         <div class="rz-kick" id="rzKick">▶ Continue</div>
@@ -645,7 +650,8 @@ gsap.from('.hero p', { y: 10, opacity: 0, duration: .35, delay: .1, ease: 'power
     $('hub').style.setProperty('--hubac', sport.accent);
     $('sportSeg').innerHTML = SPORTS.map(s =>
       `<button class="sport-chip${s.id === sport.id ? ' on' : ''}" data-sport="${s.id}">
-        ${s.isNew ? '<span class="sp-new">NEW</span>' : ''}<i>${s.icon}</i>${s.name}</button>`).join('');
+        ${s.isNew ? '<span class="sp-new">NEW</span>' : ''}<i>${s.icon}</i>${s.name}</button>`).join('')
+      + '<button class="sport-chip gp-chip" id="gpChip"><i>🎫</i>GOAT Pass</button>';
     $('roleSeg').innerHTML = sport.roles.length > 1
       ? sport.roles.map(r => `<button class="role-chip${r === active ? ' on' : ''}" data-role="${r}">${GAME[r].icon} ${GAME[r].name}</button>`).join('')
       : '';
@@ -705,6 +711,7 @@ gsap.from('.hero p', { y: 10, opacity: 0, duration: .35, delay: .1, ease: 'power
       : `<a class="mtile${t.cls || ''}" href="${t.href}"><span class="mgo">→</span><i>${t.i}</i><b>${t.b}</b><span>${t.s}</span></a>`).join('');
 
     $('sportSeg').querySelectorAll('[data-sport]').forEach(b => b.onclick = () => { const s = SPORTS.find(x => x.id === b.dataset.sport); setActive(roleFor(s)); });
+    { const gpc = $('gpChip'); if (gpc) gpc.onclick = () => { if (window.SeasonTrack) SeasonTrack.open(); }; }
     $('roleSeg').querySelectorAll('[data-role]').forEach(b => b.onclick = () => setActive(b.dataset.role));
     // ☰ menu deep links follow the ACTIVE game (daily/streak follow its rotation)
     const dgP = D ? D.path : g.path;

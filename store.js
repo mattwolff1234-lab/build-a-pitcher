@@ -264,7 +264,7 @@
     const byType = t => Object.keys(C.SKUS).filter(k => C.SKUS[k].type === t);
     const isJersey = k => k.indexOf('jr_') === 0;
     return proCard()
-      + group('Battle Pass', byType('pass'))
+      + group('GOAT Pass', byType('pass'))
       + group('Jerseys — your figure wears them in every build game', byType('cosmetic').filter(isJersey), jerseyRow)
       + group('Avatars', byType('cosmetic').filter(k => !isJersey(k)))
       + group('Consumables', byType('item'))

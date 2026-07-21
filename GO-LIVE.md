@@ -46,6 +46,21 @@ Stripe **test and live modes are separate** — different keys AND a different w
 - **Premium lane**: `season-track.js hasPass()` returns true while `pro_until` is active.
 - **Manage/cancel**: `api/account.js billingPortal` → Stripe billing portal.
 
-## Reopening the coin store (later, separate from Pro)
-- In `store.js` set **`const PRO_ONLY = false;`** to bring back the Get Coins tab (coin packs) and the
-  coin-spend items (avatars/consumables). Independent of `PRO_LIVE`.
+## Coin store (OPEN as of 2026-07-21)
+- The Shop tab now always sells coin-spend items: **Premium Pass (`pass_cur`, 1500 🪙 — resolves to
+  whatever season is live)**, avatars, consumables. The old `PRO_ONLY` flag is gone.
+- **`const SELL_PACKS = true;`** in `store.js` controls only the real-money **Get Coins** tab
+  (currently ON). Flip false to go earn-only again. Packs are always hidden inside the iOS app
+  (Apple IAP rule, `inApp()` check).
+
+## Thank-you email for new Pro subscribers (Resend — needs a one-time setup)
+`api/stripe-webhook.js` sends a welcome email on the FIRST subscribe only (never on renewals;
+`entitlements.pro_welcomed` dedupes; a send failure can never block the grant). It silently
+no-ops until you do this ~10-min setup:
+1. Create a free account at **resend.com** (100 emails/day free — plenty).
+2. Resend → Domains → Add `goat-lab.app` → add the 2 DNS records it shows (SPF + DKIM) in
+   Vercel's DNS for goat-lab.app → wait for "Verified".
+3. Resend → API Keys → create one → Vercel env **`RESEND_API_KEY`** (Production, Sensitive).
+   Optional: `RESEND_FROM` to change the sender (default `GoatLab <hello@goat-lab.app>`).
+4. Test: subscribe with Stripe test mode (or refund yourself live) and check the inbox +
+   Resend dashboard → Logs.

@@ -314,7 +314,7 @@
     const dg = dailyGame(act);
     const hash = (location.hash || '').toLowerCase();
     const onDaily = hash.indexOf('daily') >= 0;
-    const onRanks = hash.indexOf('leaderboard') >= 0 || hash.indexOf('lb') === 1;
+    const onRanks = location.pathname.toLowerCase().indexOf('ranks') >= 0;
     const vsPath = VERSUS[A.sport] || null;
     const onVersus = location.pathname.indexOf('versus') >= 0;
     const nav = document.createElement('div');
@@ -327,7 +327,7 @@
         ? `<a class="gnav-tab gnav-vs${onVersus ? ' on' : ''}" href="${vsPath}"><i>⚔️</i>1v1</a>`
         : `<button class="gnav-tab gnav-vs" data-nav="vs-pick"><i>⚔️</i>1v1</button>`}
       <a class="gnav-tab${onFranchise ? ' on' : ''}" href="${FRANCHISE[A.sport] || FRANCHISE.baseball}"><i>🏟️</i>Frnch</a>
-      <a class="gnav-tab${onRanks ? ' on' : ''}" data-nav="ranks" href="${A.path}#leaderboard"><i>🏆</i>Ranks</a>
+      <a class="gnav-tab${onRanks ? ' on' : ''}" data-nav="ranks" href="/ranks?game=${act}"><i>🏆</i>Ranks</a>
       <button class="gnav-tab" data-nav="profile"><i>👤</i>Profile<span data-social-badge></span></button>
       ${document.getElementById('menuBtn') ? `<button class="gnav-tab" data-nav="more"><i>☰</i>More</button>` : ''}
     </nav>`;

@@ -30,6 +30,16 @@ function rep(from, to, expect) {
   html = parts.join(to);
   nRep += expect;
 }
+// whole-region swap for the one-game-playoff rework: unique start marker through the end
+// marker (inclusive). Start/end still trip loudly if the baseball engine drifts.
+function repRange(startMark, endMark, to) {
+  const i = html.indexOf(startMark);
+  if (i < 0 || html.indexOf(startMark, i + 1) >= 0) { console.error('RANGE START missing/not unique:\n' + startMark.slice(0, 120)); process.exit(1); }
+  const j = html.indexOf(endMark, i + startMark.length);
+  if (j < 0) { console.error('RANGE END missing:\n' + endMark.slice(0, 120)); process.exit(1); }
+  html = html.slice(0, i) + to + html.slice(j + endMark.length);
+  nRep++;
+}
 
 /* ---------------- head / brand / constants ---------------- */
 rep('GOAT Squad Baseball · GoatLab', 'GOAT Squad Football · GoatLab', 2);
@@ -435,6 +445,39 @@ rep('`<b>${topN}</b> carried the offense: <b>${tp} RBIs</b> a night.`',
 rep('`Ask the box score who won this. It says <b>${topN}</b>, ${tp} RBIs a game.`',
   '`Ask the box score who won this. It says <b>${topN}</b>, ${tp} yards a game.`');
 
+/* ---------------- 🧮 scorigami: flag sim finals no real NFL game ever produced ---------------- */
+rep('function bossIntro() {', [
+  '// 🧮 Scorigami (h/t Jon Bois): a final score no real NFL game has ever produced. The',
+  '// has-happened set ships in the config (fetch-squadfoot.js bakes it from',
+  '// nflscorigami.com); a missing/empty set just means the flag never fires.',
+  'let SCORI = null;',
+  'function isScorigami(a, b) {',
+  '  const list = CFG.scorigami && CFG.scorigami.scores;',
+  '  if (!list || !list.length) return false;',
+  '  if (!SCORI) SCORI = new Set(list);',
+  "  return !SCORI.has(Math.max(a, b) + '-' + Math.min(a, b));",
+  '}',
+  'function bossIntro() {'
+].join('\n'));
+rep([
+  "      $('gsStar').textContent = starLine(g);",
+  "      const row = document.createElement('div');",
+  "      row.className = 'game-row';",
+  '      row.innerHTML = `<span class="gn">GM ${st.n}</span><span class="gstar">⭐ ${starShort(g)}</span><b class="${g.win ? \'win\' : \'loss\'} disp">${g.win ? \'W\' : \'L\'} ${g.us}–${g.them}</b>`;'
+].join('\n'), [
+  "      $('gsStar').textContent = starLine(g);",
+  '      const scori = isScorigami(g.us, g.them);',
+  '      if (scori) {',
+  '        toast(`🧮 SCORIGAMI! ${Math.max(g.us, g.them)}–${Math.min(g.us, g.them)} has never happened in the NFL`);',
+  '        Sound.lock();',
+  '      }',
+  "      const row = document.createElement('div');",
+  "      row.className = 'game-row';",
+  '      row.innerHTML = `<span class="gn">GM ${st.n}</span><span class="gstar">⭐ ${starShort(g)}</span><b class="${g.win ? \'win\' : \'loss\'} disp">${g.win ? \'W\' : \'L\'} ${g.us}–${g.them}${scori ? \' 🧮\' : \'\'}</b>`;'
+].join('\n'));
+rep("${g.q.map((q, i) => q + '-' + g.q2[i]).join(' · ')}</small>`;",
+  "${g.q.map((q, i) => q + '-' + g.q2[i]).join(' · ')}${isScorigami(g.us, g.them) ? ' · 🧮 SCORIGAMI' : ''}</small>`;");
+
 /* ---------------- 🔍 the scout: one-use overall peek during the mulligan ---------------- */
 rep('<button class="btn ghost disp" id="dropBtn" style="display:none">🔄 DROP ONE</button>',
   '<button class="btn ghost disp" id="dropBtn" style="display:none">🔄 DROP ONE</button>\n      <button class="btn ghost disp" id="scoutBtn" style="display:none">🔍 SCOUT ONE</button>');
@@ -499,6 +542,426 @@ rep("$('dropBtn').addEventListener('click', startRedoPick);",
   "$('dropBtn').addEventListener('click', startRedoPick);\n$('scoutBtn').addEventListener('click', startScoutPick);");
 rep('It can come back better... or worse.</span></div>',
   'It can come back better... or worse. A one-use 🔍 <b>scout</b> can peek ONE overall first.</span></div>');
+
+/* ================================================================================
+   THE ONE-GAME PLAYOFF (Matt, 2026-07-21): football isn't a 7-game series. Each
+   fight is ONE game, played quarter by quarter, and the clock STOPS at every break.
+   The win is rolled in two acts — who leads at half, then who wins — so every
+   ability/relic keeps a natural home, the 🪪 Ring-Chaser knocks at HALFTIME, the
+   🛟 insurance rewinds to halftime, and w/l become QUARTERS WON so the whole cash
+   economy ($ per quarter + game bonus) keeps its shape.
+   ================================================================================ */
+
+/* ---- odds: gameProb + seriesOdds → two-act single-game math (names kept) ---- */
+repRange('// per-game win prob at series state (w, l), game index gi — ONE place for the math, shared',
+  '  return from(0, 0);\n}', [
+  '// win probability — ONE place for the math, shared by the live sim, the scouting',
+  '// report and the ring-chaser quote so they can never disagree. A fight is ONE game,',
+  '// rolled in two acts: who leads at half, then who wins it.',
+  'function halfProbFor(ovr, boss, opts) {',
+  '  const S = CFG.bossSim;',
+  '  const ab = (opts && opts.ability) || null;',
+  '  let p = .5 + (ovr - boss.rating) * (S.halfSlope || .05)',
+  '    + (opts ? (opts.gameEdge || 0) : 0)',
+  '    + ((opts && opts.homeCourt) ? ((opts && opts.homeEdge) || 0) : 0)',
+  '    + (opts ? (opts.firstGameEdge || 0) : 0);              // 🚀 Fast Starters own the 1st',
+  "  if (ab && ab.type === 'bossFirstGameEdge') p -= ab.value;   // they've seen your tape",
+  '  return Math.min(S.maxProb, Math.max(S.minProb, p));',
+  '}',
+  'function finalProbFor(ovr, boss, opts, lead) {',
+  '  const S = CFG.bossSim, cb = S.comeback || {};',
+  '  const ab = (opts && opts.ability) || null;',
+  '  let p = .5 + (ovr - boss.rating) * (S.finalSlope || .075)',
+  '    + (opts ? (opts.gameEdge || 0) : 0)',
+  '    + ((opts && opts.homeCourt) ? ((opts && opts.homeEdge) || 0) : 0)',
+  '    + (opts ? (opts.elimEdge || 0) : 0);                   // 💍 been here before',
+  "  if (ab && ab.type === 'bossElimEdge') p -= ab.value;     // their 4th-quarter monster",
+  '  let cap = S.maxProb;',
+  '  // holding the halftime lead is worth real points (halfCarry); desperation claws',
+  '  // some of it back — and 🪄 heroes/abilities bend exactly that tug-of-war',
+  '  const carry = S.halfCarry || .18;',
+  '  if (lead) {',
+  '    let drag = S.momentum || 0;',
+  '    if (opts && opts.noMomentumDrag) drag = 0;             // 🍀 momentum never swings against you',
+  "    if (ab && ab.type === 'bossComeback') drag += ab.value;   // 28–3 energy",
+  '    p += carry - drag;',
+  '  } else {',
+  "    let push = (ab && ab.type === 'noPlayerMomentum') ? 0     // perfect teams don't blink",
+  '      : ((opts && opts.hasHero) ? (cb.heroBoost || S.momentum || 0) : (S.momentum || 0));',
+  '    p += push - carry;',
+  '    if (push > (S.momentum || 0)) cap = 0.95;              // a hero chase pierces the cap',
+  '  }',
+  '  return Math.min(cap, Math.max(S.minProb, p));',
+  '}',
+  '// exact chance of winning the fight from kickoff — both acts combined',
+  'function seriesOdds(ovr, boss, opts) {',
+  '  const ph = halfProbFor(ovr, boss, opts);',
+  '  return ph * finalProbFor(ovr, boss, opts, true) + (1 - ph) * finalProbFor(ovr, boss, opts, false);',
+  '}'
+].join('\n'));
+
+/* ---- simSeries → one game (signature + name kept; w/l = quarters won) ---- */
+repRange('function simSeries(ovr, boss, rng, roster, opts, resume) {',
+  '  return { won: w === 4, w, l, games };\n}', [
+  'function simSeries(ovr, boss, rng, roster, opts, resume) {',
+  '  // ONE-GAME PLAYOFF. Two rolls tell the story — who leads at half, then who wins —',
+  '  // and the score is painted to match. `resume` = a halftime re-flip (ring-chaser',
+  '  // hire or the insurance rewind): the first half STANDS (same Q1/Q2 numbers), the',
+  '  // second half re-rolls with fresh randomness and, for a hire, the new overall.',
+  '  const home = !!(opts && opts.homeCourt);   // 🏟️ the Deed moves the game to YOUR stadium',
+  '  const sum = ev => ev.reduce((a, b) => a + b, 0);',
+  '  let h1us, h1them, leadHalf, q01 = null, q201 = null;',
+  '  if (resume && resume.game) {',
+  '    const old = resume.game;',
+  '    h1us = old.ev.h1us.slice(); h1them = old.ev.h1them.slice();',
+  '    q01 = old.q.slice(0, 2); q201 = old.q2.slice(0, 2);',
+  '    leadHalf = sum(h1us) > sum(h1them);',
+  '  } else {',
+  '    leadHalf = rng() < halfProbFor(ovr, boss, opts);',
+  '    // first half: 1–4 scores a side, dealt so the half-lead matches the roll',
+  '    for (let tries = 0; ; tries++) {',
+  '      h1us = scoreEvents(1 + Math.floor(rng() * 2) + (rng() < .45 ? 1 : 0), rng);',
+  '      h1them = scoreEvents(1 + Math.floor(rng() * 2) + (rng() < .45 ? 1 : 0), rng);',
+  '      if (rng() < 0.10) { if (leadHalf) h1them = []; else h1us = []; }   // the odd scoreless half',
+  '      if ((sum(h1us) > sum(h1them)) === leadHalf) break;',
+  '      if (tries >= 24) {   // force it — swap the piles, top up if still short',
+  '        const t2 = h1us; h1us = h1them; h1them = t2;',
+  '        if (leadHalf && sum(h1us) <= sum(h1them)) h1us.push(7);',
+  '        break;',
+  '      }',
+  '    }',
+  '  }',
+  '  const win = rng() < finalProbFor(ovr, boss, opts, leadHalf);',
+  '  // second half: keep scoring until the final matches the roll — comebacks paint themselves',
+  '  let h2us = scoreEvents(1 + Math.floor(rng() * 2) + (rng() < .35 ? 1 : 0), rng);',
+  '  let h2them = scoreEvents(1 + Math.floor(rng() * 2) + (rng() < .35 ? 1 : 0), rng);',
+  '  for (let guard = 0; guard < 30; guard++) {',
+  '    const usT = sum(h1us) + sum(h2us), themT = sum(h1them) + sum(h2them);',
+  '    if (win ? usT > themT : themT > usT) break;',
+  '    if (win) { if (h2them.length && rng() < .5) h2them.pop(); else h2us.push(rng() < .7 ? 7 : 3); }',
+  '    else { if (h2us.length && rng() < .5) h2us.pop(); else h2them.push(rng() < .7 ? 7 : 3); }',
+  '  }',
+  '  // halves → quarters (a kept first half keeps its exact Q1/Q2 numbers)',
+  '  const dealHalf = (ev, w0) => { let a = 0, b = 0; for (const p of ev) (rng() < w0 ? (a += p) : (b += p)); return [a, b]; };',
+  '  const q = (q01 || dealHalf(h1us, 0.44)).concat(dealHalf(h2us, 0.46));',
+  '  const q2 = (q201 || dealHalf(h1them, 0.44)).concat(dealHalf(h2them, 0.46));',
+  '  const evUs = h1us.concat(h2us), evThem = h1them.concat(h2them);',
+  '  const us = sum(evUs), them = sum(evThem);',
+  '  // quarters won drive the payout and the pips — a tied quarter pays nobody',
+  '  let w = 0, l = 0;',
+  '  for (let k = 0; k < 4; k++) { if (q[k] > q2[k]) w++; else if (q2[k] > q[k]) l++; }',
+  '  const g = { win, us, them, q, q2, home,',
+  '    ev: { h1us, h1them, h2us, h2them },',
+  '    box: boxScore(evUs, evThem, roster, rng) };',
+  '  return { won: win, w, l, games: [g] };',
+  '}'
+].join('\n'));
+
+/* ---- playSeries → quarter-by-quarter playback with hard stops ---- */
+repRange('function playSeries(sr, fromIdx) {',
+  '  tl.call(showResult, null, t + 1.6);\n}', [
+  'function playSeries(sr, fromQ) {',
+  '  // ONE-GAME PLAYOFF, quarter by quarter — the clock STOPS at every break: ▶',
+  '  // continues, halftime is where the Ring-Chaser knocks (gauntlet). ⏩ still skips',
+  '  // the whole thing once you have seen a boss before.',
+  '  fromQ = fromQ || 0;                    // 2 = a second-half re-flip (hire / insurance)',
+  "  $('rentBox').style.display = 'none';",
+  '  const g = sr.games[0];',
+  '  const tl = gsap.timeline();',
+  '  bossTl = tl;',
+  '  tl.timeScale(simSpeed());',
+  '  let t = 0.7;',
+  '  if (fromQ === 0) {',
+  '    tl.call(() => {',
+  "      $('gsTitle').textContent = 'ONE-GAME PLAYOFF';",
+  "      $('gsVenue').textContent = g.home ? 'YOUR STADIUM' : 'THEIR STADIUM';",
+  "      $('gsPeriod').textContent = '';",
+  "      $('gsScore').textContent = '0 – 0';",
+  "      $('gsScore').style.color = 'var(--ink)';",
+  "      $('gsQuarters').innerHTML = '';",
+  "      $('gsStar').textContent = '';",
+  "      gsap.fromTo('#gsTitle', { scale: .8, opacity: 0 }, { scale: 1, opacity: 1, duration: .25, ease: 'back.out(1.6)' });",
+  '    }, null, t);',
+  '    t += 1.0;',
+  '  }',
+  '  let pw = 0, pl = 0;',
+  '  for (let k = 0; k < fromQ; k++) { if (g.q[k] > g.q2[k]) pw++; else if (g.q2[k] > g.q[k]) pl++; }',
+  '  for (let qi = fromQ; qi < 4; qi++) {',
+  '    if (qi === 3) {',
+  '      // drama beat before the 4th when it is a one-score game',
+  '      tl.call(() => {',
+  '        let us = 0, them = 0;',
+  '        for (let k = 0; k < 3; k++) { us += g.q[k]; them += g.q2[k]; }',
+  '        if (Math.abs(us - them) <= 8) {',
+  "          $('closeoutFlash').textContent = (us < them && run.simOpts && run.simOpts.hasHero)",
+  "            ? '· TRAILING · BRADY MODE ·' : '· ONE-SCORE GAME · 4TH QUARTER ·';",
+  "          gsap.fromTo('#closeoutFlash', { opacity: 0 }, { opacity: 1, duration: .25, yoyo: true, repeat: 3 });",
+  '        }',
+  '      }, null, t);',
+  '      t += 0.9;',
+  '    }',
+  '    tl.call(() => {',
+  '      let us = 0, them = 0, pu = 0, pt = 0;',
+  '      for (let k = 0; k <= qi; k++) { us += g.q[k]; them += g.q2[k]; }',
+  '      for (let k = 0; k < qi; k++) { pu += g.q[k]; pt += g.q2[k]; }',
+  '      const isFinal = qi === 3;',
+  "      $('gsPeriod').textContent = ['END 1ST', 'HALFTIME', 'END 3RD', 'FINAL'][qi];",
+  "      $('gsScore').style.color = isFinal ? (g.win ? 'var(--gold)' : '#ff6b6b')",
+  "        : (us > them ? 'var(--accent2)' : us < them ? '#ff6b6b' : 'var(--ink)');",
+  '      const o = { a: pu, b: pt };',
+  "      let lastTxt = '';",
+  '      gsap.to(o, {',
+  '        a: us, b: them, duration: .85, ease: \'power1.out\',',
+  '        onUpdate: () => { const txt = `${Math.round(o.a)} – ${Math.round(o.b)}`; if (txt !== lastTxt) { lastTxt = txt; $(\'gsScore\').textContent = txt; } },',
+  '        onComplete: () => { $(\'gsScore\').textContent = `${us} – ${them}`; }',
+  '      });',
+  "      const cell = document.createElement('span');",
+  "      cell.className = 'gs-q';",
+  '      cell.innerHTML = `${[\'1ST\', \'HALF\', \'3RD\', \'FIN\'][qi]}<b>${us}–${them}</b>`;',
+  "      $('gsQuarters').appendChild(cell);",
+  "      gsap.fromTo(cell, { y: 6, opacity: 0 }, { y: 0, opacity: 1, duration: .2, ease: 'power2.out' });",
+  '      if (g.q[qi] > g.q2[qi]) { pw++; tickCash(payPerGameWin()); }   // 💰 win the quarter, bank the check',
+  '      else if (g.q2[qi] > g.q[qi]) pl++;',
+  '      $(\'seriesScore\').textContent = `${pw} – ${pl}`;',
+  '      paintSeriesPips(pw, pl);',
+  '      Sound.q();',
+  '    }, null, t);',
+  '    t += 1.7;                             // the slow burn — a real breath per quarter',
+  '    if (qi < 3) {',
+  '      tl.call(() => haltAtBreak(qi), null, t);',
+  '      tl.addPause(t + 0.02);',
+  '      t += 0.1;',
+  '    }',
+  '  }',
+  '  // final gun: star line, scorigami, the one game-row, then the banner',
+  '  tl.call(() => {',
+  "    $('closeoutFlash').style.opacity = 0;",
+  "    gsap.fromTo('#gsScore', { scale: 1 }, { scale: 1.12, duration: .16, yoyo: true, repeat: 1 });",
+  "    $('gsStar').textContent = starLine(g);",
+  '    const scori = isScorigami(g.us, g.them);',
+  '    if (scori) {',
+  '      toast(`🧮 SCORIGAMI! ${Math.max(g.us, g.them)}–${Math.min(g.us, g.them)} has never happened in the NFL`);',
+  '      Sound.lock();',
+  '    }',
+  "    const row = document.createElement('div');",
+  "    row.className = 'game-row';",
+  '    row.innerHTML = `<span class="gn">FINAL</span><span class="gstar">⭐ ${starShort(g)}</span><b class="${g.win ? \'win\' : \'loss\'} disp">${g.win ? \'W\' : \'L\'} ${g.us}–${g.them}${scori ? \' 🧮\' : \'\'}</b>`;',
+  "    $('seriesLog').appendChild(row);",
+  "    gsap.fromTo(row, { x: -14, opacity: 0 }, { x: 0, opacity: 1, duration: .28, ease: 'power2.out' });",
+  '    Sound.game(g.win);',
+  '  }, null, t);',
+  '  t += 0.9;',
+  '  tl.call(() => {',
+  '    const won = sr.won;',
+  '    $(\'bossBanner\').textContent = won ? `🏆 GAME WON ${g.us}–${g.them}` : `💀 GAME LOST ${g.them}–${g.us}`;',
+  "    $('bossBanner').style.color = won ? 'var(--gold)' : '#ff6b6b';",
+  "    gsap.fromTo('#bossBanner', { scale: .7, opacity: 0 }, { scale: 1, opacity: 1, duration: .4, ease: 'back.out(1.8)' });",
+  '    if (won && run.cashShown != null) tickCash(buzzerBonus(sr));   // 💰 game + quarter-sweep + upset (📢 Hype Man)',
+  '    if (won) Sound.win(); else Sound.lose();',
+  "    try { localStorage.setItem('pl_fb_bossSeen', '1'); } catch (e) {}",
+  '  }, null, t + 0.25);',
+  '  // 💰 interest lands as its own beat — G.cash is still the pre-payout balance here',
+  '  tl.call(() => {',
+  '    if (sr.won && run.cashShown != null) {',
+  '      const interest = interestFor(G.cash);',
+  '      if (interest > 0) { tickCash(interest); toast(`💰 +${cash$(interest)} interest on your ${cash$(G.cash)} float`); }',
+  '    }',
+  '  }, null, t + 1.0);',
+  '  tl.call(showResult, null, t + 1.6);',
+  '}'
+].join('\n'));
+
+/* ---- offerRental → haltAtBreak (the rental now knocks AT halftime) ---- */
+repRange('/* ---------- 🪪 Rent-A-Ring-Chaser — a Game 7 hired gun, gone after the buzzer ---------- */',
+  "  if (window.gsap) gsap.from('#rentBox', { y: 10, opacity: 0, duration: .25, ease: 'power2.out', clearProps: 'all' });\n}", [
+  '/* ---------- the quarter breaks — the clock stops, you breathe. Halftime is where',
+  '   the 🪪 Ring-Chaser knocks (gauntlet, once, if you can pay). ---------- */',
+  'function haltAtBreak(qi) {',
+  '  const g = run.series.games[0];',
+  '  let us = 0, them = 0;',
+  '  for (let k = 0; k <= qi; k++) { us += g.q[k]; them += g.q2[k]; }',
+  "  $('rentLead').textContent = ['🕐 END OF THE 1ST', '🏟️ HALFTIME', '🕒 END OF THE 3RD'][qi];",
+  '  const line = us === them ? `All square at <b>${us}–${them}</b>.`',
+  '    : us > them ? `You lead <b>${us}–${them}</b>.` : `They lead <b>${them}–${us}</b>.`;',
+  '  const R = CFG.gauntlet && CFG.gauntlet.rental;',
+  "  const offer = qi === 1 && run.mode === 'gauntlet' && !run.rentalOffered && R && G.cash >= (R.price || 100);",
+  '  $(\'rentSub\').innerHTML = line + (offer ? ` A <b>${R.minRating || 90}+ mercenary</b> is loitering in the tunnel — second half only, then he\'s gone.` : \'\');',
+  "  $('rentCard').innerHTML = '';",
+  "  $('rentBtns').innerHTML =",
+  '    `<button class="btn" id="btnQNext" type="button">${[\'▶ 2ND QUARTER\', \'▶ SECOND HALF\', \'▶ 4TH QUARTER\'][qi]}</button>` +',
+  '    (offer ? `<button class="btn ghost" id="btnRent" type="button">🪪 Rent one · ${cash$(R.price)}</button>` : \'\');',
+  '  // breaks auto-continue after a breath — the clock only truly waits when there is a',
+  '  // decision on the table (the halftime rental). ▶ hurries it along either way.',
+  '  const tl = bossTl;',
+  '  const go = () => {',
+  '    if (run._breakTimer) { run._breakTimer.kill(); run._breakTimer = null; }',
+  "    $('rentBox').style.display = 'none';",
+  '    tl.play();',
+  '  };',
+  '  if (run._breakTimer) { run._breakTimer.kill(); run._breakTimer = null; }',
+  "  $('btnQNext').addEventListener('click', go);",
+  "  if (offer) $('btnRent').addEventListener('click', rentChaser);",
+  '  else run._breakTimer = gsap.delayedCall(2.4 / Math.max(.25, simSpeed()), go);',
+  "  $('rentBox').style.display = 'block';",
+  '  Sound.q();',
+  "  if (window.gsap) gsap.from('#rentBox', { y: 10, opacity: 0, duration: .25, ease: 'power2.out', clearProps: 'all' });",
+  '}'
+].join('\n'));
+
+/* ---- rentChaser: the hire re-flips the SECOND HALF ---- */
+repRange('function rentChaser() {',
+  '    playSeries(resim, 6);\n  });\n}', [
+  'function rentChaser() {',
+  '  const R = CFG.gauntlet.rental;',
+  '  if (G.cash < R.price || run.rentalOffered) return;',
+  '  run.rentalOffered = true;              // one knock per fight — insurance doesn\'t re-offer',
+  '  G.cash -= R.price;',
+  '  saveG();',
+  '  run.cashShown = G.cash;',
+  "  $('bossCash').textContent = cash$(G.cash);",
+  "  track('shop_use', { item: 'rental', stage: fightNum(run.stage) });",
+  '  // every eligible player, legends included, at EVEN weight — no rarity bands here',
+  '  const onSquad = new Set(run.locked.filter(e => e && !e.coach).map(e => e.name));',
+  '  const elig = PLAYERS.filter(p => p.rating >= (R.minRating || 90) && !onSquad.has(p.name));',
+  '  const hire = elig[Math.floor(Math.random() * elig.length)];',
+  '  // he takes whichever eligible seat he upgrades most — position slot or FLEX — for the',
+  '  // second half only; the real squad never changes. Worse than both? He rides the bench.',
+  "  const pi = CFG.slots.findIndex(s => s.type === 'player' && s.positions.length === 1 && s.positions[0] === slotPositions(hire)[0]);",
+  "  const si = CFG.slots.findIndex(s => s.type === 'player' && s.positions.length > 1);",
+  '  const idx = pi < 0 ? si : (run.locked[pi].rating <= run.locked[si].rating ? pi : si);   // pure-FLEX types take the FLEX seat',
+  '  const gain = hire.rating - run.locked[idx].rating;',
+  '  const temp = run.locked.slice();',
+  '  if (gain > 0) temp[idx] = { name: hire.name, rating: hire.rating, pos: hire.pos, team: hire.team, img: hire.img, legend: hire.legend };',
+  "  const newOvr = overallOf(temp) + relicSum('ovrBoost');",
+  '  const ab = run.boss.ability;',
+  "  const ovrEff = newOvr - ((ab && ab.type === 'ovrDebuff') ? ab.value : 0);",
+  '  const g0 = run.series.games[0];',
+  '  const lead = (g0.q[0] + g0.q[1]) > (g0.q2[0] + g0.q2[1]);',
+  '  const p = Math.round(100 * finalProbFor(ovrEff, run.boss, run.simOpts, lead));',
+  '  // re-flip the SECOND HALF with the mercenary on the field — the first half stands',
+  '  const roster = CFG.slots.map((s, i) => ({ key: s.key, label: s.label, e: temp[i] }))',
+  '    .filter(x => !x.e.coach).map(x => ({ key: x.key, label: x.label, name: x.e.name, rating: x.e.rating }));',
+  "  const rng = seededRandom('rr-rental|' + Date.now() + '|' + Math.random());",
+  '  const resim = simSeries(ovrEff, run.boss, rng, roster, run.simOpts, { game: g0 });',
+  '  run.rentalNote = gain > 0',
+  '    ? `🪪 ${lastName(hire.name)} (${hire.rating}) rented at halftime`',
+  '    : `🪪 ${lastName(hire.name)} (${hire.rating}) rented… and benched`;',
+  '  const hex = hire.legend ? TIER_HEX.legend : TIER_HEX[tierKey(hire)];',
+  '  const face = hire.img ? `<img src="${hire.img}" alt="" onerror="this.remove()">` : initials(hire.name);',
+  '  $(\'rentCard\').innerHTML = `<div class="rr-card" style="border-color:${hex}"><span class="rr-face">${face}<span class="rr-rate" style="color:${hex}">${hire.rating}</span></span><b>${lastName(hire.name)}</b><span class="rr-pos">${hire.pos[0]}${hire.legend ? \' · LEGEND\' : \'\'}</span></div>`;',
+  '  $(\'rentSub\').innerHTML = gain > 0',
+  '    ? `<b>${hire.name}</b> takes the ${CFG.slots[idx].label} spot for the second half. Win it from here: <b>${p}%</b>.`',
+  '    : `<b>${hire.name}</b> showed up… and your ${CFG.slots[idx].label} is already better. He\'ll cheer from the bench. Win it from here: <b>${p}%</b>.`;',
+  '  $(\'rentBtns\').innerHTML = `<button class="btn" id="btnRentGo" type="button">🏈 PLAY THE SECOND HALF</button>`;',
+  '  Sound.lock();',
+  "  if (window.gsap) gsap.from('#rentCard .rr-card', { scale: .7, opacity: 0, duration: .3, ease: 'back.out(1.7)', clearProps: 'all' });",
+  "  $('btnRentGo').addEventListener('click', () => {",
+  "    $('rentBox').style.display = 'none';",
+  '    if (bossTl) bossTl.kill();',
+  '    run.series = resim;',
+  '    playSeries(resim, 2);',
+  '  });',
+  '}'
+].join('\n'));
+
+/* ---- insurance: the rewind goes back to HALFTIME ---- */
+repRange('function rewindAndResim() {',
+  '    playSeries(resim, fromIdx);\n  }, null, 2.3);\n}', [
+  'function rewindAndResim() {',
+  '  const g0 = run.series.games[0];',
+  "  const rng = seededRandom('rr-insurance|' + Date.now() + '|' + Math.random());",
+  '  const ab = run.boss.ability;',
+  "  const ovrEff = run.ovr - ((ab && ab.type === 'ovrDebuff') ? ab.value : 0);",
+  '  const resim = simSeries(ovrEff, run.boss, rng, rosterPlayers(), run.simOpts, { game: g0 });',
+  "  $('bossBanner').textContent = '🛟 INSURANCE POLICY';",
+  "  $('bossBanner').style.color = 'var(--accent2)';",
+  '  Sound.rewind();',
+  '  const tl = gsap.timeline();',
+  '  bossTl = tl;',
+  '  tl.timeScale(simSpeed());',
+  '  tl.call(() => {',
+  "    $('closeoutFlash').textContent = '· ⏪ REWINDING TO HALFTIME ·';",
+  "    gsap.fromTo('#closeoutFlash', { opacity: 0 }, { opacity: 1, duration: .3, yoyo: true, repeat: 3 });",
+  '  }, null, .4)',
+  '  .call(() => {',
+  '    // the fatal second half comes off the books — the board resets to the half',
+  "    const rows = $('seriesLog').children;",
+  '    const last = rows[rows.length - 1];',
+  "    if (last) gsap.to(last, { x: 44, opacity: 0, duration: .45, ease: 'power2.in', onComplete: () => last.remove() });",
+  '    let pw = 0, pl = 0;',
+  '    for (let k = 0; k < 2; k++) { if (g0.q[k] > g0.q2[k]) pw++; else if (g0.q2[k] > g0.q[k]) pl++; }',
+  '    $(\'seriesScore\').textContent = `${pw} – ${pl}`;',
+  '    paintSeriesPips(pw, pl);',
+  "    $('gsTitle').textContent = 'SECOND CHANCE';",
+  "    $('gsVenue').textContent = g0.home ? 'YOUR STADIUM' : 'THEIR STADIUM';",
+  "    $('gsPeriod').textContent = 'HALFTIME';",
+  '    $(\'gsScore\').textContent = `${g0.q[0] + g0.q[1]} – ${g0.q2[0] + g0.q2[1]}`;',
+  "    $('gsScore').style.color = 'var(--ink)';",
+  "    const cells = $('gsQuarters').children;",
+  '    while (cells.length > 2) cells[cells.length - 1].remove();',
+  "    $('gsStar').textContent = '';",
+  '  }, null, 1.2)',
+  '  .call(() => {',
+  "    $('bossBanner').textContent = '';",
+  "    $('closeoutFlash').style.opacity = 0;",
+  '    run.series = resim;',
+  '    playSeries(resim, 2);',
+  '  }, null, 2.3);',
+  '}'
+].join('\n'));
+
+/* ---- one-game copy sweep ---- */
+rep('<div class="k disp" id="bossKick">DAILY BOSS · 7-GAME SERIES</div>',
+  '<div class="k disp" id="bossKick">DAILY BOSS · ONE-GAME PLAYOFF</div>');
+rep("    ? 'DAILY BOSS · 7-GAME SERIES'", "    ? 'DAILY BOSS · ONE-GAME PLAYOFF'");
+rep('<span class="spx disp">FIRST TO 4</span>', '<span class="spx disp">QUARTERS WON</span>');
+rep('// series win pips — first to four', '// quarter pips — win the quarter, light the pip');
+rep('Reveal your team overall, then <b>survive a 7-game series</b> against the boss, line scores and all.',
+  'Reveal your team overall, then <b>win a one-game playoff</b> — quarter by quarter, and the clock stops at every break.');
+rep('<b>survive a 7-game series</b> against the boss, box scores and all', '<b>win a one-game playoff</b>, box scores and all', 0);
+rep("$('bossSkip').addEventListener('click', () => { if (bossTl) bossTl.progress(1); });",
+  "$('bossSkip').addEventListener('click', () => { if (bossTl) { $('rentBox').style.display = 'none'; bossTl.play(); bossTl.progress(1); } });");
+rep("'❌ SERIES LOST'", "'❌ GAME LOST'");
+rep('`Attempt ${run.attempt}: the ${b.name} survive, ${run.series.l}–${run.series.w}.`',
+  '`Attempt ${run.attempt}: the ${b.name} survive, ${run.series.games[0].them}–${run.series.games[0].us}.`');
+rep('`Series ${run.series.w}–${run.series.l} · ${run.ovr} OVR vs ${b.rating} boss · `',
+  '`Final ${run.series.games[0].us}–${run.series.games[0].them} · quarters ${run.series.w}–${run.series.l} · ${run.ovr} OVR vs ${b.rating} boss · `');
+rep("ctx.fillText(sum ? 'One squad. One life.' : `Series ${run.series.w}–${run.series.l} · ${attemptLine()}`, 70, 208);",
+  "ctx.fillText(sum ? 'One squad. One life.' : `Final ${run.series.games[0].us}–${run.series.games[0].them} · ${attemptLine()}`, 70, 208);");
+rep('    // 💰 Cap Space — per game win + buzzer bonuses + interest on the float',
+  '    // 💰 Cap Space — per quarter won + game bonuses + interest on the float');
+rep('    // 🎓 the rookie gets better with every game won — win or lose the series',
+  '    // 🎓 the rookie gets better with every quarter you win — win or lose the game');
+rep('  $(\'bsTabs\').innerHTML = run.series.games.map((g, i) =>',
+  '  $(\'bsTabs\').innerHTML = run.series.games.length < 2 ? \'\' : run.series.games.map((g, i) =>');
+
+/* ---- scouting report: game language, halftime heartbreak ---- */
+rep('`A ${run.ovr} squad takes this series off a ${b.rating} team <b>${odds} times in 100</b>. Vegas wouldn\'t even post a line.`',
+  '`A ${run.ovr} squad takes this game off a ${b.rating} team <b>${odds} times in 100</b>. Vegas wouldn\'t even post a line.`');
+rep('`You were <b>${odds}%</b> to win this series and lost it. Historic stuff, honestly.`',
+  '`You were <b>${odds}%</b> to win this game and lost it. Historic stuff, honestly.`');
+rep([
+  "    if (run.series.games.length === 7) tips.push(['💔', pick([",
+  '      `Game 7 and it slipped. One snap from a different story.`,',
+  "      `Seven games, one bad night. That's January football.`,",
+  '      `You took them the distance and blinked last.`])]);'
+].join('\n'), [
+  '    const gH = run.series.games[0];',
+  "    if (gH && gH.q[0] + gH.q[1] > gH.q2[0] + gH.q2[1]) tips.push(['💔', pick([",
+  '      `You led at halftime and let it slip. One snap from a different story.`,',
+  "      `Up at the half, gone by the gun. That's January football.`,",
+  '      `Thirty minutes from glory and you blinked last.`])]);'
+].join('\n'));
+rep('`${low} guys under 75 on the field. Depth like that folds over seven games.`',
+  '`${low} guys under 75 on the field. Depth like that folds in the fourth quarter.`');
+rep('` — ${wkPpg} yards a night won\'t cut it`', '` — ${wkPpg} yards won\'t cut it`');
+rep('`. ${wkPpg} yards a game says so`', '`. ${wkPpg} yards says so`');
+rep('`<b>${topN}</b> piled up <b>${tp} yards a game</b> and never cooled off.`',
+  '`<b>${topN}</b> piled up <b>${tp} yards</b> and never cooled off.`');
+rep('`<b>${topN}</b> carried the offense: <b>${tp} yards</b> a night.`',
+  '`<b>${topN}</b> carried the offense: <b>${tp} yards</b>.`');
+rep('`Ask the box score who won this. It says <b>${topN}</b>, ${tp} yards a game.`',
+  '`Ask the box score who won this. It says <b>${topN}</b>, ${tp} yards.`');
 
 fs.writeFileSync(OUT, html);
 console.log(`${OUT} written · ${nRep} anchored replacements`);

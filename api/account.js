@@ -1308,7 +1308,10 @@ module.exports = async (req, res) => {
         if (!tier) return res.status(400).json({ ok: false, error: 'Unknown tier' });
         const ent = await getEnt(key);
         const proActive = ent.pro_until && Date.parse(ent.pro_until) > Date.now();
-        if (lane === 'premium' && !proActive && !(ent.pass && ent.pass[String(season)])) return res.status(200).json({ ok: false, error: 'GoatLab Pro needed' });
+        // Paid-only GOAT Pass (2026-07-21): EVERY coin tier — legacy 'free' lane included —
+        // needs the season pass or GoatLab Pro. Claims made while the free lane existed keep
+        // their ledger refs; nothing is clawed back.
+        if (!proActive && !(ent.pass && ent.pass[String(season)])) return res.status(200).json({ ok: false, error: 'GOAT Pass needed' });
         const [urow] = await sql`SELECT cosmetics FROM users WHERE google_sub = ${key}`;
         const cos = (urow && urow.cosmetics && typeof urow.cosmetics === 'object') ? urow.cosmetics : {};
         const sxp = Number((cos.seasons || {})[String(season)]) || 0;
