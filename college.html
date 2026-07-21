@@ -473,11 +473,13 @@
   .draft-skip { margin-top:28px; font-size:11px; color:var(--dim); letter-spacing:2px; text-transform:uppercase;
     pointer-events:none; opacity:0; transition:opacity .4s; }
   .draft-skip.show { opacity:.55; }
-  .hat-row { display:none; gap:10px; justify-content:center; flex-wrap:wrap; margin:18px 0 4px; }
+  /* .draft-inner is pointer-events:none (so the reveal is tap-anywhere-to-continue) —
+     the hats are the one interactive element inside it, so re-enable clicks on them. */
+  .hat-row { display:none; gap:10px; justify-content:center; flex-wrap:wrap; margin:18px 0 4px; pointer-events:auto; }
   .hat-row.show { display:flex; }
   .hat-btn { display:flex; flex-direction:column; align-items:center; gap:6px; min-width:104px; max-width:150px;
     padding:12px 10px 10px; border-radius:14px; border:1px solid #2a3648; cursor:pointer; color:var(--ink);
-    font-family:'Oswald',sans-serif; letter-spacing:.5px; transition:transform .15s ease; }
+    pointer-events:auto; font-family:'Oswald',sans-serif; letter-spacing:.5px; transition:transform .15s ease; }
   .hat-btn:hover { transform:translateY(-3px); }
   .hat-cap { font-size:26px; line-height:1; }
   .hat-name { font-size:13px; text-transform:uppercase; }
