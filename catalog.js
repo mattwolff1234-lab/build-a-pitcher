@@ -87,6 +87,7 @@
   // Server-verified coin grants (client never picks amounts — these are read server-side).
   const EARN = {
     daily: 25,          // per validated Daily Challenge submission, per game, once per day  // TUNE
+    dailyTop: [100, 50, 25], // Discord daily digest: yesterday's daily top-3 per game (accounts only, ledger ref dailytop:<date>:<game>:<sub>)  // TUNE
     pvpWin: 10,         // per RANKED 1v1 win settled from locked builds                     // TUNE
     pvpWinDailyCap: 5,  // max coin-paying wins per day                                      // TUNE
     discord: 1000,      // one-time: joining the GoatLab Discord (per account)               // TUNE
