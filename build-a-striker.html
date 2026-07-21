@@ -4078,6 +4078,18 @@ init();
   border-top:1px solid rgba(120,160,210,.14);background:rgba(4,7,13,.55);
   font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;color:#8b98ab;font-size:13.5px;line-height:1.65;}
 .pg-about-in{max-width:760px;margin:0 auto;}
+/* The section is injected at the end of <body>, so while the game is still booting
+   (#game hidden, .loading only ~150px tall) it briefly landed inside the viewport.
+   Reserving a screen of height for the loading state keeps it below the fold, and
+   margin-top:auto pins it to the bottom on any short page. Nothing is ever hidden —
+   the copy must stay crawlable. */
+.loading{flex:1 0 auto;min-height:80vh;display:grid;place-items:center;}
+body>.pg-about{margin-top:auto;}
+/* Same goal for pages whose <body> is block-level (franchise) or whose app area is
+   short: guarantee the main container owns the first screen. No-op where #game/.hub
+   is already taller, which is every build game once it has loaded. */
+#game{min-height:calc(100vh - 60px);}
+.hub{flex:1 0 auto;}
 .pg-about h2{font-family:'Oswald',sans-serif;font-size:17px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;
   color:#c9d6e6;margin:0 0 10px;}
 .pg-about h3{font-family:'Oswald',sans-serif;font-size:13px;font-weight:600;letter-spacing:1.4px;text-transform:uppercase;
