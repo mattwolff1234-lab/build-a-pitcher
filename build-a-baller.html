@@ -958,7 +958,7 @@
 
 <div id="lbModal" class="overlay">
   <div class="overlay-card panel">
-    <div class="overlay-head"><span class="overlay-title">Leaderboard</span><button class="overlay-close" data-close="lbModal">✕</button></div>
+    <div class="overlay-head"><span class="overlay-title">Leaderboard</span><a class="lb-full-link" href="/ranks" style="margin-left:auto;margin-right:10px;font-family:'Oswald',sans-serif;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--accent2);text-decoration:none">Full rankings ↗</a><button class="overlay-close" data-close="lbModal">✕</button></div>
     <div class="overlay-body">
       <div class="lb-tabs lb-sport-tabs" id="lbSportTabs"></div>
       <div class="lb-tabs lb-role-tabs" id="lbRoleTabs"></div>
@@ -1416,7 +1416,7 @@ async function init() {
   $('menuBtn').onclick = () => { Sound.click(); openOverlay('menu'); };
   $('miHof').onclick = () => { closeOverlay('menu'); openHof(); };
   $('saveHofBtn').onclick = () => saveToHof($('saveHofBtn'));
-  $('miLb').onclick = () => { closeOverlay('menu'); openLeaderboard('global'); };
+  $('miLb').onclick = () => { location.href = '/ranks?game=' + LEADERBOARD_GAME; };
   $('miHow').onclick = () => { closeOverlay('menu'); openOverlay('howModal'); };
   $('miInstall').onclick = () => {
     const el = $('installSteps'), open = el.style.display === 'block';
@@ -1482,7 +1482,7 @@ function toast(msg) {
 }
 function openOverlay(id) { const el = $(id); el.classList.add('show'); gsap.fromTo(el.firstElementChild, { y: 14, opacity: 0 }, { y: 0, opacity: 1, duration: .3, ease: 'power3.out' }); }
 function closeOverlay(id) { $(id).classList.remove('show'); }
-function openLeaderboard(scope, game = LEADERBOARD_GAME) { openOverlay('lbModal'); loadLeaderboard(scope, game); }
+function openLeaderboard(scope, game = LEADERBOARD_GAME) { openOverlay('lbModal'); const fl = document.querySelector('.lb-full-link'); if (fl) fl.href = '/ranks?game=' + (game || LEADERBOARD_GAME); loadLeaderboard(scope, game); }
 
 /* ===== Accounts ("Sign in with Google") + My Hall of Fame ===== */
 const GOOGLE_CLIENT_ID = '349698720898-t9bpb8fp7ks6scf8ci8mmoeec1lpm3d3.apps.googleusercontent.com';
@@ -2810,9 +2810,9 @@ const CAREER_EVENTS = {
   national: { title: 'Play for Gold', icon: '🥇', def: 'rest',
     flavor: 'Your country wants you leading the break at the Olympics this summer.',
     options: [
-      { key: 'play', label: 'Play for gold', hint: 'A legacy moment. The legs pay the interest.', fx: [['up', 'HOF vote'], ['down', 'Performance']] },
+      { key: 'play', label: 'Play for gold', hint: 'A legacy moment. The legs pay the interest.', fx: [['up', 'HOF vote'], ['down', 'Performance'], ['neu', 'Medal result']] },
       { key: 'rest', label: 'Protect the legs', hint: 'Regular-season wins pay the bills.', fx: [['up', 'Performance']] },
-      { key: 'captain', label: 'Go as the captain', hint: 'Lead the whole squad. Heavy is the crown.', fx: [['up', 'Clutch'], ['up', 'HOF vote'], ['down', 'Performance']] },
+      { key: 'captain', label: 'Go as the captain', hint: 'Lead the whole squad. Heavy is the crown.', fx: [['up', 'Clutch'], ['up', 'HOF vote'], ['down', 'Performance'], ['neu', 'Medal result']] },
     ] },
   mentor: { title: 'The Phenom', icon: '🧑‍🏫', def: 'focus',
     flavor: 'The team\'s top draft pick just arrived and asked for the locker next to yours.',
@@ -2863,7 +2863,7 @@ function simulateCareer(filled, finalOvr, draftTeamAb, choices, salt) {
   const evOn = Array.isArray(choices);
   const decisions = [];
   const mods = { perf: 0, earnMult: 1, clutch: 0, voteBonus: 0, noTrades: false };
-  let pendingDecision = null, choiceIdx = 0, twilightDone = false, injuryAsked = false, decisionTrade = null;
+  let pendingDecision = null, choiceIdx = 0, twilightDone = false, injuryAsked = false, decisionTrade = null, olympics = null;
   let endAge = maxAge;
   const evPlan = {};
   if (evOn) {
@@ -2896,7 +2896,20 @@ function simulateCareer(filled, finalOvr, draftTeamAb, choices, salt) {
     else if (id === 'gear') { if (pick === 'sign') m.earnMult *= 1.18; else if (pick === 'focus') m.perf += 0.012; else { m.voteBonus += 2; m.earnMult *= 1.05; } }
     else if (id === 'presser') { if (pick === 'comedy') { m.voteBonus += 1.5; m.earnMult *= 1.05; } else if (pick === 'robot') m.perf += 0.012; else { m.clutch += 3; m.voteBonus -= 1; } }
     else if (id === 'viral_celebration') { if (pick === 'trademark') m.earnMult *= 1.15; else if (pick === 'tone') { m.perf += 0.008; m.voteBonus += 0.5; } else m.voteBonus += 1.5; }
-    else if (id === 'national') { if (pick === 'play') { m.voteBonus += 1.5; m.perf -= 0.008; } else if (pick === 'rest') m.perf += 0.008; else { m.clutch += 3; m.voteBonus += 1; m.perf -= 0.012; } }
+    else if (id === 'national') {
+      if (pick === 'play' || pick === 'captain') {
+        // the Olympic summer resolves to a medal — its OWN rng stream, display-only,
+        // so every number in the career stays byte-identical to the pre-medal sim
+        const oRng = seededRandom(seed + '|olympics-v1' + (salt || ''));
+        const q = clamp((finalOvr - 62) / 34, 0, 1);
+        const roll = oRng(), pg = 0.16 + q * 0.36 + (pick === 'captain' ? 0.05 : 0);
+        olympics = { age, pick,
+          medal: roll < pg ? 'gold' : roll < pg + 0.24 ? 'silver' : roll < pg + 0.46 ? 'bronze' : null,
+          tp: Math.round(clamp((vals.finishing + vals.threept) / 2 * 0.22 + oRng() * 4, 8, 34)) };
+        decisions[decisions.length - 1].medal = olympics.medal;
+      }
+      if (pick === 'play') { m.voteBonus += 1.5; m.perf -= 0.008; } else if (pick === 'rest') m.perf += 0.008; else { m.clutch += 3; m.voteBonus += 1; m.perf -= 0.012; }
+    }
     else if (id === 'mentor') { if (pick === 'mentor') m.voteBonus += 2; else m.perf += 0.01; }
     else if (id === 'fa') {
       if (pick === 'loyal') { m.voteBonus += 2; m.perf += 0.01; m.earnMult *= 0.9; m.noTrades = true; }
@@ -3015,6 +3028,7 @@ function simulateCareer(filled, finalOvr, draftTeamAb, choices, salt) {
       fgPct: round(fgPct, 3), tpPct: round(tpPct, 3), ts: round(ts, 3), war: round(war, 1),
       mvp, allStar, allNba, scoringTitle, dpoy, roy, playoff, ring, finalsMvp, p30,
       salary, hurt, exit: null, struggling: false, team: currentTeam, trade };
+    if (olympics && olympics.age === age) season.oly = olympics;
     seasons.push(season);
     totals.gp+=gp; totals.min+=Math.round(mpg*gp); totals.pts+=pts; totals.reb+=rebT; totals.ast+=astT; totals.stl+=stlT; totals.blk+=blkT; totals.war+=war;
     totals.mvp+=mvp?1:0; totals.allStar+=allStar?1:0; totals.allNba+=allNba?1:0; totals.scoringTitles+=scoringTitle?1:0;
@@ -3095,7 +3109,10 @@ function simulateCareer(filled, finalOvr, draftTeamAb, choices, salt) {
     highlight };
   // decision fields are added ONLY when the feature ran, so classic (toggle-off)
   // careers stay byte-identical to the original sim
-  if (evOn) { career.decisions = decisions; career.totals.voteBonus = Math.round(mods.voteBonus * 10) / 10; }
+  if (evOn) {
+    career.decisions = decisions; career.totals.voteBonus = Math.round(mods.voteBonus * 10) / 10;
+    if (olympics) { career.olympics = olympics; if (olympics.medal) career.totals.oly = olympics.medal; }
+  }
   return career;
 }
 
@@ -3272,6 +3289,12 @@ function seasonHeadlines(s, idx, total, P, fallbackTeam, finished = true) {
   if (s.mvp) h.push({ text: `🏆 ${P} is named league <b>MVP</b>!`, big: true });
   if (s.finalsMvp) h.push({ text: `🏆 ${P} wins <b>Finals MVP</b> as ${team} take the title!`, big: true });
   else if (s.ring) h.push({ text: `💍 ${P} and ${team} win the <b>NBA Championship</b>!`, big: true });
+  if (s.oly) {
+    if (s.oly.medal === 'gold') h.push({ text: `🥇 ${P} leads his country to <b>Olympic gold</b> — ${s.oly.tp} a game in the tournament!`, big: true });
+    else if (s.oly.medal === 'silver') h.push({ text: `🥈 ${P} settles for <b>Olympic silver</b> — heartbreak in the final.` });
+    else if (s.oly.medal === 'bronze') h.push({ text: `🥉 ${P} battles to <b>Olympic bronze</b>.` });
+    else h.push({ text: `${P}'s Olympic run ends short of the podium.` });
+  }
   if (s.p30) h.push({ text: `${P} averages <b>${s.ppg} points</b> a game.`, big: true });
   if (s.scoringTitle) h.push({ text: `${P} wins the <b>scoring title</b> (${s.ppg} PPG).` });
   if (s.dpoy) h.push({ text: `${P} is <b>Defensive Player of the Year</b>.` });
@@ -3453,7 +3476,8 @@ function _doCareerSim() {
     const s = seasons[i]; i++;
     const rowTeam = teamInfo(s.team || state.simTeam.abbr);
     const badges = [s.mvp ? 'MVP' : '', s.allStar ? '★' : '', s.allNba ? 'All-NBA' : '', s.scoringTitle ? 'SCORE Title' : '',
-      s.dpoy ? 'DPOY' : '', s.roy ? 'ROY' : '', s.finalsMvp ? 'FMVP' : '', s.ring ? '💍' : ''].filter(Boolean).join(' · ');
+      s.dpoy ? 'DPOY' : '', s.roy ? 'ROY' : '', s.finalsMvp ? 'FMVP' : '', s.ring ? '💍' : '',
+      s.oly && s.oly.medal ? ({ gold: '🥇', silver: '🥈', bronze: '🥉' })[s.oly.medal] : ''].filter(Boolean).join(' · ');
     const row = document.createElement('div');
     row.className = 'season-row' + (s.mvp || s.ring || s.p30 ? ' big' : '');
     row.style.borderLeft = `3px solid ${rowTeam.color}`;
@@ -3589,6 +3613,7 @@ function trophyParts(t) {
   const trophies = [];
   for (let i = 0; i < t.mvp; i++) trophies.push('🏆');
   for (let i = 0; i < t.rings; i++) trophies.push('💍');
+  if (t.oly) trophies.push(({ gold: '🥇', silver: '🥈', bronze: '🥉' })[t.oly]);
   if (t.allStar) trophies.push(`⭐ ${t.allStar}`);
   if (t.allNba) trophies.push(`🏀 ${t.allNba}`);
   if (t.dpoy) trophies.push(`🛡️ ${t.dpoy}`);
@@ -3776,6 +3801,7 @@ async function submitScore() {
     const data = await res.json();
     if (!data.ok) { const err = new Error(data.error || 'rejected'); err.server = true; throw err; }
     myEntryId = data.id;
+    try { localStorage.setItem('pl_lastEntry_' + LEADERBOARD_GAME, String(data.id)); } catch (e) {}
     draftClear();
     try { gtag('event', 'leaderboard_submit', { game: LEADERBOARD_GAME, ovr: state.finalOvr }); } catch (e) {}
     $('submitRow').style.display = 'none';
