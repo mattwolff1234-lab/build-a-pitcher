@@ -41,17 +41,28 @@
   // .pro_until (= no_ads_until) to each paid period's end (works for month OR year) and lapses on cancel.
   const PRO = {
     id: 'pro', name: 'GoatLab Pro', icon: '⭐',
-    tagline: 'No ads · Premium battle pass · more perks',
-    perks: ['Zero ads across every GoatLab game', 'Premium Season Track lane (exclusive rewards + coins back)', 'More Pro perks coming'],
+    tagline: 'No ads · every Battle Pass included · exclusive golden cosmetics',
+    perks: [
+      'Zero ads across every GoatLab game',
+      'Every season’s Premium Battle Pass lane included (exclusive frames, avatars, name effects + ~1000 🪙 back per season)',
+      '✨ Midas Glow — exclusive golden name effect with particles, shown in 1v1 and on the leaderboards',
+      '⭐ Pro star on your name everywhere',
+      'Golden Reel Trail on every spin',
+      'Coming soon: monthly coin drop · Pro-only tournaments · early access to new sports',
+    ],
     plans: {   // usd in CENTS. api/buy.js picks by body.cycle; the webhook reads the real period end.
       monthly: { usd: 499,  interval: 'month', label: 'Monthly' },                    // TUNE $4.99/mo
       yearly:  { usd: 3999, interval: 'year',  label: 'Yearly', tag: 'Save 33%' },    // TUNE $39.99/yr
     },
   };
 
-  // Coin-priced store items.  (Ad-free + the premium pass are NOT here anymore — they're part of
-  // GoatLab Pro, the real-money subscription above. Coins buy cosmetics + consumables.)
+  // Coin-priced store items. (Ad-free is Pro-only; the premium Season Track lane is included
+  // with Pro OR sold here for coins — season:'current' resolves server-side via the shared
+  // season clock, so this one SKU always sells the pass for whatever season is live.)
   const SKUS = {
+    pass_cur: { type: 'pass', season: 'current', price: 1500, name: 'Premium Pass — this season', icon: '🎫',  // TUNE
+      desc: 'Unlock this season’s premium Battle Pass lane: exclusive cosmetics + 🪙 coins back. Included free with GoatLab Pro.' },
+
     // Cosmetics — ids live in social.js AVATARS (track:'future' art, already rendered + equippable).
     av_robot_ump:   { type: 'cosmetic', price: 350, name: 'Robo Ump Avatar', icon: '🤖', desc: 'Beep. Strike three.' },        // TUNE
     av_ghost_jersey:{ type: 'cosmetic', price: 350, name: 'Double Zero Avatar', icon: '👻', desc: 'The ghost in the lineup.' }, // TUNE

@@ -26,9 +26,10 @@
   const C = window.Catalog;
 
   const DISCORD_URL = 'https://discord.gg/bMVX2zJp49';
-  // Launch gate: while true the store sells ONLY GoatLab Pro — coin packs (Get Coins tab) and
-  // coin-spend items (avatars/consumables) are hidden. Flip to false to reopen the coin economy.
-  const PRO_ONLY = true;
+  // Real-money coin packs (the Get Coins tab). Flip false to go earn-only again — coin SPENDING
+  // (pass/cosmetics/consumables in the Shop tab) stays on either way. Always hidden in the
+  // Capacitor iOS shell (Apple IAP rule) via inApp().
+  const SELL_PACKS = true;
   // Real-money go-live gate. FALSE = Pro shows "Coming soon" (can't subscribe) — use while Stripe is
   // still in test mode / the account isn't activated. Flip TRUE (and swap Vercel to LIVE Stripe
   // keys + a LIVE-mode webhook — see GO-LIVE.md) to actually start charging. One switch, that's it.
@@ -192,7 +193,12 @@
 
   function ownedSku(id, sku) {
     const e = ent();
-    if (sku.type === 'pass') return !!(e.pass && e.pass[String(sku.season)]);
+    if (sku.type === 'pass') {
+      if (proActive()) return true;   // every season's pass is included with Pro
+      let season = sku.season;
+      if (season === 'current') { try { season = window.SeasonTrack ? SeasonTrack.info().season : 0; } catch (er) { season = 0; } }
+      return !!(e.pass && e.pass[String(season)]);
+    }
     if (sku.type === 'entitlement') return !!e[sku.ent];
     if (sku.type === 'cosmetic') {
       try { const t = JSON.parse(localStorage.getItem('pl_track') || '{}'); if (t.unlocked && t.unlocked[id]) return true; } catch (er) {}
@@ -204,7 +210,7 @@
     const s = C.SKUS[id];
     const owned = ownedSku(id, s);
     const noadsActive = s.type === 'noads' && noAds();
-    const btn = owned ? '<button class="gc-buy owned" disabled>Owned ✓</button>'
+    const btn = owned ? `<button class="gc-buy owned" disabled>${s.type === 'pass' && proActive() ? 'Included ⭐' : 'Owned ✓'}</button>`
       : `<button class="gc-buy" data-sku="${id}" ${coins() < s.price ? 'disabled title="Not enough coins"' : ''}>🪙 ${s.price}</button>`;
     const extra = noadsActive ? `<div class="ds" style="color:#39d98a">Active until ${new Date(ent().no_ads_until).toLocaleDateString()}</div>` : '';
     return `<div class="gc-row"><span class="ic">${s.icon}</span>
@@ -239,12 +245,10 @@
       </div><div class="gc-err" id="gcProMsg"></div></div>`;
   }
   function bodyShop() {
-    if (PRO_ONLY) return proCard()
-      + `<div class="gc-note">More ways to spend coins are coming soon — for now, GoatLab Pro is the play.</div>`
-      + `<div class="gc-err" id="gcShopMsg"></div>`;
     const group = (title, ids) => ids.length ? `<div class="gc-sec">${title}</div>` + ids.map(skuRow).join('') : '';
     const byType = t => Object.keys(C.SKUS).filter(k => C.SKUS[k].type === t);
     return proCard()
+      + group('Battle Pass', byType('pass'))
       + group('Avatars', byType('cosmetic'))
       + group('Consumables', byType('item'))
       + group('Franchise', byType('entitlement').concat(byType('tokens')))
@@ -278,7 +282,7 @@
 
   function render() {
     if (!overlay) return;
-    if (PRO_ONLY && tab === 'coins') tab = 'shop';
+    if (!SELL_PACKS && tab === 'coins') tab = 'shop';
     if (!signedIn()) {
       overlay.innerHTML = `<div class="gc-panel"><button class="gc-close">✕</button>
         <div class="gc-eyebrow">GoatLab Store</div><div class="gc-title">🪙 Goat Coins</div>
@@ -294,7 +298,7 @@
       <div class="gc-bal">Balance: ${coins().toLocaleString('en-US')}</div>
       <div class="gc-tabs">
         <button class="gc-tab ${tab === 'shop' ? 'active' : ''}" data-tab="shop">🛒 Shop</button>
-        ${(inApp() || PRO_ONLY) ? '' : `<button class="gc-tab ${tab === 'coins' ? 'active' : ''}" data-tab="coins">🪙 Get Coins</button>`}
+        ${(inApp() || !SELL_PACKS) ? '' : `<button class="gc-tab ${tab === 'coins' ? 'active' : ''}" data-tab="coins">🪙 Get Coins</button>`}
         <button class="gc-tab ${tab === 'earn' ? 'active' : ''}" data-tab="earn">🎁 Earn</button>
       </div>
       <div class="gc-body">${(bodies[tab] || bodies.shop)()}</div></div>`;
@@ -327,6 +331,11 @@
         if (r.items) t.items = Object.assign(t.items || {}, r.items);
         localStorage.setItem('pl_track', JSON.stringify(t));
       } catch (e) {}
+      // a fresh pass retro-unlocks the premium lane — resync so the track panel lights up now
+      if (C.SKUS[id].type === 'pass') {
+        celebrate('🎫', 'Premium Pass unlocked!', 'This season’s premium lane is yours — rewards drop as you earn SXP');
+        try { window.SeasonTrack && SeasonTrack.sync(); } catch (e) {}
+      }
       burst(btn);
       paintChips(); render();
     } else {

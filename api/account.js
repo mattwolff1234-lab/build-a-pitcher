@@ -1262,13 +1262,21 @@ module.exports = async (req, res) => {
         const ent = await getEnt(key);
         const [urow] = await sql`SELECT cosmetics FROM users WHERE google_sub = ${key}`;
         const cos = (urow && urow.cosmetics && typeof urow.cosmetics === 'object') ? urow.cosmetics : {};
-        if (sku.type === 'pass' && ent.pass && ent.pass[String(sku.season)]) return res.status(200).json({ ok: false, error: 'Already owned' });
+        // season:'current' in the catalog resolves to whatever season is live right now — one
+        // SKU sells every month's pass. Pro already includes the lane, so block a wasted buy.
+        let passSeason = null;
+        if (sku.type === 'pass') {
+          passSeason = sku.season === 'current' ? seasonInfo(Date.now()).number : Number(sku.season);
+          if (!(passSeason >= 1)) return res.status(200).json({ ok: false, error: 'Season not live yet' });
+          if (ent.pro_until && Date.parse(ent.pro_until) > Date.now()) return res.status(200).json({ ok: false, error: 'Included with your GoatLab Pro' });
+        }
+        if (sku.type === 'pass' && ent.pass && ent.pass[String(passSeason)]) return res.status(200).json({ ok: false, error: 'Already owned' });
         if (sku.type === 'cosmetic' && cos.unlocked && cos.unlocked[skuId]) return res.status(200).json({ ok: false, error: 'Already owned' });
         if (sku.type === 'entitlement' && ent[sku.ent]) return res.status(200).json({ ok: false, error: 'Already owned' });
         const bal = await spendCoins(key, sku.price, 'spend:' + skuId, 'spend:' + skuId + ':' + key + ':' + Date.now());
         if (bal == null) return res.status(200).json({ ok: false, error: 'Not enough coins' });
         let items = null;
-        if (sku.type === 'pass') { ent.pass = ent.pass || {}; ent.pass[String(sku.season)] = true; await setEnt(key, ent); }
+        if (sku.type === 'pass') { ent.pass = ent.pass || {}; ent.pass[String(passSeason)] = true; await setEnt(key, ent); }
         else if (sku.type === 'entitlement') { ent[sku.ent] = true; await setEnt(key, ent); }
         else if (sku.type === 'tokens') { ent[sku.ent] = (Number(ent[sku.ent]) || 0) + sku.qty; await setEnt(key, ent); }
         else if (sku.type === 'noads') {
@@ -1362,7 +1370,7 @@ module.exports = async (req, res) => {
           }
         }
         if (body.equipped && typeof body.equipped === 'object') {
-          for (const slot of ['frame', 'title', 'trail']) {
+          for (const slot of ['frame', 'title', 'trail', 'fx']) {
             if (!(slot in body.equipped)) continue;
             const v = body.equipped[slot];
             merged.equipped[slot] = okId(v) ? v : null;

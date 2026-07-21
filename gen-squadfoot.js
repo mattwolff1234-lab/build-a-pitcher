@@ -435,5 +435,70 @@ rep('`<b>${topN}</b> carried the offense: <b>${tp} RBIs</b> a night.`',
 rep('`Ask the box score who won this. It says <b>${topN}</b>, ${tp} RBIs a game.`',
   '`Ask the box score who won this. It says <b>${topN}</b>, ${tp} yards a game.`');
 
+/* ---------------- 🔍 the scout: one-use overall peek during the mulligan ---------------- */
+rep('<button class="btn ghost disp" id="dropBtn" style="display:none">🔄 DROP ONE</button>',
+  '<button class="btn ghost disp" id="dropBtn" style="display:none">🔄 DROP ONE</button>\n      <button class="btn ghost disp" id="scoutBtn" style="display:none">🔍 SCOUT ONE</button>');
+rep([
+  "  $('keepBtn').style.display = 'inline-flex';",
+  "  $('dropBtn').style.display = 'inline-flex';",
+  "  $('gameHint').innerHTML = 'Squad full! Keep it, or <b>drop one</b> and gamble on a respin?';",
+  "  if (window.gsap) gsap.from('#keepBtn, #dropBtn', { y: 8, opacity: 0, duration: .22, stagger: .06, ease: 'power2.out', clearProps: 'all' });"
+].join('\n'), [
+  "  $('keepBtn').style.display = 'inline-flex';",
+  "  $('dropBtn').style.display = 'inline-flex';",
+  "  $('scoutBtn').style.display = run.scoutUsed ? 'none' : 'inline-flex';",
+  "  $('gameHint').innerHTML = run.scoutUsed",
+  "    ? 'Squad full! Keep it, or <b>drop one</b> and gamble on a respin?'",
+  "    : 'Squad full! Keep it, <b>drop one</b> and respin — or 🔍 <b>scout</b> one overall first.';",
+  "  if (window.gsap) gsap.from('#keepBtn, #dropBtn, #scoutBtn', { y: 8, opacity: 0, duration: .22, stagger: .06, ease: 'power2.out', clearProps: 'all' });"
+].join('\n'));
+rep([
+  'function offerDone() {',
+  "  $('keepBtn').style.display = 'none';",
+  "  $('dropBtn').style.display = 'none';",
+  "  $('stopBtn').style.display = 'inline-flex';",
+  '}'
+].join('\n'), [
+  'function offerDone() {',
+  "  $('keepBtn').style.display = 'none';",
+  "  $('dropBtn').style.display = 'none';",
+  "  $('scoutBtn').style.display = 'none';",
+  "  $('stopBtn').style.display = 'inline-flex';",
+  '}'
+].join('\n'));
+rep('function keepSquad() {', [
+  '// 🔍 the scout: once per build, put ONE player\'s overall on the table before deciding',
+  '// who to drop. Purely informational — no RNG is consumed, so the daily stays shared.',
+  'function startScoutPick() {',
+  "  run.phase = 'scout-pick';",
+  "  $('keepBtn').style.display = 'none';",
+  "  $('dropBtn').style.display = 'none';",
+  "  $('scoutBtn').style.display = 'none';",
+  "  $('gameHint').innerHTML = 'Tap ONE player to <b>scout</b> — his overall goes public.';",
+  "  CFG.slots.forEach((s, i) => $('slot' + i).classList.add('pickable'));",
+  '}',
+  'function scoutSlot(i) {',
+  '  run.scoutUsed = true;',
+  "  const e = run.locked[i], rEl = $('sRate' + i);",
+  "  rEl.textContent = e.coach ? ((e.mod > 0 ? '+' : '') + e.mod) : e.rating;",
+  "  rEl.style.display = 'flex';",
+  "  $('slot' + i).classList.add('t-' + tierKey(e));",
+  "  CFG.slots.forEach((s, j) => $('slot' + j).classList.remove('pickable'));",
+  "  if (window.gsap) gsap.fromTo('#slot' + i, { scale: 1 }, { scale: 1.08, duration: .16, yoyo: true, repeat: 1, ease: 'power2.out' });",
+  '  Sound.lock();',
+  "  track('scout_used', { slot: CFG.slots[i].key, rating: e.coach ? e.mod : e.rating });",
+  '  redoOffer();',
+  '}',
+  'function keepSquad() {'
+].join('\n'));
+rep("  if (run && run.phase === 'redo-pick' && run.locked[i]) { dropSlot(i); return; }", [
+  "  if (run && run.phase === 'scout-pick' && run.locked[i]) { scoutSlot(i); return; }",
+  "  if (run && run.phase === 'redo-pick' && run.locked[i]) { dropSlot(i); return; }"
+].join('\n'));
+rep("$('dropBtn').addEventListener('click', startRedoPick);",
+  "$('dropBtn').addEventListener('click', startRedoPick);\n$('scoutBtn').addEventListener('click', startScoutPick);");
+rep('It can come back better... or worse.</span></div>',
+  'It can come back better... or worse. A one-use 🔍 <b>scout</b> can peek ONE overall first.</span></div>');
+
 fs.writeFileSync(OUT, html);
 console.log(`${OUT} written · ${nRep} anchored replacements`);

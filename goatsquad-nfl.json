@@ -160,7 +160,7 @@
     "reelLength": 512
   },
   "rarity": {
-    "_comment": "Madden pool histogram is MLB-shaped (deep 65-74 middle: 758 of 1,496), so the MLB band weights carry over. legendMult 0.2 keeps purple pulls rare; legendPity forces one after 18 legend-free stops (gauntlet only).",
+    "_comment": "Madden pool histogram is MLB-shaped (deep 65-74 middle: 758 of 1,496). Bands boosted 2026-07-21 (Matt: odds felt tight) — 80+ pulls now land ~33% of stops vs ~27% at launch, lifting typical squads ~+1 OVR and gauntlet completion toward the ~5% NBA target. legendMult 0.2 keeps purple pulls rare; legendPity forces one after 18 legend-free stops (gauntlet only).",
     "bands": [
       [
         0,
@@ -170,7 +170,7 @@
       [
         65,
         74,
-        3.5
+        3
       ],
       [
         75,
@@ -180,17 +180,17 @@
       [
         80,
         84,
-        6
+        7
       ],
       [
         85,
         89,
-        5.5
+        6.5
       ],
       [
         90,
         999,
-        4
+        5
       ]
     ],
     "legendMult": 0.2,

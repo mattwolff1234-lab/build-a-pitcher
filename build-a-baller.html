@@ -533,6 +533,9 @@
   .lb-row:hover { border-color:var(--accent2); box-shadow:0 0 12px rgba(25,198,255,.22); }
   .lb-row .rank { font-family:'Oswald',sans-serif; font-size:15px; font-weight:600; color:var(--muted); width:30px; text-align:right; }
   .lb-row .nm { flex:1; text-align:left; font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .lb-row .nm .lb-av { display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px;
+    margin-right:6px; border-radius:50%; font-size:12px; vertical-align:-4px; overflow:hidden; flex:0 0 auto; }
+  .lb-row .nm .lb-av img { width:100%; height:100%; object-fit:cover; }
   .lb-row .nm-ovr { color:var(--muted); font-size:11px; font-weight:600; letter-spacing:.5px; }
   .lb-row .lb-stat { color:var(--accent2); }
   .lb-row .chev { color:var(--muted); font-size:14px; }
@@ -3767,7 +3770,8 @@ async function submitScore() {
   try {
     const res = await fetch('/api/score', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, ovr: state.finalOvr, game: LEADERBOARD_GAME, build: { slots: state.build, career: state.career } }),
+      body: JSON.stringify({ name, ovr: state.finalOvr, game: LEADERBOARD_GAME, build: { slots: state.build, career: state.career },
+        style: { av: (window.Social && Social.myAvatar()) || undefined, fx: (window.SeasonTrack && SeasonTrack.equippedFx()) || undefined } }),
     });
     const data = await res.json();
     if (!data.ok) { const err = new Error(data.error || 'rejected'); err.server = true; throw err; }
@@ -3784,6 +3788,10 @@ async function submitScore() {
 }
 
 function lbRow(rank, entry, cls) {
+  const style = (entry.build && entry.build.style) || {};
+  const av = style.av && window.Social && Social.avatarMeta(style.av);
+  const avChip = av ? `<span class="lb-av" style="background:${av.bg}">${av.src ? `<img src="${av.src}" alt="" loading="lazy">` : av.emoji}</span>` : '';
+  const fxCls = (style.fx && window.SeasonTrack && SeasonTrack.fxClass(style.fx)) || '';
   const sorted = lbSort !== 'ovr' && lbSort !== 'ovrAsc';
   const posTag = lbGame === 'cfb' && !lbPos && entry.build && entry.build.pos
     ? ` <span class="nm-ovr">${escapeHTML(String(entry.build.pos))}</span>` : '';
@@ -3792,7 +3800,7 @@ function lbRow(rank, entry, cls) {
     ? `<div class="ov lb-stat">${entry.stat == null ? '-' : fmtStat(entry.stat)}</div>`
     : `<div class="ov c-${tier(entry.ovr)}">${entry.ovr}</div>`;
   return `<div class="lb-row ${cls}" role="button" tabindex="0" data-entry-id="${entry.id}"><div class="rank">${rank}</div>
-    <div class="nm">${escapeHTML(entry.name)}${sub}</div>
+    <div class="nm">${avChip}<span class="${fxCls}">${escapeHTML(entry.name)}</span>${sub}</div>
     ${right}
     <div class="chev">›</div></div>`;
 }

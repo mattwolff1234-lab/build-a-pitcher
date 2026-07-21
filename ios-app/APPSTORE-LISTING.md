@@ -1,16 +1,16 @@
 # App Store listing · paste-ready submission kit
-(updated 2026-07-11: Sign in with Apple + push notifications + College Football in the app)
+(updated 2026-07-18: rename + GOAT Squad + hockey; matches build 16)
 
 ## Name (30 chars max)
-GoatLab: Sports GM Builder
-(fallbacks if taken: "GoatLab - Build the GOAT", "GoatLab Sports Sim")
+GoatLab: Player Builder
+(fallbacks if taken: "GoatLab - Player Builder", "GoatLab - Build the GOAT")
 
 ## Subtitle (30 chars max)
 Build players. Sim careers.
 
 ## Promotional text (170 chars, editable without review)
 Spin real pro cards, build your dream player, and sim their whole career. Daily
-challenges, live 1v1s, franchise mode, and college football.
+challenges, live 1v1s, franchise mode, and GOAT Squad gauntlet runs.
 
 ## Description
 THE SPORTS LAB IN YOUR POCKET
@@ -19,13 +19,17 @@ Spin the reel. Land on a real pro. Bolt their rating onto your player, slot by s
 then simulate an entire career: seasons, awards, injuries, championships, and a
 Hall of Fame verdict.
 
-FOUR SPORTS, ONE LAB
+FIVE SPORTS, ONE LAB
 · Baseball: build a pitcher or a hitter from real MLB-rated cards
 · Basketball: build a hooper from real NBA-rated cards
 · Soccer: build a striker or a keeper from real FIFA-rated cards
 · College Football: build a QB, RB, or WR, win the natty, then go pro
+· Hockey: build a skater rated from real NHL stats
 
 WAYS TO PLAY
+· GOAT SQUAD: the roguelike gauntlet. Every slot spins at once — hit STOP, lock
+  your five, and survive a city-to-city run through ten legendary teams. Beat
+  them, sign their stars, spend your winnings. One squad. One life.
 · DAILY CHALLENGE: the same cards for everyone worldwide, one shot a day. Beat the
   board, protect your streak.
 · 1v1 LIVE: match a real opponent, quick-build on a shot clock, and watch the
@@ -44,7 +48,7 @@ Sign in with Apple to keep your Hall of Fame, friends, and rating on every devic
 or just play as a guest. No account needed. Free forever.
 
 ## Keywords (100 chars, comma-separated)
-sports,sim,GM,baseball,basketball,soccer,football,career,franchise,draft,builder,daily
+sports,sim,GM,baseball,basketball,soccer,football,hockey,career,franchise,draft,daily,squad
 
 ## Category
 Primary: Games > Sports · Secondary: Games > Simulation
@@ -85,16 +89,17 @@ Data types collected:
 - Push notifications are used for friend requests, 1v1 challenges, and a daily
   streak reminder. Declining permission changes nothing else.
 
-## Screenshots (need at least 3, up to 10)
-Required size: 6.9"/6.7" class - 1290x2796 (portrait). Easiest path: take them on
-your iPhone in the TestFlight build (Matt's phone screenshots can be resized/padded
-to exact spec - hand them to Claude). Shot list:
-1. Hub with the four sport chips + mode grid
-2. Mid-build: reel landed, glowing body slots
-3. Career card: HOF verdict + trophies
-4. Franchise: standings + game feed
-5. College: Signing Day / natty trophy moment
-6. 1v1 arena (staged with two devices, or skip)
+## Screenshots (DONE — 7 finished images in ios-app/appstore-screenshots/)
+All rendered at 1290x2796 (6.9"/6.7" class), upload in number order:
+1. store-1 — "Spin real pros. Build the GOAT." (Skenes card, mid-build)
+2. store-2 — "Sim the whole career" (season log + G.O.A.T. HOF card)
+3. store-3 — "Every sport. One lab." (hub, five sports)
+4. store-4 — "Win the natty. Go pro." (college QB build)
+5. store-5 — "Build a baller" (SGA, hoops build)
+6. store-6 — "Stop the spin. Lock five." (GOAT Squad draft grid)
+7. store-7 — "Survive the gauntlet" (GOAT Squad map)
+If App Store Connect only offers a 6.5" slot and rejects these, ask Claude to
+re-render at 1242x2688.
 
 ## Version info
 - Version 1.0.0, build number = GitHub run number (automatic).

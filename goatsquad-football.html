@@ -498,7 +498,7 @@
         <div><i>🌀</i><span><b>Every open position spins at once</b> — quarterbacks at QB, corners on the island, playmakers at FLEX, faces flying past on the field.</span></div>
         <div><i>⏹</i><span><b>Hit STOP</b> to freeze all of them where they stand.</span></div>
         <div><i>👆</i><span><b>Lock ONE</b> of the frozen players. The rest start spinning again. Repeat until your squad is full.</span></div>
-        <div><i>♻️</i><span><b>One mulligan:</b> after your last lock you can drop a player and respin that slot. It can come back better... or worse.</span></div>
+        <div><i>♻️</i><span><b>One mulligan:</b> after your last lock you can drop a player and respin that slot. It can come back better... or worse. A one-use 🔍 <b>scout</b> can peek ONE overall first.</span></div>
         <div><i>⚔️</i><span>Reveal your team overall, then <b>survive a 7-game series</b> against the boss, line scores and all.</span></div>
         <div><i>🎯</i><span><b>Daily:</b> everyone worldwide gets the same spins and boss. <b>Gauntlet:</b> fly city to city through the greatest teams in history — beat them all.</span></div>
       </div>
@@ -517,6 +517,7 @@
       <button class="btn primary disp" id="stopBtn">⏹ STOP</button>
       <button class="btn primary disp" id="keepBtn" style="display:none">✅ KEEP SQUAD</button>
       <button class="btn ghost disp" id="dropBtn" style="display:none">🔄 DROP ONE</button>
+      <button class="btn ghost disp" id="scoutBtn" style="display:none">🔍 SCOUT ONE</button>
     </div>
   </section>
 
@@ -1517,13 +1518,39 @@ function redoOffer() {
   $('stopBtn').style.display = 'none';
   $('keepBtn').style.display = 'inline-flex';
   $('dropBtn').style.display = 'inline-flex';
-  $('gameHint').innerHTML = 'Squad full! Keep it, or <b>drop one</b> and gamble on a respin?';
-  if (window.gsap) gsap.from('#keepBtn, #dropBtn', { y: 8, opacity: 0, duration: .22, stagger: .06, ease: 'power2.out', clearProps: 'all' });
+  $('scoutBtn').style.display = run.scoutUsed ? 'none' : 'inline-flex';
+  $('gameHint').innerHTML = run.scoutUsed
+    ? 'Squad full! Keep it, or <b>drop one</b> and gamble on a respin?'
+    : 'Squad full! Keep it, <b>drop one</b> and respin — or 🔍 <b>scout</b> one overall first.';
+  if (window.gsap) gsap.from('#keepBtn, #dropBtn, #scoutBtn', { y: 8, opacity: 0, duration: .22, stagger: .06, ease: 'power2.out', clearProps: 'all' });
 }
 function offerDone() {
   $('keepBtn').style.display = 'none';
   $('dropBtn').style.display = 'none';
+  $('scoutBtn').style.display = 'none';
   $('stopBtn').style.display = 'inline-flex';
+}
+// 🔍 the scout: once per build, put ONE player's overall on the table before deciding
+// who to drop. Purely informational — no RNG is consumed, so the daily stays shared.
+function startScoutPick() {
+  run.phase = 'scout-pick';
+  $('keepBtn').style.display = 'none';
+  $('dropBtn').style.display = 'none';
+  $('scoutBtn').style.display = 'none';
+  $('gameHint').innerHTML = 'Tap ONE player to <b>scout</b> — his overall goes public.';
+  CFG.slots.forEach((s, i) => $('slot' + i).classList.add('pickable'));
+}
+function scoutSlot(i) {
+  run.scoutUsed = true;
+  const e = run.locked[i], rEl = $('sRate' + i);
+  rEl.textContent = e.coach ? ((e.mod > 0 ? '+' : '') + e.mod) : e.rating;
+  rEl.style.display = 'flex';
+  $('slot' + i).classList.add('t-' + tierKey(e));
+  CFG.slots.forEach((s, j) => $('slot' + j).classList.remove('pickable'));
+  if (window.gsap) gsap.fromTo('#slot' + i, { scale: 1 }, { scale: 1.08, duration: .16, yoyo: true, repeat: 1, ease: 'power2.out' });
+  Sound.lock();
+  track('scout_used', { slot: CFG.slots[i].key, rating: e.coach ? e.mod : e.rating });
+  redoOffer();
 }
 function keepSquad() {
   run.phase = 'done';
@@ -1571,6 +1598,7 @@ function redoLock() {
   setTimeout(reveal, 600);
 }
 function tryLock(i) {
+  if (run && run.phase === 'scout-pick' && run.locked[i]) { scoutSlot(i); return; }
   if (run && run.phase === 'redo-pick' && run.locked[i]) { dropSlot(i); return; }
   if (!run || run.phase !== 'choose' || run.locked[i] || !run.current[i]) return;
   run.phase = 'locking';
@@ -2991,6 +3019,7 @@ $('stopBtn').addEventListener('pointerdown', ev => { if (ev.button > 0) return; 
 $('ovrGo').addEventListener('click', goBoss);
 $('keepBtn').addEventListener('click', keepSquad);
 $('dropBtn').addEventListener('click', startRedoPick);
+$('scoutBtn').addEventListener('click', startScoutPick);
 $('bossSkip').addEventListener('click', () => { if (bossTl) bossTl.progress(1); });
 // 🐢/🐇 sim speed — remembered on the device, applied live to the running series
 function simSpeed() {

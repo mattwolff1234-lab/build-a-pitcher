@@ -85,11 +85,18 @@
     title_high_roller: { type: 'title', name: 'High Roller',        icon: '🎲' },
     scout_s2p:      { type: 'item',  name: 'Scout Tokens ×3',       icon: '🔭', item: 'scout', qty: 3 },
     resim_s2p:      { type: 'item',  name: 'Re-sim Tokens ×3',      icon: '🔁', item: 'resim', qty: 3 },
+    // ---- Name Effects (type 'fx') — glow/particles on your name, shown on leaderboards + 1v1 ----
+    fx_neon_pulse:  { type: 'fx',    name: 'Neon Pulse',            icon: '💠', cls: 'st-fx-neon' },
+    fx_ember:       { type: 'fx',    name: 'Ember Name',            icon: '🔥', cls: 'st-fx-ember' },
+    frame_prism:    { type: 'frame', name: 'Prism',                 icon: '🔷', cls: 'st-frame-prism' },
+    // ---- GoatLab Pro exclusives — available while the subscription is active (pro:true) ----
+    fx_gold_aura:   { type: 'fx',    name: 'Midas Glow',            icon: '✨', cls: 'st-fx-gold', pro: true },
+    trail_gold:     { type: 'trail', name: 'Golden Reel Trail',     icon: '🌠', pro: true },
   };
   // "frame" = the CAREER card (the shareable trophy) — never the reel cards, whose
   // borders are tier information (grey→legend) that cosmetics must not repaint.
   // "item" = consumables (Scout = peek the next spin; Re-sim = re-roll a finished career).
-  const TYPE_LABEL = { frame: 'Career Card Frame', title: 'Title', trail: 'Reel Effect', item: 'Consumable', avatar: 'Profile Avatar' };
+  const TYPE_LABEL = { frame: 'Career Card Frame', title: 'Title', trail: 'Reel Effect', item: 'Consumable', avatar: 'Profile Avatar', fx: 'Name Effect' };
   // Define SEASONS[2] before 2026-08-15 — an undefined month falls back to re-running
   // this track (already-owned rewards just show as unlocked, nothing new to earn).
   const SEASONS = {
@@ -129,10 +136,13 @@
       { req: 5600, id: 'frame_frost' },
     ], premium: [
       { req: 150,  id: 'av_eagle_glove' },
+      { req: 600,  id: 'fx_neon_pulse' },
       { req: 900,  id: 'scout_s2p' },
       { req: 1800, id: 'av_lightning_bat' },
+      { req: 2400, id: 'fx_ember' },
       { req: 3000, id: 'resim_s2p' },
       { req: 4600, id: 'title_high_roller' },
+      { req: 5200, id: 'frame_prism' },
     ] },
   };
   const seasonDef = n => SEASONS[n] || { name: `Season ${n}`, icon: '🏟️', tiers: SEASONS[1].tiers };
@@ -276,6 +286,27 @@
     box-shadow:0 0 26px rgba(200,107,255,.55), 0 14px 44px rgba(0,0,0,.5) !important;
     animation:st-holo-spin 5s linear infinite; }
   @keyframes st-holo-spin { to { --stg:495deg; } }
+  .st-frame-prism{ border:3px solid transparent !important;
+    background:linear-gradient(#0c131e,#0c131e) padding-box,
+      conic-gradient(from var(--stg,135deg), #9fdcff, #19c6ff, #4361ee, #9d4edd, #9fdcff) border-box !important;
+    box-shadow:0 0 26px rgba(67,97,238,.55), 0 14px 44px rgba(0,0,0,.5) !important;
+    animation:st-holo-spin 6s linear infinite; }
+  /* ---- Name Effects (fx) — applied to any element that shows a player name ---- */
+  .st-fx-neon{ color:#7fe6ff !important; text-shadow:0 0 8px rgba(25,198,255,.95), 0 0 18px rgba(25,198,255,.55);
+    animation:st-fx-neon 1.6s ease-in-out infinite; }
+  @keyframes st-fx-neon { 50% { text-shadow:0 0 3px rgba(25,198,255,.55), 0 0 9px rgba(25,198,255,.3); } }
+  .st-fx-ember{ color:#ffb45e !important; text-shadow:0 0 7px rgba(255,122,60,.95), 0 0 18px rgba(255,70,20,.55);
+    animation:st-fx-ember .9s ease-in-out infinite alternate; }
+  @keyframes st-fx-ember { to { text-shadow:0 0 4px rgba(255,122,60,.6), 0 0 26px rgba(255,70,20,.8); } }
+  .st-fx-gold{ background:linear-gradient(90deg,#ffce3a,#fff6cf,#ffce3a); background-size:200% auto;
+    -webkit-background-clip:text; background-clip:text; color:transparent !important; -webkit-text-fill-color:transparent;
+    filter:drop-shadow(0 0 6px rgba(255,206,58,.55)); animation:st-fx-gold 2.2s linear infinite; }
+  @keyframes st-fx-gold { to { background-position:200% center; } }
+  .st-fx-p{ position:fixed; z-index:340; width:5px; height:5px; border-radius:50%; pointer-events:none; }
+  .st-fx-p.gold{ background:radial-gradient(circle,#fff,#ffce3a 60%,transparent); box-shadow:0 0 8px rgba(255,206,58,.8); }
+  .st-fx-p.ember{ background:radial-gradient(circle,#fff,#ff7a3c 60%,transparent); box-shadow:0 0 8px rgba(255,122,60,.8); }
+  .st-trail-p.gold{ background:radial-gradient(circle, #fff, #ffce3a 60%, transparent);
+    box-shadow:0 0 10px #ffce3a, 0 0 20px rgba(255,206,58,.55); }
   /* mini preview card at the top of the panel (instant feedback when equipping) */
   .st-preview{ display:flex; align-items:center; gap:14px; margin:12px 16px 0; padding:12px 14px; border-radius:12px;
     border:1px solid var(--line,rgba(120,150,190,.16)); background:rgba(8,13,22,.55); }
@@ -350,15 +381,19 @@
     teaseEl.innerHTML = `<b>Season 1 kicks off soon.</b> Once it starts, every XP you earn — builds, careers,
       quests, achievements, 1v1 — also fills this track. Rewards you unlock are yours forever.`;
 
-    // live "your card look" preview — instant feedback the moment a frame/title is equipped
-    const fId = equippedOf('frame'), tId = equippedOf('title');
+    // live "your card look" preview — instant feedback the moment a frame/title/fx is equipped
+    const fId = equippedOf('frame'), tId = equippedOf('title'), fxId = equippedOf('fx');
+    const esc = t => String(t).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+    let myName = 'Your Name';
+    try { myName = localStorage.getItem('pl_guestName') || myName; } catch (e) {}
     prevEl.innerHTML = `
       <div class="st-mini${fId ? ' ' + COSMETICS[fId].cls : ''}"><div class="m-top"></div><div class="m-line"></div><div class="m-line short"></div></div>
       <div class="st-prev-body">
         <div class="st-prev-lbl">Your card look</div>
-        <div class="st-prev-name">${fId ? COSMETICS[fId].name : 'No frame equipped'}</div>
+        <div class="st-prev-name${fxId ? ' ' + COSMETICS[fxId].cls : ''}">${fxId ? esc(myName) : (fId ? COSMETICS[fId].name : 'No frame equipped')}</div>
         ${tId ? `<div class="st-title-chip">${COSMETICS[tId].icon} ${COSMETICS[tId].name}</div>` : ''}
       </div>`;
+    if (fxId) fxBurst(prevEl.querySelector('.st-prev-name'), fxId);
 
     // retro-unlock earned tiers first (covers "just bought the Premium Pass" mid-season)
     if (active && sweepUnlocks(s)) { save(s); queueSync(); }
@@ -423,14 +458,34 @@
             <div class="st-body"><div class="st-name">Premium Pass lane</div><div class="st-kind">unlocked — rewards drop automatically as you earn SXP</div></div>
             <div class="st-right">✅</div></div>`
         : `<div class="st-row next"><span class="st-ico">🎫</span>
-            <div class="st-body"><div class="st-name">Premium Pass lane</div><div class="st-kind">exclusive avatars · frames · 🪙 coins back</div></div>
+            <div class="st-body"><div class="st-name">Premium Pass lane</div><div class="st-kind">avatars · name effects · frames · 🪙 coins back — 🪙 ${(window.Catalog && window.Catalog.SKUS && window.Catalog.SKUS.pass_cur && window.Catalog.SKUS.pass_cur.price) || 1500} or free with GoatLab Pro ⭐</div></div>
             <div class="st-right"><button class="st-eq" data-get-pass="1">Unlock in Store</button></div></div>`;
       premRows = head
         + def.premium.map((t, i) => ({ req: t.req, html: cosRow(t, i, !ownedPass) }))
           .concat(((coinDefs.premium) || []).map((t, i) => ({ req: t.req, html: coinRow('premium', i, t, !ownedPass) })))
           .sort((a, b) => a.req - b.req).map(r => r.html).join('');
     }
-    listEl.innerHTML = freeRows + premRows;
+    // ---- ⭐ GoatLab Pro exclusives — usable while the subscription is active ----
+    const isPro = proActive();
+    const proRows = `<div class="st-row${isPro ? ' got' : ''}"><span class="st-ico">⭐</span>
+        <div class="st-body"><div class="st-name">GoatLab Pro exclusives</div>
+        <div class="st-kind">${isPro ? 'active — yours while Pro runs' : 'golden cosmetics, active while subscribed'}</div></div>
+        <div class="st-right">${isPro ? '✅' : '<button class="st-eq" data-get-pro="1">Get Pro</button>'}</div></div>`
+      + Object.keys(COSMETICS).filter(id => COSMETICS[id].pro).map(id => {
+        const c = COSMETICS[id];
+        const equipable = isPro && EQUIPABLE[c.type];
+        const on = equipable && s.equipped[c.type] === id;
+        const right = isPro
+          ? (equipable ? `<button class="st-eq${on ? ' on' : ''}" data-eq="${id}">${on ? 'Equipped' : 'Equip'}</button>` : '✅')
+          : '<span class="st-soon">⭐ PRO</span>';
+        return `<div class="st-row${isPro ? ' got' : ''}"${isPro ? '' : ' style="opacity:.65"'}>
+          <span class="st-tier">⭐</span>
+          <span class="st-ico">${c.icon}</span>
+          <div class="st-body"><div class="st-name">${c.name}</div><div class="st-kind">${TYPE_LABEL[c.type] || c.type}</div></div>
+          <div class="st-right">${right}</div>
+        </div>`;
+      }).join('');
+    listEl.innerHTML = freeRows + premRows + proRows;
     listEl.querySelectorAll('[data-eq]').forEach(b => { b.onclick = () => equip(b.dataset.eq); });
     // avatars equip in the profile's Style tab (social.js owns the server-visible avatar)
     listEl.querySelectorAll('[data-av-open]').forEach(b => {
@@ -438,6 +493,8 @@
     });
     const gp = listEl.querySelector('[data-get-pass]');
     if (gp) gp.onclick = () => { close(); if (window.Store) window.Store.open('shop'); };
+    const gpro = listEl.querySelector('[data-get-pro]');
+    if (gpro) gpro.onclick = () => { close(); if (window.Store) window.Store.open('shop'); };
     // 🪙 coin tiers settle SERVER-side (trackClaimCoins validates sxp/pass and dedupes per tier)
     listEl.querySelectorAll('[data-claim]').forEach(b => b.onclick = async () => {
       const parts = b.dataset.claim.split(':');
@@ -520,14 +577,26 @@
   // Premium lane access — unlocked by an active GoatLab Pro subscription (entitlements.pro_until
   // in the future), for whatever season is current. store.js caches the server wallet in pl_wallet
   // (no load-order dependency). Legacy per-season coin passes (entitlements.pass) still honored.
+  function proActive() {
+    try {
+      const w = JSON.parse(localStorage.getItem('pl_wallet') || 'null');
+      const u = w && w.entitlements && w.entitlements.pro_until;
+      return !!(u && Date.parse(u) > Date.now());
+    } catch (e) { return false; }
+  }
   function hasPass(season) {
+    if (proActive()) return true;   // GoatLab Pro includes every season's pass
     try {
       const w = JSON.parse(localStorage.getItem('pl_wallet') || 'null');
       const ent = w && w.entitlements;
-      if (!ent) return false;
-      if (ent.pro_until && Date.parse(ent.pro_until) > Date.now()) return true;   // GoatLab Pro
-      return !!(ent.pass && ent.pass[String(season)]);
+      return !!(ent && ent.pass && ent.pass[String(season)]);
     } catch (e) { return false; }
+  }
+  // Pro-exclusive cosmetics (pro:true) are owned while the subscription is active — they lapse
+  // (unequip via equippedOf) the moment pro_until passes, same posture as the premium lane.
+  function ownedCos(s, id) {
+    const c = COSMETICS[id];
+    return !!(c && (s.unlocked[id] || (c.pro && proActive())));
   }
   // Unlock every earned tier in a lane (idempotent — `unlocked` guards each id).
   function sweepLane(s, tiers, laneLabel) {
@@ -579,11 +648,11 @@
   (function tryHook(n) { if (hookXP() || n <= 0) return; setTimeout(() => tryHook(n - 1), 300); })(12);
 
   // ---- equip + surfaces --------------------------------------------------------------
-  const EQUIPABLE = { frame: 1, title: 1, trail: 1 };
+  const EQUIPABLE = { frame: 1, title: 1, trail: 1, fx: 1 };
   function equip(id) {
     const c = COSMETICS[id];
     const s = load();
-    if (!c || !s.unlocked[id] || c.soon || !EQUIPABLE[c.type]) return;
+    if (!c || !ownedCos(s, id) || c.soon || !EQUIPABLE[c.type]) return;
     s.equipped[c.type] = s.equipped[c.type] === id ? null : id;   // tap again to unequip
     save(s); queueSync();
     render(); applyFrame(); mount();
@@ -591,7 +660,7 @@
   function equippedOf(type) {
     const s = load();
     const id = s.equipped[type];
-    return (id && s.unlocked[id] && COSMETICS[id] && !COSMETICS[id].soon) ? id : null;
+    return (id && COSMETICS[id] && !COSMETICS[id].soon && ownedCos(s, id)) ? id : null;
   }
 
   // Cards register themselves once (buildCard calls applyFrame(el)); equip changes
@@ -629,9 +698,10 @@
     lastTrail = now;
     const r = el.getBoundingClientRect();
     if (!r.width) return;
+    const gold = equippedOf('trail') === 'trail_gold';
     for (let i = 0; i < 2; i++) {
       const p = document.createElement('span');
-      p.className = 'st-trail-p';
+      p.className = 'st-trail-p' + (gold ? ' gold' : '');
       document.body.appendChild(p);
       gsap.set(p, { left: r.left + r.width * (0.25 + Math.random() * 0.5), top: r.top + Math.random() * r.height });
       gsap.to(p, {
@@ -639,6 +709,38 @@
         opacity: 0, scale: 0.2, duration: 0.55 + Math.random() * 0.4, ease: 'power1.out',
         onComplete: () => p.remove(),
       });
+    }
+  }
+
+  // ---- name effects (fx) ---------------------------------------------------------
+  // applyFx(el, fxId) styles ANY element that shows a player name — pass your own equipped fx
+  // (equippedOf('fx')) or another player's reported fx id (leaderboard rows, 1v1 opponent).
+  const FX_CLASSES = Object.keys(COSMETICS).filter(id => COSMETICS[id].type === 'fx').map(id => COSMETICS[id].cls);
+  function fxClass(fxId) {
+    const c = fxId && COSMETICS[fxId];
+    return (c && c.type === 'fx' && c.cls) || '';
+  }
+  function applyFx(el, fxId) {
+    if (!el || !el.classList) return;
+    injectOnly();
+    FX_CLASSES.forEach(c => el.classList.remove(c));
+    const cls = fxClass(fxId);
+    if (cls) { el.classList.add(cls); fxBurst(el, fxId); }
+  }
+  // one small particle burst over the name (gold flecks / rising embers); CSS keeps glowing after
+  function fxBurst(el, fxId) {
+    if (!window.gsap || !el) return;
+    const kind = fxId === 'fx_gold_aura' ? 'gold' : fxId === 'fx_ember' ? 'ember' : null;
+    if (!kind) return;
+    const r = el.getBoundingClientRect();
+    if (!r.width) return;
+    for (let i = 0; i < 6; i++) {
+      const p = document.createElement('span');
+      p.className = 'st-fx-p ' + kind;
+      document.body.appendChild(p);
+      gsap.set(p, { left: r.left + Math.random() * r.width, top: r.top + r.height * (0.2 + Math.random() * 0.6) });
+      gsap.to(p, { y: -(14 + Math.random() * 26), x: (Math.random() - 0.5) * 24, opacity: 0, scale: 0.3,
+        duration: 0.8 + Math.random() * 0.6, ease: 'power1.out', delay: Math.random() * 0.4, onComplete: () => p.remove() });
     }
   }
 
@@ -657,6 +759,8 @@
     equippedFrame: () => equippedOf('frame'),
     equippedTrail: () => equippedOf('trail'),
     equippedTitle: () => { const id = equippedOf('title'); return id ? COSMETICS[id].name : null; },
+    equippedFx: () => equippedOf('fx'),
+    applyFx, fxClass, fxBurst,
     items, useItem, trailTick,
     applyFrame, mount,
     info: () => { const i = seasonInfo(); const s = load(); return { season: i.number, endMs: i.endMs, sxp: s.sxp, unlocked: Object.keys(s.unlocked) }; },
