@@ -244,12 +244,29 @@
         <button class="gc-buy gc-pro-btn gc-pro-year" data-cycle="yearly">Yearly · ${yrP}/yr${save}</button>
       </div><div class="gc-err" id="gcProMsg"></div></div>`;
   }
+  // Jerseys (`jr_` cosmetics): swatch preview + Buy → Equip/Unequip toggle. The look is
+  // rendered by jerseys.js; equipping repaints the build figure on the spot.
+  function jerseyRow(id) {
+    const s = C.SKUS[id];
+    const J = window.Jerseys;
+    const owned = ownedSku(id, s);
+    const eq = J && J.equippedId() === id;
+    const sw = `<span class="ic" style="display:inline-block;width:30px;height:30px;border-radius:7px;border:1px solid #ffffff2e;background:${J ? J.preview(id) : '#446'}"></span>`;
+    const btn = !owned
+      ? `<button class="gc-buy" data-sku="${id}" ${coins() < s.price ? 'disabled title="Not enough coins"' : ''}>🪙 ${s.price}</button>`
+      : eq ? `<button class="gc-buy" data-jersey-equip="">Equipped ✓</button>`
+           : `<button class="gc-buy" data-jersey-equip="${id}">Equip</button>`;
+    return `<div class="gc-row">${sw}
+      <div class="who"><div class="nm">${s.icon} ${s.name}</div><div class="ds">${s.desc || ''}</div></div>${btn}</div>`;
+  }
   function bodyShop() {
-    const group = (title, ids) => ids.length ? `<div class="gc-sec">${title}</div>` + ids.map(skuRow).join('') : '';
+    const group = (title, ids, row) => ids.length ? `<div class="gc-sec">${title}</div>` + ids.map(row || skuRow).join('') : '';
     const byType = t => Object.keys(C.SKUS).filter(k => C.SKUS[k].type === t);
+    const isJersey = k => k.indexOf('jr_') === 0;
     return proCard()
       + group('Battle Pass', byType('pass'))
-      + group('Avatars', byType('cosmetic'))
+      + group('Jerseys — your figure wears them in every build game', byType('cosmetic').filter(isJersey), jerseyRow)
+      + group('Avatars', byType('cosmetic').filter(k => !isJersey(k)))
       + group('Consumables', byType('item'))
       + group('Franchise', byType('entitlement').concat(byType('tokens')))
       + `<div class="gc-err" id="gcShopMsg"></div>`;
@@ -305,6 +322,10 @@
     overlay.querySelector('.gc-close').onclick = close;
     overlay.querySelectorAll('.gc-tab').forEach(b => b.onclick = () => { tab = b.dataset.tab; render(); });
     overlay.querySelectorAll('[data-sku]').forEach(b => b.onclick = () => buySku(b));
+    overlay.querySelectorAll('[data-jersey-equip]').forEach(b => b.onclick = () => {
+      if (window.Jerseys) Jerseys.equip(b.dataset.jerseyEquip || '');
+      render();
+    });
     overlay.querySelectorAll('[data-pack]').forEach(b => b.onclick = () => buyPack(b.dataset.pack, b));
     const dj = overlay.querySelector('#gcDiscordJoin');
     if (dj) dj.onclick = () => discordVerify(dj);

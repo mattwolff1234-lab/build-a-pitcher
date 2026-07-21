@@ -23,6 +23,7 @@
 <script src="/social.js" defer></script>
 <script src="/catalog.js" defer></script>
 <script src="/store.js" defer></script>
+<script src="/jerseys.js" defer></script>
 <script src="/hotboard.js" defer></script>
 <script src="/season-track.js" defer></script>
 <script src="/switcher.js?v=15" defer></script>
@@ -459,10 +460,10 @@
       <a class="menu-item" href="/pitching#hof">🏛️ My Hall of Fame</a>
       <a class="menu-item" href="/pitching#achievements">🏅 Achievements</a>
       <a class="menu-item" href="/pitching#collection">📇 My Collection</a>
-      <button class="menu-item" id="miTrack">🎟️ Season Track</button>
+      <button class="menu-item" id="miTrack">🎟️ Battle Pass</button>
       <button class="menu-item" id="miStore">🪙 Store &amp; Coins</button>
       <div class="menu-sec">Compete</div>
-      <a class="menu-item" href="/pitching#leaderboard">🏆 Leaderboard</a>
+      <a class="menu-item" href="/ranks">🏆 Ranks</a>
       <a class="menu-item" href="/versus#stats">📊 1v1 Stats</a>
       <div class="menu-sec">Help</div>
       <a class="menu-item" href="/pitching#how">📖 How to Play</a>
@@ -695,7 +696,7 @@ gsap.from('.hero p', { y: 10, opacity: 0, duration: .35, delay: .1, ease: 'power
             href: sport.id === 'hoops' ? (LOCAL ? '/franchise-hoops.html' : '/franchise-hoops')
                 : sport.id === 'soccer' ? (LOCAL ? '/franchise-soccer.html' : '/franchise-soccer')
                 : (LOCAL ? '/franchise.html' : '/franchise') },
-      { i: '🏆', b: 'Leaderboard', s: 'Top builds, all-time & today', href: g.path + '#leaderboard' },
+      { i: '🏆', b: 'Ranks', s: 'Top builds, daily champions & the 1v1 ladder', href: (LOCAL ? '/ranks.html' : '/ranks') + '?game=' + active },
       { i: '📇', b: 'Collection', s: 'Every card you\'ve pulled', href: g.path + '#collection' },
       { i: '🏛️', b: 'Hall of Fame', s: 'Your saved careers', href: g.path + '#hof' },
     ];

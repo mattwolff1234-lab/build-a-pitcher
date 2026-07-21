@@ -13,6 +13,7 @@
 <script src="/social.js" defer></script>
 <script src="/catalog.js" defer></script>
 <script src="/store.js" defer></script>
+<script src="/jerseys.js" defer></script>
 <script src="/quests.js" defer></script>
 <script src="/season-track.js" defer></script>
 <script src="https://cdn.ably.com/lib/ably.min-2.js"></script>
@@ -988,11 +989,14 @@ let ably=null, clientId=null;
 let myRole=null, oppRole=null, matchId=null, seed=0, oppId=null, wasClaimer=false;
 let inviteCh=null, matchCh=null;
 let rematchOffered=false, rematchOppOffer=null, rematchCountdown=null, rematchSec=10;
-let oppPresenceName='', oppPresenceElo=0, oppPresenceAvatar=null;
+let oppPresenceName='', oppPresenceElo=0, oppPresenceAvatar=null, oppPresenceFx=null;
 // ---- avatar flair: `avatar` rides ADDITIVELY on the presence/build/forfeit messages (old
 // clients ignore extra fields). Render via Social.avatarMeta (social.js registry); falls
 // back to an initial-letter circle when there's no avatar or social.js didn't load. ----
 function myAvatarId(){ try{ return localStorage.getItem('pl_avatar') || null; }catch(e){ return null; } }
+function myFxId(){ try{ return (window.SeasonTrack && SeasonTrack.equippedFx()) || null; }catch(e){ return null; } }
+function oppFxId(){ return oppPresenceFx || (oppBuild && oppBuild.fx) || null; }
+function oppFxCls(){ return (window.SeasonTrack && SeasonTrack.fxClass && SeasonTrack.fxClass(oppFxId())) || ''; }
 function oppAvatarId(){ return oppPresenceAvatar || (oppBuild && oppBuild.avatar) || null; }
 function avatarChipHTML(av, name, size){
   const s = size || 24;
@@ -1715,7 +1719,7 @@ async function startMatch(mId, role, sd, opp, claimer, friendly=false){
   matchCh.presence.subscribe('enter', m => { if (m.clientId === clientId) return; oppPresent=true; cancelOppQuit(); captureOppPresence(m.data); updateOppPill(); });
   matchCh.presence.subscribe('present', m => { if (m.clientId === clientId) return; oppPresent=true; cancelOppQuit(); captureOppPresence(m.data); updateOppPill(); });
   matchCh.presence.subscribe('leave', m => { if (m.clientId === clientId) return; onOppLeave(); });
-  await matchCh.presence.enter({ role: myRole, name: displayName(), elo: myElo(), avatar: myAvatarId() });
+  await matchCh.presence.enter({ role: myRole, name: displayName(), elo: myElo(), avatar: myAvatarId(), fx: myFxId() });
   try { const members = await matchCh.presence.get(); const opp = members.find(m => m.clientId !== clientId); if (opp){ oppPresent=true; captureOppPresence(opp.data); } } catch(e){}
 
   // Dead-waiter guard: if I claimed someone who never shows up, re-queue.
@@ -1734,6 +1738,7 @@ function captureOppPresence(data){
   if (data.name) oppPresenceName = data.name;
   if (data.elo)  oppPresenceElo  = data.elo;
   if (data.avatar) oppPresenceAvatar = data.avatar;
+  if (data.fx) oppPresenceFx = data.fx;
   updateOppChip();
 }
 function updateOppChip(){
@@ -2092,7 +2097,7 @@ function finishBuild(){
   const slots = ROLE[myRole].slots.map(s=>buildState.filled[s.key]);
   const ovr = computeOvr(myRole, buildState.filled);
   const team = modalTeam(slots);
-  myBuild = { role:myRole, ovr, team, slots, elo: myElo(), name: displayName(), key: personId(), avatar: myAvatarId() };
+  myBuild = { role:myRole, ovr, team, slots, elo: myElo(), name: displayName(), key: personId(), avatar: myAvatarId(), fx: myFxId() };
   // Ranked matches also LOCK the build server-side (validated against real card data +
   // Elo-stamped) — pvpResult settles both-locked matches from those rows, so a doctored
   // client can't lie its way up the ladder. Friendly/ghost matches never lock.
@@ -2270,15 +2275,15 @@ async function publishBuild(){
     try{ matchCh.publish('build', myBuild); }catch(e){}
   }, 5000);
 }
-function publishForfeit(filled){ if(matchCh){ try{ matchCh.publish('forfeit',{ role:myRole, filled, total:ROLE[myRole].slots.length, elo:myElo(), name:displayName(), avatar: myAvatarId() }); }catch(e){} } }
+function publishForfeit(filled){ if(matchCh){ try{ matchCh.publish('forfeit',{ role:myRole, filled, total:ROLE[myRole].slots.length, elo:myElo(), name:displayName(), avatar: myAvatarId(), fx: myFxId() }); }catch(e){} } }
 let oppProg={filled:0,total:9};
 function updateOppProgress(d){ oppProg=d; updateOppPill(); updateWaitArena(); }
 function updateOppPill(){
   const pill=$('oppPill');
   const oppNm = escapeHTML(String(oppPresenceName || (oppBuild && oppBuild.name) || 'Opponent').slice(0, 14));
   const chip = avatarChipHTML(oppAvatarId(), oppPresenceName || (oppBuild && oppBuild.name), 16) + ' ';
-  if(oppBuild){ pill.innerHTML = isGhost ? '👻 Ghost: ready ✓' : chip + oppNm + ': ready ✓'; pill.style.color='#7CE38B'; }
-  else if(oppPresent){ pill.innerHTML = chip + oppNm + `: building ${oppProg.filled}/${oppProg.total}`; pill.style.color='var(--muted)'; }
+  if(oppBuild){ pill.innerHTML = isGhost ? '👻 Ghost: ready ✓' : chip + '<span class="'+oppFxCls()+'">'+oppNm+'</span>' + ': ready ✓'; pill.style.color='#7CE38B'; }
+  else if(oppPresent){ pill.innerHTML = chip + '<span class="'+oppFxCls()+'">'+oppNm+'</span>' + `: building ${oppProg.filled}/${oppProg.total}`; pill.style.color='var(--muted)'; }
   else { pill.textContent='Opponent: connecting…'; pill.style.color='var(--muted)'; }
   updateWaitArena();
 }
@@ -2295,7 +2300,7 @@ function paintResultOpp(name, av){
   }
   el.style.display='flex';
   el.innerHTML = '<span style="opacity:.7">vs</span> ' + avatarChipHTML(av, name, 24) +
-    ' <span style="color:#eaf2fb">' + escapeHTML(String(name).slice(0, 18)) + '</span>';
+    ' <span style="color:#eaf2fb" class="' + oppFxCls() + '">' + escapeHTML(String(name).slice(0, 18)) + '</span>';
 }
 
 /* ---------- at-bat ---------- */

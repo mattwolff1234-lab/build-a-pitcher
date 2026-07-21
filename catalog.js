@@ -42,9 +42,12 @@
   const PRO = {
     id: 'pro', name: 'GoatLab Pro', icon: '⭐',
     tagline: 'No ads · every Battle Pass included · exclusive golden cosmetics',
+    // What the buyer reads on the Stripe Checkout page itself (api/buy.js sends it as the
+    // line-item description) — sell the full package, not just "no ads".
+    checkoutDesc: 'Zero ads across every GoatLab game · every season’s full Battle Pass included (~1450 coins back per season) · exclusive Midas Glow name effect + Golden Reel Trail · Pro star on your name. More Pro perks landing every season — cancel anytime.',
     perks: [
       'Zero ads across every GoatLab game',
-      'Every season’s Premium Battle Pass lane included (exclusive frames, avatars, name effects + ~1000 🪙 back per season)',
+      'Every season’s FULL Battle Pass included (every tier: frames, avatars, name effects + ~1450 🪙 back per season)',
       '✨ Midas Glow — exclusive golden name effect with particles, shown in 1v1 and on the leaderboards',
       '⭐ Pro star on your name everywhere',
       'Golden Reel Trail on every spin',
@@ -60,13 +63,23 @@
   // with Pro OR sold here for coins — season:'current' resolves server-side via the shared
   // season clock, so this one SKU always sells the pass for whatever season is live.)
   const SKUS = {
-    pass_cur: { type: 'pass', season: 'current', price: 1500, name: 'Premium Pass — this season', icon: '🎫',  // TUNE
-      desc: 'Unlock this season’s premium Battle Pass lane: exclusive cosmetics + 🪙 coins back. Included free with GoatLab Pro.' },
+    pass_cur: { type: 'pass', season: 'current', price: 1500, name: 'Battle Pass — this season', icon: '🎫',  // TUNE
+      desc: 'Unlock this season’s Battle Pass — EVERY tier: exclusive cosmetics + 🪙 coins back. Included free with GoatLab Pro.' },
 
     // Cosmetics — ids live in social.js AVATARS (track:'future' art, already rendered + equippable).
     av_robot_ump:   { type: 'cosmetic', price: 350, name: 'Robo Ump Avatar', icon: '🤖', desc: 'Beep. Strike three.' },        // TUNE
     av_ghost_jersey:{ type: 'cosmetic', price: 350, name: 'Double Zero Avatar', icon: '👻', desc: 'The ghost in the lineup.' }, // TUNE
     av_astro_ball:  { type: 'cosmetic', price: 350, name: 'Moonshot Avatar', icon: '🚀', desc: 'Launch angle: vertical.' },     // TUNE
+
+    // Jerseys (`jr_` prefix) — worn by the FIGURE in every build game (registry + CSS live in
+    // jerseys.js; the store renders these with a live swatch + Equip toggle). Plain 'cosmetic'
+    // type so unlock/sync ride the existing users.cosmetics plumbing.
+    jr_pinstripe: { type: 'cosmetic', price: 150, name: 'Pinstripes Jersey', icon: '🦓', desc: 'Team-color pinstripes on white. Timeless.' },                // TUNE
+    jr_retro:     { type: 'cosmetic', price: 200, name: 'Retro Cream Jersey', icon: '📻', desc: 'Sandlot cream with a team-color fade. Grandpa approves.' }, // TUNE
+    jr_blackout:  { type: 'cosmetic', price: 200, name: 'Blackout Jersey', icon: '🌑', desc: 'City-edition black on black. Menacing.' },                     // TUNE
+    jr_camo:      { type: 'cosmetic', price: 250, name: 'Night Ops Camo Jersey', icon: '🪖', desc: 'They never saw the fastball coming.' },                  // TUNE
+    jr_gold:      { type: 'cosmetic', price: 300, name: 'All-Gold Jersey', icon: '🏆', desc: 'For players who already know they made the Hall.' },           // TUNE
+    jr_chrome:    { type: 'cosmetic', price: 500, name: 'Diamond Chrome Jersey', icon: '💎', desc: 'Liquid-metal shine. The flex of flexes.' },              // TUNE
 
     // Consumables (Scout stays earnable FREE on the track — these are top-ups).
     scout_x5: { type: 'item', item: 'scout', qty: 5, price: 200, name: 'Scout Tokens ×5', icon: '🔭',   // TUNE
@@ -117,18 +130,19 @@
         { req: 5000, coins: 400 },   // TUNE — ~1000 coins back over a season of Pro
       ],
     },
+    // Season 2+ — paid-only Battle Pass (2026-07-21): ONE lane ('premium', pass/Pro required —
+    // trackClaimCoins now gates BOTH lanes anyway; S1 keeps its old split so existing claim
+    // refs stay stable). S2 pays ~1450 back across the season on the 1500 pass.
     2: {
-      free: [
-        { req: 600,  coins: 100 },   // TUNE
-        { req: 2100, coins: 150 },   // TUNE
-        { req: 4500, coins: 200 },   // TUNE
-      ],
+      free: [],
       premium: [
-        { req: 200,  coins: 100 },   // TUNE
-        { req: 1000, coins: 150 },   // TUNE
-        { req: 2100, coins: 200 },   // TUNE
-        { req: 3600, coins: 250 },   // TUNE
-        { req: 5500, coins: 300 },   // TUNE
+        { req: 300,  coins: 100 },   // TUNE
+        { req: 900,  coins: 150 },   // TUNE
+        { req: 1600, coins: 150 },   // TUNE
+        { req: 2400, coins: 200 },   // TUNE
+        { req: 3300, coins: 200 },   // TUNE
+        { req: 4300, coins: 250 },   // TUNE
+        { req: 5400, coins: 400 },   // TUNE
       ],
     },
   };

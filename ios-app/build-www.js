@@ -15,7 +15,7 @@ const PAGES = [
   'build-a-striker.html', 'build-a-keeper.html', 'versus.html', 'versus-hoops.html',
   'versus-soccer.html', 'versus-cfb.html', 'franchise.html', 'franchise-hoops.html',
   'franchise-soccer.html', 'college.html', 'hockey.html', 'monster.html',
-  'goatsquad.html', 'privacy.html', 'terms.html',
+  'goatsquad.html', 'ranks.html', 'privacy.html', 'terms.html',
 ];
 const SCRIPTS = [
   'switcher.js', 'social.js', 'xp.js', 'achievements.js', 'hotboard.js', 'quests.js',
@@ -23,7 +23,7 @@ const SCRIPTS = [
   'real-legends.js',
   // Goat Coins store · store.js hides real-money purchases at runtime inside the Capacitor
   // shell (window.Capacitor check — Apple requires IAP for digital currency); spending stays.
-  'catalog.js', 'store.js',
+  'catalog.js', 'store.js', 'jerseys.js',
 ];
 const DATA = ['pitchers.json', 'batters.json', 'ballers.json', 'strikers.json', 'keepers.json',
   'cfb.json', 'hockey.json', 'pokemon.json', 'goatsquad-nba.json'];

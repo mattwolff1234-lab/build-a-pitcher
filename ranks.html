@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>GoatLab · Ranks</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#0a1320">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="GoatLab">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="icon" href="/icon-192.png">
+<meta property="og:title" content="GoatLab · Ranks">
+<meta property="og:description" content="Global leaderboards for every GoatLab game — all-time GOATs, today's champions, and the 1v1 Elo ladder.">
+<meta property="og:image" content="/icon-512.png">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="/icon-512.png">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="/namefilter.js"></script>
+<script src="/xp.js" defer></script>
+<script src="/social.js" defer></script>
+<script src="/catalog.js" defer></script>
+<script src="/store.js" defer></script>
+<script src="/jerseys.js" defer></script>
+<script src="/switcher.js?v=15" defer></script>
+<script src="/season-track.js" defer></script>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-TVL2XEQ2Q7"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-TVL2XEQ2Q7');
+</script>
+
+<!-- Playwire deliberately NOT on this page (2026-07-21): with no units mapped for /ranks the
+     injected anchor/placeholder covered the whole board on phones for zero revenue. To monetize
+     later: have Louis map units for /ranks FIRST, then copy the 3-piece contract from ads.md. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg0:#04070d; --bg1:#0a1320;
+    --panel-a: rgba(20,31,48,.72); --panel-b: rgba(9,15,25,.86);
+    --ink:#eaf2fb; --muted:#7e8da3; --dim:#56627a;
+    --line: rgba(120,160,210,.16);
+    --accent:#ff7a18; --accent2:#19c6ff;
+    --grey:#9aa6b6; --bronze:#d08a3e; --silver:#c8d0da; --gold:#ffce3a; --diamond:#54c7ff; --legend:#a366ff;
+  }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  * { scrollbar-width:thin; scrollbar-color:rgba(120,160,210,.32) transparent; }
+  ::-webkit-scrollbar { width:7px; height:7px; }
+  ::-webkit-scrollbar-track { background:transparent; }
+  ::-webkit-scrollbar-thumb { background:rgba(120,160,210,.28); border-radius:8px; }
+  html,body { min-height:100%; }
+  body { margin:0; background:var(--bg0); color:var(--ink); overflow-x:hidden;
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif; }
+  .bg { position:fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden;
+    background:radial-gradient(120% 90% at 50% -10%, #14253c 0%, var(--bg1) 38%, var(--bg0) 80%); }
+  .bg .scan { position:absolute; inset:0; opacity:.05;
+    background:repeating-linear-gradient(0deg, transparent 0 3px, #9fd8ff 3px 4px); }
+  .c-grey{color:var(--grey);} .c-bronze{color:var(--bronze);} .c-silver{color:var(--silver);}
+  .c-gold{color:var(--gold);} .c-diamond{color:var(--diamond);} .c-legend{color:var(--legend);}
+
+  header { position:relative; z-index:2; display:flex; align-items:center; gap:10px;
+    max-width:760px; margin:0 auto; padding:16px 14px 6px; }
+  header .tt { font-family:'Oswald',sans-serif; font-size:22px; font-weight:700; letter-spacing:2.5px; text-transform:uppercase; }
+  header .tt b { color:var(--accent2); }
+  header .tag { font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin-top:5px; }
+  header .sp { flex:1; }
+
+  .wrap { position:relative; z-index:1; max-width:760px; margin:0 auto; padding:4px 12px 90px; }
+
+  .rk-mode { display:flex; gap:8px; margin:8px 0 10px; }
+  .rk-mode button { flex:1; font-family:'Oswald',sans-serif; font-size:13px; font-weight:600; letter-spacing:1.5px;
+    text-transform:uppercase; padding:11px 6px; border-radius:11px; cursor:pointer; color:var(--muted);
+    background:linear-gradient(180deg, rgba(16,32,46,.55), rgba(8,13,22,.7)); border:1px solid var(--line); }
+  .rk-mode button.active { color:var(--accent2); border-color:rgba(25,198,255,.55); box-shadow:0 0 14px rgba(25,198,255,.14); }
+
+  .rk-tabs { display:flex; gap:6px; overflow-x:auto; padding-bottom:4px; margin-bottom:6px; scrollbar-width:none; }
+  .rk-tabs::-webkit-scrollbar { display:none; }
+  .rk-tab { flex:0 0 auto; font-family:'Oswald',sans-serif; font-size:12.5px; font-weight:600; letter-spacing:.8px;
+    padding:8px 13px; border-radius:999px; cursor:pointer; color:var(--muted); white-space:nowrap;
+    background:rgba(16,26,40,.6); border:1px solid var(--line); }
+  .rk-tab.active { color:var(--accent2); border-color:rgba(25,198,255,.5); background:rgba(25,198,255,.08); }
+
+  .rk-scopes { display:flex; gap:6px; margin:4px 0 8px; }
+  .rk-scopes .rk-tab { flex:1; text-align:center; }
+  .rk-sorts { display:flex; gap:8px; align-items:center; margin-bottom:10px; }
+  .rk-sorts select { flex:1; font-family:'Oswald',sans-serif; font-size:13px; letter-spacing:.5px; color:var(--ink);
+    background:rgba(16,26,40,.8); border:1px solid var(--line); border-radius:9px; padding:9px 10px; }
+  .rk-sorts button { font-family:'Oswald',sans-serif; font-size:12px; font-weight:600; letter-spacing:1px; cursor:pointer;
+    color:var(--muted); background:rgba(16,26,40,.6); border:1px solid var(--line); border-radius:9px; padding:9px 13px; }
+  .rk-sorts button.active { color:var(--accent2); border-color:rgba(25,198,255,.5); }
+
+  .rk-banner { font-family:'Oswald',sans-serif; font-size:11.5px; letter-spacing:1.5px; text-transform:uppercase;
+    color:var(--muted); text-align:center; padding:9px 10px; margin-bottom:10px; border-radius:10px;
+    border:1px solid rgba(255,206,58,.22); background:linear-gradient(90deg, rgba(255,206,58,.06), rgba(255,122,24,.05)); }
+  .rk-banner b { color:var(--gold); }
+
+  /* 👑 champion spotlight */
+  .rk-champ { position:relative; overflow:hidden; border-radius:15px; padding:15px 16px 13px; margin-bottom:12px;
+    border:1px solid rgba(255,206,58,.45); background:linear-gradient(165deg, rgba(60,45,10,.5), rgba(9,15,25,.92));
+    box-shadow:0 0 26px rgba(255,206,58,.12), 0 14px 40px rgba(0,0,0,.45); }
+  .rk-champ .crown { position:absolute; top:-14px; right:-8px; font-size:78px; opacity:.1; transform:rotate(18deg); }
+  .rk-champ .lbl { font-family:'Oswald',sans-serif; font-size:11px; font-weight:600; letter-spacing:2.5px;
+    text-transform:uppercase; color:var(--gold); }
+  .rk-champ .row1 { display:flex; align-items:center; gap:12px; margin-top:8px; }
+  .rk-champ .nm { font-family:'Oswald',sans-serif; font-size:23px; font-weight:700; letter-spacing:.5px;
+    flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .rk-champ .sub { font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); margin-top:2px; }
+  .rk-champ .ovr { text-align:center; flex:0 0 auto; }
+  .rk-champ .ovr b { font-family:'Oswald',sans-serif; font-size:36px; font-weight:700; display:block; line-height:1; }
+  .rk-champ .ovr span { font-family:'Oswald',sans-serif; font-size:9.5px; letter-spacing:2px; color:var(--muted); }
+  .rk-strip { display:flex; gap:6px; margin-top:12px; overflow-x:auto; padding-bottom:3px; scrollbar-width:none; }
+  .rk-strip::-webkit-scrollbar { display:none; }
+  .rk-strip .sc { flex:0 0 auto; text-align:center; width:46px; }
+  .rk-strip .sc img { width:38px; height:38px; border-radius:50%; object-fit:cover; background:#11161d; border:2px solid var(--line); }
+  .rk-strip .sc.t-gold img { border-color:var(--gold); } .rk-strip .sc.t-diamond img { border-color:var(--diamond); }
+  .rk-strip .sc.t-silver img { border-color:var(--silver); } .rk-strip .sc.t-bronze img { border-color:var(--bronze); }
+  .rk-strip .sc.t-legend img { border-color:var(--legend); }
+  .rk-strip .sc b { display:block; font-family:'Oswald',sans-serif; font-size:11px; margin-top:2px; }
+
+  .rk-av { display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto; width:26px; height:26px;
+    border-radius:50%; overflow:hidden; font-size:14px; border:2px solid rgba(120,170,220,.3); background:#182334; }
+  .rk-av img { width:100%; height:100%; object-fit:cover; }
+  .rk-champ .rk-av { width:40px; height:40px; font-size:20px; }
+
+  .rk-list { display:flex; flex-direction:column; gap:7px; }
+  .rk-row { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:11px; cursor:pointer;
+    border:1px solid var(--line); background:linear-gradient(180deg, rgba(16,32,46,.5), rgba(8,13,22,.66)); }
+  .rk-row:hover { border-color:var(--accent2); box-shadow:0 0 12px rgba(25,198,255,.18); }
+  .rk-row .rank { font-family:'Oswald',sans-serif; font-size:15px; font-weight:600; color:var(--muted); width:34px; text-align:right; flex:0 0 auto; }
+  .rk-row.top1 .rank { color:var(--gold); } .rk-row.top2 .rank { color:var(--silver); } .rk-row.top3 .rank { color:var(--bronze); }
+  .rk-row .nm { flex:1; min-width:0; font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .rk-row .nm .sub { color:var(--muted); font-size:11px; font-weight:600; letter-spacing:.5px; }
+  .rk-row .ov { font-family:'Oswald',sans-serif; font-size:20px; font-weight:700; flex:0 0 auto; }
+  .rk-row .ov.stat { color:var(--accent2); }
+  .rk-row .chev { color:var(--muted); font-size:14px; flex:0 0 auto; transition:transform .2s; }
+  .rk-row.open .chev { transform:rotate(90deg); }
+  .rk-row.mine { border-color:var(--accent2); box-shadow:0 0 12px rgba(25,198,255,.3); background:rgba(25,198,255,.07); }
+  .rk-detail { display:none; padding:4px 2px 10px; }
+  .rk-detail.show { display:block; }
+  .rk-slots { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  @media (max-width:560px){ .rk-slots { grid-template-columns:1fr; } }
+  .rk-slot { display:flex; align-items:center; gap:9px; padding:7px 10px; border-radius:10px;
+    border:1px solid var(--line); background:rgba(8,13,22,.55); }
+  .rk-slot img { width:34px; height:34px; border-radius:50%; object-fit:cover; background:#11161d;
+    border:2px solid var(--line); flex:0 0 auto; }
+  .rk-slot.t-gold img { border-color:var(--gold); } .rk-slot.t-diamond img { border-color:var(--diamond); }
+  .rk-slot.t-silver img { border-color:var(--silver); } .rk-slot.t-bronze img { border-color:var(--bronze); }
+  .rk-slot.t-legend img { border-color:var(--legend); }
+  .rk-slot .tx { flex:1; min-width:0; }
+  .rk-slot .tx b { display:block; font-family:'Oswald',sans-serif; font-size:11px; font-weight:600;
+    letter-spacing:1.2px; text-transform:uppercase; }
+  .rk-slot .tx span { display:block; font-size:12.5px; color:var(--ink); white-space:nowrap;
+    overflow:hidden; text-overflow:ellipsis; }
+  .rk-slot .vl { font-family:'Oswald',sans-serif; font-size:19px; font-weight:700; flex:0 0 auto; }
+  .rk-dhead { display:flex; align-items:baseline; gap:8px; padding:6px 4px 8px;
+    font-family:'Oswald',sans-serif; }
+  .rk-dhead b { font-size:15px; letter-spacing:.5px; }
+  .rk-dhead span { font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); }
+  .rk-empty { text-align:center; color:var(--muted); font-size:13px; padding:26px 10px; border:1px dashed var(--line); border-radius:11px; }
+
+  /* 1v1 elo board */
+  .rk-elo .rec { color:var(--muted); font-family:'Oswald',sans-serif; font-size:12px; letter-spacing:.5px; flex:0 0 auto; }
+  .rk-elo .elo { font-family:'Oswald',sans-serif; font-size:18px; font-weight:700; color:var(--accent2); flex:0 0 auto; }
+
+  footer { position:relative; z-index:1; text-align:center; color:var(--dim); font-size:11px; padding:10px 14px 26px; }
+  footer a { color:var(--muted); }
+</style>
+</head>
+<body>
+<div class="bg"><div class="scan"></div></div>
+<header>
+  <div>
+    <div class="tt">🏆 <b>Ranks</b></div>
+    <div class="tag">Every board · every game · one page</div>
+  </div>
+  <div class="sp"></div>
+  <span data-coin-chip></span>
+</header>
+<div class="wrap">
+  <div class="rk-mode">
+    <button id="modeBuilds" class="active">🏟️ Build Boards</button>
+    <button id="modePvp">⚔️ 1v1 Elo</button>
+  </div>
+
+  <div id="buildsView">
+    <div class="rk-tabs" id="sportTabs"></div>
+    <div class="rk-tabs" id="roleTabs"></div>
+    <div class="rk-scopes">
+      <button class="rk-tab" data-scope="global">🌍 All-time</button>
+      <button class="rk-tab" data-scope="daily">📅 Today</button>
+      <button class="rk-tab" data-scope="challenge">🎯 Daily Challenge</button>
+    </div>
+    <div class="rk-sorts">
+      <select id="sortSel"></select>
+      <button id="dirBtn">↓ Best</button>
+    </div>
+    <div id="champ"></div>
+    <div id="banner"></div>
+    <div id="list" class="rk-list"><div class="rk-empty">Loading…</div></div>
+  </div>
+
+  <div id="pvpView" style="display:none">
+    <div class="rk-tabs" id="pvpSportTabs"></div>
+    <div id="pvpChamp"></div>
+    <div id="pvpList" class="rk-list rk-elo"><div class="rk-empty">Loading…</div></div>
+  </div>
+</div>
+<footer>Build a player in any GoatLab game and submit it to claim your spot. · <a href="/">Home</a></footer>
+
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+function escapeHTML(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function tier(ovr) {
+  if (ovr >= 85) return 'diamond';
+  if (ovr >= 80) return 'gold';
+  if (ovr >= 75) return 'silver';
+  if (ovr >= 65) return 'bronze';
+  return 'grey';
+}
+const TIER_LABELS = { grey: 'Common', bronze: 'Bronze', silver: 'Silver', gold: 'Gold', diamond: 'Diamond', legend: 'Legend' };
+const GAME_LABEL = { pitcher: 'Pitcher', batter: 'Batter', baller: 'Hooper', striker: 'Striker', keeper: 'Keeper', hockey: 'Skater', mon: 'Monster', cfb: 'College Star' };
+const SILHOUETTE = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="%2311161d"/><circle cx="50" cy="38" r="20" fill="%23394150"/><path d="M50 62c-20 0-34 14-34 34h68c0-20-14-34-34-34z" fill="%23394150"/></svg>');
+function todayLocal() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+const SORT_OPTIONS = {
+  pitcher: [{ key: 'ovr', label: 'OVR' }, { key: 'k', label: 'Strikeouts' }, { key: 'war', label: 'WAR' }, { key: 'wins', label: 'Wins' }, { key: 'rings', label: 'Rings' }, { key: 'cyYoung', label: 'Cy Youngs' }],
+  batter: [{ key: 'ovr', label: 'OVR' }, { key: 'hr', label: 'Home Runs' }, { key: 'hits', label: 'Hits' }, { key: 'war', label: 'WAR' }, { key: 'rings', label: 'Rings' }, { key: 'mvp', label: 'MVPs' }],
+  baller: [{ key: 'ovr', label: 'OVR' }, { key: 'pts', label: 'Points' }, { key: 'reb', label: 'Rebounds' }, { key: 'ast', label: 'Assists' }, { key: 'war', label: 'Win Shares' }, { key: 'rings', label: 'Rings' }, { key: 'mvp', label: 'MVPs' }],
+  striker: [{ key: 'ovr', label: 'OVR' }, { key: 'goals', label: 'Goals' }, { key: 'assists', label: 'Assists' }, { key: 'war', label: 'Rating' }, { key: 'rings', label: 'UCLs' }, { key: 'mvp', label: "Ballons d'Or" }],
+  keeper: [{ key: 'ovr', label: 'OVR' }, { key: 'cs', label: 'Clean Sheets' }, { key: 'saves', label: 'Saves' }, { key: 'war', label: 'Rating' }, { key: 'rings', label: 'UCLs' }, { key: 'mvp', label: 'Yashin Trophies' }],
+  hockey: [{ key: 'ovr', label: 'OVR' }, { key: 'g', label: 'Goals' }, { key: 'p', label: 'Points' }, { key: 'war', label: 'Point Shares' }, { key: 'rings', label: 'Cups' }, { key: 'mvp', label: 'Harts' }],
+  mon: [{ key: 'ovr', label: 'OVR' }, { key: 'w', label: 'Wins' }, { key: 'badges', label: 'Badges' }, { key: 'war', label: 'Battle Rating' }, { key: 'rings', label: 'Leagues' }, { key: 'mvp', label: 'Worlds' }],
+  cfb: [{ key: 'ovr', label: 'OVR' }, { key: 'yds', label: 'Yards' }, { key: 'td', label: 'TDs' }, { key: 'wins', label: 'Team Wins' }, { key: 'heisman', label: 'Heismans' }, { key: 'natty', label: 'Titles' }],
+};
+const SPORTS = [
+  { id: 'baseball', icon: '⚾', label: 'Baseball', games: [['pitcher', 'Pitchers'], ['batter', 'Batters']] },
+  { id: 'hoops',    icon: '🏀', label: 'Hoops',    games: [['baller', 'Hoopers']] },
+  { id: 'soccer',   icon: '⚽', label: 'Soccer',   games: [['striker', 'Strikers'], ['keeper', 'Keepers']] },
+  { id: 'hockey',   icon: '🏒', label: 'Hockey',   games: [['hockey', 'Skaters']] },
+  { id: 'cfb',      icon: '🏈', label: 'College',  games: [['cfb', 'College Football']] },
+];
+const sportOf = g => SPORTS.find(s => s.games.some(x => x[0] === g)) || SPORTS[0];
+const VALID_GAMES = SPORTS.flatMap(s => s.games.map(x => x[0]));
+
+let g = 'pitcher', scope = 'global', sort = 'ovr', dir = 'desc', pos = null;
+let entries = [];
+try {
+  const q = new URLSearchParams(location.search).get('game');
+  if (VALID_GAMES.indexOf(q) >= 0) g = q;
+} catch (e) {}
+function myEntryId() { try { return Number(localStorage.getItem('pl_lastEntry_' + g)) || null; } catch (e) { return null; } }
+
+/* ---------- cosmetics (avatars + name effects) — modules load deferred, degrade to plain ---------- */
+function avChip(style, size) {
+  const meta = style && style.av && window.Social && Social.avatarMeta ? Social.avatarMeta(style.av) : null;
+  if (!meta) return '';
+  return `<span class="rk-av" style="background:${meta.bg}">${meta.src ? `<img src="${meta.src}" alt="" loading="lazy">` : meta.emoji}</span>`;
+}
+function fxCls(style) {
+  return (style && style.fx && window.SeasonTrack && SeasonTrack.fxClass && SeasonTrack.fxClass(style.fx)) || '';
+}
+
+/* ---------- nav rendering ---------- */
+function renderNav() {
+  const sport = sportOf(g);
+  $('sportTabs').innerHTML = SPORTS.map(s =>
+    `<button class="rk-tab${s.id === sport.id ? ' active' : ''}" data-sport="${s.id}">${s.icon} ${s.label}</button>`).join('');
+  document.querySelectorAll('[data-sport]').forEach(b => b.onclick = () => {
+    const s = SPORTS.find(x => x.id === b.dataset.sport);
+    if (s.id !== sport.id) { pos = null; setGame(s.games[0][0]); }
+  });
+  const roles = $('roleTabs');
+  if (sport.id === 'cfb') {
+    roles.innerHTML = [['', 'All'], ['QB', 'QBs'], ['RB', 'RBs'], ['WR', 'WRs']]
+      .map(([id, label]) => `<button class="rk-tab${(pos || '') === id ? ' active' : ''}" data-pos="${id}">${label}</button>`).join('');
+    roles.querySelectorAll('[data-pos]').forEach(b => b.onclick = () => { pos = b.dataset.pos || null; load(); });
+  } else if (sport.games.length > 1) {
+    roles.innerHTML = sport.games.map(([id, label]) =>
+      `<button class="rk-tab${id === g ? ' active' : ''}" data-game="${id}">${label}</button>`).join('');
+    roles.querySelectorAll('[data-game]').forEach(b => b.onclick = () => setGame(b.dataset.game));
+  } else roles.innerHTML = '';
+  document.querySelectorAll('.rk-scopes .rk-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.scope === scope);
+    t.onclick = () => { scope = t.dataset.scope; load(); };
+  });
+  const opts = SORT_OPTIONS[g] || SORT_OPTIONS.pitcher;
+  if (!opts.some(o => o.key === sort)) sort = 'ovr';
+  const sel = $('sortSel');
+  sel.innerHTML = opts.map(o => `<option value="${o.key}"${o.key === sort ? ' selected' : ''}>Sort: ${o.label}</option>`).join('');
+  sel.onchange = () => { sort = sel.value; load(); };
+  const db = $('dirBtn');
+  db.textContent = dir === 'asc' ? '↑ Worst' : '↓ Best';
+  db.classList.toggle('active', dir === 'asc');
+  db.onclick = () => { dir = dir === 'asc' ? 'desc' : 'asc'; load(); };
+  const onChallenge = scope === 'challenge';
+  sel.style.display = onChallenge ? 'none' : '';
+  db.style.display = onChallenge ? 'none' : '';
+}
+function setGame(game) {
+  g = game;
+  try { history.replaceState(null, '', '/ranks?game=' + g); } catch (e) {}
+  load();
+}
+
+/* ---------- build strip (from the submitted build's slots) ---------- */
+function stripHTML(entry) {
+  const slots = entry && entry.build && Array.isArray(entry.build.slots) ? entry.build.slots : [];
+  if (!slots.length) return '';
+  return `<div class="rk-strip">` + slots.map(s => {
+    const st = tier(Number(s.value) || 0);
+    const val = s.display != null ? s.display : (s.value != null ? s.value : '-');
+    return `<div class="sc t-${st}" title="${escapeHTML((s.slot || '') + ' · ' + (s.player || ''))}">
+      <img src="${s.img || SILHOUETTE}" alt="" loading="lazy" onerror="this.onerror=null;this.src='${SILHOUETTE}'">
+      <b class="c-${st}">${escapeHTML(String(val))}</b></div>`;
+  }).join('') + `</div>`;
+}
+
+/* ---------- expanded row: full attribute breakdown ---------- */
+function detailHTML(entry) {
+  const slots = entry && entry.build && Array.isArray(entry.build.slots) ? entry.build.slots : [];
+  if (!slots.length) return '<div class="rk-empty">This build was saved before details were tracked.</div>';
+  const t = tier(entry.ovr);
+  return `<div class="rk-dhead"><b class="c-${t}">${entry.ovr} OVR</b>
+      <span>${TIER_LABELS[t]} · ${GAME_LABEL[entry.game || g] || 'Player'}${entry.build.pos ? ' · ' + escapeHTML(String(entry.build.pos)) : ''}</span></div>
+    <div class="rk-slots">` + slots.map(s => {
+    const st = tier(Number(s.value) || 0);
+    const val = s.display != null ? s.display : (s.value != null ? s.value : '-');
+    return `<div class="rk-slot t-${st}">
+      <img src="${s.img || SILHOUETTE}" alt="" loading="lazy" onerror="this.onerror=null;this.src='${SILHOUETTE}'">
+      <div class="tx"><b class="c-${st}">${escapeHTML(s.slot || '')}</b><span>${escapeHTML(s.player || 'Unknown')}${s.legend ? ' ★' : ''}</span></div>
+      <div class="vl c-${st}">${escapeHTML(String(val))}</div>
+    </div>`;
+  }).join('') + `</div>`;
+}
+
+/* ---------- 👑 champion spotlight ---------- */
+function champHTML(entry, label, sub) {
+  if (!entry) return '';
+  const t = tier(entry.ovr);
+  const style = (entry.build && entry.build.style) || {};
+  return `<div class="rk-champ"><div class="crown">👑</div>
+    <div class="lbl">👑 ${label}</div>
+    <div class="row1">
+      ${avChip(style, 40) || ''}
+      <div style="flex:1;min-width:0">
+        <div class="nm"><span class="${fxCls(style)}">${escapeHTML(entry.name)}</span></div>
+        <div class="sub">${TIER_LABELS[t]} · ${GAME_LABEL[entry.game || g] || 'Player'}${sub ? ' · ' + sub : ''}</div>
+      </div>
+      <div class="ovr"><b class="c-${t}">${entry.ovr}</b><span>OVR</span></div>
+    </div>
+    ${stripHTML(entry)}
+  </div>`;
+}
+
+/* ---------- rows ---------- */
+function rowHTML(rank, entry, i, cls) {
+  const t = tier(entry.ovr);
+  const style = (entry.build && entry.build.style) || {};
+  const sorted = sort !== 'ovr' && scope !== 'challenge';
+  const posTag = g === 'cfb' && !pos && entry.build && entry.build.pos
+    ? ` <span class="sub">${escapeHTML(String(entry.build.pos))}</span>` : '';
+  const sub = posTag + (sorted ? ` <span class="sub">${entry.ovr} OVR</span>` : '');
+  const right = sorted
+    ? `<div class="ov stat">${entry.stat == null ? '-' : (sort === 'war' ? Number(entry.stat).toFixed(1) : Math.round(entry.stat))}</div>`
+    : `<div class="ov c-${t}">${entry.ovr}</div>`;
+  const hasBuild = entry.build && Array.isArray(entry.build.slots) && entry.build.slots.length;
+  return `<div class="rk-row ${cls || ''}" data-i="${i}">
+      <div class="rank">${rank}</div>
+      ${avChip(style)}
+      <div class="nm"><span class="${fxCls(style)}">${escapeHTML(entry.name)}</span>${sub}</div>
+      ${right}
+      <div class="chev">${hasBuild ? '›' : ''}</div>
+    </div>
+    <div class="rk-detail" data-d="${i}"></div>`;
+}
+function bindRows() {
+  document.querySelectorAll('#list .rk-row[data-i]').forEach(r => {
+    r.onclick = () => {
+      const i = Number(r.dataset.i);
+      const e = entries[i];
+      if (!e || !e.build || !Array.isArray(e.build.slots) || !e.build.slots.length) return;
+      const d = document.querySelector(`#list .rk-detail[data-d="${i}"]`);
+      const open = d.classList.contains('show');
+      if (!open && !d.innerHTML) d.innerHTML = detailHTML(e);
+      d.classList.toggle('show', !open);
+      r.classList.toggle('open', !open);
+    };
+  });
+}
+
+/* ---------- loaders ---------- */
+async function load() {
+  renderNav();
+  const list = $('list');
+  list.innerHTML = '<div class="rk-empty">Loading…</div>';
+  $('champ').innerHTML = ''; $('banner').innerHTML = '';
+  entries = [];
+  try {
+    if (scope === 'challenge') return await loadChallenge();
+    const meId = myEntryId();
+    const posParam = g === 'cfb' && pos ? `&pos=${pos.toLowerCase()}` : '';
+    const meParam = meId ? `&me=${meId}` : '';
+    const sortParam = sort === 'ovr' && dir === 'asc' ? 'ovrAsc' : sort;
+    const [data, ydata] = await Promise.all([
+      fetch(`/api/score?scope=${scope}&limit=200&game=${g}&sort=${sortParam}&dir=${dir}${meParam}${posParam}`).then(r => r.json()),
+      scope === 'daily'
+        ? fetch(`/api/score?scope=yesterday&limit=1&game=${g}${posParam}`).then(r => r.json()).catch(() => null)
+        : Promise.resolve(null),
+    ]);
+    if (!data.ok) throw new Error();
+    let html = '';
+    // 👑 spotlight: the current #1 (only on the default best-first OVR view), plus — on the
+    // Today board — yesterday's locked-in champion.
+    if (sort === 'ovr' && dir === 'desc' && data.rows.length) {
+      html = ''; // champ card renders separately so the list keeps every rank
+      $('champ').innerHTML =
+        champHTML(data.rows[0], scope === 'daily' ? "Today's Leader" : 'All-time GOAT')
+        + (ydata && ydata.ok && ydata.rows && ydata.rows.length
+          ? champHTML(ydata.rows[0], "Yesterday's Champion", new Date(Date.now() - 86400000).toLocaleDateString())
+          : '');
+    }
+    if (typeof data.total === 'number') {
+      $('banner').innerHTML = `<div class="rk-banner"><b>${data.total.toLocaleString()}</b> build${data.total === 1 ? '' : 's'} on this board${scope === 'daily' ? ' today' : ''}</div>`;
+    }
+    if (data.me) {
+      data.me.game = data.me.game || g;
+      entries.push(data.me);
+      html += rowHTML('#' + data.me.rank, { ...data.me, name: data.me.name + ' (you)' }, entries.length - 1, 'mine');
+    }
+    if (!data.rows.length) html += '<div class="rk-empty">No entries yet — be the first!</div>';
+    else html += data.rows.map((r, idx) => {
+      entries.push(r);
+      const rank = idx + 1;
+      const cls = [rank <= 3 ? 'top' + rank : '', myEntryId() && r.id === myEntryId() ? 'mine' : ''].filter(Boolean).join(' ');
+      return rowHTML(rank, r, entries.length - 1, cls);
+    }).join('');
+    list.innerHTML = html;
+    bindRows();
+    if (window.gsap) gsap.fromTo('#list .rk-row', { y: 10, opacity: 0 }, { y: 0, opacity: 1, duration: .3, stagger: .015, ease: 'power2.out' });
+  } catch (e) {
+    list.innerHTML = '<div class="rk-empty">Couldn\'t load this board — check your connection and try again.</div>';
+  }
+}
+async function loadChallenge() {
+  const list = $('list');
+  try {
+    const data = await fetch(`/api/score?action=challengeLeaderboard&game=${g}&limit=200&date=${todayLocal()}`).then(r => r.json());
+    if (!data.ok) throw new Error();
+    if (data.rows.length) $('champ').innerHTML = champHTML({ ...data.rows[0], game: g }, "Today's Daily Challenge Leader");
+    $('banner').innerHTML = `<div class="rk-banner">🎯 Today's Daily Challenge · <b>${data.total}</b> player${data.total === 1 ? '' : 's'} played</div>`;
+    list.innerHTML = data.rows.length
+      ? data.rows.map((r, i) => {
+          const rank = i + 1, t = tier(r.ovr);
+          return `<div class="rk-row ${rank <= 3 ? 'top' + rank : ''}"><div class="rank">${rank}</div>
+            <div class="nm">${escapeHTML(r.name)}</div><div class="ov c-${t}">${r.ovr}</div><div class="chev"></div></div>`;
+        }).join('')
+      : '<div class="rk-empty">No one has played today yet — be the first!</div>';
+  } catch (e) {
+    list.innerHTML = '<div class="rk-empty">Couldn\'t load the daily board.</div>';
+  }
+}
+
+/* ---------- ⚔️ 1v1 Elo ladder ---------- */
+const PVP_SPORTS = [['baseball', '⚾ Baseball'], ['hoops', '🏀 Hoops'], ['soccer', '⚽ Soccer'], ['cfb', '🏈 College']];
+let pvpSport = 'baseball';
+function principal() {
+  try {
+    const a = JSON.parse(localStorage.getItem('pl_account') || 'null');
+    if (a && a.sub && a.sessionToken) return { sub: a.sub, sessionToken: a.sessionToken };
+    const gid = localStorage.getItem('pl_guestId');
+    return gid ? { guestId: gid } : {};
+  } catch (e) { return {}; }
+}
+async function loadPvp() {
+  $('pvpSportTabs').innerHTML = PVP_SPORTS.map(([id, label]) =>
+    `<button class="rk-tab${id === pvpSport ? ' active' : ''}" data-pvp="${id}">${label}</button>`).join('');
+  document.querySelectorAll('[data-pvp]').forEach(b => b.onclick = () => { pvpSport = b.dataset.pvp; loadPvp(); });
+  const list = $('pvpList');
+  list.innerHTML = '<div class="rk-empty">Loading…</div>';
+  $('pvpChamp').innerHTML = '';
+  try {
+    const data = await fetch('/api/account', { method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(Object.assign({ action: 'pvpLeaderboard', limit: 100, sport: pvpSport }, principal())) }).then(r => r.json());
+    if (!data.ok) throw new Error();
+    const rows = data.rows || [];
+    if (rows.length) {
+      const top = rows[0];
+      $('pvpChamp').innerHTML = `<div class="rk-champ"><div class="crown">👑</div>
+        <div class="lbl">👑 #1 Ranked Player</div>
+        <div class="row1"><div style="flex:1;min-width:0">
+          <div class="nm">${escapeHTML(top.name || 'Player')}</div>
+          <div class="sub">${top.wins}-${top.losses} · ${PVP_SPORTS.find(x => x[0] === pvpSport)[1]}</div></div>
+          <div class="ovr"><b class="c-gold">${top.elo}</b><span>RATING</span></div></div></div>`;
+    }
+    const meRank = data.me && data.me.rank;
+    list.innerHTML = rows.length
+      ? rows.map((r, i) => {
+          const rank = i + 1;
+          const cls = [rank <= 3 ? 'top' + rank : '', meRank === rank ? 'mine' : ''].filter(Boolean).join(' ');
+          return `<div class="rk-row ${cls}" style="cursor:default"><div class="rank">${rank}</div>
+            <div class="nm">${escapeHTML(r.name || 'Player')}</div>
+            <div class="rec">${r.wins}-${r.losses}</div>
+            <div class="elo">${r.elo}</div></div>`;
+        }).join('')
+        + (data.me && data.me.rank > rows.length
+          ? `<div class="rk-row mine" style="cursor:default"><div class="rank">#${data.me.rank}</div><div class="nm">${escapeHTML(data.me.name || 'You')} (you)</div><div class="rec">${data.me.wins}-${data.me.losses}</div><div class="elo">${data.me.elo}</div></div>` : '')
+      : '<div class="rk-empty">No ranked players yet — jump into a 1v1!</div>';
+  } catch (e) {
+    list.innerHTML = '<div class="rk-empty">Couldn\'t load the Elo ladder.</div>';
+  }
+}
+
+/* ---------- mode toggle + boot ---------- */
+$('modeBuilds').onclick = () => {
+  $('modeBuilds').classList.add('active'); $('modePvp').classList.remove('active');
+  $('buildsView').style.display = ''; $('pvpView').style.display = 'none';
+};
+$('modePvp').onclick = () => {
+  $('modePvp').classList.add('active'); $('modeBuilds').classList.remove('active');
+  $('buildsView').style.display = 'none'; $('pvpView').style.display = '';
+  loadPvp();
+};
+load();
+// cosmetics modules load deferred — repaint once so avatars/name effects land on the first view
+window.addEventListener('load', () => { setTimeout(() => { if ($('buildsView').style.display !== 'none') load(); }, 400); });
+</script>
+</body>
+</html>
