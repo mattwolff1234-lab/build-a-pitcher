@@ -980,7 +980,7 @@
 
 <div id="lbModal" class="overlay">
   <div class="overlay-card panel">
-    <div class="overlay-head"><span class="overlay-title">Leaderboard</span><button class="overlay-close" data-close="lbModal">✕</button></div>
+    <div class="overlay-head"><span class="overlay-title">Leaderboard</span><a class="lb-full-link" href="/ranks" style="margin-left:auto;margin-right:10px;font-family:'Oswald',sans-serif;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--accent2);text-decoration:none">Full rankings ↗</a><button class="overlay-close" data-close="lbModal">✕</button></div>
     <div class="overlay-body">
       <div class="lb-tabs lb-sport-tabs" id="lbSportTabs"></div>
       <div class="lb-tabs lb-role-tabs" id="lbRoleTabs"></div>
@@ -1468,7 +1468,7 @@ async function init() {
   $('miQuests').onclick = () => { closeOverlay('menu'); Sound.click(); window.Quests && Quests.open(); };
   $('miTrack').onclick = () => { closeOverlay('menu'); Sound.click(); window.SeasonTrack && SeasonTrack.open(); };
   $('saveHofBtn').onclick = () => saveToHof($('saveHofBtn'));
-  $('miLb').onclick = () => { closeOverlay('menu'); openLeaderboard('global'); };
+  $('miLb').onclick = () => { location.href = '/ranks?game=' + LEADERBOARD_GAME; };
   $('miHow').onclick = () => { closeOverlay('menu'); openOverlay('howModal'); };
   $('miInstall').onclick = () => {
     const el = $('installSteps'), open = el.style.display === 'block';
@@ -1534,7 +1534,7 @@ function toast(msg) {
 }
 function openOverlay(id) { const el = $(id); el.classList.add('show'); gsap.fromTo(el.firstElementChild, { y: 14, opacity: 0 }, { y: 0, opacity: 1, duration: .3, ease: 'power3.out' }); }
 function closeOverlay(id) { $(id).classList.remove('show'); }
-function openLeaderboard(scope, game = LEADERBOARD_GAME) { openOverlay('lbModal'); loadLeaderboard(scope, game); }
+function openLeaderboard(scope, game = LEADERBOARD_GAME) { openOverlay('lbModal'); const fl = document.querySelector('.lb-full-link'); if (fl) fl.href = '/ranks?game=' + (game || LEADERBOARD_GAME); loadLeaderboard(scope, game); }
 
 /* ===== Accounts ("Sign in with Google") + My Hall of Fame ===== */
 const GOOGLE_CLIENT_ID = '349698720898-t9bpb8fp7ks6scf8ci8mmoeec1lpm3d3.apps.googleusercontent.com';
@@ -1616,7 +1616,7 @@ async function saveToHof(btn) {
   const reset = () => { if (btn) { btn.disabled = false; btn.textContent = '💾 Save to my Hall of Fame'; } };
   try {
     const slimSlots = state.build.map(({ img: _img, ...s }) => s);
-    const slimCareer = { totals: state.career.totals, role: state.career.role, finalTeam: state.career.finalTeam };
+    const slimCareer = { totals: state.career.totals, role: state.career.role, finalTeam: state.career.finalTeam, mostTeam: mostPlayedTeam(state.career) };
     const r = await fetch('/api/account', { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'save', sub: account.sub, sessionToken: account.sessionToken, game: HOF_GAME,
         name: state.simName || 'My Player', ovr: state.finalOvr,
@@ -3891,9 +3891,21 @@ function trophyParts(t) {
 
 // Pure career-card markup · used for YOUR card and for cards arriving via /p/<id> share links.
 // d = { career, verdict, voteLine, name, ovr, archetypeName, teamAb }
+// The team the player actually spent the most seasons with (trades / free-agency
+// / portal moves count) — ties go to the later stint. Slim careers with no season
+// log fall back to the stored mostTeam, then finalTeam.
+function mostPlayedTeam(career) {
+  if (!career) return null;
+  if (Array.isArray(career.seasons) && career.seasons.length) {
+    const n = {}; let best = null, bestN = 0;
+    for (const s of career.seasons) { if (!s.team) continue; n[s.team] = (n[s.team] || 0) + 1; if (n[s.team] >= bestN) { best = s.team; bestN = n[s.team]; } }
+    if (best) return best;
+  }
+  return career.mostTeam || career.finalTeam || null;
+}
 function careerCardHTML(d) {
   const career = d.career, t = career.totals;
-  const team = teamInfo(career.finalTeam || d.teamAb);
+  const team = teamInfo(mostPlayedTeam(career) || d.teamAb);
   const trophies = trophyParts(t);
   const trophyHtml = trophies.length ? trophies.join('&nbsp; ') : '<span class="none">No major hardware</span>';
   const hasSeasons = Array.isArray(career.seasons) && career.seasons.length > 0;
@@ -3953,7 +3965,7 @@ async function shareCareerCard() {
   const t = state.career.totals;
   if (!window.ShareCard) { shareBuild({ game: LEADERBOARD_GAME, ovr: state.finalOvr, name: state.simName }); return; }
   const verdict = careerTier(t, state.finalOvr);
-  const team = teamInfo(state.career.finalTeam || (state.simTeam && state.simTeam.abbr) || state.draftTeamAb);
+  const team = teamInfo(mostPlayedTeam(state.career) || (state.simTeam && state.simTeam.abbr) || state.draftTeamAb);
   const url = myEntryId ? `https://goat-lab.app/p/${myEntryId}` : 'https://goat-lab.app';
   const btn = $('ccShareBtn');
   if (btn) { btn.disabled = true; btn.textContent = 'Rendering…'; }
@@ -4003,7 +4015,7 @@ async function loadSharedBuild(id) {
       $('sharedCard').innerHTML = careerCardHTML({
         career, verdict,
         voteLine: hofVoteLine(career.totals, entry.ovr).voteLine,
-        name: entry.name, ovr: entry.ovr, archetypeName: '', teamAb: career.finalTeam,
+        name: entry.name, ovr: entry.ovr, archetypeName: '', teamAb: mostPlayedTeam(career) || career.finalTeam,
       });
     } else {
       $('sharedCard').innerHTML = `<div class="cc-top" style="background:linear-gradient(135deg,#2b3948,#141d28);">
@@ -4086,6 +4098,7 @@ async function submitScore() {
     const data = await res.json();
     if (!data.ok) { const err = new Error(data.error || 'rejected'); err.server = true; throw err; }
     myEntryId = data.id;
+    try { localStorage.setItem('pl_lastEntry_' + LEADERBOARD_GAME, String(data.id)); } catch (e) {}
     draftClear();
     try { gtag('event', 'leaderboard_submit', { game: LEADERBOARD_GAME, ovr: state.finalOvr }); } catch (e) {}
     $('submitRow').style.display = 'none';

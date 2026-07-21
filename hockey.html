@@ -1520,7 +1520,7 @@ async function saveToHof(btn) {
   const reset = () => { if (btn) { btn.disabled = false; btn.textContent = '💾 Save to my Hall of Fame'; } };
   try {
     const slimSlots = state.build.map(({ img: _img, ...s }) => s);
-    const slimCareer = { totals: state.career.totals, role: state.career.role, finalTeam: state.career.finalTeam };
+    const slimCareer = { totals: state.career.totals, role: state.career.role, finalTeam: state.career.finalTeam, mostTeam: mostPlayedTeam(state.career) };
     const r = await fetch('/api/account', { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'save', sub: account.sub, sessionToken: account.sessionToken, game: HOF_GAME,
         name: state.simName || 'My Player', ovr: state.finalOvr,
@@ -3594,9 +3594,21 @@ function trophyParts(t) {
 
 // Pure career-card markup · used for YOUR card and for cards arriving via /p/<id> share links.
 // d = { career, verdict, voteLine, name, ovr, teamAb }
+// The team the player actually spent the most seasons with (trades / free-agency
+// / portal moves count) — ties go to the later stint. Slim careers with no season
+// log fall back to the stored mostTeam, then finalTeam.
+function mostPlayedTeam(career) {
+  if (!career) return null;
+  if (Array.isArray(career.seasons) && career.seasons.length) {
+    const n = {}; let best = null, bestN = 0;
+    for (const s of career.seasons) { if (!s.team) continue; n[s.team] = (n[s.team] || 0) + 1; if (n[s.team] >= bestN) { best = s.team; bestN = n[s.team]; } }
+    if (best) return best;
+  }
+  return career.mostTeam || career.finalTeam || null;
+}
 function careerCardHTML(d) {
   const career = d.career, t = career.totals;
-  const team = teamInfo(career.finalTeam || d.teamAb);
+  const team = teamInfo(mostPlayedTeam(career) || d.teamAb);
   const trophies = trophyParts(t);
   const trophyHtml = trophies.length ? trophies.join('&nbsp; ') : '<span class="none">No major hardware</span>';
   const hasSeasons = Array.isArray(career.seasons) && career.seasons.length > 0;
@@ -3650,7 +3662,7 @@ async function shareCareerCard() {
   const t = state.career.totals;
   if (!window.ShareCard) { shareBuild({ game: LEADERBOARD_GAME, ovr: state.finalOvr, name: state.simName }); return; }
   const verdict = careerTier(t, state.finalOvr);
-  const team = teamInfo(state.career.finalTeam || (state.simTeam && state.simTeam.abbr) || state.draftTeamAb);
+  const team = teamInfo(mostPlayedTeam(state.career) || (state.simTeam && state.simTeam.abbr) || state.draftTeamAb);
   const url = myEntryId ? `https://goat-lab.app/p/${myEntryId}` : 'https://goat-lab.app';
   const btn = $('ccShareBtn');
   if (btn) { btn.disabled = true; btn.textContent = 'Rendering…'; }
@@ -3699,7 +3711,7 @@ async function loadSharedBuild(id) {
       $('sharedCard').innerHTML = careerCardHTML({
         career, verdict,
         voteLine: hofVoteLine(career.totals, entry.ovr).voteLine,
-        name: entry.name, ovr: entry.ovr, teamAb: career.finalTeam,
+        name: entry.name, ovr: entry.ovr, teamAb: mostPlayedTeam(career) || career.finalTeam,
       });
     } else {
       $('sharedCard').innerHTML = `<div class="cc-top" style="background:linear-gradient(135deg,#2b3948,#141d28);">
