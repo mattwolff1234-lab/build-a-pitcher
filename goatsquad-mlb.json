@@ -590,12 +590,20 @@
           "desc": "+2 OVR to one player. Max +4 per player."
         },
         {
+          "id": "prime",
+          "icon": "⭐",
+          "name": "Prime Boost",
+          "price": 55,
+          "once": false,
+          "desc": "One player finds his PRIME form: +4 OVR. Once per player."
+        },
+        {
           "id": "fa",
           "icon": "🎰",
           "name": "Free-Agent Wheel",
           "price": 50,
           "once": false,
-          "desc": "Spin the whole league — legends included. Sign who you freeze, somebody gets cut."
+          "desc": "Spin the whole league — your agent skews it toward stars. Sign who you freeze, somebody gets cut."
         },
         {
           "id": "token2",

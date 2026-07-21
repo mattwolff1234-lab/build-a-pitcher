@@ -785,7 +785,7 @@ const Sound = (() => {
 })();
 
 /* ---------- state + persistence (pl_sb_* keys, resets when the local date rolls) ---------- */
-let CFG = null, PLAYERS = [], POOLS = [], DAILY_REELS = null;
+let CFG = null, PLAYERS = [], POOLS = [], DAILY_REELS = null, PRIMES = {};
 let day = null, run = null, rafId = 0, ovrTimer = 0, bossTl = null;
 
 function freshDay() { return { date: todayLocal(), daily: { n: 0, beat: 0, firstBeat: null, bestOvr: 0 } }; }
@@ -1050,9 +1050,40 @@ function flyPlane(fromPt, toPt, done) {
 }
 
 /* ---------- the traveling shop ---------- */
-let campPicking = false;
+let campPicking = false, primePicking = false;
+// ⭐ Prime Boost target: the player's best-ever card if the data knows it (Training Camp
+// gains ride on top), never less than +4 — a paid upgrade always moves the number.
+function primeTarget(e) {
+  const pv = PRIMES[e.name];
+  return Math.max(e.rating + 4, pv ? pv + 2 * (e.camp || 0) : 0);
+}
 function renderShop() {
   const items = (CFG.gauntlet.shop && CFG.gauntlet.shop.items) || [];
+  if (primePicking) {
+    // ⭐ Prime Boost: pick who ascends — once per player
+    $('shopBox').innerHTML = `<p class="shopLead">⭐ Who's turning back the clock? <b>Prime card (min +4)</b>, once each</p>` +
+      `<div id="primePicks">` + G.squad.map((e, i) => {
+        if (e.coach) return '';
+        const used = !!e.primed;
+        return `<button class="btn campPick" type="button" data-i="${i}" ${used ? 'disabled' : ''}>${lastName(e.name)} ${e.rating}${used ? ' · PRIMED' : ' → ' + primeTarget(e)}</button>`;
+      }).join('') + `</div>` +
+      `<button class="btn ghost" id="primeCancel" style="min-height:40px">Cancel</button>`;
+    $('shopBox').querySelectorAll('.campPick').forEach(b => b.addEventListener('click', () => {
+      const e = G.squad[+b.dataset.i];
+      const before = e.rating;
+      e.rating = primeTarget(e);
+      e.primed = 1;
+      G.cash -= priceOf(shopItem('prime'));
+      primePicking = false;
+      saveG();
+      Sound.lock();
+      toast(`⭐ ${lastName(e.name)} is in his PRIME: ${before} → ${e.rating}`);
+      track('shop_buy', { item: 'prime', player: e.name });
+      renderStopCard();
+    }));
+    $('primeCancel').addEventListener('click', () => { primePicking = false; renderStopCard(); });
+    return;
+  }
   if (campPicking) {
     // Training Camp: pick who gets the +2
     $('shopBox').innerHTML = `<p class="shopLead">🏋️ Who's putting in the work? <b>+2 OVR</b> (max +4 each)</p>` +
@@ -1100,6 +1131,7 @@ function buyItem(id) {
   if (!it || G.cash < priceOf(it) || (it.once && G.items[id])) return;
   Sound.unlock();
   if (id === 'camp') { campPicking = true; renderShop(); return; }   // pay on pick
+  if (id === 'prime') { primePicking = true; renderShop(); return; } // pay on pick
   G.cash -= priceOf(it);
   if (id === 'insurance' || id === 'token2' || id === 'home') {
     G.items[id] = 1;
@@ -1114,8 +1146,13 @@ function buyItem(id) {
     const sixPool = POOLS[CFG.slots.findIndex(s => s.type === 'player' && s.positions.length > 1)];
     const sq = squadNames();
     const entries = [];
-    for (let k = 0; k < 200 && entries.length < 40; k++) { const e = pickFrom(sixPool, Math.random); if (!sq.has(e.name)) entries.push(e); }
-    openWheel('fa', entries, 'FREE AGENCY', 'The whole league is on the wheel — legends included. One STOP.');
+    for (let k = 0; k < 200 && entries.length < 40; k++) {
+      // your agent earns his cut: sub-75 landings reroll up to twice, best offer stands
+      let e = pickFrom(sixPool, Math.random);
+      for (let t = 0; t < 2 && e.rating < 75; t++) { const e2 = pickFrom(sixPool, Math.random); if (e2.rating > e.rating) e = e2; }
+      if (!sq.has(e.name)) entries.push(e);
+    }
+    openWheel('fa', entries, 'FREE AGENCY', 'Your agent did the homework — the wheel skews toward stars. Legends included. One STOP.');
   } else if (id === 'coach') {
     saveG();
     track('shop_buy', { item: id });
@@ -3032,6 +3069,15 @@ $('lbOv').addEventListener('click', ev => { if (ev.target === $('lbOv')) $('lbOv
     $('heroTag').textContent = CFG.tagline || '';
     const raw = await (await fetch(CFG.dataFile)).json();
     PLAYERS = adapt(raw);
+    // ⭐ Prime Boost map: name -> that player's best special-edition card overall.
+    // Editions whose data ships no prime map just use the flat +4 fallback.
+    if (CFG.adapter.primeKey && raw[CFG.adapter.primeKey]) {
+      for (const v of Object.values(raw[CFG.adapter.primeKey])) {
+        const nm = String(v[CFG.adapter.nameField] || v.name || '');
+        const r = Number(v[CFG.adapter.ratingField]) || Number(v.ovr) || 0;
+        if (nm && r) PRIMES[nm] = r;
+      }
+    }
     buildPools();
     buildGrid();
     day = loadDay(); saveDay();

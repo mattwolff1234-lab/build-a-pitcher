@@ -15,6 +15,7 @@
     "legendsKey": "legends",
     "nameField": "name",
     "ratingField": "ovr",
+    "primeKey": "prime",
     "posField": "pos",
     "teamField": "team",
     "imageIdField": "nbaId",
@@ -130,7 +131,8 @@
       "items": [
         { "id": "insurance", "icon": "🛟", "name": "Insurance Policy",  "price": 125, "once": true,  "desc": "When a loss would end your run, time rewinds to the game that killed you and the series re-flips from there. One use." },
         { "id": "camp",      "icon": "🏋️", "name": "Training Camp",     "price": 40, "once": false, "desc": "+2 OVR to one player. Max +4 per player." },
-        { "id": "fa",        "icon": "🎰", "name": "Free-Agent Wheel",  "price": 50, "once": false, "desc": "Spin the whole NBA pool — sign who you freeze, somebody gets cut." },
+        { "id": "prime",     "icon": "⭐", "name": "Prime Boost",       "price": 55, "once": false, "desc": "One player becomes his PRIME self — his best card ever, min +4. Once per player." },
+        { "id": "fa",        "icon": "🎰", "name": "Free-Agent Wheel",  "price": 50, "once": false, "desc": "Spin the whole NBA pool — your agent skews it toward stars. Somebody gets cut." },
         { "id": "token2",    "icon": "🎟️", "name": "Second-Stop Token", "price": 35, "once": true,  "desc": "Your next victory wheel: STOP twice, keep the better freeze." },
         { "id": "coach",     "icon": "📋", "name": "Coach Carousel",    "price": 25, "once": false, "desc": "Respin your coach slot. Could be Phil. Could be the Mascot." },
         { "id": "home",      "icon": "🏟️", "name": "Home Court Deed",   "price": 45, "once": true,  "desc": "Home court the rest of the run — games 1, 2, 5 and 7 in YOUR building, with an edge." },
