@@ -356,6 +356,18 @@ og:title/og:description are kept in sync. gen-versus-cfb.js carries the meta thr
 (title/desc soft transforms + the `/versus-hoops` blanket count is now 5). New pages: copy the
 head pattern + add a sitemap line. GSC: both domains verified 2026-07-21; submit sitemap.xml.
 
+**Crawlable on-page copy (same pass):** a `<footer class="pg-about">` injected before `</body>`
+on 14 listed pages — About prose + 4 FAQs + internal links to every sibling game, plus
+`application/ld+json` (VideoGame + FAQPage schema, the latter can earn FAQ rich results). It
+exists because the good how-to-play copy lives in a HIDDEN overlay, which Google discounts;
+this puts real prose in the visible flow. Word counts roughly +300/page (home 268→576).
+Placement is in-flow BELOW everything so gameplay is untouched and ads.md holds (no fixed
+elements; `padding-bottom: calc(var(--gnav-h) + var(--pl-adh) + 24px)` clears the bottom nav +
+anchor ad). **Monster Lab is deliberately EXCLUDED** from both this and sitemap.xml — it's
+de-listed from the hub, and its IP posture means no franchise keywords anywhere. Copy rules:
+accurate, useful to a human, never names the ratings source (house rule: "Prime"), no keyword
+stuffing (Google's helpful-content system penalizes filler). New game → add an entry.
+
 ## Career simulation (shipped)
 
 After the draft: **name the pitcher, pick a team, and "Simulate Career"** → a season-by-season

@@ -10,7 +10,6 @@
   <url><loc>https://goat-lab.app/striker</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
   <url><loc>https://goat-lab.app/keeper</loc><changefreq>daily</changefreq><priority>0.7</priority></url>
   <url><loc>https://goat-lab.app/hockey</loc><changefreq>daily</changefreq><priority>0.7</priority></url>
-  <url><loc>https://goat-lab.app/monster</loc><changefreq>daily</changefreq><priority>0.6</priority></url>
   <url><loc>https://goat-lab.app/ranks</loc><changefreq>hourly</changefreq><priority>0.8</priority></url>
   <url><loc>https://goat-lab.app/versus</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
   <url><loc>https://goat-lab.app/versus-hoops</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
