@@ -26,10 +26,11 @@
   const C = window.Catalog;
 
   const DISCORD_URL = 'https://discord.gg/bMVX2zJp49';
-  // Real-money coin packs (the Get Coins tab). Flip false to go earn-only again — coin SPENDING
-  // (pass/cosmetics/consumables in the Shop tab) stays on either way. Always hidden in the
-  // Capacitor iOS shell (Apple IAP rule) via inApp().
-  const SELL_PACKS = true;
+  // The Get Coins tab is ALWAYS visible on web — it's the "need more coins" funnel (packs +
+  // GoatLab Pro + the Discord bonus). PACKS_LIVE=false lists the coin packs as "Coming soon";
+  // flip true to start selling them (Stripe checkout + webhook crediting are already wired).
+  // The tab stays hidden inside the Capacitor iOS shell (Apple IAP rule) via inApp().
+  const PACKS_LIVE = false;
   // Real-money go-live gate. FALSE = Pro shows "Coming soon" (can't subscribe) — use while Stripe is
   // still in test mode / the account isn't activated. Flip TRUE (and swap Vercel to LIVE Stripe
   // keys + a LIVE-mode webhook — see GO-LIVE.md) to actually start charging. One switch, that's it.
@@ -211,7 +212,10 @@
     const owned = ownedSku(id, s);
     const noadsActive = s.type === 'noads' && noAds();
     const btn = owned ? `<button class="gc-buy owned" disabled>${s.type === 'pass' && proActive() ? 'Included ⭐' : 'Owned ✓'}</button>`
-      : `<button class="gc-buy" data-sku="${id}" ${coins() < s.price ? 'disabled title="Not enough coins"' : ''}>🪙 ${s.price}</button>`;
+      // GOAT Pass short on coins → the button stays live and routes to the Get Coins funnel
+      : s.type === 'pass' && coins() < s.price
+        ? `<button class="gc-buy" data-need-coins="1" title="Get more coins">🪙 ${s.price}</button>`
+        : `<button class="gc-buy" data-sku="${id}" ${coins() < s.price ? 'disabled title="Not enough coins"' : ''}>🪙 ${s.price}</button>`;
     const extra = noadsActive ? `<div class="ds" style="color:#39d98a">Active until ${new Date(ent().no_ads_until).toLocaleDateString()}</div>` : '';
     return `<div class="gc-row"><span class="ic">${s.icon}</span>
       <div class="who"><div class="nm">${s.name}</div><div class="ds">${s.desc || ''}</div>${extra}</div>${btn}</div>`;
@@ -271,35 +275,48 @@
       + group('Franchise', byType('entitlement').concat(byType('tokens')))
       + `<div class="gc-err" id="gcShopMsg"></div>`;
   }
-  function bodyCoins() {
-    if (inApp()) return '<div class="gc-note">Coin purchases aren’t available in the app yet — earn coins by playing, or buy them on the website: <b>goat-lab.app</b>.</div>';
-    return Object.keys(C.PACKS).map(id => {
-      const p = C.PACKS[id];
-      return `<div class="gc-row"><span class="ic">${p.icon}</span>
-        <div class="who"><div class="nm">${p.coins.toLocaleString('en-US')} Goat Coins${p.tag ? ` · <span style="color:#39d98a">${p.tag}</span>` : ''}</div>
-        <div class="ds">${p.label}</div></div>
-        <button class="gc-buy" data-pack="${id}">$${(p.usd / 100).toFixed(2)}</button></div>`;
-    }).join('') + `<div class="gc-note">Secure checkout by Stripe. Coins land in your account automatically —
-      they follow your Google sign-in on every device.</div><div class="gc-err" id="gcPackMsg"></div>`;
-  }
-  function bodyEarn() {
+  // One-time Discord bonus block — shared by the Earn tab and the Get Coins funnel.
+  function discordBlock() {
     const claimed = (wallet && (wallet.ledger || []).some(l => l.reason === 'discord'));
-    const discord = claimed
+    return claimed
       ? `<div class="gc-row"><span class="ic">💬</span><div class="who"><div class="nm">GoatLab Discord</div>
           <div class="ds">Reward claimed — see you in there!</div></div><button class="gc-buy owned" disabled>Claimed ✓</button></div>`
       : `<div class="gc-row"><span class="ic">💬</span><div class="who"><div class="nm">Join the GoatLab Discord</div>
           <div class="ds"><a href="${DISCORD_URL}" target="_blank" rel="noopener" style="color:#7aa7ff">Open the invite</a> &amp; join, then verify to claim 🪙 ${C.EARN.discord}.</div></div>
           <button class="gc-buy" id="gcDiscordJoin">Verify &amp; claim</button></div>
         <div class="gc-err" id="gcDiscordMsg"></div>`;
-    return discord + `<div class="gc-sec">Ways to earn</div>
+  }
+  // The "need more coins" funnel — every way to get Goat Coins in one place. The GOAT Pass
+  // buy button routes here when the balance is short.
+  function bodyCoins() {
+    if (inApp()) return `<div class="gc-note">Coin purchases aren’t available in the app — earn coins by playing:
+      the Daily Challenge pays 🪙 ${C.EARN.daily} per game every day, ranked 1v1 wins pay 🪙 ${C.EARN.pvpWin}.</div>` + discordBlock();
+    const packs = Object.keys(C.PACKS).map(id => {
+      const p = C.PACKS[id];
+      return `<div class="gc-row"><span class="ic">${p.icon}</span>
+        <div class="who"><div class="nm">${p.coins.toLocaleString('en-US')} Goat Coins${p.tag ? ` · <span style="color:#39d98a">${p.tag}</span>` : ''}</div>
+        <div class="ds">${p.label}</div></div>
+        ${PACKS_LIVE ? `<button class="gc-buy" data-pack="${id}">$${(p.usd / 100).toFixed(2)}</button>` : '<button class="gc-buy" disabled>Coming soon</button>'}</div>`;
+    }).join('');
+    return `<div class="gc-sec">🪙 Coin packs${PACKS_LIVE ? '' : ' · coming soon'}</div>` + packs
+      + (PACKS_LIVE ? `<div class="gc-note">Secure checkout by Stripe. Coins land in your account automatically —
+        they follow your Google sign-in on every device.</div>` : '')
+      + `<div class="gc-sec">⭐ Or skip the coins — GOAT Pass included with Pro</div>` + proCard()
+      + `<div class="gc-sec">💬 Free 🪙 ${C.EARN.discord} — join the Discord</div>` + discordBlock()
+      + `<div class="gc-note">Also: 🗓️ <b>Daily Challenge</b> pays 🪙 ${C.EARN.daily} per game every day ·
+        ⚔️ <b>ranked 1v1 wins</b> pay 🪙 ${C.EARN.pvpWin} each (up to ${C.EARN.pvpWinDailyCap}/day) ·
+        🎟️ the <b>GOAT Pass</b> itself pays coin tiers back as you level it.</div>`
+      + `<div class="gc-err" id="gcPackMsg"></div>`;
+  }
+  function bodyEarn() {
+    return discordBlock() + `<div class="gc-sec">Ways to earn</div>
       <div class="gc-note">🗓️ <b>Daily Challenge</b> — 🪙 ${C.EARN.daily} per game, every day (first valid run).<br>
       ⚔️ <b>Ranked 1v1 wins</b> — 🪙 ${C.EARN.pvpWin} each, up to ${C.EARN.pvpWinDailyCap} wins a day.<br>
-      🎟️ <b>Season Track</b> — coin tiers on the free lane, more on the <b>GoatLab Pro</b> premium lane.</div>`;
+      🎟️ <b>GOAT Pass</b> — coin tiers pay back as you level it (pass or Pro required).</div>`;
   }
 
   function render() {
     if (!overlay) return;
-    if (!SELL_PACKS && tab === 'coins') tab = 'shop';
     if (!signedIn()) {
       overlay.innerHTML = `<div class="gc-panel"><button class="gc-close">✕</button>
         <div class="gc-eyebrow">GoatLab Store</div><div class="gc-title">🪙 Goat Coins</div>
@@ -315,7 +332,7 @@
       <div class="gc-bal">Balance: ${coins().toLocaleString('en-US')}</div>
       <div class="gc-tabs">
         <button class="gc-tab ${tab === 'shop' ? 'active' : ''}" data-tab="shop">🛒 Shop</button>
-        ${(inApp() || !SELL_PACKS) ? '' : `<button class="gc-tab ${tab === 'coins' ? 'active' : ''}" data-tab="coins">🪙 Get Coins</button>`}
+        ${inApp() ? '' : `<button class="gc-tab ${tab === 'coins' ? 'active' : ''}" data-tab="coins">🪙 Get Coins</button>`}
         <button class="gc-tab ${tab === 'earn' ? 'active' : ''}" data-tab="earn">🎁 Earn</button>
       </div>
       <div class="gc-body">${(bodies[tab] || bodies.shop)()}</div></div>`;
@@ -327,6 +344,8 @@
       render();
     });
     overlay.querySelectorAll('[data-pack]').forEach(b => b.onclick = () => buyPack(b.dataset.pack, b));
+    // short on coins for the GOAT Pass → jump to the Get Coins funnel
+    overlay.querySelectorAll('[data-need-coins]').forEach(b => b.onclick = () => { tab = 'coins'; render(); });
     const dj = overlay.querySelector('#gcDiscordJoin');
     if (dj) dj.onclick = () => discordVerify(dj);
     overlay.querySelectorAll('.gc-pro-btn[data-cycle]').forEach(b => b.onclick = () => buyPro(b, b.dataset.cycle));

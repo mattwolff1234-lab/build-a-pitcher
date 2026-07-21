@@ -546,7 +546,13 @@
       b.onclick = () => { if (window.Jerseys) Jerseys.equip(b.dataset.jr || ''); render(); };
     });
     const gp = listEl.querySelector('[data-get-pass]');
-    if (gp) gp.onclick = () => { close(); if (window.Store) window.Store.open('shop'); };
+    if (gp) gp.onclick = () => {
+      close();
+      if (!window.Store) return;
+      // can't afford the pass → land on the Get Coins funnel (packs · Pro · Discord bonus)
+      const need = (window.Catalog && window.Catalog.SKUS && window.Catalog.SKUS.pass_cur && window.Catalog.SKUS.pass_cur.price) || 1500;
+      window.Store.open(window.Store.coins() < need ? 'coins' : 'shop');
+    };
     const gpro = listEl.querySelector('[data-get-pro]');
     if (gpro) gpro.onclick = () => { close(); if (window.Store) window.Store.open('shop'); };
     // 🪙 coin tiers settle SERVER-side (trackClaimCoins validates sxp/pass and dedupes per tier)

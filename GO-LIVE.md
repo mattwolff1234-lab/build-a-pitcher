@@ -49,9 +49,10 @@ Stripe **test and live modes are separate** — different keys AND a different w
 ## Coin store (OPEN as of 2026-07-21)
 - The Shop tab now always sells coin-spend items: **Premium Pass (`pass_cur`, 1500 🪙 — resolves to
   whatever season is live)**, avatars, consumables. The old `PRO_ONLY` flag is gone.
-- **`const SELL_PACKS = true;`** in `store.js` controls only the real-money **Get Coins** tab
-  (currently ON). Flip false to go earn-only again. Packs are always hidden inside the iOS app
-  (Apple IAP rule, `inApp()` check).
+- The **Get Coins** tab is always visible on web — it doubles as the "need more coins" funnel
+  (packs · Pro · Discord bonus); the GOAT Pass buy button routes there when the balance is short.
+  **`const PACKS_LIVE = false;`** in `store.js` lists coin packs as "Coming soon" — flip true to
+  start selling them (checkout + webhook already wired). Tab hidden in the iOS app (Apple IAP).
 
 ## Thank-you email for new Pro subscribers (Resend — needs a one-time setup)
 `api/stripe-webhook.js` sends a welcome email on the FIRST subscribe only (never on renewals;
