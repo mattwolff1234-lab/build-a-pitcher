@@ -92,6 +92,10 @@
     // ---- GoatLab Pro exclusives — available while the subscription is active (pro:true) ----
     fx_gold_aura:   { type: 'fx',    name: 'Midas Glow',            icon: '✨', cls: 'st-fx-gold', pro: true },
     trail_gold:     { type: 'trail', name: 'Golden Reel Trail',     icon: '🌠', pro: true },
+    // ---- 🏆 Champions Club — can't be bought: won by finishing #1 in the weekly/monthly
+    // cross-sport championship (server grants unlocked[] at crowning, api/discord-daily.js) ----
+    fx_champion:    { type: 'fx',     name: 'Champion Gold',        icon: '🏆', cls: 'st-fx-champ', champ: 'weekly' },
+    av_champ_goat:  { type: 'avatar', name: 'The Champ',            icon: '👑', champ: 'monthly' },
   };
   // "frame" = the CAREER card (the shareable trophy) — never the reel cards, whose
   // borders are tier information (grey→legend) that cosmetics must not repaint.
@@ -302,6 +306,10 @@
     -webkit-background-clip:text; background-clip:text; color:transparent !important; -webkit-text-fill-color:transparent;
     filter:drop-shadow(0 0 6px rgba(255,206,58,.55)); animation:st-fx-gold 2.2s linear infinite; }
   @keyframes st-fx-gold { to { background-position:200% center; } }
+  .st-fx-champ{ background:linear-gradient(90deg,#ffd44a,#fff7d1,#ff9d2e,#ffd44a); background-size:250% auto;
+    -webkit-background-clip:text; background-clip:text; color:transparent !important;
+    filter:drop-shadow(0 0 7px rgba(255,180,20,.7)); animation:st-fx-champ 1.8s linear infinite; }
+  @keyframes st-fx-champ { to { background-position:250% center; } }
   .st-fx-p{ position:fixed; z-index:340; width:5px; height:5px; border-radius:50%; pointer-events:none; }
   .st-fx-p.gold{ background:radial-gradient(circle,#fff,#ffce3a 60%,transparent); box-shadow:0 0 8px rgba(255,206,58,.8); }
   .st-fx-p.ember{ background:radial-gradient(circle,#fff,#ff7a3c 60%,transparent); box-shadow:0 0 8px rgba(255,122,60,.8); }
@@ -485,7 +493,28 @@
           <div class="st-right">${right}</div>
         </div>`;
       }).join('');
-    listEl.innerHTML = freeRows + premRows + proRows;
+    // ---- 🏆 Champions Club — permanent unlocks, only winnable (weekly/monthly championship #1) ----
+    const champRows = `<div class="st-row"><span class="st-ico">🏆</span>
+        <div class="st-body"><div class="st-name">Champions Club</div>
+        <div class="st-kind">finish #1 in a weekly or monthly cross-sport championship — can't be bought, yours forever</div></div>
+        <div class="st-right"></div></div>`
+      + Object.keys(COSMETICS).filter(id => COSMETICS[id].champ).map(id => {
+        const c = COSMETICS[id];
+        const got = !!s.unlocked[id];
+        const equipable = got && EQUIPABLE[c.type];
+        const on = equipable && s.equipped[c.type] === id;
+        const right = got
+          ? (c.type === 'avatar' ? '<button class="st-eq" data-av-open="1">Use in Profile</button>'
+            : equipable ? `<button class="st-eq${on ? ' on' : ''}" data-eq="${id}">${on ? 'Equipped' : 'Equip'}</button>` : '✅')
+          : `<span class="st-soon">🏆 ${String(c.champ).toUpperCase()} #1</span>`;
+        return `<div class="st-row${got ? ' got' : ''}"${got ? '' : ' style="opacity:.65"'}>
+          <span class="st-tier">🏆</span>
+          <span class="st-ico">${c.icon}</span>
+          <div class="st-body"><div class="st-name">${c.name}</div><div class="st-kind">${TYPE_LABEL[c.type] || c.type}</div></div>
+          <div class="st-right">${right}</div>
+        </div>`;
+      }).join('');
+    listEl.innerHTML = freeRows + premRows + proRows + champRows;
     listEl.querySelectorAll('[data-eq]').forEach(b => { b.onclick = () => equip(b.dataset.eq); });
     // avatars equip in the profile's Style tab (social.js owns the server-visible avatar)
     listEl.querySelectorAll('[data-av-open]').forEach(b => {

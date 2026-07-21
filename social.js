@@ -108,6 +108,8 @@
     av_astro_ball: { emoji: '🚀', name: 'Moonshot', bg: 'linear-gradient(135deg,#3a3a7a,#121226)', track: 'future' },
     av_lightning_bat: { emoji: '⚡', name: 'Voltage', bg: 'linear-gradient(135deg,#8a7a1d,#2b2610)', track: 'future' },
     av_ghost_jersey: { emoji: '👻', name: 'Double Zero', bg: 'linear-gradient(135deg,#556077,#1a1e28)', track: 'future' },
+    // 🏆 Champions Club — monthly cross-sport champion only (server-granted at crowning)
+    av_champ_goat: { emoji: '👑', name: 'The Champ', bg: 'linear-gradient(135deg,#c9971c,#3a2a05)', track: 'champ' },
   };
   for (const id in AVATARS) AVATARS[id].src = AV_SRC(id);   // every avatar has real art now
   // the image sits on top; the emoji shows while it loads (or if it 404s and removes itself)

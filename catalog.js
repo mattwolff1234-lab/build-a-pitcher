@@ -101,6 +101,11 @@
   const EARN = {
     daily: 25,          // per validated Daily Challenge submission, per game, once per day  // TUNE
     dailyTop: [100, 50, 25], // Discord daily digest: yesterday's daily top-3 per game (accounts only, ledger ref dailytop:<date>:<game>:<sub>)  // TUNE
+    // Cross-sport championships (api/champions.js scoring, crowned by the Discord digest cron):
+    weeklyTop: [300, 150, 75],    // weekly Total Points top 3 (ref weektop:<monday>:<sub>)      // TUNE
+    weeklyBestDay: 150,           // weekly Best Single Day winner (ref weekbest:<monday>:<sub>) // TUNE
+    monthlyTop: [1000, 500, 250], // monthly Total Points top 3 (ref monthtop:<1st>:<sub>)       // TUNE
+    monthlyBestDay: 400,          // monthly Best Single Day winner (ref monthbest:<1st>:<sub>)  // TUNE
     pvpWin: 10,         // per RANKED 1v1 win settled from locked builds                     // TUNE
     pvpWinDailyCap: 5,  // max coin-paying wins per day                                      // TUNE
     discord: 1000,      // one-time: joining the GoatLab Discord (per account)               // TUNE

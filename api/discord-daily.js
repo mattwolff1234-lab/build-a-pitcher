@@ -12,8 +12,15 @@
 // Auth: Vercel cron sends "Authorization: Bearer <CRON_SECRET>" when that env is set; manual runs
 // pass ?token=<STATS_TOKEN>. ?dry=1 composes and returns JSON without posting/paying/claiming;
 // ?force=1 (token only) bypasses the once-a-day claim to re-post.
+// Championships (api/champions.js does the scoring): the digest crowns a 👑 Player of the Day
+// daily; Mondays it crowns last week's champions and the 1st crowns last month's — coins to the
+// Total top-3 + Best Single Day winner (EARN.weeklyTop/monthlyTop/…BestDay, ledger-idempotent),
+// and #1 unlocks the exclusive Champion cosmetics (fx_champion; monthly adds av_champ_goat).
+// Off-schedule testing: ?crown=weekly|monthly needs dry=1 (preview) or force=1 (token) so a
+// mid-window run can never pay out a partial week.
 const { neon } = require('@neondatabase/serverless');
 const Catalog = require('../catalog.js');
+const Champs = require('./champions.js');
 let NameFilter; try { NameFilter = require('../namefilter.js'); } catch (e) { NameFilter = { clean: (n, f) => n || f }; }
 
 function findConn() {
@@ -65,6 +72,34 @@ async function postWebhook(url, payload) {
     body: JSON.stringify(payload),
   });
   if (!r.ok) throw new Error('discord ' + r.status + ': ' + (await r.text()).slice(0, 200));
+}
+
+// "20 Jul" — short date for embed copy
+const fmtDate = d => new Date(d + 'T12:00:00Z').toUTCString().slice(5, 11);
+
+// Idempotent champion coin payout (UNIQUE ledger ref = the dedupe). Returns amount actually paid.
+async function payCoins(sub, amt, ref) {
+  try {
+    const led = await sql`INSERT INTO coin_ledger (player_key, delta, reason, ref)
+      VALUES (${sub}, ${amt}, 'champ', ${ref}) ON CONFLICT (ref) DO NOTHING RETURNING id`;
+    if (!led.length) return 0;
+    await sql`UPDATE users SET coins = GREATEST(0, COALESCE(coins, 0) + ${amt}) WHERE google_sub = ${sub}`;
+    return amt;
+  } catch (e) { return 0; }
+}
+
+// Champion cosmetics: same users.cosmetics.unlocked shape api/account.js coinSpend writes —
+// trackSync unions it down to the device, style panel + avatar picker light up automatically.
+async function grantCosmetic(sub, ids) {
+  try {
+    const [u] = await sql`SELECT cosmetics FROM users WHERE google_sub = ${sub}`;
+    if (!u) return;
+    const cos = (u.cosmetics && typeof u.cosmetics === 'object') ? u.cosmetics : {};
+    cos.unlocked = cos.unlocked || {};
+    let changed = false;
+    for (const id of ids) if (!cos.unlocked[id]) { cos.unlocked[id] = 1; changed = true; }
+    if (changed) await sql`UPDATE users SET cosmetics = ${JSON.stringify(cos)}::jsonb WHERE google_sub = ${sub}`;
+  } catch (e) {}
 }
 
 // First line of every non-merge commit in the last 24h (GITHUB_TOKEN needed if the repo is private).
@@ -194,11 +229,20 @@ module.exports = async (req, res) => {
         else {
           const [{ total }] = await sql`SELECT count(*)::int AS total FROM daily_scores
             WHERE challenge_date = ${reportDate}::date`;
+          // 👑 Player of the Day — yesterday's cross-sport Champion Points king
+          let pod = '';
+          try {
+            const day = await Champs.boards(reportDate, reportDate, 1);
+            const t = day.total[0];
+            if (t) pod = '\n👑 **Player of the Day:** ' + esc(t.name) + ' — ' + t.pts + ' pts ('
+              + t.runs + (t.runs === 1 ? ' game)' : ' games)');
+          } catch (e) {}
           const embeds = [{
             title: '📊 GoatLab Daily Report — ' + new Date(reportDate + 'T12:00:00Z').toUTCString().slice(0, 11),
             color: 0x22d3ee,
             description: '**' + total + '** daily challenge runs yesterday. Top 3 per game win **'
-              + amounts.join(' / ') + ' Goat Coins** (signed-in players — coins are already in your wallet).\n'
+              + amounts.join(' / ') + ' Goat Coins** (signed-in players — coins are already in your wallet).'
+              + pod + '\n'
               + '▶️ Today\'s challenges are live: ' + SITE,
             fields,
             footer: { text: 'GoatLab · goat-lab.app' },
@@ -223,6 +267,71 @@ module.exports = async (req, res) => {
         }
       }
     }
+
+    // ---------- 1b. Championship crowning: Mondays = last week · the 1st = last month ----------
+    // windowFor() is anchored on reportDate (yesterday), so Monday resolves the COMPLETED
+    // Mon–Sun week and the 1st resolves the month that just ended.
+    try {
+      const wd = new Date(today + 'T00:00:00Z').getUTCDay();
+      const doWeekly = wd === 1 || (q.crown === 'weekly' && (dry || force));
+      const doMonthly = today.slice(8) === '01' || (q.crown === 'monthly' && (dry || force));
+      if (HOOK_DAILY && (doWeekly || doMonthly)) {
+        for (const kind of [doWeekly && 'weekly', doMonthly && 'monthly'].filter(Boolean)) {
+          const weekly = kind === 'weekly';
+          const { start, end } = Champs.windowFor(weekly ? 'week' : 'month', reportDate);
+          let claimed = true;
+          if (!dry && !force) {
+            const ins = await sql`INSERT INTO discord_posts (kind, post_date) VALUES (${kind}, ${start})
+              ON CONFLICT DO NOTHING RETURNING kind`;
+            claimed = ins.length > 0;
+          }
+          if (!claimed) { out[kind] = 'already crowned'; continue; }
+          const b = await Champs.boards(start, end, 10);
+          if (!b.total.length) { out[kind] = 'no runs in window'; continue; }
+          const topAmts = (weekly ? Catalog.EARN.weeklyTop : Catalog.EARN.monthlyTop) || [];
+          const bestAmt = (weekly ? Catalog.EARN.weeklyBestDay : Catalog.EARN.monthlyBestDay) || 0;
+          const bd = b.best[0];
+          let paid = 0;
+          if (!dry) {
+            for (let i = 0; i < b.total.length && i < topAmts.length; i++) {
+              const r = b.total[i];
+              if (!r.signedIn) continue;
+              paid += await payCoins(r.key.slice(5), topAmts[i],
+                (weekly ? 'weektop:' : 'monthtop:') + start + ':' + r.key.slice(5));
+            }
+            if (bd && bd.signedIn && bestAmt) paid += await payCoins(bd.key.slice(5), bestAmt,
+              (weekly ? 'weekbest:' : 'monthbest:') + start + ':' + bd.key.slice(5));
+            const c1 = b.total[0];
+            if (c1 && c1.signedIn) await grantCosmetic(c1.key.slice(5),
+              weekly ? ['fx_champion'] : ['fx_champion', 'av_champ_goat']);
+          }
+          const label = weekly
+            ? fmtDate(start) + ' – ' + fmtDate(end)
+            : new Date(start + 'T12:00:00Z').toLocaleString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+          const list = b.total.map((r, i) => {
+            const coin = r.signedIn && topAmts[i] ? ' (+' + topAmts[i] + ' 🪙)' : '';
+            return (MEDALS[i] || '`' + (i + 1) + '.`') + ' **' + esc(r.name) + '** — '
+              + r.pts.toLocaleString() + ' pts · ' + r.runs + ' runs' + coin;
+          }).join('\n');
+          const embed = {
+            title: '🏆 ' + (weekly ? 'Weekly' : 'Monthly') + ' Champions — ' + label,
+            color: 0xffce3a,
+            description: list
+              + (bd ? '\n\n⚡ **Best Single Day:** **' + esc(bd.name) + '** — ' + bd.bestDay + ' pts on '
+                + fmtDate(bd.bestDayDate) + (bd.signedIn && bestAmt ? ' (+' + bestAmt + ' 🪙)' : '') : '')
+              + '\n\n👑 The champion unlocks the exclusive **Champion Gold** name effect'
+              + (weekly ? '' : ' + **The Champ** avatar')
+              + '. New race starts today — every daily run in every sport counts!',
+            footer: { text: 'Champion Points: beat more of each game’s field, score more. All sports, one race.' },
+          };
+          if (dry) out[kind] = { wouldPost: true, embed };
+          else {
+            await postWebhook(HOOK_DAILY, { username: 'GoatLab Bot', embeds: [embed] });
+            out[kind] = { posted: true, coinsPaid: paid };
+          }
+        }
+      }
+    } catch (e) { out.champions = 'error: ' + String(e.message || e).slice(0, 200); }
 
     // ---------- 2. Patch notes: last 24h of commits → player-speak ----------
     const HOOK_PATCH = findHook(/UPDATE/i, 'DISCORD_WEBHOOK_UPDATES', 'DISCORD_WEBHOOK_PATCH');
