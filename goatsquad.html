@@ -817,7 +817,15 @@ function loadG() {
 }
 function saveG() { try { localStorage.setItem('pl_rr_gauntlet', JSON.stringify(G)); } catch (e) {} }
 /* the map is LAYERS: [teamKey] straight road · [teamKey, teamKey] fork · 'shop' */
-function gLayers() { return (CFG.gauntlet && CFG.gauntlet.layers) || []; }
+function gLayers() {
+  const g = (CFG && CFG.gauntlet) || {};
+  const base = g.layers || [];
+  // 🌋 Overtime: a champion who keeps the run alive gets the bonus ladder appended
+  return (typeof G === 'object' && G && G.ot && g.overtime && g.overtime.layers) ? base.concat(g.overtime.layers) : base;
+}
+function baseFightCount() { const g = (CFG && CFG.gauntlet) || {}; return (g.layers || []).filter(l => Array.isArray(l)).length; }
+function otFightCount() { const g = (CFG && CFG.gauntlet) || {}; return ((g.overtime && g.overtime.layers) || []).filter(l => Array.isArray(l)).length; }
+function hasOvertime() { return otFightCount() > 0; }
 function gTeam(key) { return CFG.gauntlet.teams[key]; }
 function layerTeams(i) { const l = gLayers()[i]; return Array.isArray(l) ? l.map(gTeam) : []; }
 function isShopLayer(i) { return gLayers()[i] === 'shop'; }
@@ -830,7 +838,7 @@ function gauntletStop() {
 }
 function ECO() { return (CFG.gauntlet && CFG.gauntlet.economy) || {}; }
 function cash$(n) { return (ECO().currency || '$') + n; }
-function freshG() { return { stage: 0, route: {}, tries: {}, done: false, squad: null, cash: 0, items: {}, relics: [] }; }
+function freshG() { return { stage: 0, route: {}, tries: {}, done: false, squad: null, cash: 0, items: {}, relics: [], ot: 0 }; }
 /* ---------- relics — run-wide passive abilities won off the spoils wheel ---------- */
 function relicSum(type) { return ((G && G.relics) || []).reduce((a, r) => a + (r.effect && r.effect.type === type ? (r.effect.value || 0) : 0), 0); }
 function relicHas(type) { return ((G && G.relics) || []).some(r => r.effect && r.effect.type === type); }
@@ -884,10 +892,17 @@ function renderStopCard() {
   $('shopBox').innerHTML = '';
   $('btnFight').style.display = 'inline-flex';
   if (G.done) {
-    $('stopKick').textContent = '👑 CHAMPION';
-    $('stopName').textContent = 'GAUNTLET COMPLETE';
-    $('stopBlurb').textContent = `Every team on the map, beaten. Run it again?`;
-    $('btnFight').textContent = '🔄 RUN IT AGAIN';
+    const otReady = hasOvertime() && !G.ot;
+    $('stopKick').textContent = G.ot ? '🌌 IMMORTAL' : '👑 CHAMPION';
+    $('stopName').textContent = G.ot ? 'NOTHING LEFT TO BEAT' : 'GAUNTLET COMPLETE';
+    $('stopBlurb').textContent = G.ot
+      ? 'The base table and the overtime myths — all of it beaten. Run it again?'
+      : (otReady ? 'Every team on the map, beaten. But the phone keeps ringing…' : 'Every team on the map, beaten. Run it again?');
+    $('btnFight').textContent = otReady ? '🌋 ENTER OVERTIME' : '🔄 RUN IT AGAIN';
+    if (otReady) {
+      $('forkBtns').innerHTML = '<button class="btn ghost" id="btnFreshRun" type="button" style="min-height:40px">🔄 No thanks — start a fresh run</button>';
+      $('btnFreshRun').addEventListener('click', () => { G = freshG(); saveG(); openMap(); });
+    }
   } else if (isShopLayer(G.stage)) {
     $('stopKick').textContent = `🏪 TRAVELING SHOP · ${cash$(G.cash)} CAP SPACE`;
     $('stopName').textContent = 'SPEND IT OR BANK IT';
@@ -932,7 +947,7 @@ function openMap() {
   const layers = gLayers();
   if (!layers.length) return;
   const logoT = CFG.gauntlet.logoTemplate || '';
-  $('mapKick').textContent = (CFG.gauntlet.title || 'THE GAUNTLET');
+  $('mapKick').textContent = (G && G.ot ? '🌋 OVERTIME · ' : '') + (CFG.gauntlet.title || 'THE GAUNTLET');
   $('mapSub').textContent = CFG.gauntlet.subtitle || '';
   // web of route lines: every node connects to every node of the next layer
   let lines = '';
@@ -2164,12 +2179,16 @@ function showResult() {
       });
     }
     // snapshot the run for the share card BEFORE anything gets wiped
+    const baseLayerCount = ((CFG.gauntlet && CFG.gauntlet.layers) || []).length;
     run.summary = {
       fights: fightNum(run.stage) - (won ? 0 : 1),
       total: totalFights(),
       cash: G.cash,
       relics: (G.relics || []).map(r => r.icon).join(''),
-      champion: won && run.stage >= gLayers().length - 1,
+      // once you've cleared the base table you're champion for good — an overtime death can't take it
+      champion: (won && run.stage >= baseLayerCount - 1) || !!G.ot,
+      ot: Math.max(0, (fightNum(run.stage) - (won ? 0 : 1)) - baseFightCount()),
+      immortal: !!(won && G.ot && run.stage >= gLayers().length - 1),
       diedTo: won ? null : b.name
     };
     if (won) {
@@ -2198,6 +2217,16 @@ function showResult() {
           : `Beat the ${b.name} again, attempt ${run.attempt}.`)
       : `Attempt ${run.attempt}: the ${b.name} survive, ${run.series.l}–${run.series.w}.`;
     $('btnRetry').textContent = '🔁 Run It Back';
+  } else if (won && finalStop && G.ot) {
+    $('resBanner').textContent = '🌌 IMMORTAL — OVERTIME CLEARED';
+    $('resLine').textContent = `The ${b.name} fall. The base table, the national teams, the myths — ALL of it beaten.`;
+    $('btnRetry').textContent = '🗺️ View The Map';
+    confetti();
+  } else if (won && finalStop && hasOvertime()) {
+    $('resBanner').textContent = '👑 GAUNTLET CHAMPION';
+    $('resLine').textContent = `The ${b.name} fall. You ran the whole table — and the phone rings: the national teams want a shot at you.`;
+    $('btnRetry').textContent = '🌋 KEEP THE RUN ALIVE';
+    confetti();
   } else if (won && finalStop) {
     $('resBanner').textContent = '👑 GAUNTLET CHAMPION';
     $('resLine').textContent = `The ${b.name} fall. You ran the whole table!`;
@@ -2574,11 +2603,15 @@ async function openBoard() {
     const mine = lbName();
     $('lbBody').innerHTML = j.rows.length ? j.rows.map((row, i) => {
       const fights = Math.max(0, Math.round(Number(row.stat) || 0));
-      const champ = fights >= totalFights();
+      const champ = fights >= baseFightCount();
+      const immortal = hasOvertime() && fights >= baseFightCount() + otFightCount();
+      const label = immortal ? '🌌 IMMORTAL'
+        : champ && fights > baseFightCount() ? `👑 +${fights - baseFightCount()} OT`
+        : champ ? 'CHAMPION' : fights + '/' + baseFightCount() + ' beaten';
       return `<div class="lbRow${mine && row.name === mine ? ' me' : ''}">
         <span class="lbRank">${i + 1}</span>
         <span class="lbName">${champ ? '👑 ' : ''}${escapeHtml(row.name)}</span>
-        <span class="lbFights">${champ ? 'CHAMPION' : fights + '/' + totalFights() + ' beaten'}</span>
+        <span class="lbFights">${label}</span>
         <b class="lbOvr" style="color:${ovrTierHex(Number(row.ovr))}">${Number(row.ovr)}</b>
       </div>`;
     }).join('') : '<div class="lbLoading">Nobody on the board yet. Be first.</div>';
@@ -2611,7 +2644,7 @@ async function submitRun() {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         name: nm, ovr: run.ovr, game: CFG.slug,
-        build: { career: { totals: { w: sum.fights } }, rr: { total: sum.total, champion: sum.champion, cash: sum.cash, relics: sum.relics } }
+        build: { career: { totals: { w: sum.fights } }, rr: { total: sum.total, champion: sum.champion, cash: sum.cash, relics: sum.relics, ot: sum.ot || 0, immortal: !!sum.immortal } }
       })
     });
     const j = await r.json();
@@ -2875,7 +2908,10 @@ $('btnDaily').addEventListener('click', () => { Sound.unlock(); startRun('daily'
 $('btnGauntlet').addEventListener('click', () => { Sound.unlock(); openMap(); });
 $('btnFight').addEventListener('click', () => {
   Sound.unlock();
-  if (G.done) { G = freshG(); saveG(); openMap(); }                        // champion → run it again
+  if (G.done) {
+    if (hasOvertime() && !G.ot) { G.ot = 1; G.done = false; saveG(); openMap(); }  // 🌋 ENTER OVERTIME
+    else { G = freshG(); saveG(); openMap(); }                             // champion/immortal → run it again
+  }
   else if (isShopLayer(G.stage)) {                                          // ✈️ FLY ON from the shop
     campPicking = false;
     travelFrom = G.stage;
@@ -2951,6 +2987,12 @@ $('btnRetry').addEventListener('click', () => {
   if (run.mode === 'gauntlet' && run.series.won) {
     // ✈️ CONTINUE → sign-a-player offer (when the beaten team has one), then the flight
     const stop = run.boss;
+    if (G.done && hasOvertime() && !G.ot && run.summary && run.summary.champion) {
+      // 🌋 KEEP THE RUN ALIVE — overtime opens; the final boss's spoils are still yours
+      G.ot = 1; G.done = false; saveG();
+      if (stop.players && stop.players.length) showSteal(); else openMap();
+      return;
+    }
     if (!G.done && stop.players && stop.players.length) showSteal();
     else openMap();
   } else if (run.mode === 'gauntlet') openMap();   // 🔄 Start Over — the loss already wiped the run

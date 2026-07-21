@@ -251,7 +251,45 @@
           { "name": "Draymond Green", "nbaId": 203110, "rating": 89, "pos": "PF" }, { "name": "Andre Iguodala", "nbaId": 2738, "rating": 82, "pos": "SF" },
           { "name": "Andrew Bogut", "nbaId": 101106, "rating": 79, "pos": "C" }, { "name": "Harrison Barnes", "nbaId": 203084, "rating": 78, "pos": "SF" },
           { "name": "Shaun Livingston", "nbaId": 2733, "rating": 76, "pos": "PG" }, { "name": "Festus Ezeli", "nbaId": 203105, "rating": 72, "pos": "C" },
-          { "name": "Leandro Barbosa", "nbaId": 2571, "rating": 72, "pos": "SG" }] }
+          { "name": "Leandro Barbosa", "nbaId": 2571, "rating": 72, "pos": "SG" }] },
+      "dream92": { "name": "'92 Dream Team", "rating": 101, "abbr": "USA", "blurb": "Barcelona. Eleven Hall of Famers on one bench. The greatest roster ever assembled.",
+        "players": [
+          { "name": "Magic Johnson", "nbaId": 77142, "rating": 96, "pos": "PG" }, { "name": "Michael Jordan", "nbaId": 893, "rating": 99, "pos": "SG" },
+          { "name": "Scottie Pippen", "nbaId": 937, "rating": 94, "pos": "SF" }, { "name": "Larry Bird", "nbaId": 1449, "rating": 92, "pos": "SF" },
+          { "name": "Charles Barkley", "rating": 96, "pos": "PF" }, { "name": "Karl Malone", "rating": 94, "pos": "PF" },
+          { "name": "Patrick Ewing", "rating": 93, "pos": "C" }, { "name": "David Robinson", "rating": 93, "pos": "C" }] },
+      "arg04": { "name": "2004 Argentina", "rating": 98, "abbr": "ARG", "blurb": "La Generación Dorada — the team that beat the USA in Athens and took gold.",
+        "ability": { "type": "noPlayerMomentum", "value": 1, "desc": "Fundamentals never panic. Your desperation boost is switched off." },
+        "players": [
+          { "name": "Manu Ginobili", "nbaId": 1938, "rating": 95, "pos": "SG" }, { "name": "Luis Scola", "rating": 90, "pos": "PF" },
+          { "name": "Andres Nocioni", "rating": 85, "pos": "SF" }, { "name": "Carlos Delfino", "rating": 82, "pos": "SG" },
+          { "name": "Fabricio Oberto", "rating": 81, "pos": "C" }, { "name": "Pepe Sanchez", "rating": 78, "pos": "PG" },
+          { "name": "Walter Herrmann", "rating": 79, "pos": "SF" }, { "name": "Ruben Wolkowyski", "rating": 76, "pos": "C" }] },
+      "redeem08": { "name": "2008 Redeem Team", "rating": 103, "abbr": "USA", "blurb": "Kobe, LeBron, Wade. Redemption with a vengeance — gold in Beijing.",
+        "ability": { "type": "bossFirstGameEdge", "value": 0.12, "desc": "They open on a 20–0 run. Redeem Team +12% in Game 1." },
+        "players": [
+          { "name": "Kobe Bryant", "nbaId": 977, "rating": 99, "pos": "SG" }, { "name": "LeBron James", "nbaId": 2544, "rating": 98, "pos": "SF" },
+          { "name": "Dwyane Wade", "nbaId": 2548, "rating": 96, "pos": "SG" }, { "name": "Carmelo Anthony", "nbaId": 2546, "rating": 94, "pos": "SF" },
+          { "name": "Chris Paul", "nbaId": 101108, "rating": 94, "pos": "PG" }, { "name": "Dwight Howard", "nbaId": 2730, "rating": 94, "pos": "C" },
+          { "name": "Chris Bosh", "nbaId": 2547, "rating": 92, "pos": "PF" }, { "name": "Deron Williams", "nbaId": 101114, "rating": 90, "pos": "PG" }] },
+      "neon": { "name": "Neon City Flight", "rating": 106, "abbr": "NEO", "blurb": "An exhibition squad that plays under blacklight and has never lost. Nobody knows where they train.",
+        "ability": { "type": "ovrDebuff", "value": 2, "desc": "The lights get in your eyes. Your squad plays at -2 overall." },
+        "players": [
+          { "name": "Apex Holloway", "rating": 105, "pos": "PG" }, { "name": "Sable Quickstrike", "rating": 104, "pos": "SG" },
+          { "name": "Meteor Vance", "rating": 103, "pos": "SF" }, { "name": "Colossus Grand", "rating": 104, "pos": "PF" },
+          { "name": "Zenith Okafor-Cruz", "rating": 105, "pos": "C" }, { "name": "Blur Castellanos", "rating": 101, "pos": "PG" },
+          { "name": "Phantom Reeves", "rating": 100, "pos": "SF" }, { "name": "Tidal Brooks", "rating": 99, "pos": "C" }] },
+      "pantheon": { "name": "The Pantheon", "rating": 110, "abbr": "GOD", "blurb": "Myth-tier. Every basketball god the playground ever invented, on one roster.",
+        "ability": { "type": "bossElimEdge", "value": 0.12, "desc": "Myths don't miss with the season on the line: +12% in elimination games." },
+        "players": [
+          { "name": "Zeus Marathon", "rating": 112, "pos": "C" }, { "name": "Chronos Vale", "rating": 110, "pos": "PG" },
+          { "name": "Helios Drakos", "rating": 111, "pos": "SG" }, { "name": "Atlas Ironwood", "rating": 110, "pos": "PF" },
+          { "name": "Nyx Shadowvale", "rating": 109, "pos": "SF" }, { "name": "Hermes Flightpath", "rating": 108, "pos": "PG" },
+          { "name": "Apollo Dawnbringer", "rating": 107, "pos": "SF" }, { "name": "Poseidon Reef", "rating": 108, "pos": "C" }] }
+    },
+    "_overtime_comment": "Post-championship bonus ladder — beating the base map offers KEEP THE RUN ALIVE: same one-life rules, same squad, Olympic-level national teams into original fictional super-teams (rated past any real card). Clearing it all = 🌌 IMMORTAL on the board. Layer format identical to `layers`; team keys live in the same `teams` map above.",
+    "overtime": {
+      "layers": ["shop", ["dream92"], ["arg04", "redeem08"], ["neon"], ["pantheon"]]
     }
   },
 
