@@ -23,7 +23,7 @@ function findConn() {
 }
 const CONN = findConn();
 const sql = CONN ? neon(CONN) : null;
-const gameOf = g => (g === 'batter' || g === 'baller' || g === 'striker' || g === 'keeper' || g === 'cfb' || g === 'hockey' || g === 'mon' || g === 'goatsquad' || g === 'squadball') ? g : 'pitcher';
+const gameOf = g => (g === 'batter' || g === 'baller' || g === 'striker' || g === 'keeper' || g === 'cfb' || g === 'hockey' || g === 'mon' || g === 'goatsquad' || g === 'squadball' || g === 'squadfoot') ? g : 'pitcher';
 // Per-player key for daily dedup: signed-in account, else device guest id. Trust-the-client, same
 // posture as the rest of the leaderboard · the UNIQUE constraint is what enforces one attempt/day.
 const playerKey = b => (b && b.sub ? 'acct:' + String(b.sub).slice(0, 80) : (b && b.guestId ? 'guest:' + String(b.guestId).slice(0, 80) : null));
