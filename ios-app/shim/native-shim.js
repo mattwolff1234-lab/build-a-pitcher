@@ -188,22 +188,71 @@
       return loginServer({ action: 'loginApple', identityToken: resp.identityToken, name: fullName });
     });
   }
+  /* Google Sign-In WITHOUT any third-party SDK: the OAuth 2.0 code+PKCE flow run
+     in the SYSTEM browser, which is what Google requires for installed apps (its
+     web sign-in is blocked inside app WebViews) and what Apple's privacy-manifest
+     rules are happiest with — Google's own SDK shipped no manifest and got build 16
+     auto-rejected (ITMS-91061). Google redirects back into the app via the reversed
+     client id URL scheme registered in Info.plist; the code is exchanged for an id
+     token server-side (no CORS surprises, and installed-app clients use no secret). */
   var GOOGLE_IOS_ID = '349698720898-3kkgcor4aoi0uhmeddugl2ao4vfh89ec.apps.googleusercontent.com';
-  var googleReady = null;
+  var GOOGLE_REDIRECT = 'com.googleusercontent.apps.349698720898-3kkgcor4aoi0uhmeddugl2ao4vfh89ec:/oauth2redirect';
+  function b64url(buf) {
+    var a = new Uint8Array(buf), s = '';
+    for (var i = 0; i < a.length; i++) s += String.fromCharCode(a[i]);
+    return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  function randTok(n) { var a = new Uint8Array(n); crypto.getRandomValues(a); return b64url(a); }
   function signInGoogle() {
-    var GA = plugins.GoogleAuth;
-    // initialize is idempotent; the id also lives in capacitor.config.json as a fallback
-    if (!googleReady) {
-      googleReady = Promise.resolve()
-        .then(function () { return GA.initialize({ clientId: GOOGLE_IOS_ID, iosClientId: GOOGLE_IOS_ID, scopes: ['profile', 'email'] }); })
-        .catch(function () {});
-    }
-    return googleReady.then(function () { return GA.signIn(); }).then(function (u) {
-      var tok = u && ((u.authentication && u.authentication.idToken) || u.idToken);
-      if (!tok) throw new Error('No Google idToken');
+    var verifier = randTok(48), state = randTok(12), nonce = randTok(12);
+    return crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier)).then(function (d) {
+      var url = 'https://accounts.google.com/o/oauth2/v2/auth'
+        + '?client_id=' + encodeURIComponent(GOOGLE_IOS_ID)
+        + '&redirect_uri=' + encodeURIComponent(GOOGLE_REDIRECT)
+        + '&response_type=code&scope=' + encodeURIComponent('openid email profile')
+        + '&code_challenge=' + b64url(d) + '&code_challenge_method=S256'
+        + '&state=' + state + '&nonce=' + nonce + '&prompt=select_account';
+      return new Promise(function (resolve, reject) {
+        var settled = false, hUrl = null, hFin = null;
+        function drop() {
+          try { if (hUrl && hUrl.remove) hUrl.remove(); } catch (e) {}
+          try { if (hFin && hFin.remove) hFin.remove(); } catch (e) {}
+        }
+        // Google bounces back into the app as a custom-scheme deep link
+        Promise.resolve(plugins.App.addListener('appUrlOpen', function (ev) {
+          var u = (ev && ev.url) || '';
+          if (settled || u.indexOf('com.googleusercontent.apps.') !== 0) return;
+          settled = true; drop();
+          try { plugins.Browser.close(); } catch (e) {}
+          var q = {};
+          (u.split('?')[1] || '').split('&').forEach(function (kv) {
+            var i = kv.indexOf('='); if (i < 0) return;
+            q[decodeURIComponent(kv.slice(0, i))] = decodeURIComponent(kv.slice(i + 1).replace(/\+/g, ' '));
+          });
+          if (q.error) return reject(new Error(q.error));
+          if (q.state !== state) return reject(new Error('state mismatch'));
+          if (!q.code) return reject(new Error('no code'));
+          resolve(q.code);
+        })).then(function (h) { hUrl = h; if (settled) drop(); });
+        // swiped the browser away without finishing → treat as a cancel (stays quiet)
+        Promise.resolve(plugins.Browser.addListener('browserFinished', function () {
+          if (settled) return;
+          settled = true; drop(); reject(new Error('cancelled'));
+        })).then(function (h) { hFin = h; if (settled) drop(); });
+        plugins.Browser.open({ url: url }).catch(function (e) {
+          if (settled) return; settled = true; drop(); reject(e);
+        });
+      });
+    }).then(function (code) {
+      return fetch(API + '/api/account', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ action: 'googleCodeExchange', code: code, codeVerifier: verifier, redirectUri: GOOGLE_REDIRECT }),
+      }).then(function (x) { return x.json(); });
+    }).then(function (j) {
+      if (!j || !j.ok || !j.idToken) throw new Error((j && j.error) || 'Google sign-in failed');
       var gid = null; try { gid = localStorage.getItem('pl_guestId'); } catch (e) {}
       // same action the website uses — including adopting this device's guest streak
-      return loginServer({ action: 'login', idToken: tok, guestId: gid || undefined });
+      return loginServer({ action: 'login', idToken: j.idToken, guestId: gid || undefined });
     });
   }
   var G_SVG = '<svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">' +
@@ -249,7 +298,8 @@
       };
     }
     wire(p + 'Apple', plugins.SignInWithApple, signInApple);
-    wire(p + 'Google', plugins.GoogleAuth, signInGoogle);
+    // Google needs only the system browser + deep-link plugins (no SDK)
+    wire(p + 'Google', plugins.Browser && plugins.App, signInGoogle);
   }
 
   // Tutorial slides: annotated real-gameplay screenshots (bundled at /tutorial/) with
@@ -345,7 +395,7 @@
   function injectMenuAuth() {
     var slot = document.getElementById('acctSlot');
     if (!slot || acct() || document.getElementById('naErr')) return;
-    if (!plugins.SignInWithApple && !plugins.GoogleAuth) return;
+    if (!plugins.SignInWithApple && !(plugins.Browser && plugins.App)) return;
     slot.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;padding:6px 0">' +
       authButtonsHtml('na', false) + '</div>';
     wireAuthButtons('na');

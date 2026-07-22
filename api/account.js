@@ -1068,6 +1068,36 @@ module.exports = async (req, res) => {
           streak: streakOut, bestStreak: bestOut, isNew: row.is_new === true });
       }
 
+      // Native Google Sign-In for the iOS app. The app runs the OAuth code+PKCE flow
+      // in the SYSTEM browser (no third-party SDK — Google's own SDK ships no privacy
+      // manifest and fails Apple's ITMS-91061 scan) and hands us the authorization
+      // code. We trade it for an id token here: server-to-server, so the device never
+      // meets a CORS preflight, and installed-app clients carry no secret to leak.
+      // The app then posts that token to the normal `login` action above, so streak
+      // merging / handles / guest adoption all stay on one tested path.
+      if (action === 'googleCodeExchange') {
+        const code = String(body.code || ''), verifier = String(body.codeVerifier || '');
+        const redirectUri = String(body.redirectUri || '');
+        if (!code || !verifier || !redirectUri) return res.status(400).json({ ok: false, error: 'missing code' });
+        if (!GOOGLE_IOS_CLIENT_ID) return res.status(400).json({ ok: false, error: 'no iOS client configured' });
+        const form = new URLSearchParams({
+          code, client_id: GOOGLE_IOS_CLIENT_ID, redirect_uri: redirectUri,
+          code_verifier: verifier, grant_type: 'authorization_code',
+        });
+        let t = {};
+        try {
+          const r = await fetch('https://oauth2.googleapis.com/token', {
+            method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' },
+            body: form.toString(),
+          });
+          t = await r.json();
+        } catch (e) { return res.status(502).json({ ok: false, error: 'Google unreachable' }); }
+        if (!t || !t.id_token) {
+          return res.status(400).json({ ok: false, error: String((t && (t.error_description || t.error)) || 'exchange failed').slice(0, 120) });
+        }
+        return res.status(200).json({ ok: true, idToken: t.id_token });
+      }
+
       // Sign in with Apple (the iOS app). Same account model as Google login above:
       // keep an existing session token, a claimed @handle wins the name, auto-seed a
       // handle for new accounts. Apple only sends the person's name on the FIRST
