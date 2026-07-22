@@ -656,7 +656,7 @@
       { "id": "scorched",  "icon": "🚫", "name": "No Ghosts",       "desc": "Legends never appear on your reels this run. Start with +$40." },
       { "id": "benchmob",  "icon": "💪", "name": "Bench Mob",       "desc": "Your DH gets +6 after the draft. Every boss +1." },
       { "id": "headstart", "icon": "🎁", "name": "Head Start",      "desc": "Start with a random economy relic. Shop prices +30% all run." },
-      { "id": "ironfive",  "icon": "🔒", "name": "Set the Lineup",  "desc": "No mulligan this run. +$60 up front." },
+      { "id": "ironfive",  "icon": "🔒", "name": "Set the Lineup",  "desc": "No do-over: you can't drop a player and respin after the draft. +$60 up front." },
       { "id": "underdogs", "icon": "🐕", "name": "Underdogs",       "desc": "Your reels max out at 84 overall. All winnings +50%." }
     ],
 
