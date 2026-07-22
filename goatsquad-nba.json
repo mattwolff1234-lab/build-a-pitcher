@@ -151,6 +151,16 @@
 
     "relicChance": 0.25,
     "maxRelics": 5,
+
+    "_mods_comment": "🃏 Run modifiers — a fresh Gauntlet offers 3 of these (plus Standard Issue). Behavior is keyed by id in the page (modReelFilter/applyMod/etc); this file is just the wording.",
+    "mods": [
+      { "id": "scorched",  "icon": "🚫", "name": "No Ghosts",   "desc": "Legends never appear on your reels this run. Start with +$40." },
+      { "id": "benchmob",  "icon": "💪", "name": "Bench Mob",   "desc": "Your 6th Man gets +6 after the draft. Every boss +1." },
+      { "id": "headstart", "icon": "🎁", "name": "Head Start",  "desc": "Start with a random economy relic. Shop prices +30% all run." },
+      { "id": "ironfive",  "icon": "🔒", "name": "Iron Five",   "desc": "No mulligan this run. +$60 up front." },
+      { "id": "underdogs", "icon": "🐕", "name": "Underdogs",   "desc": "Your reels max out at 84 overall. All winnings +50%." }
+    ],
+
     "_relics_comment": "Relics ride the victory-spoils wheel alongside players (~relicChance per card slot). Hold up to maxRelics; landing another means swapping one out. `weight` = draw odds within the relic pool (default 1) — the win-prob relics are weighted rare, the cash/economy ones common. Effect types the engine understands: gameEdge / elimEdge / firstGameEdge (win-prob bumps), noMomentumDrag, gameWinCash, interestCap, shopDiscount, upsetMult, ovrBoost.",
     "relics": [
       { "id": "ring",     "icon": "💍", "name": "The Ring",       "weight": 1, "desc": "Been there before — +6% win chance in elimination games.", "effect": { "type": "elimEdge", "value": 0.06 } },
@@ -190,6 +200,67 @@
     ],
 
     "teams": {
+      "_rotation_comment": "↓ 2026-07-22 rotation-pool era teams — never in the config layers; ensureLadder() swaps them into band-matched early/mid slots per run. Era-rated like everything else.",
+      "sixers14": { "name": "2014 Sixers", "rating": 74, "abbr": "PHI", "logoId": 1610612755, "blurb": "Trust the Process, year zero — 26 straight losses.", "players": [
+        { "name": "Michael Carter-Williams", "nbaId": 203487, "rating": 74, "pos": "PG" },
+        { "name": "Thaddeus Young", "nbaId": 201152, "rating": 78, "pos": "PF" },
+        { "name": "Tony Wroten", "nbaId": 203100, "rating": 70, "pos": "SG" },
+        { "name": "Hollis Thompson", "rating": 65, "pos": "SG" },
+        { "name": "Henry Sims", "rating": 64, "pos": "C" },
+        { "name": "James Anderson", "rating": 66, "pos": "SF" },
+        { "name": "Brandon Davies", "rating": 62, "pos": "PF" },
+        { "name": "Casper Ware", "rating": 60, "pos": "PG" }
+      ] },
+      "thunder09": { "name": "2009 Thunder", "rating": 79, "abbr": "OKC", "logoId": 1610612760, "blurb": "Three future MVPs on rookie deals. You're catching them early.", "players": [
+        { "name": "Kevin Durant", "nbaId": 201142, "rating": 84, "pos": "SF" },
+        { "name": "Russell Westbrook", "nbaId": 201566, "rating": 78, "pos": "PG" },
+        { "name": "James Harden", "nbaId": 201935, "rating": 76, "pos": "SG" },
+        { "name": "Jeff Green", "nbaId": 201145, "rating": 74, "pos": "PF" },
+        { "name": "Nenad Krstic", "rating": 70, "pos": "C" },
+        { "name": "Thabo Sefolosha", "nbaId": 200757, "rating": 71, "pos": "SG" },
+        { "name": "Nick Collison", "rating": 70, "pos": "PF" },
+        { "name": "Eric Maynor", "rating": 65, "pos": "PG" }
+      ] },
+      "suns05": { "name": "2005 Suns", "rating": 85, "abbr": "PHX", "logoId": 1610612756, "blurb": "Seven seconds or less. Nash makes everyone a star.", "players": [
+        { "name": "Steve Nash", "nbaId": 959, "rating": 92, "pos": "PG" },
+        { "name": "Amar'e Stoudemire", "nbaId": 2405, "rating": 90, "pos": "C" },
+        { "name": "Shawn Marion", "nbaId": 1890, "rating": 88, "pos": "SF" },
+        { "name": "Joe Johnson", "nbaId": 2207, "rating": 84, "pos": "SG" },
+        { "name": "Quentin Richardson", "nbaId": 2202, "rating": 77, "pos": "SG" },
+        { "name": "Leandro Barbosa", "nbaId": 2571, "rating": 75, "pos": "PG" },
+        { "name": "Jim Jackson", "rating": 71, "pos": "SF" },
+        { "name": "Steven Hunter", "rating": 64, "pos": "C" }
+      ] },
+      "jazz97": { "name": "1997 Jazz", "rating": 89, "abbr": "UTA", "logoId": 1610612762, "blurb": "The pick-and-roll, perfected for a decade.", "players": [
+        { "name": "Karl Malone", "nbaId": 252, "rating": 95, "pos": "PF" },
+        { "name": "John Stockton", "nbaId": 304, "rating": 91, "pos": "PG" },
+        { "name": "Jeff Hornacek", "nbaId": 100, "rating": 82, "pos": "SG" },
+        { "name": "Bryon Russell", "rating": 75, "pos": "SF" },
+        { "name": "Greg Ostertag", "rating": 69, "pos": "C" },
+        { "name": "Antoine Carr", "rating": 71, "pos": "PF" },
+        { "name": "Howard Eisley", "rating": 67, "pos": "PG" },
+        { "name": "Shandon Anderson", "rating": 66, "pos": "SG" }
+      ] },
+      "raptors19": { "name": "2019 Raptors", "rating": 90, "abbr": "TOR", "logoId": 1610612761, "blurb": "Board man gets paid. One perfect rental year.", "players": [
+        { "name": "Kawhi Leonard", "nbaId": 202695, "rating": 96, "pos": "SF" },
+        { "name": "Kyle Lowry", "nbaId": 200768, "rating": 86, "pos": "PG" },
+        { "name": "Pascal Siakam", "nbaId": 1627783, "rating": 85, "pos": "PF" },
+        { "name": "Marc Gasol", "nbaId": 201188, "rating": 80, "pos": "C" },
+        { "name": "Fred VanVleet", "nbaId": 1627832, "rating": 78, "pos": "PG" },
+        { "name": "Danny Green", "nbaId": 201980, "rating": 78, "pos": "SG" },
+        { "name": "Serge Ibaka", "nbaId": 201586, "rating": 79, "pos": "C" },
+        { "name": "Norman Powell", "nbaId": 1626181, "rating": 72, "pos": "SG" }
+      ] },
+      "sixers83": { "name": "1983 Sixers", "rating": 93, "abbr": "PHI", "logoId": 1610612755, "blurb": "Fo', fi', fo'. Moses called it, then they did it.", "players": [
+        { "name": "Moses Malone", "rating": 96, "pos": "C" },
+        { "name": "Julius Erving", "rating": 94, "pos": "SF" },
+        { "name": "Andrew Toney", "rating": 84, "pos": "SG" },
+        { "name": "Maurice Cheeks", "rating": 84, "pos": "PG" },
+        { "name": "Bobby Jones", "rating": 80, "pos": "PF" },
+        { "name": "Clint Richardson", "rating": 67, "pos": "SG" },
+        { "name": "Marc Iavaroni", "rating": 64, "pos": "PF" },
+        { "name": "Franklin Edwards", "rating": 61, "pos": "PG" }
+      ] },
       "bobcats12": { "name": "2012 Bobcats",  "rating": 74, "abbr": "CHA", "logoId": 1610612766, "blurb": "7–59. The worst team ever assembled. A warm-up.",
         "players": [
           { "name": "Kemba Walker", "nbaId": 202689, "rating": 78, "pos": "PG" }, { "name": "Gerald Henderson", "nbaId": 201945, "rating": 74, "pos": "SG" },

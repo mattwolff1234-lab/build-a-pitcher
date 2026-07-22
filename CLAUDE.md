@@ -726,6 +726,23 @@ and internal CSS/fn names say `rr-`).
   copycat (mirrors newest by `r.seq`), poacher (next-route-team player rides the spoils wheel).
   Egg hatches only into pure-upside weight-1 relics (never restrictions). All gauntlet-only —
   the Daily stays byte-identical.
+- **Run variety (2026-07-22, same pass):** `ensureLadder()` rolls a **rotating ladder** per fresh run
+  (band-matched ±2 swaps across the whole `gauntlet.teams` map — incl. 6-7 new hand-authored era teams
+  per sport tagged by `_rotation_comment`; the FINAL TWO fights never move; mid-run saves without a
+  roll keep the classic config ladder) plus ONE **⚠️ ELITE** side of one fork (`G.elite`): +2 rating,
+  a granted ability (deterministic pick from `ELITE_ABILITIES`), pulsing map node + ⚠️ tags, spoils
+  wheel at 60% relic cards + tripled stars + $10 bounty (inside `buzzerBonus` so live/settle agree).
+  The other fork road is always the escape. **🃏 Run modifiers** (`gauntlet.mods` in config, behavior
+  keyed by id in the page): every fresh gauntlet offers 3 of 5 + Standard Issue — scorched (no
+  legends, +$40) / benchmob (6th-man +6, bosses +1) / headstart (free economy relic, shop +30%) /
+  ironfive (no mulligan, +$60) / underdogs (reels ≤84, winnings +50%). Reel filters run through
+  `buildPools(filter)` and everything is gauntlet-gated — the Daily stays byte-identical. **🏆
+  Banners** (Ascension, renamed): base-table championship unlocks BANNER I–V, saved per device in
+  `pl_rr_banner`/`pl_sb_banner`/`pl_fb_banner` {max,last}; picker chips on the pre-run map card;
+  screws stack — +1 team rating/level, II +20% shop, III half interest cap, IV no mulligan, V no
+  Insurance. Level rides `G.banner`, tags the fight kicker + boss intro, posts as `build.rr.banner`
+  (shows on lb row detail + share text), unlock announced on the champion result screen + a howto
+  bullet on all three pages. Football variants: two-act Mood Swings and a 2-ability elite pool.
 - **Economy (Balatro-style Cap Space):** $5/game win, +$15 series, +$10 sweep, +$20 upset; interest
   on series wins ($1 per $5 held, cap $10) rewards a float. All cash rules live in ONE place
   (`payPerGameWin`/`buzzerBonus`/`interestFor`) shared by the live in-series counter and the result

@@ -656,6 +656,16 @@
     "rookieMaxRating": 64,
     "relicChance": 0.25,
     "maxRelics": 5,
+
+    "_mods_comment": "🃏 Run modifiers — a fresh Gauntlet offers 3 of these (plus Standard Issue). Behavior is keyed by id in the page (modReelFilter/applyMod/etc); this file is just the wording.",
+    "mods": [
+      { "id": "scorched",  "icon": "🚫", "name": "No Ghosts",    "desc": "Legends never appear on your reels this run. Start with +$40." },
+      { "id": "benchmob",  "icon": "💪", "name": "Bench Mob",    "desc": "Your FLEX gets +6 after the draft. Every boss +1." },
+      { "id": "headstart", "icon": "🎁", "name": "Head Start",   "desc": "Start with a random economy relic. Shop prices +30% all run." },
+      { "id": "ironfive",  "icon": "🔒", "name": "Iron Eleven",  "desc": "No mulligan this run. +$60 up front." },
+      { "id": "underdogs", "icon": "🐕", "name": "Underdogs",    "desc": "Your reels max out at 84 overall. All winnings +50%." }
+    ],
+
     "relics": [
       {
         "id": "ring",
@@ -800,6 +810,77 @@
       ]
     ],
     "teams": {
+      "_rotation_comment": "↓ 2026-07-22 rotation-pool era teams — never in the config layers; ensureLadder() swaps them into band-matched early/mid slots per run. Era-rated like everything else.",
+      "lions08": { "name": "2008 Lions", "rating": 74, "abbr": "DET", "logoId": "det", "blurb": "0–16. At least Megatron showed up every Sunday.", "players": [
+        { "name": "Calvin Johnson", "rating": 88, "pos": "WR" },
+        { "name": "Kevin Smith", "rating": 70, "pos": "RB" },
+        { "name": "Dan Orlovsky", "rating": 62, "pos": "QB" },
+        { "name": "Casey Fitzsimmons", "rating": 60, "pos": "TE" },
+        { "name": "Ernie Sims", "rating": 72, "pos": "LB" },
+        { "name": "Leigh Bodden", "rating": 70, "pos": "CB" },
+        { "name": "Dwight Smith", "rating": 66, "pos": "S" },
+        { "name": "Cory Redding", "rating": 68, "pos": "DL" }
+      ] },
+      "broncos11": { "name": "2011 Broncos", "rating": 78, "abbr": "DEN", "logoId": "den", "blurb": "Tebow Time. Don't ask how — it just kept working.", "players": [
+        { "name": "Tim Tebow", "rating": 74, "pos": "QB" },
+        { "name": "Von Miller", "rating": 88, "pos": "LB" },
+        { "name": "Champ Bailey", "rating": 89, "pos": "CB" },
+        { "name": "Willis McGahee", "rating": 79, "pos": "RB" },
+        { "name": "Demaryius Thomas", "rating": 78, "pos": "WR" },
+        { "name": "Eric Decker", "rating": 75, "pos": "WR" },
+        { "name": "Elvis Dumervil", "rating": 82, "pos": "DL" },
+        { "name": "Brian Dawkins", "rating": 80, "pos": "S" }
+      ] },
+      "cardinals08": { "name": "2008 Cardinals", "rating": 80, "abbr": "ARI", "logoId": "ari", "blurb": "Larry Legend and one furious February run.", "players": [
+        { "name": "Larry Fitzgerald", "rating": 94, "pos": "WR" },
+        { "name": "Kurt Warner", "rating": 86, "pos": "QB" },
+        { "name": "Anquan Boldin", "rating": 86, "pos": "WR" },
+        { "name": "Edgerrin James", "rating": 76, "pos": "RB" },
+        { "name": "Adrian Wilson", "rating": 82, "pos": "S" },
+        { "name": "Dominique Rodgers-Cromartie", "rating": 75, "pos": "CB" },
+        { "name": "Darnell Dockett", "rating": 80, "pos": "DL" },
+        { "name": "Karlos Dansby", "rating": 79, "pos": "LB" }
+      ] },
+      "panthers15": { "name": "2015 Panthers", "rating": 84, "abbr": "CAR", "logoId": "car", "blurb": "Cam dabbed on everybody. 15–1.", "players": [
+        { "name": "Cam Newton", "rating": 90, "pos": "QB" },
+        { "name": "Luke Kuechly", "rating": 94, "pos": "LB" },
+        { "name": "Josh Norman", "rating": 87, "pos": "CB" },
+        { "name": "Greg Olsen", "rating": 84, "pos": "TE" },
+        { "name": "Jonathan Stewart", "rating": 78, "pos": "RB" },
+        { "name": "Ted Ginn Jr.", "rating": 74, "pos": "WR" },
+        { "name": "Kawann Short", "rating": 84, "pos": "DL" },
+        { "name": "Kurt Coleman", "rating": 76, "pos": "S" }
+      ] },
+      "packers96": { "name": "1996 Packers", "rating": 89, "abbr": "GB", "logoId": "gb", "blurb": "Favre at full gunslinger, Reggie in the trenches.", "players": [
+        { "name": "Brett Favre", "rating": 93, "pos": "QB" },
+        { "name": "Reggie White", "rating": 95, "pos": "DL" },
+        { "name": "LeRoy Butler", "rating": 86, "pos": "S" },
+        { "name": "Antonio Freeman", "rating": 82, "pos": "WR" },
+        { "name": "Keith Jackson", "rating": 80, "pos": "TE" },
+        { "name": "Robert Brooks", "rating": 78, "pos": "WR" },
+        { "name": "Dorsey Levens", "rating": 76, "pos": "RB" },
+        { "name": "Craig Newsome", "rating": 74, "pos": "CB" }
+      ] },
+      "steelers75": { "name": "1975 Steelers", "rating": 90, "abbr": "PIT", "logoId": "pit", "blurb": "The Steel Curtain doesn't move for anybody.", "players": [
+        { "name": "Joe Greene", "rating": 96, "pos": "DL" },
+        { "name": "Jack Lambert", "rating": 93, "pos": "LB" },
+        { "name": "Mel Blount", "rating": 92, "pos": "CB" },
+        { "name": "Franco Harris", "rating": 88, "pos": "RB" },
+        { "name": "Lynn Swann", "rating": 85, "pos": "WR" },
+        { "name": "John Stallworth", "rating": 84, "pos": "WR" },
+        { "name": "Terry Bradshaw", "rating": 84, "pos": "QB" },
+        { "name": "Mike Wagner", "rating": 78, "pos": "S" }
+      ] },
+      "rams99": { "name": "1999 Rams", "rating": 91, "abbr": "STL", "logoId": "lar", "blurb": "The Greatest Show on Turf hangs 30 before halftime.", "players": [
+        { "name": "Marshall Faulk", "rating": 96, "pos": "RB" },
+        { "name": "Kurt Warner", "rating": 92, "pos": "QB" },
+        { "name": "Isaac Bruce", "rating": 88, "pos": "WR" },
+        { "name": "Torry Holt", "rating": 84, "pos": "WR" },
+        { "name": "Kevin Carter", "rating": 84, "pos": "DL" },
+        { "name": "London Fletcher", "rating": 80, "pos": "LB" },
+        { "name": "Todd Lyght", "rating": 78, "pos": "CB" },
+        { "name": "Keith Lyle", "rating": 74, "pos": "S" }
+      ] },
       "bucs76": {
         "name": "1976 Buccaneers",
         "rating": 74,
