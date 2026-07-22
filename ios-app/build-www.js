@@ -15,7 +15,8 @@ const PAGES = [
   'build-a-striker.html', 'build-a-keeper.html', 'versus.html', 'versus-hoops.html',
   'versus-soccer.html', 'versus-cfb.html', 'franchise.html', 'franchise-hoops.html',
   'franchise-soccer.html', 'college.html', 'hockey.html', 'monster.html',
-  'goatsquad.html', 'ranks.html', 'privacy.html', 'terms.html',
+  'goatsquad.html', 'goatsquad-baseball.html', 'goatsquad-football.html',
+  'ranks.html', 'privacy.html', 'terms.html',
 ];
 const SCRIPTS = [
   'switcher.js', 'social.js', 'xp.js', 'achievements.js', 'hotboard.js', 'quests.js',
@@ -26,7 +27,30 @@ const SCRIPTS = [
   'catalog.js', 'store.js', 'jerseys.js',
 ];
 const DATA = ['pitchers.json', 'batters.json', 'ballers.json', 'strikers.json', 'keepers.json',
-  'cfb.json', 'hockey.json', 'pokemon.json', 'goatsquad-nba.json'];
+  'cfb.json', 'hockey.json', 'pokemon.json',
+  // GOAT Squad: one config + one player pool per sport
+  'goatsquad-nba.json', 'goatsquad-mlb.json', 'goatsquad-nfl.json',
+  'squadball-mlb.json', 'squadfoot-nfl.json'];
+
+// Clean routes ("/goatsquad") only exist because vercel.json rewrites them to a file.
+// The app has no server, so every such link 404s inside the shell — pages ARE bundled
+// but unreachable. Read the real rewrite table and swap those links for the actual
+// file at build time, so the app can never drift from the site's routing.
+function routeMap() {
+  const map = new Map();
+  try {
+    const v = JSON.parse(fs.readFileSync(path.join(ROOT, 'vercel.json'), 'utf8'));
+    for (const r of v.rewrites || []) {
+      if (r.has || !r.source || !r.destination) continue;         // skip host-conditional redirects
+      if (!/^\/[\w-]+$/.test(r.source)) continue;                 // simple one-segment routes only
+      if (!/\.html$/.test(r.destination)) continue;
+      const file = r.destination.replace(/^\//, '');
+      if (PAGES.includes(file)) map.set(r.source, '/' + file);    // only routes we actually ship
+    }
+  } catch (e) {}
+  return map;
+}
+const ROUTES = routeMap();
 const ASSET_DIRS = ['avatars', 'baseball-anim', 'hoops-anim', 'soccer-anim'];
 const ASSET_GLOBS = ['.png', '.webp', '.svg', '.webmanifest', '.ico'];
 
@@ -45,7 +69,7 @@ if (fs.existsSync(TUT_SRC)) {
   }
 }
 
-let pages = 0, assets = 0, skipped = [];
+let pages = 0, assets = 0, rewrites = 0, skipped = [];
 for (const f of PAGES) {
   const src = path.join(ROOT, f);
   if (!fs.existsSync(src)) { skipped.push(f); continue; }
@@ -58,6 +82,14 @@ for (const f of PAGES) {
   html = html.replace(/<script[^>]*accounts\.google\.com\/gsi\/client[^>]*><\/script>/, '<!-- GSI stripped for native build (native Apple/Google sign-in via the shim instead) -->');
   // 4. strip the "powered by Playwire" footer badge (no ads in the app)
   html = html.replace(/<p>(?:(?!<\/p>)[\s\S])*playwire\.com(?:(?!<\/p>)[\s\S])*<\/p>/g, '');
+  // 5. point clean routes at real files — "/goatsquad" has no server to rewrite it here.
+  //    Quote-delimited so "/goatsquad-nba.json" and friends are never touched; a #hash or
+  //    ?query is carried through (/pitching#daily -> /pitcher.html#daily).
+  for (const [route, file] of ROUTES) {
+    const re = new RegExp('(["\'`])' + route.replace(/[-/]/g, '\\$&') + '((?:[#?][^"\'`]*)?)\\1', 'g');
+    html = html.replace(re, (_m, q, tail) => q + file + tail + q);
+    rewrites++;
+  }
   fs.writeFileSync(path.join(OUT, f), html);
   pages++;
 }
@@ -80,6 +112,6 @@ for (const dir of ASSET_DIRS) {
   assets++;
 }
 
-console.log(`www/ built: ${pages} pages, ${assets} asset groups.`);
+console.log(`www/ built: ${pages} pages, ${assets} asset groups, ${ROUTES.size} clean routes rewritten to files.`);
 if (skipped.length) console.log('skipped (not found):', skipped.join(', '));
 console.log('Next: npx cap sync ios');
