@@ -97,9 +97,24 @@ Observed in how 20-0.com frames itself, and consistent with the verified Wordle 
 
 ## ⭐ r/playmygame, filled into their required template
 
-r/playmygame requires this exact structure. Copy it as-is, then **add the platform flair after
-posting** (the `[pc] (web)` flair). Lead with GOAT Squad rather than the career sims: this audience
-plays roguelikes, and "Balatro but basketball" lands harder here than "sports career simulator."
+r/playmygame requires this exact structure in the BODY. The post title is separate.
+
+**Post title (recommended):**
+> I made a roguelike where your deck is a basketball dream team and the final boss is the '96 Bulls
+
+Alternates:
+- `GOAT Squad: a roguelike where your deck is a dream team and the final boss is the '96 Bulls`
+  (name up front, useful in a sub where people reference games by name)
+- `Balatro's interest mechanic, Slay the Spire's one-life run, except your relics are role players`
+
+Title rules: no `[TT]` (that tag is only for PAID games on Tuesdays, yours is free), no platform in
+the title (that is the flair you add after posting), and do not open with "free browser game"
+because free is assumed in this sub and it burns your best words. Name the inspirations in the
+body, not the title: in a title it reads as riding coattails, in the body it reads as craft.
+
+Copy the body as-is, then **add the `[pc] (web)` flair after posting**. Lead with GOAT Squad
+rather than the career sims: this audience plays roguelikes, and "Balatro but basketball" lands
+harder here than "sports career simulator."
 
 ```
 Game Title: GOAT Squad
