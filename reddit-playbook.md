@@ -1,56 +1,61 @@
-# Reddit playbook — GoatLab
+# Reddit playbook: GoatLab
 
-> Post drafts + the rules that govern them. Built 2026-07-22 from a verified research pass
-> (see the "What's verified" box) plus direct observation of how 20-0.com structures its
-> hooks. **Read `## Non-negotiables` before posting anything.**
+> Post drafts plus the rules that govern them. Built 2026-07-22 from a verified research pass
+> (see "What's verified") plus direct observation of how 20-0.com structures its hooks.
+> **Read `## Non-negotiables` before posting anything.**
+>
+> **House style for all copy below: no em dashes.** They read as an AI tell, and an
+> astroturfing accusation is fatal in these communities. Use commas, colons, parentheses,
+> or just start a new sentence. (Source quotes keep their original punctuation.)
 
 ## What's verified vs. what's judgment
 
 **Verified (quoted from source):**
-- Reddit has **no sitewide ban on self-promotion** — its own mod docs say *"promotional content is
+- Reddit has **no sitewide ban on self-promotion**. Its own mod docs say *"promotional content is
   not inherently considered to be spam."* Per-subreddit rules are the only binding constraint.
 - There is **no sitewide 9:1 rule.** The only official number is an optional *"10% rule"* that
   *some* communities adopt.
 - **r/CFB is dangerous.** Rule 6: posting external links *"for the primary purpose of generating
   income is forbidden and may result in an account suspension, ban and/or a domain ban."* It also
-  requires you to comment in the sub before posting at all. GoatLab runs ads → in scope. A domain
-  ban blocks **goat-lab.app sub-wide**, not just one post.
+  requires you to comment in the sub before posting at all. GoatLab runs ads, so it is in scope.
+  A domain ban blocks **goat-lab.app sub-wide**, not just one post.
 - **r/playmygame** exists for exactly this: *"freely playable games… so long as users can click a
   link and play it."*
-- Mass-posting the same link across subs is a **sitewide** violation (suspension risk), and using a
-  shortener to dodge a domain block is explicitly reportable.
-- Subs can **silently filter** new/low-karma accounts (Reputation filtering, Crowd Control). Your
-  post goes to a mod queue and **you are never told.**
+- Mass-posting the same link across subs is a **sitewide** violation (suspension risk), and using
+  a shortener to dodge a domain block is explicitly reportable.
+- Subs can **silently filter** new or low-karma accounts (Reputation filtering, Crowd Control).
+  Your post goes to a mod queue and **you are never told.**
 - **Wordle's grid was invented by a player**, and Wardle shipped the share text **without a URL**
   on purpose: *"it feels spammy… they were sharing for themselves."*
 
-**Refuted — do not repeat these:**
+**Refuted, do not repeat these:**
 - ❌ "Immaculate Grid went viral from one r/baseball post." The sharper inflection followed a big
   baseball Twitter account, and its user counts are founder-supplied round numbers.
 - ❌ "r/CFB bans user-made games." The real risk is the income-link rule, which is narrower but worse.
 
-**Unverified — check the sidebar yourself:** every sub below except r/CFB and r/playmygame.
+**Unverified, check the sidebar yourself:** every sub below except r/CFB and r/playmygame.
 
 ---
 
 ## Non-negotiables
 
-1. **One real account.** Never a throwaway, never a second account to re-post something removed.
-2. **Disclose in the first line.** "I made this" / "my side project." Undisclosed ownership is what
-   makes something astroturfing.
+1. **One real account.** Never a throwaway, never a second account to repost something removed.
+2. **Disclose in the first line.** "I made this" or "my side project." Undisclosed ownership is
+   what makes something astroturfing.
 3. **Different title and body every time.** Never the same week. Copy-paste across subs is the
    exact pattern that triggers sitewide spam enforcement.
-4. **If a post is removed: stop.** Do not repost, do not shorten the URL, do not try another sub
+4. **If a post is removed, stop.** Do not repost, do not shorten the URL, do not try another sub
    that day. Message the mods politely or move on.
 5. **Answer every comment.** A dev replying in the thread is the single biggest credibility signal.
-6. **Tier 2/3 = no link in the body.** Let people ask. "What's it called?" in the comments is worth
-   more than a link in the post.
-7. **Check yourself for a shadowban** before investing weeks: post a link, then view the thread in
-   a logged-out incognito window. Invisible = you're filtered.
+6. **Tier 2 and 3 mean no link in the body.** Let people ask. "What's this called?" in the
+   comments is worth more than a link in the post.
+7. **Check for a shadowban** before investing weeks: post a link, then view the thread in a
+   logged-out incognito window. Invisible means you are filtered.
+8. **No em dashes in anything you paste.**
 
 ---
 
-## Real stats to use (pulled 2026-07-22 — re-pull before posting, these drift)
+## Real stats to use (pulled 2026-07-22, re-pull before posting)
 
 | Board | Builds posted | Top OVR | Cutoff for top 200 |
 |---|---|---|---|
@@ -64,7 +69,6 @@
 **Career-sim record on the pitcher board: 7,403 strikeouts.** Nolan Ryan's real record is 5,714.
 That gap is a post all by itself.
 
-Re-pull anytime:
 ```bash
 curl -s "https://goat-lab.app/api/score?scope=global&limit=200&game=batter" | head -c 400
 curl -s "https://goat-lab.app/api/score?scope=global&limit=3&game=pitcher&sort=k"
@@ -74,95 +78,166 @@ curl -s "https://goat-lab.app/api/score?scope=global&limit=3&game=pitcher&sort=k
 
 ## The hook patterns that work
 
-Observed in how 20-0.com frames itself, and consistent with the verified Wordle/Poeltl evidence:
+Observed in how 20-0.com frames itself, and consistent with the verified Wordle and Poeltl evidence:
 
-- **Challenge + rarity stat.** "Can you go 20-0? *Only 4% go undefeated.*" A hard target plus a
-  number that proves it's hard. GoatLab's native version: the 99 OVR ceiling, or the top-200 cutoff.
-- **Same puzzle for everyone.** The daily's whole social value is that your result is comparable
-  to mine. Say so explicitly.
-- **Yesterday's answer as recurring content.** A reason to post again tomorrow without it being an ad.
+- **Challenge plus rarity stat.** "Can you go 20-0? Only 4% go undefeated." A hard target plus a
+  number proving it is hard.
+- **"I made X but it's Y."** The highest-performing indie title format on Reddit. It borrows a
+  known game's shape and lands the twist in six words.
+- **Name the final boss.** Concrete beats abstract every time. "The final boss is the '96 Bulls"
+  outperforms "survive a gauntlet of historic teams."
+- **Same puzzle for everyone.** The daily's whole social value is comparability. Say so out loud.
 - **The machine disagrees with you.** Sim output that contradicts fan consensus is free argument.
-- **Lead with the artifact, not the app.** A result, a stat, a screenshot. The game is the answer to
-  "where's this from," not the subject of the post.
+- **Lead with the artifact, not the app.** A result, a stat, a screenshot. The game is the answer
+  to "where's this from," not the subject of the post.
 
 ---
 
-# TIER 1 — links allowed (sanctioned discovery subs)
+# TIER 1: links allowed (sanctioned discovery subs)
 
-*r/playmygame, r/WebGames, r/browsergames, r/incremental_games, r/IndieDev, r/SideProject.
-Verify each sidebar; several require flair, a feedback exchange, or minimum account age.*
+## ⭐ r/playmygame, filled into their required template
 
-**1. r/playmygame — the straight ask**
-> **Title:** 7 sports, one weird mechanic: you spin a slot reel of real athletes to build a player, then sim their whole career
-> **Body:** I made this. The core loop is a slot machine of real pros — whoever you land on, you assign their rating to one attribute of your own player (Velocity, Power, whatever the sport uses). Fill every slot, get an Overall, then the game plays out their entire career: season stats, awards, Hall of Fame vote. Free, no signup, runs in the browser. Looking for feedback on the first 60 seconds specifically — I think the reel needs a better explanation but I've stared at it too long to tell. Happy to play and comment on yours.
+r/playmygame requires this exact structure. Copy it as-is, then **add the platform flair after
+posting** (the `[pc] (web)` flair). Lead with GOAT Squad rather than the career sims: this audience
+plays roguelikes, and "Balatro but basketball" lands harder here than "sports career simulator."
 
-**2. r/WebGames — lead with the strangeness**
-> **Title:** Free, no signup: draft real MLB pitchers into your own pitcher's body, then watch his 15-year career and Hall of Fame vote play out
-> **Body:** Each body part is an attribute. Land on deGrom, decide whether he's your Velocity or your Command — you only get one of each pro. Then it sims the career off whatever you built.
+```
+Game Title: GOAT Squad
 
-**3. r/browsergames — the daily angle**
-> **Title:** Made a daily sports puzzle where everyone in the world gets the exact same cards — today's took me three tries to not waste the legend
-> **Body:** Post your result block if you play, curious how differently people slot the same cards.
+Playable Link: https://goat-lab.app/goatsquad
 
-**4. r/incremental_games — GOAT Squad, speak their language**
-> **Title:** Built a roguelike where you stop spinning reels to lock a dream team, then survive a gauntlet of the greatest teams ever
-> **Body:** Run economy has interest on held cash (Balatro-style), relics that modify series odds, one life per run. Would love balance feedback — I think insurance is overpriced at 125 but I'm too close to it.
+Platform: Web browser (desktop and mobile, no download, no signup)
 
-**5. r/SideProject / r/IndieDev — the number is the hook**
-> **Title:** 1.3M pageviews/month on a browser sports game, solo, no marketing budget — here's what actually worked
-> **Body:** Honest breakdown: daily challenge drove retention more than any feature, SEO was an afterthought I'm only now fixing, and the thing I spent longest on (a 2.5D figure with per-body-part jersey tinting) moved zero metrics. Ask me anything.
+Description:
+GOAT Squad is a roguelike dream-team builder. Every roster position spins at once
+like a slot machine full of real NBA players, and you hit STOP to freeze the board.
+The reels move at a fixed speed, so stopping them is a skill rather than a dice roll.
+You lock exactly one player from the frozen board, the rest respin, and you repeat
+until you have a starting five, a sixth man, and a coach.
 
-**6. r/gamedev — the technical post-mortem**
-> **Title:** I made my sports career sim deterministic so every player's result is reproducible and shareable — here's the seeding approach and where it bit me
-> **Body:** Same build always produces the same career. Great for sharing and anti-cheat, brutal when you want to add a feature mid-season without invalidating everyone's saved results.
+Then your squad has to survive. The Gauntlet is a ten layer run against the greatest
+teams ever assembled, each one a best-of-seven series, and the final boss is the
+1996 Bulls. You earn cap space for wins, spend it in traveling shops between rounds
+on things like insurance, training camps, and free agent wheels, and you can pick up
+relics that bend the series odds. You get one life. Lose a series and the run is over,
+which makes the mid-run decisions actually hurt.
 
-**7. r/webdev — the constraint flex**
-> **Title:** Shipped 20+ pages of a browser game with no framework and no build step — single HTML files, and it's fine actually
-> **Body:** 1.3M pageviews/month. What broke, what I'd keep, what I'd never do again.
+The obvious comparisons are Slay the Spire for the map and one-life structure, and
+Balatro for the run economy (held cash earns interest, so banking versus spending is
+a real decision). There is also a daily mode where every player in the world gets the
+same reels and the same boss, so results are directly comparable.
 
-**8. r/InternetIsBeautiful — high bar, one shot, no promo language**
-> **Title:** Build a baseball player out of 9 different real MLB players, then watch his entire career get simulated
-> ⚠️ Historically aggressive about removing monetized links. One attempt, clean title, no dev-speak. Consider skipping.
+I am looking for feedback on two things specifically: whether the STOP timing feels
+learnable or random on your first run, and whether the shop prices feel right. I
+suspect insurance is overpriced but I am too close to it to tell.
+
+Free to Play Status:
+[X] Free to play
+[ ] Demo/Key available
+[ ] Paid (Allowed only on Tuesdays with [TT] in the title)
+
+Involvement: Solo developer. I built all of it: the game design, the code, the data
+pipeline that pulls real player ratings, and the art pipeline. Happy to answer
+anything about how it works under the hood.
+```
+
+**Notes:** description is ~250 words, comfortably over their 100 word minimum. It discloses
+solo dev involvement, states free-to-play plainly, and ends with a specific feedback ask, which
+is what the sub is for. Play and comment on a few other games in the sub the same day.
 
 ---
 
-# TIER 2 — comment first, one post later, modmail preferred
+## GOAT Squad titles for the other Tier 1 subs
 
-*r/Sabermetrics, r/dynastyff, r/fantasybaseball, r/OOTP, r/EASportsCFB, r/nbadiscussion, team subs.
-No link in the body. Verify rules first.*
+The roguelike framing is your strongest hook with gamers. Rotate these, never reuse:
 
-**9. r/Sabermetrics — your single best intellectual fit**
-> **Title:** I built a career sim off a FIP core and the strikeout distribution looks wrong to me — where's my model broken?
-> **Body:** K/9 comes from a strikeout rating with small velocity/break terms; ERA is FIP-based, adjusted for a strand-rate "clutch" input and BABIP off defense. Innings and career length key off stamina. At the top of my board a maxed build produces 7,403 career strikeouts — Ryan's real record is 5,714, so I'm ~30% hot at the tail. My guess is compounding: high K rate × high innings × long career all multiply. Curious how you'd damp a tail like that without flattening the middle. (Made the thing myself, not linking it — happy to share if anyone wants to poke at the output.)
+**1. r/incremental_games**
+> I made a roguelike where your deck is a basketball dream team and the final boss is the '96 Bulls
 
-**10. r/OOTP — respect the incumbents**
-> **Title:** For those who want a 90-second version between OOTP seasons — what would you consider the minimum viable sim depth?
-> **Body:** I built a lightweight browser career sim and I'm trying to figure out where "fun and fast" stops being credible to people who play real sim baseball. Currently model: FIP core, BABIP off defense, stamina-driven innings/career length, clutch as strand rate. What's the first thing you'd notice missing?
+**2. r/roguelikes / r/slaythespire-adjacent subs (check rules, many ban promo outright)**
+> Slay the Spire's map structure, Balatro's interest mechanic, except your relics are role players and one bad series ends the run
 
-**11. r/dynastyff — data first, tool second**
-> **Title:** Simmed 1,000 careers for each rookie-archetype profile — here are the Hall of Fame hit rates by build type
-> **Body:** Table of results. Discussion about which archetype ages best.
+**3. r/WebGames**
+> Stop the spinning reels to lock a dream team, then try to survive ten rounds against the greatest teams in history. Free, no signup.
 
-**12. r/EASportsCFB — adjacent audience, high intent**
-> **Title:** Made a free browser thing that does the Signing Day hat-pick and Heisman chase in about 3 minutes — what did CFB 26's Road to Glory get wrong?
-> **Body:** Lead with the critique question. Let them ask what yours is.
+**4. r/browsergames**
+> Balatro-style run economy, but the deck is a basketball roster and every boss is a real championship team
 
-**13. r/nbadiscussion — pose the question, don't pitch**
-> **Title:** If you could only build a starting five from random draws — one player's rating per attribute — what's the theoretical ceiling?
-> **Body:** I ran this and the best result on my board is a 110. Curious what people think the optimal strategy is: hoard for the heavily-weighted slots, or take value early?
+**5. r/BaseballGames or team subs (baseball flavor)**
+> Built a roguelike where you fill a lineup by stopping slot reels, then run a gauntlet that ends at the 1927 Yankees
 
-**14. Team sub (r/NYYankees, r/Braves, etc.) — smallest risk, warmest reception**
-> **Title:** Built [current star] from scratch in a career sim and it gave him three Cy Youngs and a first-ballot Hall of Fame — argue with the machine
+**6. r/SideProject**
+> My roguelike sports game hit 1.3M pageviews a month with no marketing budget. Here is what actually worked.
+
+---
+
+## Career-sim posts for Tier 1
+
+**7. r/WebGames**
+> Free, no signup: draft real MLB pitchers into your own pitcher's body, then watch his 15 year career and Hall of Fame vote play out
+>
+> Body: Each body part is an attribute. Land on deGrom and you decide whether he is your Velocity or your Command, because you only get one shot at each pro. Then the game sims the whole career off whatever you built.
+
+**8. r/browsergames**
+> Made a daily sports puzzle where everyone in the world gets the exact same cards. Today's took me three tries to not waste the legend.
+
+**9. r/IndieDev**
+> 1.3M pageviews a month on a browser sports game, solo, no marketing budget. Here is the honest breakdown.
+>
+> Body: The daily challenge drove retention more than any feature. SEO was an afterthought I am only now fixing. The thing I spent longest on, a 2.5D figure with per body part jersey tinting, moved exactly zero metrics. Ask me anything.
+
+**10. r/gamedev**
+> I made my sports career sim fully deterministic so results are reproducible and shareable. Here is the seeding approach and where it bit me.
+>
+> Body: Same build always produces the same career. Great for sharing and for anti-cheat. Brutal when you want to add a feature mid-season without invalidating everyone's saved results.
+
+**11. r/webdev**
+> Shipped 20+ pages of a browser game with no framework and no build step. Single HTML files, and it is fine actually.
+
+**12. r/InternetIsBeautiful** (high bar, one shot, no dev-speak)
+> Build a baseball player out of nine different real MLB players, then watch his entire career get simulated
+>
+> ⚠️ Historically aggressive about removing monetized links. Consider skipping.
+
+---
+
+# TIER 2: comment first, one post later, modmail preferred
+
+*No link in the body. Verify rules first.*
+
+**13. r/Sabermetrics, your single best intellectual fit**
+> **Title:** I built a career sim off a FIP core and the strikeout tail looks wrong to me. Where is my model broken?
+>
+> **Body:** I made this myself, not linking it, just want the math torn apart. K/9 comes from a strikeout rating with small velocity and break terms. ERA is FIP based, adjusted by a strand rate "clutch" input and BABIP off defense. Innings and career length key off stamina. At the top of my board a maxed build produces 7,403 career strikeouts, and Ryan's real record is 5,714, so I am roughly 30% hot at the tail. My guess is compounding: high K rate times high innings times long career all multiply. How would you damp a tail like that without flattening the middle of the distribution?
+
+**14. r/OOTP, respect the incumbents**
+> **Title:** For people who play real sim baseball: what is the minimum sim depth before a lightweight version stops feeling credible?
+>
+> **Body:** I built a 90 second browser career sim and I am trying to find the line. Current model is a FIP core, BABIP off defense, stamina driven innings and career length, clutch as strand rate. What is the first thing you would notice missing?
+
+**15. r/dynastyff**
+> **Title:** Simmed 1,000 careers for each rookie archetype. Here are the Hall of Fame hit rates by build profile.
+
+**16. r/EASportsCFB**
+> **Title:** What did CFB 26's Road to Glory get wrong? I built a three minute version with the Signing Day hat pick and a Heisman chase, and I want to know what is missing.
+
+**17. r/nbadiscussion**
+> **Title:** If you could only build a starting five from random draws, one player's rating per attribute, what is the theoretical ceiling?
+>
+> **Body:** Best result I have seen is a 110. Curious whether the optimal play is hoarding for the heavily weighted slots or taking value early.
+
+**18. Team subs (r/NYYankees, r/Braves, r/torontoraptors, etc.)**
+> **Title:** Built [current star] from scratch in a career sim and it gave him three Cy Youngs and a first ballot Hall of Fame. Argue with the machine.
+>
 > ⚠️ Time it to a real performance. Team subs are friendlier and a rule mistake costs less.
 
 ---
 
-# TIER 3 — never cold-post. Comments and daily threads only.
+# TIER 3: never cold-post, comments and daily threads only
 
 *r/baseball, r/nba, r/CFB, r/hockey, r/soccer, r/fantasyfootball, r/mlb.*
 
-**15. Any sport sub's daily discussion thread — the result block**
-> Paste your daily result as a comment, link-free, like a fan:
+**19. Any sport sub's daily discussion thread, the result block**
 > ```
 > 🐐 GoatLab Daily · Pitcher · Jul 22
 > 🟪🟦🟦🟨⬜🟫⬛🟨🟫
@@ -170,56 +245,58 @@ No link in the body. Verify rules first.*
 > ```
 > This is the whole strategy in one move. If someone asks what it is, answer plainly.
 
-**16. r/baseball off-day thread — the record hook**
-> **Comment:** "The best simulated pitcher on a career-sim board I've been playing has 7,403 strikeouts. Ryan's real 5,714 is one of those records that feels untouchable until a computer gets hold of it. What's the most unbreakable record in baseball, really?"
+**20. r/baseball off-day thread, the record hook**
+> The best simulated pitcher on a career sim board I have been playing has 7,403 strikeouts. Ryan's real 5,714 is one of those records that feels untouchable right up until a computer gets hold of it. What is the actually unbreakable record in baseball?
 
-**17. r/hockey off-day thread — the measurables argument**
-> **Comment:** "Pure measurables put Chara at a 94 for frame in a ratings model I've been messing with. Who else grades out absurdly on physical tools alone?"
+**21. r/hockey off-day thread**
+> Pure measurables put Chara at a 94 for frame in a ratings model I have been messing with. Who else grades out absurdly on physical tools alone?
 
-**18. r/CFB — the ONLY safe path**
-> Comment through the season. Then, before Signing Day, **modmail**: "I built a free college-football career game with a Signing Day hat-pick. Your rules say income-generating links are forbidden — is there any format you'd allow, or should I not?" **Accept whatever they say.** Do not post regardless of the answer.
+**22. r/CFB, the only safe path**
+> Comment through the season. Then, before Signing Day, send **modmail**: "I built a free college
+> football career game with a Signing Day hat pick. Your rules say income generating links are
+> forbidden, so I wanted to ask before doing anything. Is there a format you would allow, or should
+> I stay out of the way?" **Accept whatever they say.** Do not post regardless of the answer.
 
 ---
 
 # RECURRING FORMATS (the UGC engine)
 
-These are worth more than any single post because they get *other people* posting.
+Worth more than any single post, because they get other people posting.
 
-**19. "Yesterday's board" recap** — In your own space (Discord, r/GoatLab), post yesterday's winner
-and their build every morning. It's a reason for the community to check back and screenshot.
+**23. Yesterday's board recap.** Post yesterday's winner and their build every morning in your own
+space. A reason for people to check back, and a screenshot magnet.
 
-**20. Weekly build-off with a constraint** — "This week: no card above 85. Highest OVR wins."
-Constraint-based challenges generate wildly different results, which generates comments.
+**24. Weekly build-off with a constraint.** "This week: no card above 85. Highest OVR wins."
+Constraints produce wildly different results, which produces comments.
 
-**21. "Rate my build" thread** — Seed it with your own, let people reply with theirs. Their
+**25. Rate my build thread.** Seed it with your own, let people reply with theirs. Their
 screenshots are the ad.
 
-**22. Head-to-head callout** — "Post your daily result. I'll build against the best one tonight and
-post the sim." Turns a leaderboard into a story.
+**26. Head to head callout.** "Post your daily result. I will build against the best one tonight
+and post the sim." Turns a leaderboard into a story.
 
-**23. Beat-the-dev** — Publish your daily result early. Anyone who beats it gets a shout in the
-next recap. Cheap, and it makes you a participant instead of an owner.
+**27. Beat the dev.** Publish your daily result early. Anyone who beats it gets a shout in the
+next recap. Makes you a participant instead of an owner.
 
-**24. Record-chase watch** — When someone approaches a milestone (3,000 K, 700 HR, the 7,403
-record), post the chase. Sports fans are conditioned to care about record watches.
+**28. Record chase watch.** When someone approaches 3,000 K, 700 HR, or the 7,403 record, post the
+chase. Sports fans are conditioned to care about record watches.
 
-**25. r/GoatLab** — Worth creating as a **home**, not a growth channel. It's where you point people
+**29. r/GoatLab.** Worth creating as a **home**, not a growth channel. It is where you point people
 who ask, where recaps live, and where a link is always allowed. It grows from your Discord and from
 comments, not from posting into it.
 
 ---
 
-# CALENDAR HOOKS (post when the sport is already talking)
+# CALENDAR HOOKS
 
-- **Opening Day / first pitch** — baseball builds
-- **NBA opening night, All-Star, playoffs** — hoops
-- **National Signing Day (Feb), Heisman ceremony (Dec), CFP** — college football (modmail first!)
-- **NFL Draft** — the college→pro continuation
-- **Trade deadlines** — "build the guy your team just got"
-- **Hall of Fame announcement day** — your sim's HOF verdict is instantly topical. *This is your
-  single best annual hook.*
-- **A player's monster game** — "Last Night's Studs already boosts him in-game" is a real, timely,
-  non-promotional thing to mention in a game thread
+- Opening Day and first pitch: baseball builds
+- NBA opening night, All-Star weekend, playoffs: hoops
+- National Signing Day (Feb), Heisman ceremony (Dec), CFP: college football (modmail first)
+- NFL Draft: the college to pro continuation
+- Trade deadlines: "build the guy your team just got"
+- **Hall of Fame announcement day: your single best annual hook.** Your sim renders an HOF verdict,
+  which makes it instantly topical.
+- A player's monster game: "Last Night's Studs already boosts him in game" is timely and real
 
 ---
 
@@ -228,12 +305,12 @@ comments, not from posting into it.
 | When | Do |
 |---|---|
 | **Week 0** | Ship the link-free share block ✅ *(done 2026-07-22)*. Check for an existing shadowban. |
-| **Weeks 1–4** | One account. Comment daily in sport subs **about sports**. Zero game mentions. This satisfies r/CFB's gate and builds the karma signals the filters key on. |
-| **Weeks 3–6** | First link posts — **Tier 1 only**, one sub at a time, one per week, unique copy each. |
-| **Weeks 5–10** | Modmail outreach. Tier 2 posts where rules allow. |
-| **Month 3+** | Tier 3 daily-thread participation. Recurring formats running. r/GoatLab as home base. |
+| **Weeks 1 to 4** | One account. Comment daily in sport subs **about sports**. Zero game mentions. Satisfies r/CFB's gate and builds the karma signals the filters key on. |
+| **Weeks 3 to 6** | First link posts. **Tier 1 only**, one sub at a time, one per week, unique copy each. |
+| **Weeks 5 to 10** | Modmail outreach. Tier 2 posts where rules allow. |
+| **Month 3+** | Tier 3 daily thread participation. Recurring formats running. r/GoatLab as home base. |
 
-**The Discord is your seed audience** — the thing that turns a cold post into a thread with instant
+**The Discord is your seed audience**, the thing that turns a cold post into a thread with instant
 replies (this is what Poeltl had with its podcast). But ask people to post **in their own words**.
 Handing out a script to paste is precisely the "repeatedly posting the same or similar content"
 pattern that gets reported to admins.
@@ -242,17 +319,20 @@ pattern that gets reported to admins.
 
 # ONE-LINE TITLE BANK
 
-Swipe file. Pair with the right sub and rewrite the body every time.
+Swipe file. Pair with the right sub, rewrite the body every time, never reuse a title.
 
-1. Can you build a 99? Only [X] of 46,455 batters ever have.
-2. You need a 101 just to crack the top 200 pitchers right now.
-3. The hockey board is 1,535 builds deep — easiest leaderboard on the site to top today.
-4. Everyone gets the same nine cards. Nobody agrees where they go.
-5. My simulated pitcher struck out 7,403. Nolan Ryan's real record is 5,714.
-6. Built the entire '27 Yankees lineup and still lost the gauntlet.
-7. The sim says your favorite player is a Hall of Famer. Argue with it.
-8. What's the highest Overall possible if every pick is a coin flip?
-9. Spent a legend on Frame and I'd do it again.
-10. Day 40 of the daily. My streak is the only thing keeping me employed.
-11. I made a sports game where losing is a stat line, not a game over.
-12. Three Cy Youngs, zero rings. The machine is a comedian.
+1. I made a roguelike where your deck is a basketball dream team and the final boss is the '96 Bulls
+2. Balatro's interest mechanic, Slay the Spire's map, except every boss is a real championship team
+3. Can you build a 99? Out of 46,455 batters, almost nobody has.
+4. You need a 101 just to crack the top 200 pitchers right now.
+5. The hockey board is only 1,535 builds deep. Easiest leaderboard on the site to top today.
+6. Everyone gets the same nine cards. Nobody agrees where they go.
+7. My simulated pitcher struck out 7,403. Nolan Ryan's real record is 5,714.
+8. Built the entire '27 Yankees lineup and still lost the gauntlet.
+9. The sim says your favorite player is a Hall of Famer. Argue with it.
+10. What is the highest Overall possible if every pick is a coin flip?
+11. Spent a legend on Frame and I would do it again.
+12. Day 40 of the daily. My streak is the only thing keeping me employed.
+13. I made a sports game where losing is a stat line, not a game over.
+14. Three Cy Youngs, zero rings. The machine is a comedian.
+15. Stop the reels, lock your five, survive ten rounds. One life.
