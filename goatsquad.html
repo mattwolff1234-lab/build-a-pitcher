@@ -850,14 +850,48 @@ function gauntletStop() {
 function ECO() { return (CFG.gauntlet && CFG.gauntlet.economy) || {}; }
 function cash$(n) { return (ECO().currency || '$') + n; }
 function freshG() { return { stage: 0, route: {}, tries: {}, done: false, squad: null, cash: 0, items: {}, relics: [], ot: 0 }; }
-/* ---------- relics — run-wide passive abilities won off the spoils wheel ---------- */
-function relicSum(type) { return ((G && G.relics) || []).reduce((a, r) => a + (r.effect && r.effect.type === type ? (r.effect.value || 0) : 0), 0); }
-function relicHas(type) { return ((G && G.relics) || []).some(r => r.effect && r.effect.type === type); }
+/* ---------- relics — run-wide passive abilities won off the spoils wheel ----------
+   relicEffects() is the ONE resolver: it expands stateful relics (Dynasty's counter, a
+   shattered Piggy Bank), splits double-effect relics (No Ringers = OVR + a rule), and
+   lets The Copycat mirror the newest other relic. relicSum/relicHas sit on top, so
+   every existing caller picks the new relics up for free. */
+function relicEffects(r, noCopy) {
+  if (!r || !r.effect) return [];
+  const t = r.effect.type, v = r.effect.value || 0, s = r.state || {};
+  switch (t) {
+    case 'copycat': {
+      if (noCopy) return [];                       // a copy can't copy a copy
+      let src = null;
+      ((G && G.relics) || []).forEach(x => {
+        if (x === r || !x.effect || x.effect.type === 'copycat') return;
+        if (!src || (x.seq || 0) >= (src.seq || 0)) src = x;
+      });
+      return src ? relicEffects(src, true) : [];
+    }
+    case 'egg': return [];                          // does nothing… until it hatches
+    case 'dynasty': return [{ type: 'ovrBoost', value: v * (s.wins || 0) }];
+    case 'noRingers': return [{ type: 'ovrBoost', value: v }, { type: 'noSpoilsSign', value: 1 }];
+    case 'proveIt': return [{ type: 'ovrBoost', value: v }, { type: 'noGameCash', value: 1 }];
+    case 'cityCash': return s.dead ? [] : [{ type: 'cityCash', value: v }];   // 🐖 shattered = dead
+    case 'rentalStar': return [{ type: 'ovrBoost', value: v }];
+    default: return [{ type: t, value: v }];
+  }
+}
+function relicSum(type) { return ((G && G.relics) || []).reduce((a, r) => a + relicEffects(r).reduce((x, e) => x + (e.type === type ? (e.value || 0) : 0), 0), 0); }
+function relicHas(type) { return ((G && G.relics) || []).some(r => relicEffects(r).some(e => e.type === type)); }
 // every cash rule in ONE place so the live counter and the result screen can never disagree
-function payPerGameWin() { return (ECO().gameWin || 0) + relicSum('gameWinCash'); }
+function payPerGameWin() { return relicHas('noGameCash') ? 0 : (ECO().gameWin || 0) + relicSum('gameWinCash'); }   // 📝 Prove-It zeroes it
+// 🚌 Bandwagon: an escalating series-win bonus — pay = step × (wins already banked + 1).
+// PURE read (the counter increments at settlement), so live tick + settle always agree.
+function bandwagonPay() {
+  const step = relicSum('bandwagon');
+  if (!step) return 0;
+  const r = ((G && G.relics) || []).find(x => x.effect && x.effect.type === 'bandwagon');
+  return step * (((r && r.state && r.state.times) || 0) + 1);
+}
 function buzzerBonus(sr) {
   const E = ECO();
-  return (E.seriesWin || 0) + (sr.l === 0 ? (E.sweep || 0) : 0) +
+  return (E.seriesWin || 0) + (sr.l === 0 ? (E.sweep || 0) : 0) + bandwagonPay() +
     (run.boss.rating > run.ovr ? (E.upset || 0) * Math.max(1, relicSum('upsetMult')) : 0);
 }
 function interestFor(bal) {
@@ -865,6 +899,13 @@ function interestFor(bal) {
   return Math.min((E.interestCap || 0) + relicSum('interestCap'), Math.floor(bal / (E.interestPer || Infinity)));
 }
 function priceOf(it) { return Math.max(0, Math.round(it.price * (1 - relicSum('shopDiscount')))); }
+function shopSpent() {   // 🐖 the Piggy Bank shatters the first time you buy ANYTHING
+  const pig = ((G && G.relics) || []).find(r => r.effect && r.effect.type === 'cityCash' && !(r.state && r.state.dead));
+  if (!pig) return;
+  pig.state = { dead: 1 };
+  pig.desc = 'Shattered — it stopped paying the day you went shopping.';
+  toast(`${pig.icon}💥 ${pig.name} shattered!`);
+}
 
 /* ---------- the map: layered path (straight roads, forks, shops), plane flies you between ---------- */
 // per-layer node positions: single/shop nodes snake, fork nodes sit side by side
@@ -1095,6 +1136,7 @@ function renderShop() {
       e.rating = primeTarget(e);
       e.primed = 1;
       G.cash -= priceOf(shopItem('prime'));
+      shopSpent();
       primePicking = false;
       saveG();
       Sound.lock();
@@ -1119,6 +1161,7 @@ function renderShop() {
       e.rating += 2;
       e.camp = (e.camp || 0) + 1;
       G.cash -= priceOf(shopItem('camp'));
+      shopSpent();
       campPicking = false;
       saveG();
       Sound.lock();
@@ -1154,6 +1197,7 @@ function buyItem(id) {
   if (id === 'camp') { campPicking = true; renderShop(); return; }   // pay on pick
   if (id === 'prime') { primePicking = true; renderShop(); return; } // pay on pick
   G.cash -= priceOf(it);
+  shopSpent();
   if (id === 'insurance' || id === 'token2' || id === 'home') {
     G.items[id] = 1;
     saveG();
@@ -1173,6 +1217,15 @@ function buyItem(id) {
       entries.push(e);
     }
     openWheel('fa', entries, 'FREE AGENCY', 'Your agent did the homework — the wheel skews toward stars. Legends included. One STOP.');
+  } else if (id === 'relicwheel') {
+    saveG();
+    track('shop_buy', { item: id });
+    // every card is a relic — same weighted odds as the spoils draws, minus what you own
+    const ownedR = new Set((G.relics || []).map(r => r.id));
+    const entries = [];
+    (CFG.gauntlet.relics || []).filter(r => !ownedR.has(r.id))
+      .forEach(r => { for (let k = 0; k < (r.weight || 1); k++) entries.push({ relic: true, id: r.id, icon: r.icon, name: r.name, desc: r.desc, effect: r.effect }); });
+    openWheel('relic', entries, 'RELIC WHEEL', 'Every card on this wheel is a relic. One STOP — take what freezes or walk away.');
   } else if (id === 'coach') {
     saveG();
     track('shop_buy', { item: id });
@@ -1682,7 +1735,7 @@ function startGauntletSeries() {
     redoUsed: true, redoSlot: -1, redoOld: null, completeTracked: true,
     boss: gauntletStop(), stage: G.stage, ovr: 0, series: null, resultShown: false
   };
-  run.ovr = overallOf(run.locked);
+  run.ovr = overallOf(run.locked) + relicSum('ovrBoost');   // intro number matches the fight
   track('run_start', { attempt: run.attempt, stage: G.stage + 1, reused_squad: 1 });
   bossIntro();
 }
@@ -1703,9 +1756,12 @@ function buildSimOpts(b) {
     opts.homeCourt = !!G.items.home;
     opts.homeEdge = ECO().homeEdge || 0;
     opts.gameEdge = relicSum('gameEdge');
+    const dpRate = relicSum('deepPockets');   // 💰 Deep Pockets: win chance per $25 held, 4 steps max
+    if (dpRate) opts.gameEdge += Math.min(4 * dpRate, Math.floor((G.cash || 0) / 25) * dpRate);
     opts.elimEdge = relicSum('elimEdge');
     opts.firstGameEdge = relicSum('firstGameEdge');
     opts.noMomentumDrag = relicHas('noMomentumDrag');
+    opts.moodSwings = relicSum('moodSwings');   // 🎭 odd games surge, even games wobble
   }
   return opts;
 }
@@ -1772,7 +1828,8 @@ function gameProb(ovr, boss, opts, w, l, gi) {
   if (ab && ab.type === 'noPlayerMomentum' && mom > 0) mom = 0;     // '13 Heat never blink
   const relicEdge = (opts ? (opts.gameEdge || 0) : 0)               // 🔥 The Microwave
     + ((w === 3 || l === 3) ? (opts ? (opts.elimEdge || 0) : 0) : 0)   // 💍 The Ring
-    + (gi === 0 ? (opts ? (opts.firstGameEdge || 0) : 0) : 0);         // 🚀 Fast Starters
+    + (gi === 0 ? (opts ? (opts.firstGameEdge || 0) : 0) : 0)
+    + ((opts && opts.moodSwings) ? (gi % 2 === 0 ? 0.08 : -0.03) * opts.moodSwings : 0);   // 🎭 Mood Swings         // 🚀 Fast Starters
   let p = .5 + (ovr - boss.rating) * S.perGameSlope + mom + (home && hc ? ((opts && opts.homeEdge) || 0) : 0) + relicEdge;
   if (ab) {
     if (ab.type === 'bossElimEdge' && (w === 3 || l === 3)) p -= ab.value;     // MJ closes
@@ -2163,7 +2220,7 @@ function showResult() {
   }
   run.resultShown = true;
   const won = run.series.won, b = run.boss;
-  let finalStop = false, earned = 0, rookieNote = null;
+  let finalStop = false, earned = 0, rookieNote = null, relicNotes = [];
   if (run.mode === 'daily') {
     const st = day.daily;
     if (won) { st.beat++; if (st.firstBeat == null) st.firstBeat = run.attempt; }
@@ -2179,6 +2236,43 @@ function showResult() {
       earned += run.interestPaid;
     }
     G.cash += earned;
+    // ✨ stateful relic settlement — AFTER the payout math (which must read pre-win state)
+    if (won) {
+      (G.relics || []).forEach(r => {
+        const t = r.effect && r.effect.type;
+        if (t === 'bandwagon') { r.state = r.state || {}; r.state.times = (r.state.times || 0) + 1; }
+        if (t === 'dynasty') { r.state = r.state || {}; r.state.wins = (r.state.wins || 0) + 1; relicNotes.push(`${r.icon} ${r.name} +${r.state.wins} OVR`); }
+        if (t === 'egg') { r.state = r.state || {}; r.state.wins = (r.state.wins || 0) + 1; }
+      });
+      // 🥚 hatch: 3 series wins while held → a random pure-upside chase relic takes its slot
+      const ei = (G.relics || []).findIndex(r => r.effect && r.effect.type === 'egg' && (r.state && r.state.wins) >= (r.effect.value || 3));
+      if (ei >= 0) {
+        const ownedIds = new Set(G.relics.map(r => r.id));
+        const NO_HATCH = { egg: 1, noRingers: 1, proveIt: 1 };   // never hatch a restriction onto someone
+        const pool = (CFG.gauntlet.relics || []).filter(x => (x.weight || 1) === 1 && !NO_HATCH[x.effect.type] && !ownedIds.has(x.id));
+        if (pool.length) {
+          const nr = pool[Math.floor(Math.random() * pool.length)];
+          G.relicSeq = (G.relicSeq || 0) + 1;
+          G.relics[ei] = { id: nr.id, icon: nr.icon, name: nr.name, desc: nr.desc, effect: nr.effect, seq: G.relicSeq };
+          relicNotes.push(`🐣 The Egg hatched into ${nr.icon} ${nr.name}!`);
+          track('relic_egg_hatch', { into: nr.id });
+        } else {
+          G.relics.splice(ei, 1); G.cash += 30;
+          relicNotes.push(`🐣 The Egg hatched into… +${cash$(30)}. Huh.`);
+          track('relic_egg_hatch', { into: 'cash' });
+        }
+      }
+      // 🏎️ the rental's agent calls — 25% he walks after every series win
+      const ri = (G.relics || []).findIndex(r => r.effect && r.effect.type === 'rentalStar');
+      if (ri >= 0 && Math.random() < 0.25) {
+        const gone = G.relics.splice(ri, 1)[0];
+        relicNotes.push(`${gone.icon} ${gone.name} WALKED. His agent says thanks for the memories`);
+        track('relic_rental_walked', {});
+      }
+      // 🐖 the Piggy Bank pays out when the plane lands in the next city
+      const pig = relicSum('cityCash');
+      if (pig && run.stage < gLayers().length - 1) { G.cash += pig; relicNotes.push(`🐖 +${cash$(pig)} for landing in a new city`); }
+    }
     // 🎓 the rookie gets better with every game won — win or lose the series
     if (G.squad && run.series.w > 0) {
       G.squad.forEach(e => {
@@ -2257,7 +2351,8 @@ function showResult() {
     (run.mode === 'daily' ? 'Daily · same spins worldwide' : `Gauntlet fight ${fightNum(run.stage)}/${totalFights()}`) +
     (run.mode !== 'daily' && earned ? ` · +${cash$(earned)} banked${run.interestPaid ? ` (incl. ${cash$(run.interestPaid)} interest)` : ''}` : '') +
     (run.rentalNote ? ` · ${run.rentalNote}` : '') +
-    (rookieNote ? ` · ${rookieNote}` : '');
+    (rookieNote ? ` · ${rookieNote}` : '') +
+    (relicNotes.length ? ` · ${relicNotes.join(' · ')}` : '');
 
   $('recap').innerHTML = CFG.slots.map((s, i) => {
     const e = run.locked[i];
@@ -2437,6 +2532,23 @@ function showSteal() {
   // 🏆 spoils skew slightly toward the stars you just beat: the roster's top three
   // ride the wheel twice — enough to matter, not enough to make the duds vanish
   roster.slice().sort((a, b) => b.rating - a.rating).slice(0, 3).forEach(p => roster.push({ ...p }));
+  // 🕵️ The Poacher: your scout smuggles ONE player off the NEXT team on the route onto this wheel
+  if (relicHas('poacher')) {
+    const L = gLayers();
+    let ni = run.stage + 1;
+    while (ni < L.length && isShopLayer(ni)) ni++;
+    if (ni < L.length) {
+      const nts = layerTeams(ni);
+      const nt = nts[Math.floor(Math.random() * nts.length)];
+      const tops = (nt.players || []).slice().sort((a, b) => b.rating - a.rating).slice(0, 5);
+      if (tops.length) {
+        const p = tops[Math.floor(Math.random() * tops.length)];
+        roster.push({ name: p.name, rating: p.rating, pos: [p.pos], team: nt.abbr || '',
+          img: p.nbaId != null ? CFG.adapter.imageTemplate.replace('{id}', p.nbaId) : imgByName(p.name), legend: false, scout: 1 });
+        toast(`🕵️ Your scout slipped a ${nt.name} player onto the wheel`);
+      }
+    }
+  }
   openWheel('steal', roster, 'SPIN THEIR ROSTER', `You beat the ${stop.name}. Their roster's on the wheel, rated as they were that season. One STOP.`);
 }
 function openWheel(kind, entries, title, sub) {
@@ -2476,7 +2588,7 @@ function openWheel(kind, entries, title, sub) {
     const face = e.img ? `<img src="${e.img}" alt="" onerror="this.remove()">` : (e.coach ? '📋' : initials(e.name));
     const val = e.coach ? ((e.mod > 0 ? '+' : '') + e.mod) : e.rating;
     const hex = e.coach ? (e.mod > 0 ? '#4ade80' : e.mod < 0 ? '#ff6b6b' : TIER_HEX.grey) : TIER_HEX[tierKey(e)];
-    return `<div class="rr-card"><span class="rr-face">${face}<span class="rr-rate" style="color:${hex}">${val}</span></span><b>${lastName(e.name)}</b><span class="rr-pos">${e.coach ? 'COACH' : e.pos[0] + (e.rookie ? ' · RK' : '')}</span></div>`;
+    return `<div class="rr-card"><span class="rr-face">${face}<span class="rr-rate" style="color:${hex}">${val}</span></span><b>${lastName(e.name)}</b><span class="rr-pos">${e.coach ? 'COACH' : e.pos[0] + (e.rookie ? ' · RK' : '') + (e.scout ? ' · 🕵️ SCOUTED' : '')}</span></div>`;
   }).join('');
   if (window.gsap) gsap.set('#stStrip', { x: 0 });
   $('stealFrame').style.borderColor = 'var(--line)';
@@ -2525,7 +2637,7 @@ function wheelLand(idx) {
   // slot straight up; players cut pos-incumbent or 6th man
   let btns = '';
   if (e.relic) {
-    const max = CFG.gauntlet.maxRelics || 3;
+    const max = CFG.gauntlet.maxRelics || 5;
     $('stealCutLead').innerHTML = `✨ <b>${e.name}</b>: ${e.desc}`;
     if ((G.relics || []).length < max) {
       btns = `<button class="btn cutBtn" type="button" data-relic="-1"><span>✨ Take ${e.name}</span><b style="color:${TIER_HEX.legend}">${(G.relics || []).length + 1}/${max}</b></button>`;
@@ -2535,6 +2647,27 @@ function wheelLand(idx) {
     }
     $('stealCutBtns').innerHTML = btns;
     $('stealCutBtns').querySelectorAll('.cutBtn[data-relic]').forEach(b => b.addEventListener('click', () => signRelic(+b.dataset.relic)));
+    $('stealBtns').style.display = 'none';
+    $('stealChoice').style.display = 'block';
+    if (window.gsap) gsap.from('#stealChoice', { y: 10, opacity: 0, duration: .25, ease: 'power2.out', clearProps: 'all' });
+    return;
+  }
+  // 🚫 No Ringers: spoils players are look-don't-touch (relics still land + get taken fine)
+  if (st.kind === 'steal' && !e.coach && relicHas('noSpoilsSign')) {
+    $('stealCutLead').innerHTML = `🚫 <b>${e.name}</b> wants in — but your relic says you ride with who you've got.`;
+    let nb = '';
+    if (G.items.token2 && !st.tokenUsed) nb = `<button class="btn cutBtn" type="button" id="btnToken2"><span>🎟️ Use token, spin again</span><b style="color:var(--accent2)">1x</b></button>`;
+    $('stealCutBtns').innerHTML = nb;
+    const tok0 = $('btnToken2');
+    if (tok0) tok0.addEventListener('click', () => {
+      delete G.items.token2;
+      saveG();
+      track('shop_use', { item: 'token2' });
+      toast('Token burned. One more spin');
+      const a = st.args;
+      openWheel(a.kind, a.entries, a.title, a.sub);
+      st.tokenUsed = true;
+    });
     $('stealBtns').style.display = 'none';
     $('stealChoice').style.display = 'block';
     if (window.gsap) gsap.from('#stealChoice', { y: 10, opacity: 0, duration: .25, ease: 'power2.out', clearProps: 'all' });
@@ -2577,7 +2710,8 @@ function wheelLand(idx) {
 }
 function signRelic(swapIdx) {
   const e = st.frozen;
-  const r = { id: e.id, icon: e.icon, name: e.name, desc: e.desc, effect: e.effect };
+  G.relicSeq = (G.relicSeq || 0) + 1;   // acquisition order — The Copycat mirrors the newest
+  const r = { id: e.id, icon: e.icon, name: e.name, desc: e.desc, effect: e.effect, seq: G.relicSeq };
   if (swapIdx >= 0) {
     const old = G.relics[swapIdx];
     G.relics[swapIdx] = r;
@@ -2987,6 +3121,8 @@ $('btnFight').addEventListener('click', () => {
     campPicking = false;
     travelFrom = G.stage;
     G.stage++;
+    const pigFly = relicSum('cityCash');   // 🐖 a new city pays out
+    if (pigFly) { G.cash += pigFly; toast(`🐖 +${cash$(pigFly)} for landing in a new city`); }
     saveG();
     openMap();
   }

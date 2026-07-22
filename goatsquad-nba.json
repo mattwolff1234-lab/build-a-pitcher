@@ -133,6 +133,7 @@
         { "id": "camp",      "icon": "🏋️", "name": "Training Camp",     "price": 40, "once": false, "desc": "+2 OVR to one player. Max +4 per player." },
         { "id": "prime",     "icon": "⭐", "name": "Prime Boost",       "price": 55, "once": false, "desc": "One player becomes his PRIME self — his best card ever, min +4. Once per player." },
         { "id": "fa",        "icon": "🎰", "name": "Free-Agent Wheel",  "price": 50, "once": false, "desc": "Spin the whole NBA pool — your agent skews it toward stars. Somebody gets cut." },
+        { "id": "relicwheel","icon": "✨", "name": "Relic Wheel",       "price": 65, "once": false, "desc": "Every card on the wheel is a relic — spoils-wheel odds, minus what you own. One STOP." },
         { "id": "token2",    "icon": "🎟️", "name": "Second-Stop Token", "price": 35, "once": true,  "desc": "Your next victory wheel: STOP twice, keep the better freeze." },
         { "id": "coach",     "icon": "📋", "name": "Coach Carousel",    "price": 25, "once": false, "desc": "Respin your coach slot. Could be Phil. Could be the Mascot." },
         { "id": "home",      "icon": "🏟️", "name": "Home Court Deed",   "price": 45, "once": true,  "desc": "Home court the rest of the run — games 1, 2, 5 and 7 in YOUR building, with an edge." },
@@ -149,7 +150,7 @@
     },
 
     "relicChance": 0.25,
-    "maxRelics": 3,
+    "maxRelics": 5,
     "_relics_comment": "Relics ride the victory-spoils wheel alongside players (~relicChance per card slot). Hold up to maxRelics; landing another means swapping one out. `weight` = draw odds within the relic pool (default 1) — the win-prob relics are weighted rare, the cash/economy ones common. Effect types the engine understands: gameEdge / elimEdge / firstGameEdge (win-prob bumps), noMomentumDrag, gameWinCash, interestCap, shopDiscount, upsetMult, ovrBoost.",
     "relics": [
       { "id": "ring",     "icon": "💍", "name": "The Ring",       "weight": 1, "desc": "Been there before — +6% win chance in elimination games.", "effect": { "type": "elimEdge", "value": 0.06 } },
@@ -160,7 +161,18 @@
       { "id": "tickets",  "icon": "🎫", "name": "Season Tickets", "weight": 3, "desc": "Shop prices 25% off.",                                     "effect": { "type": "shopDiscount", "value": 0.25 } },
       { "id": "hypeman",  "icon": "📢", "name": "Hype Man",       "weight": 3, "desc": "Upset bonuses pay triple.",                                "effect": { "type": "upsetMult", "value": 3 } },
       { "id": "chemistry","icon": "🧬", "name": "Team Chemistry", "weight": 1, "desc": "Squad overall +2 in every series.",                        "effect": { "type": "ovrBoost", "value": 2 } },
-      { "id": "jetlag",   "icon": "🚀", "name": "Fast Starters",  "weight": 2, "desc": "+15% win chance in Game 1.",                               "effect": { "type": "firstGameEdge", "value": 0.15 } }
+      { "id": "jetlag",   "icon": "🚀", "name": "Fast Starters",  "weight": 2, "desc": "+15% win chance in Game 1.",                               "effect": { "type": "firstGameEdge", "value": 0.15 } },
+      { "id": "noringers", "icon": "🚫", "name": "No Ringers", "weight": 1, "desc": "+4 squad overall — but you can never sign a spoils player again.", "effect": { "type": "noRingers", "value": 4 } },
+      { "id": "proveit",   "icon": "📝", "name": "Prove-It Deal",  "weight": 1, "desc": "+3 squad overall. Game wins pay $0 — series money still counts.", "effect": { "type": "proveIt", "value": 3 } },
+      { "id": "piggy",     "icon": "🐖", "name": "Piggy Bank",     "weight": 2, "desc": "+$4 every city you land in. Shatters forever the first time you buy from a shop.", "effect": { "type": "cityCash", "value": 4 } },
+      { "id": "dynasty",   "icon": "🏗️", "name": "Dynasty",        "weight": 1, "desc": "+1 squad overall for every series won while holding it.", "effect": { "type": "dynasty", "value": 1 } },
+      { "id": "egg",       "icon": "🥚", "name": "The Egg",        "weight": 2, "desc": "Does nothing… hatches into a random chase relic after 3 series wins.", "effect": { "type": "egg", "value": 3 } },
+      { "id": "bandwagon", "icon": "🚌", "name": "Bandwagon",      "weight": 2, "desc": "Series wins pay a bonus that grows: $3, then $6, then $9…", "effect": { "type": "bandwagon", "value": 3 } },
+      { "id": "rentalstar","icon": "🏎️", "name": "Rental Superstar", "weight": 1, "desc": "+5 squad overall. After every series win there's a 25% chance he walks.", "effect": { "type": "rentalStar", "value": 5 } },
+      { "id": "moodswings","icon": "🎭", "name": "Mood Swings",    "weight": 2, "desc": "Games 1, 3, 5 and 7: +8% win chance. Games 2, 4 and 6: −3%.", "effect": { "type": "moodSwings", "value": 1 } },
+      { "id": "deeppockets","icon": "💰", "name": "Deep Pockets",  "weight": 2, "desc": "+1% win chance per $25 you're holding when the series starts (max +4%).", "effect": { "type": "deepPockets", "value": 0.01 } },
+      { "id": "copycat",   "icon": "🖨️", "name": "The Copycat",    "weight": 1, "desc": "Mirrors the newest of your other relics.", "effect": { "type": "copycat", "value": 1 } },
+      { "id": "poacher",   "icon": "🕵️", "name": "The Poacher", "weight": 2, "desc": "Victory spoils also deal one player scouted off the NEXT team on your route.", "effect": { "type": "poacher", "value": 1 } }
     ],
 
     "_layers_comment": "The map, bottom to top. Each layer is an array of 1 team key (straight road), 2 team keys (fork — pick your road: usually safe-and-modest vs harder-with-a-better-wheel), or the string 'shop' (the traveling shop). Beat every layer to finish.",

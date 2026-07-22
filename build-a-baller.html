@@ -1127,6 +1127,7 @@
     <div class="dres-board-label">Today's top builds</div>
     <div class="dres-board" id="dResBoard"></div>
     <div id="dResStreak" class="dr-streak"></div>
+    <button id="dResCopy" type="button" style="margin-top:12px;width:100%;padding:11px;border-radius:10px;cursor:pointer;font-family:'Oswald',sans-serif;font-size:13px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent2);background:rgba(25,198,255,.08);border:1px solid rgba(25,198,255,.45)">📋 Copy result</button>
     <button id="dResSim" class="primary" style="margin-top:14px;width:100%">Continue → name &amp; simulate</button>
   </div>
 </div>
@@ -1448,6 +1449,21 @@ async function init() {
   $('drClose').onclick = () => { Sound.click(); closeDailyReveal(); };
   $('dailyReveal').addEventListener('click', e => { if (e.target.id === 'dailyReveal') closeDailyReveal(); });
   $('dResSim').onclick = () => { Sound.click(); closeDailyResults(false); };
+  // 📋 Copy result — the link-free, spoiler-free block players paste into Reddit/chats.
+  { const cb = $('dResCopy'); if (cb) cb.onclick = async () => {
+    if (!window.ShareCard || !window.__lastDaily) return;
+    const txt = ShareCard.resultText({
+      label: (typeof GAME_LABEL !== 'undefined' && GAME_LABEL[LEADERBOARD_GAME]) || 'Build',
+      slots: state.build, ovr: __lastDaily.ovr, rank: __lastDaily.rank, total: __lastDaily.total,
+      streak: (typeof streak !== 'undefined' && streak) ? streak.count : 0,
+    });
+    const ok = await ShareCard.copyText(txt);
+    cb.textContent = ok ? '✓ Copied — paste it anywhere' : 'Press Ctrl+C to copy';
+    if (!ok) { try { window.prompt('Copy your result:', txt); } catch (e) {} }
+    setTimeout(() => { cb.textContent = '📋 Copy result'; }, 2400);
+    try { Sound.click(); } catch (e) {}
+    try { gtag('event', 'copy_daily_result', { game: LEADERBOARD_GAME }); } catch (e) {}
+  }; }
   $('miDaily').onclick = () => { Sound.click(); startDailyChallenge(); };
   $('miStreak').onclick = () => { Sound.click(); openStreak(); };
   renderStreakChip();
@@ -2632,6 +2648,7 @@ async function showDailyResults() {
   }
 }
 function renderDailyResults(res, best, rows, name) {
+  window.__lastDaily = { ovr: res.ovr, rank: res.rank, total: res.total };
   const ov = $('dailyResults');
   const pct = res.total > 1 ? Math.max(1, Math.round((res.rank / res.total) * 100)) : 1;
   $('dResOvr').textContent = res.ovr;
@@ -3896,9 +3913,8 @@ function miniFigureHTML(entry, slots) {
 }
 function shareBuild(entry) {
   const kind = (GAME_LABEL[entry.game] || 'player').toLowerCase();
-  const url = 'https://goat-lab.app';
   const txt = `I built a ${entry.ovr} OVR ${kind}${entry.name ? ` - "${entry.name}"` : ''} on GoatLab. Think you can do better?`;
-  window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(txt)}&url=${encodeURIComponent(url)}`, '_blank', 'noopener');
+  window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(txt)}`, '_blank', 'noopener');
 }
 function openBuildDetails(entryId) {
   const entry = lbEntries.get(String(entryId));

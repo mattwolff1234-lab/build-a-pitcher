@@ -260,5 +260,62 @@
     return { mode: 'download', copied };
   }
 
-  window.ShareCard = { render, share };
+  /* ---------------------------------------------------------------------------
+     Copy-pasteable result block — the Wordle-grid analogue.
+
+     Wordle's emoji grid was invented by a PLAYER and shipped by the dev, and the
+     share text deliberately carried NO URL: "it feels spammy… they were sharing
+     for themselves" (Josh Wardle). So this block is link-free ON PURPOSE — the
+     signature line "🐐 GoatLab" is the googleable hook instead. Do not add a URL.
+
+     Our grid = one square per slot, coloured by that card's TIER, in slot order.
+     Spoiler-safe (never names a player), instantly readable, and braggable: a row
+     with a 🟪 legend or a wall of 🟦 is worth a comment, which is the whole point.
+     --------------------------------------------------------------------------- */
+  const TIER_SQUARE = { grey: '⬛', bronze: '🟫', silver: '⬜', gold: '🟨', diamond: '🟦', legend: '🟪' };
+  function tierOf(v) {
+    v = Number(v) || 0;
+    if (v >= 85) return 'diamond';
+    if (v >= 80) return 'gold';
+    if (v >= 75) return 'silver';
+    if (v >= 65) return 'bronze';
+    return 'grey';
+  }
+  // slots: the game's build array ([{value, legend}…]). Legend cards win over value.
+  function tierRow(slots) {
+    return (slots || []).map(s => {
+      if (!s) return TIER_SQUARE.grey;
+      const t = s.legend ? 'legend' : tierOf(s.value != null ? s.value : s.ovr);
+      return TIER_SQUARE[t] || TIER_SQUARE.grey;
+    }).join('');
+  }
+  // opts: { label, slots, ovr, rank, total, streak, daily, date, extra }
+  function resultText(opts) {
+    opts = opts || {};
+    const d = opts.date instanceof Date ? opts.date : new Date();
+    const day = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const head = `🐐 GoatLab ${opts.daily === false ? '' : 'Daily '}· ${opts.label || 'Build'} · ${day}`;
+    const lines = [head.replace(/\s+·/g, ' ·'), tierRow(opts.slots)];
+    const bits = [];
+    if (opts.ovr != null) bits.push(`${opts.ovr} OVR`);
+    if (opts.rank && opts.total) bits.push(`#${opts.rank.toLocaleString()} of ${opts.total.toLocaleString()}`);
+    if (opts.streak >= 2) bits.push(`🔥 ${opts.streak}`);
+    if (opts.extra) bits.push(opts.extra);
+    if (bits.length) lines.push(bits.join(' · '));
+    return lines.join('\n');
+  }
+  // Clipboard with a legacy fallback (older iOS Safari / non-secure contexts).
+  async function copyText(text) {
+    try { await navigator.clipboard.writeText(text); return true; } catch (e) {}
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.setAttribute('readonly', '');
+      ta.style.cssText = 'position:fixed;top:-1000px;opacity:0';
+      document.body.appendChild(ta); ta.select();
+      const ok = document.execCommand('copy');
+      ta.remove(); return ok;
+    } catch (e) { return false; }
+  }
+
+  window.ShareCard = { render, share, resultText, tierRow, copyText };
 })();

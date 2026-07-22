@@ -612,6 +612,14 @@
           "desc": "Spin the whole league — your agent skews it toward stars. Sign who you freeze, somebody gets cut."
         },
         {
+          "id": "relicwheel",
+          "icon": "✨",
+          "name": "Relic Wheel",
+          "price": 65,
+          "once": false,
+          "desc": "Every card on the wheel is a relic — spoils-wheel odds, minus what you own. One STOP."
+        },
+        {
           "id": "token2",
           "icon": "🎟️",
           "name": "Second-Stop Token",
@@ -647,7 +655,7 @@
     },
     "rookieMaxRating": 64,
     "relicChance": 0.25,
-    "maxRelics": 3,
+    "maxRelics": 5,
     "relics": [
       {
         "id": "ring",
@@ -747,7 +755,18 @@
           "value": 0.15
         },
         "weight": 2
-      }
+      },
+      { "id": "noringers", "icon": "🚫", "name": "Draft & Develop", "weight": 1, "desc": "+4 squad overall — homegrown only: you can never sign a spoils player again.", "effect": { "type": "noRingers", "value": 4 } },
+      { "id": "proveit",   "icon": "📝", "name": "Prove-It Deal",  "weight": 1, "desc": "+3 squad overall. Game wins pay $0 — the big bonuses still count.", "effect": { "type": "proveIt", "value": 3 } },
+      { "id": "piggy",     "icon": "🐖", "name": "Piggy Bank",     "weight": 2, "desc": "+$4 every city you land in. Shatters forever the first time you buy from a shop.", "effect": { "type": "cityCash", "value": 4 } },
+      { "id": "dynasty",   "icon": "🏗️", "name": "Dynasty",        "weight": 1, "desc": "+1 squad overall for every fight won while holding it.", "effect": { "type": "dynasty", "value": 1 } },
+      { "id": "egg",       "icon": "🥚", "name": "The Egg",        "weight": 2, "desc": "Does nothing… hatches into a random chase relic after 3 wins.", "effect": { "type": "egg", "value": 3 } },
+      { "id": "bandwagon", "icon": "🚌", "name": "Bandwagon",      "weight": 2, "desc": "Wins pay a bonus that grows: $3, then $6, then $9…", "effect": { "type": "bandwagon", "value": 3 } },
+      { "id": "rentalstar","icon": "🏎️", "name": "One-Year Rental", "weight": 1, "desc": "+5 squad overall. After every win there's a 25% chance he walks in free agency.", "effect": { "type": "rentalStar", "value": 5 } },
+      { "id": "moodswings","icon": "🎭", "name": "Mood Swings",    "weight": 2, "desc": "Comes out ON FIRE: +8% to lead at half — then −3% down the stretch.", "effect": { "type": "moodSwings", "value": 1 } },
+      { "id": "deeppockets","icon": "💰", "name": "Deep Pockets",  "weight": 2, "desc": "+1% win chance per $25 you're holding at kickoff (max +4%).", "effect": { "type": "deepPockets", "value": 0.01 } },
+      { "id": "copycat",   "icon": "🖨️", "name": "The Copycat",    "weight": 1, "desc": "Mirrors the newest of your other relics.", "effect": { "type": "copycat", "value": 1 } },
+      { "id": "poacher",   "icon": "🕵️", "name": "Advance Scout", "weight": 2, "desc": "Victory spoils also deal one player scouted off the NEXT team on your schedule.", "effect": { "type": "poacher", "value": 1 } }
     ],
     "layers": [
       [

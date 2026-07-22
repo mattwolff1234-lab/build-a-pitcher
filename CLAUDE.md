@@ -368,6 +368,28 @@ de-listed from the hub, and its IP posture means no franchise keywords anywhere.
 accurate, useful to a human, never names the ratings source (house rule: "Prime"), no keyword
 stuffing (Google's helpful-content system penalizes filler). New game → add an entry.
 
+## Shareable result block (2026-07-22)
+`ShareCard.resultText()/tierRow()/copyText()` in share-card.js + a 📋 Copy result button on
+every build game's Daily Results panel (`#dResCopy`, wired beside `#dResSim`; `window.__lastDaily`
+stashes ovr/rank/total in renderDailyResults).
+
+Output — the Wordle-grid analogue: one square per slot, coloured by that card's TIER, in slot
+order (⬛grey 🟫bronze ⬜silver 🟨gold 🟦diamond 🟪legend):
+
+    🐐 GoatLab Daily · Pitcher · Jul 22
+    🟪🟦🟦🟨⬜🟫⬛🟨🟫
+    96 OVR · #12 of 847 · 🔥 14
+
+Spoiler-safe (never names a player), and braggable in a way Wordle's grey squares are not.
+
+**The block carries NO URL, deliberately — do not "fix" this.** Wordle's creator removed the
+link because "it feels spammy… they were sharing for themselves"; the 🐐 GoatLab signature line
+is the googleable hook instead. Same reason `shareBuild()`'s X-intent lost its bare
+`&url=goat-lab.app`. The career card's `/p/<id>` permalink is KEPT — that points at the artifact
+being shared, not the front door. Sourced from the deep-research run of 2026-07-22 (which also
+refuted the popular "Immaculate Grid went viral from one r/baseball post" story — the inflection
+actually followed a large baseball Twitter account).
+
 ## Career simulation (shipped)
 
 After the draft: **name the pitcher, pick a team, and "Simulate Career"** → a season-by-season
@@ -693,14 +715,23 @@ and internal CSS/fn names say `rr-`).
   `pl_rr_gauntlet` (forever, not daily). **One life** — a series loss wipes the run (`freshG`),
   no refresh-scumming. Beat a team → **victory spoils wheel**: their era-rated roster (Ray Allen is
   87 on the '08 Celtics, 79 on the '13 Heat), sign one by cutting the position incumbent or 6th man
-  (squad stays 7) — or pass. **Relics** ride that wheel (`relicChance` .25/card, max 3, land more →
-  swap): elimEdge/noMomentumDrag/gameEdge/gameWinCash/interestCap/shopDiscount/upsetMult(×3 upset
-  pay)/ovrBoost/firstGameEdge.
+  (squad stays 7) — or pass. **Relics** ride that wheel (`relicChance` .25/card, **max 5**, land more →
+  swap): 20 per sport (2026-07-22 StS/Balatro pass added 11 — restrictions/scalers/gambles). Simple
+  types: elimEdge/noMomentumDrag/gameEdge/gameWinCash/interestCap/shopDiscount/upsetMult(×3 upset
+  pay)/ovrBoost/firstGameEdge. Stateful/rule types resolve through **`relicEffects()`** (ONE resolver
+  under relicSum/relicHas — every caller inherits new relics): noRingers/proveIt (OVR + a rule),
+  cityCash (Piggy Bank — dies on first shop buy via `shopSpent()`), dynasty/egg/bandwagon (counters
+  on `r.state`, settled post-payout in the result screen), rentalStar (25% walk roll/win), moodSwings
+  (deterministic ±, football = two-act half/final variant), deepPockets (cash→win%, capped),
+  copycat (mirrors newest by `r.seq`), poacher (next-route-team player rides the spoils wheel).
+  Egg hatches only into pure-upside weight-1 relics (never restrictions). All gauntlet-only —
+  the Daily stays byte-identical.
 - **Economy (Balatro-style Cap Space):** $5/game win, +$15 series, +$10 sweep, +$20 upset; interest
   on series wins ($1 per $5 held, cap $10) rewards a float. All cash rules live in ONE place
   (`payPerGameWin`/`buzzerBonus`/`interestFor`) shared by the live in-series counter and the result
   payout so they can never disagree. **Shop items:** 🛟 Insurance (one-use — a fatal loss rewinds to
   the killing game and re-flips from there), 🏋️ Training Camp +2 (max +4/player), 🎰 FA wheel,
+  ✨ Relic Wheel ($65 repeatable — every card is a relic, spoils-wheel weights minus owned),
   🎟️ Second-Stop Token, 📋 Coach Carousel, 🏟️ Home Court Deed (flips the 2-2-1-1-1 pattern + 3%
   home edge), 🎓 Draft Workout (≤69 rookie who grows +1 per game win, cap 99).
 - **Leaderboard:** shared `/api/score`, `game='goatsquad'`. Posts `{ovr, build:{career:{totals:{w:
