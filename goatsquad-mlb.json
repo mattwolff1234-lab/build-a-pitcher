@@ -606,6 +606,14 @@
           "desc": "Spin the whole league — your agent skews it toward stars. Sign who you freeze, somebody gets cut."
         },
         {
+          "id": "relicwheel",
+          "icon": "✨",
+          "name": "Relic Wheel",
+          "price": 65,
+          "once": false,
+          "desc": "Every card on the wheel is a relic — spoils-wheel odds, minus what you own. One STOP."
+        },
+        {
           "id": "token2",
           "icon": "🎟️",
           "name": "Second-Stop Token",
@@ -641,7 +649,17 @@
     },
     "rookieMaxRating": 64,
     "relicChance": 0.25,
-    "maxRelics": 3,
+    "maxRelics": 5,
+
+    "_mods_comment": "🃏 Run modifiers — a fresh Gauntlet offers 3 of these (plus Standard Issue). Behavior is keyed by id in the page (modReelFilter/applyMod/etc); this file is just the wording.",
+    "mods": [
+      { "id": "scorched",  "icon": "🚫", "name": "No Ghosts",       "desc": "Legends never appear on your reels this run. Start with +$40." },
+      { "id": "benchmob",  "icon": "💪", "name": "Bench Mob",       "desc": "Your DH gets +6 after the draft. Every boss +1." },
+      { "id": "headstart", "icon": "🎁", "name": "Head Start",      "desc": "Start with a random economy relic. Shop prices +30% all run." },
+      { "id": "ironfive",  "icon": "🔒", "name": "Set the Lineup",  "desc": "No mulligan this run. +$60 up front." },
+      { "id": "underdogs", "icon": "🐕", "name": "Underdogs",       "desc": "Your reels max out at 84 overall. All winnings +50%." }
+    ],
+
     "relics": [
       {
         "id": "ring",
@@ -741,7 +759,18 @@
           "value": 0.15
         },
         "weight": 2
-      }
+      },
+      { "id": "noringers", "icon": "🚫", "name": "Homegrown", "weight": 1, "desc": "+4 squad overall — trust the farm system: you can never sign a spoils player again.", "effect": { "type": "noRingers", "value": 4 } },
+      { "id": "proveit",   "icon": "📝", "name": "Prove-It Deal",  "weight": 1, "desc": "+3 squad overall. Game wins pay $0 — series money still counts.", "effect": { "type": "proveIt", "value": 3 } },
+      { "id": "piggy",     "icon": "🐖", "name": "Piggy Bank",     "weight": 2, "desc": "+$4 every city you land in. Shatters forever the first time you buy from a shop.", "effect": { "type": "cityCash", "value": 4 } },
+      { "id": "dynasty",   "icon": "🏗️", "name": "Dynasty",        "weight": 1, "desc": "+1 squad overall for every series won while holding it.", "effect": { "type": "dynasty", "value": 1 } },
+      { "id": "egg",       "icon": "🥚", "name": "The Egg",        "weight": 2, "desc": "Does nothing… hatches into a random chase relic after 3 series wins.", "effect": { "type": "egg", "value": 3 } },
+      { "id": "bandwagon", "icon": "🚌", "name": "Bandwagon",      "weight": 2, "desc": "Series wins pay a bonus that grows: $3, then $6, then $9…", "effect": { "type": "bandwagon", "value": 3 } },
+      { "id": "rentalstar","icon": "🏎️", "name": "Deadline Rental", "weight": 1, "desc": "+5 squad overall. After every series win there's a 25% chance he walks at the deadline.", "effect": { "type": "rentalStar", "value": 5 } },
+      { "id": "moodswings","icon": "🎭", "name": "Mood Swings",    "weight": 2, "desc": "Games 1, 3, 5 and 7: +8% win chance. Games 2, 4 and 6: −3%.", "effect": { "type": "moodSwings", "value": 1 } },
+      { "id": "deeppockets","icon": "💰", "name": "Deep Pockets",  "weight": 2, "desc": "+1% win chance per $25 you're holding when the series starts (max +4%).", "effect": { "type": "deepPockets", "value": 0.01 } },
+      { "id": "copycat",   "icon": "🖨️", "name": "The Copycat",    "weight": 1, "desc": "Mirrors the newest of your other relics.", "effect": { "type": "copycat", "value": 1 } },
+      { "id": "poacher",   "icon": "🕵️", "name": "Advance Scout", "weight": 2, "desc": "Victory spoils also deal one player scouted off the NEXT team on your schedule.", "effect": { "type": "poacher", "value": 1 } }
     ],
     "layers": [
       [
@@ -775,6 +804,67 @@
       ]
     ],
     "teams": {
+      "_rotation_comment": "↓ 2026-07-22 rotation-pool era teams — never in the config layers; ensureLadder() swaps them into band-matched early/mid slots per run. Era-rated like everything else.",
+      "tigers03": { "name": "2003 Tigers", "rating": 74, "abbr": "DET", "logoId": 116, "blurb": "43–119. Hey — somebody has to be fight one.", "players": [
+        { "name": "Dmitri Young", "rating": 78, "pos": "LF" },
+        { "name": "Carlos Pena", "rating": 70, "pos": "1B" },
+        { "name": "Alex Sanchez", "rating": 68, "pos": "CF" },
+        { "name": "Bobby Higginson", "rating": 69, "pos": "RF" },
+        { "name": "Eric Munson", "rating": 62, "pos": "3B" },
+        { "name": "Ramon Santiago", "rating": 60, "pos": "SS" },
+        { "name": "Brandon Inge", "rating": 61, "pos": "C" },
+        { "name": "Mike Maroth", "rating": 58, "pos": "P" }
+      ] },
+      "rays08": { "name": "2008 Rays", "rating": 79, "abbr": "TB", "logoId": 139, "blurb": "Worst-to-first. The kids all arrived at once.", "players": [
+        { "name": "Evan Longoria", "rating": 84, "pos": "3B" },
+        { "name": "Carl Crawford", "rating": 83, "pos": "LF" },
+        { "name": "Carlos Pena", "rating": 80, "pos": "1B" },
+        { "name": "B.J. Upton", "rating": 78, "pos": "CF" },
+        { "name": "Scott Kazmir", "rating": 79, "pos": "P" },
+        { "name": "James Shields", "rating": 78, "pos": "P" },
+        { "name": "Dioner Navarro", "rating": 74, "pos": "C" },
+        { "name": "Akinori Iwamura", "rating": 72, "pos": "2B" }
+      ] },
+      "phillies93": { "name": "1993 Phillies", "rating": 84, "abbr": "PHI", "logoId": 143, "blurb": "Mullets, dirt, and a pennant nobody saw coming.", "players": [
+        { "name": "Lenny Dykstra", "rating": 88, "pos": "CF" },
+        { "name": "Curt Schilling", "rating": 86, "pos": "P" },
+        { "name": "Darren Daulton", "rating": 85, "pos": "C" },
+        { "name": "John Kruk", "rating": 84, "pos": "1B" },
+        { "name": "Dave Hollins", "rating": 78, "pos": "3B" },
+        { "name": "Jim Eisenreich", "rating": 74, "pos": "RF" },
+        { "name": "Mickey Morandini", "rating": 72, "pos": "2B" },
+        { "name": "Kevin Stocker", "rating": 70, "pos": "SS" }
+      ] },
+      "indians95": { "name": "1995 Indians", "rating": 89, "abbr": "CLE", "logoId": 114, "blurb": "That lineup was simply unfair — 100 wins in 144 games.", "players": [
+        { "name": "Albert Belle", "rating": 95, "pos": "LF" },
+        { "name": "Jim Thome", "rating": 90, "pos": "3B" },
+        { "name": "Manny Ramirez", "rating": 89, "pos": "RF" },
+        { "name": "Kenny Lofton", "rating": 88, "pos": "CF" },
+        { "name": "Carlos Baerga", "rating": 84, "pos": "2B" },
+        { "name": "Eddie Murray", "rating": 83, "pos": "DH" },
+        { "name": "Omar Vizquel", "rating": 80, "pos": "SS" },
+        { "name": "Dennis Martinez", "rating": 82, "pos": "P" }
+      ] },
+      "mets86": { "name": "1986 Mets", "rating": 90, "abbr": "NYM", "logoId": 121, "blurb": "Doc, Darryl, and a team New York still argues about.", "players": [
+        { "name": "Dwight Gooden", "rating": 94, "pos": "P" },
+        { "name": "Darryl Strawberry", "rating": 90, "pos": "RF" },
+        { "name": "Gary Carter", "rating": 88, "pos": "C" },
+        { "name": "Keith Hernandez", "rating": 87, "pos": "1B" },
+        { "name": "Lenny Dykstra", "rating": 81, "pos": "CF" },
+        { "name": "Mookie Wilson", "rating": 78, "pos": "LF" },
+        { "name": "Ray Knight", "rating": 76, "pos": "3B" },
+        { "name": "Wally Backman", "rating": 73, "pos": "2B" }
+      ] },
+      "dodgers55": { "name": "1955 Dodgers", "rating": 92, "abbr": "BRO", "logoId": 119, "blurb": "Next year finally came to Brooklyn.", "players": [
+        { "name": "Duke Snider", "rating": 93, "pos": "CF" },
+        { "name": "Roy Campanella", "rating": 93, "pos": "C" },
+        { "name": "Jackie Robinson", "rating": 91, "pos": "3B" },
+        { "name": "Don Newcombe", "rating": 90, "pos": "P" },
+        { "name": "Gil Hodges", "rating": 88, "pos": "1B" },
+        { "name": "Pee Wee Reese", "rating": 87, "pos": "SS" },
+        { "name": "Carl Furillo", "rating": 85, "pos": "RF" },
+        { "name": "Jim Gilliam", "rating": 79, "pos": "2B" }
+      ] },
       "mets62": {
         "name": "1962 Mets",
         "rating": 74,
