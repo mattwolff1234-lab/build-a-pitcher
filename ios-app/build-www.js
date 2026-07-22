@@ -76,8 +76,14 @@ for (const f of PAGES) {
   let html = fs.readFileSync(src, 'utf8');
   // 1. native shim first, before any other script
   html = html.replace('<head>', '<head>\n<script src="/native-shim.js"></script>');
-  // 2. strip Playwire (comment marker through the ramp.js tag, plus the ad-safe style is harmless to keep)
-  html = html.replace(/<!-- Playwire Ramp[\s\S]*?cdn\.intergient\.com[^>]*><\/script>/, '<!-- Playwire stripped for native build (web ad tags are invalid in apps) -->');
+  // 2. strip Playwire. The tag is now a CONDITIONAL LOADER (two <script>s that append
+  //    ramp.js at runtime), not a plain <script src>, so match the whole block from the
+  //    marker through the loader's own </script>, then drop the ad-safe spacing <style>.
+  //    Web ad tags inside a native app violate Playwire policy (would tank the account) —
+  //    the post-build guard at the bottom of this file FAILS the build if any loader leaks.
+  html = html.replace(/<!-- Playwire Ramp[\s\S]*?cdn\.intergient\.com[\s\S]*?<\/script>/,
+    '<!-- Playwire stripped for native build (web ad tags are invalid in apps) -->');
+  html = html.replace(/\n?[ \t]*<style>\s*\/\* Ad-safe mobile spacing[\s\S]*?<\/style>/, '');
   // 3. strip Google Sign-In (web GSI is blocked inside app WebViews)
   html = html.replace(/<script[^>]*accounts\.google\.com\/gsi\/client[^>]*><\/script>/, '<!-- GSI stripped for native build (native Apple/Google sign-in via the shim instead) -->');
   // 4. strip the "powered by Playwire" footer badge (no ads in the app)
@@ -110,6 +116,18 @@ for (const dir of ASSET_DIRS) {
   if (!fs.existsSync(src)) { skipped.push(dir + '/'); continue; }
   fs.cpSync(src, path.join(OUT, dir), { recursive: true });
   assets++;
+}
+
+// Guardrail: a web ad loader must NEVER reach the app bundle — it violates Playwire's
+// policy and risks the whole ad account (see ads.md). If the strip above ever drifts from
+// the tag format again, fail loudly here instead of silently shipping ads inside the app.
+const adLeaks = fs.readdirSync(OUT)
+  .filter(f => f.endsWith('.html'))
+  .filter(f => fs.readFileSync(path.join(OUT, f), 'utf8').includes('cdn.intergient.com'));
+if (adLeaks.length) {
+  console.error('\nFATAL: Playwire ad loader survived native stripping in: ' + adLeaks.join(', '));
+  console.error('The app must ship with NO web ad tags. Fix the strip in build-www.js (step 2).');
+  process.exit(1);
 }
 
 console.log(`www/ built: ${pages} pages, ${assets} asset groups, ${ROUTES.size} clean routes rewritten to files.`);
