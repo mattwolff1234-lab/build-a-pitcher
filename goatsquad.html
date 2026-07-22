@@ -437,6 +437,23 @@
   table.bs td { padding:6px; text-align:right; border-bottom:1px solid rgba(120,160,210,.08); }
   table.bs tr.star td { color:var(--gold); }
   table.bs tr.bench td { color:var(--dim); }
+  /* 📖 guide */
+  .gTabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
+  .gSec { margin:0 0 6px; font:600 .72rem 'Inter',sans-serif; letter-spacing:.2em; color:var(--accent2); }
+  .gRow { display:flex; gap:11px; align-items:flex-start; padding:9px 4px; border-bottom:1px solid rgba(120,160,210,.08); }
+  .gRow:last-child { border-bottom:none; }
+  .gIcon { flex:none; width:30px; text-align:center; font-size:1.2rem; line-height:1.4; }
+  .gCol { flex:1; min-width:0; }
+  .gCol b { display:block; font-size:.92rem; }
+  .gCol span { display:block; color:var(--muted); font-size:.82rem; line-height:1.45; }
+  .gTag { flex:none; align-self:center; font:600 .6rem 'Inter',sans-serif; letter-spacing:.1em; padding:3px 8px;
+    border-radius:999px; border:1px solid var(--line); color:var(--dim); white-space:nowrap; }
+  .gTag.rare { color:var(--legend); border-color:rgba(163,102,255,.5); }
+  .gTag.held { color:#4ade80; border-color:rgba(74,222,128,.5); }
+  .gTag.locked { color:var(--dim); }
+  .gTag.on { color:#ffce3a; border-color:#ffce3a; }
+  .gLead { color:var(--muted); font-size:.84rem; line-height:1.5; margin:0 0 12px; }
+
   /* ⚠️ elite node · 🏆 banner picker · 🃏 mod pick */
   .mnode.elite { border-color:#ff9a3c; animation:elitePulse 1.6s ease-in-out infinite; }
   @keyframes elitePulse { 0%,100% { box-shadow:0 0 10px rgba(255,154,60,.35); } 50% { box-shadow:0 0 22px rgba(255,154,60,.8); } }
@@ -522,7 +539,7 @@
         <div><i>🌀</i><span><b>Every open slot spins at once</b>. PGs in the PG slot, centers in the C slot, faces flying past.</span></div>
         <div><i>⏹</i><span><b>Hit STOP</b> to freeze all of them where they stand.</span></div>
         <div><i>👆</i><span><b>Lock ONE</b> of the frozen players. The rest start spinning again. Repeat until your squad is full.</span></div>
-        <div><i>♻️</i><span><b>One mulligan:</b> after your last lock you can drop a player and respin that slot. It can come back better... or worse.</span></div>
+        <div><i>♻️</i><span><b>One mulligan — your single do-over:</b> after your last lock you can drop a player and respin that slot. It can come back better... or worse.</span></div>
         <div><i>🥊</i><span>Reveal your team overall, then <b>survive a 7-game series</b> against the boss, box scores and all.</span></div>
         <div><i>🎯</i><span><b>Daily:</b> everyone worldwide gets the same spins and boss. <b>Gauntlet:</b> fly city to city through 10 legendary teams — beat them all.</span></div>
         <div><i>🗺️</i><span><b>Every run, a new map:</b> the early cities reshuffle each Gauntlet run — only the final two bosses never move. One fork hides a ⚠️ <b>ELITE</b> team: tougher, but its spoils wheel gushes relics. The other road is always open.</span></div>
@@ -552,6 +569,7 @@
     <div class="panel mapHead">
       <div class="k disp" id="mapKick">THE GAUNTLET</div>
       <p id="mapSub"></p>
+      <button class="btn ghost" id="btnGuide" type="button" style="min-height:38px; padding:6px 15px; font-size:.82rem">📖 Gauntlet Guide</button>
     </div>
     <div class="panel mapBox">
       <svg id="mapSvg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"></svg>
@@ -692,6 +710,20 @@
     <div class="ovhead"><h3 class="disp">🏆 GAUNTLET LEADERBOARD</h3><button class="x" id="lbClose">✕</button></div>
     <p class="lbLead">Deepest runs worldwide. Ties broken by squad overall.</p>
     <div id="lbBody"></div>
+  </div>
+</div>
+
+<!-- 📖 gauntlet guide: how to play + the full relic catalog -->
+<div class="ov" id="guideOv">
+  <div class="panel ovp">
+    <div class="ovhead"><h3 class="disp">📖 GAUNTLET GUIDE</h3><button class="x" id="guideClose">✕</button></div>
+    <div class="gTabs">
+      <button class="bs-tab on" type="button" data-gt="how">How to play</button>
+      <button class="bs-tab" type="button" data-gt="relics">✨ Relics</button>
+      <button class="bs-tab" type="button" data-gt="mods">🃏 Modifiers</button>
+      <button class="bs-tab" type="button" data-gt="banners">🏆 Banners</button>
+    </div>
+    <div id="guideBody"></div>
   </div>
 </div>
 
@@ -890,7 +922,7 @@ const BANNERS = [null,
   { n: 'I',   name: 'REPEAT RUN',   desc: 'Every team +1' },
   { n: 'II',  name: 'THREE-PEAT',   desc: 'Teams +2 · shop prices +20%' },
   { n: 'III', name: 'FOUR-PEAT',    desc: 'Teams +3 · interest cap halved' },
-  { n: 'IV',  name: 'FIVE-PEAT',    desc: 'Teams +4 · no mulligan' },
+  { n: 'IV',  name: 'FIVE-PEAT',    desc: 'Teams +4 · no draft do-over' },
   { n: 'V',   name: 'THE GOAT RUN', desc: 'Teams +5 · Insurance not sold' }];
 function bannerState() {
   try { const j = JSON.parse(localStorage.getItem('pl_rr_banner') || '{}'); return { max: Math.min(5, j.max || 0), last: j.last || 0 }; }
@@ -1001,6 +1033,73 @@ function shopSpent() {   // 🐖 the Piggy Bank shatters the first time you buy 
   pig.state = { dead: 1 };
   pig.desc = 'Shattered — it stopped paying the day you went shopping.';
   toast(`${pig.icon}💥 ${pig.name} shattered!`);
+}
+
+/* ---------- 📖 the guide: how the Gauntlet works + every relic, modifier and banner.
+   Everything reads from CFG/BANNERS, so a config change updates the guide for free. ---------- */
+const RARITY = { 1: ['RARE', 'rare'], 2: ['UNCOMMON', ''], 3: ['COMMON', ''] };
+function gRow(icon, name, desc, tag, tagCls) {
+  return `<div class="gRow"><span class="gIcon">${icon}</span><span class="gCol"><b>${name}</b><span>${desc}</span></span>` +
+    (tag ? `<span class="gTag ${tagCls || ''}">${tag}</span>` : '') + `</div>`;
+}
+function guideHow() {
+  const R = CFG.gauntlet.rental || {};
+  const rows = [
+    ['🎰', 'Build ONE squad', `Every slot spins at once — hit <b>STOP</b>, lock one player, the rest respin. This squad rides the <b>whole</b> Gauntlet, so draft for the long haul.`],
+    ['🔄', 'The mulligan (your one do-over)', `After your last lock you can <b>drop one player and respin that slot</b> — ratings still hidden. Some runs take this away (the 🔒 modifier, 🏆 BANNER IV): then every lock is final the moment you make it.`],
+    ['⚔️', 'Fights', `Each city is a best-of-seven series against a legendary team, rated as they were that season.`],
+    ['💀', 'One life', `Lose a fight and the <b>run is over</b> — squad, cash, relics, all of it. Only 🛟 Insurance can undo a loss, once.`],
+    ['🍴', 'Forks', `Two roads means a choice. One side may be <b>⚠️ ELITE</b>: tougher and armed with a signature ability, but its spoils wheel gushes relics and pays a bounty. The other road is always the safe way through.`],
+    ['🏆', 'Victory spoils', `Beat a team and spin their roster — sign one (somebody on your squad gets cut) or take a ✨ relic. Passing is always allowed.`],
+    ['💰', 'Cap Space', `${cash$(ECO().gameWin || 0)} per game won, bonuses at the buzzer, plus interest on whatever you're holding when you win. <b>The counter on the scoreboard is live money</b> — you can spend it before the fight is even over.`],
+    ['🏪', 'Traveling shops', `Between cities. Upgrades, insurance, extra wheels — winnings are worthless if the run dies with them in your pocket.`],
+    ['🪪', 'Rent-A-Ring-Chaser', `At Game 7, a ${R.minRating || 90}+ mercenary offers to suit up for ${cash$(R.price || 100)} — legends included. One game only, then he's gone, win or lose.`],
+    ['✨', 'Relics', `Run-wide powers, up to <b>${CFG.gauntlet.maxRelics || 5}</b> at once. They ride the victory wheels or you buy a guaranteed one at the ✨ Relic Wheel. Full list in the Relics tab.`],
+    ['🌋', 'Overtime', `Run the whole table and the phone rings — an optional bonus ladder of national teams and myths. Clear it for 🌌 IMMORTAL.`]
+  ];
+  return `<p class="gLead">One squad. One life. ${totalFights()} teams between you and the banner.</p>` +
+    rows.map(r => gRow(r[0], r[1], r[2])).join('');
+}
+function guideRelics() {
+  const owned = new Set(((G && G.relics) || []).map(r => r.id));
+  const list = (CFG.gauntlet.relics || []).slice().sort((a, b) => (a.weight || 1) - (b.weight || 1) || a.name.localeCompare(b.name));
+  return `<p class="gLead">Hold up to <b>${CFG.gauntlet.maxRelics || 5}</b>. Land one with a full bag and you choose which to swap out. Rarer relics bend the run harder — the common ones pay.</p>` +
+    list.map(r => {
+      const held = owned.has(r.id);
+      const rar = RARITY[r.weight || 1] || RARITY[1];
+      return gRow(r.icon, r.name, r.desc, held ? '✓ HELD' : rar[0], held ? 'held' : rar[1]);
+    }).join('');
+}
+function guideMods() {
+  return `<p class="gLead">Every fresh Gauntlet deals you three of these plus <b>Standard Issue</b> (no modifier). One pick, whole run.</p>` +
+    (CFG.gauntlet.mods || []).map(m => gRow(m.icon, m.name, m.desc)).join('');
+}
+function guideBanners() {
+  const st = bannerState();
+  return `<p class="gLead">Win the Gauntlet and you don't just stop — you hang a banner and unlock the next level. Beating the table at your highest banner opens the one above it. You can always drop back down; banners are saved on this device.</p>` +
+    BANNERS.slice(1).map((b, i) => {
+      const n = i + 1, cur = (G && G.banner) === n, open = st.max >= n;
+      return gRow('🏆', `BANNER ${b.n} · ${b.name}`, b.desc + (n === 4 ? ' — no drop-and-respin after the draft.' : ''),
+        cur ? 'SELECTED' : open ? 'UNLOCKED' : '🔒 LOCKED', cur ? 'on' : open ? 'held' : 'locked');
+    }).join('');
+}
+function openGuide(tab) {
+  const t = tab || 'how';
+  document.querySelectorAll('#guideOv .bs-tab').forEach(b => b.classList.toggle('on', b.dataset.gt === t));
+  $('guideBody').innerHTML = t === 'relics' ? guideRelics() : t === 'mods' ? guideMods() : t === 'banners' ? guideBanners() : guideHow();
+  $('guideOv').style.display = 'flex';
+}
+/* ---------- 💵 spendable cash — the number on the scoreboard IS the number you can spend.
+   Game wins pay into `run.cashShown` live but only reach the bank at settlement, so an
+   in-series purchase is booked against the counter and reconciled ONCE in the result
+   screen (`run.spent`). The bank can never double-count and can never go negative. ---------- */
+function spendableCash() { return (run && run.cashShown != null) ? run.cashShown : ((G && G.cash) || 0); }
+function spendInSeries(n) {
+  run.spent = (run.spent || 0) + n;
+  if (run.cashShown != null) {
+    run.cashShown -= n;
+    $('bossCash').textContent = cash$(run.cashShown);
+  }
 }
 
 /* ---------- the map: layered path (straight roads, forks, shops), plane flies you between ---------- */
@@ -1613,7 +1712,7 @@ function startRun(mode) {
     stage: mode === 'daily' ? null : G.stage,
     ovr: 0, series: null, resultShown: false
   };
-  if (mode === 'gauntlet' && (bannerFx().noMull || G.mod === 'ironfive')) run.redoUsed = true;   // no mulligan this run
+  if (mode === 'gauntlet' && (bannerFx().noMull || G.mod === 'ironfive')) { run.redoUsed = true; run.noMulligan = true; }   // no do-over this run
   CFG.slots.forEach((s, i) => {
     const el = $('slot' + i);
     el.className = 'slot' + (s.type === 'coach' ? ' coach' : '');
@@ -1810,7 +1909,7 @@ function tryLock(i) {
   if (run.lockedCount === CFG.slots.length) {
     $('stopBtn').disabled = true;
     if (!run.redoUsed) setTimeout(redoOffer, 450);   // last spin done → offer the mulligan
-    else { $('gameHint').textContent = 'Squad locked!'; setTimeout(reveal, 420); }
+    else { $('gameHint').innerHTML = run.noMulligan ? 'Squad locked — <b>no do-over this run</b>.' : 'Squad locked!'; setTimeout(reveal, 420); }
   } else {
     run.tickBase = run.tick + 1;                       // resume the reels from the next entry
     setTimeout(beginSpin, CFG.spin.resumeMs || 400);   // brief beat, then the rest respin
@@ -2299,7 +2398,7 @@ function rewindAndResim() {
 /* ---------- 🪪 Rent-A-Ring-Chaser — a Game 7 hired gun, gone after the buzzer ---------- */
 function offerRental() {
   const R = CFG.gauntlet && CFG.gauntlet.rental;
-  if (!R || run.mode !== 'gauntlet' || run.rentalOffered || G.cash < (R.price || 100)) return;
+  if (!R || run.mode !== 'gauntlet' || run.rentalOffered || spendableCash() < (R.price || 100)) return;
   run.rentalOffered = true;   // one knock per series — the insurance re-flip doesn't re-offer
   bossTl.pause();
   run._skipWas = $('bossSkip').style.display;   // ⏩ Skip could race a paid re-flip — bench it during the offer
@@ -2325,11 +2424,8 @@ function offerRental() {
 }
 function rentChaser() {
   const R = CFG.gauntlet.rental;
-  if (G.cash < R.price) return;
-  G.cash -= R.price;
-  saveG();
-  run.cashShown = G.cash;
-  $('bossCash').textContent = cash$(G.cash);
+  if (spendableCash() < R.price) return;
+  spendInSeries(R.price);
   track('shop_use', { item: 'rental', stage: fightNum(run.stage) });
   // every eligible player, legends included, at EVEN weight — no rarity bands here
   const onSquad = new Set(run.locked.filter(e => e && !e.coach).map(e => e.name));
@@ -2399,7 +2495,7 @@ function showResult() {
       run.interestPaid = interestFor(G.cash);
       earned += run.interestPaid;
     }
-    G.cash += earned;
+    G.cash = Math.max(0, G.cash + earned - (run.spent || 0));   // 🪪 in-series spending settles here
     // ✨ stateful relic settlement — AFTER the payout math (which must read pre-win state)
     if (won) {
       (G.relics || []).forEach(r => {
@@ -3409,6 +3505,10 @@ $('bsOv').addEventListener('click', ev => { if (ev.target === $('bsOv')) $('bsOv
 $('btnBoard').addEventListener('click', openBoard);
 $('lbClose').addEventListener('click', () => { $('lbOv').style.display = 'none'; });
 $('lbOv').addEventListener('click', ev => { if (ev.target === $('lbOv')) $('lbOv').style.display = 'none'; });
+$('btnGuide').addEventListener('click', () => openGuide('how'));
+$('guideClose').addEventListener('click', () => { $('guideOv').style.display = 'none'; });
+$('guideOv').addEventListener('click', ev => { if (ev.target === $('guideOv')) $('guideOv').style.display = 'none'; });
+$('guideOv').querySelectorAll('.bs-tab').forEach(b => b.addEventListener('click', () => openGuide(b.dataset.gt)));
 $('modClose').addEventListener('click', () => { $('modOv').style.display = 'none'; });
 $('modOv').addEventListener('click', ev => { if (ev.target === $('modOv')) $('modOv').style.display = 'none'; });
 $('lbBody').addEventListener('click', ev => {

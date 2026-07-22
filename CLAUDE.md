@@ -743,6 +743,18 @@ and internal CSS/fn names say `rr-`).
   Insurance. Level rides `G.banner`, tags the fight kicker + boss intro, posts as `build.rr.banner`
   (shows on lb row detail + share text), unlock announced on the champion result screen + a howto
   bullet on all three pages. Football variants: two-act Mood Swings and a 2-ability elite pool.
+- **📖 Gauntlet Guide + spendable in-series cash (2026-07-22):** `openGuide()` overlay off the map
+  header — 4 tabs (How to play · the FULL relic catalog with rarity chips + ✓ HELD · modifiers ·
+  banners with lock state), all rendered from CFG/BANNERS so config edits update it for free.
+  **Bug fixed the same pass:** the 🪪 Ring Chaser gated on BANKED cash (`G.cash`) while the
+  scoreboard showed banked + this series' live winnings, so a board reading $103 with $88 banked
+  silently skipped the Game-7 knock (dead zone ≈ $85–99 banked, wider with Sponsor Deal/Underdogs;
+  pre-existing since the pages shipped, all 3 games). Now `spendableCash()` = the counter and
+  `spendInSeries()` books the purchase against it; settlement reconciles ONCE via
+  `G.cash = max(0, G.cash + earned − run.spent)` — never double-counts, never negative (a game-7
+  loss ends the run anyway). Any future in-series purchase must use the same two helpers.
+  "Mulligan" is now spelled out as "your one do-over" in the howto/guide/BANNER IV/Iron Five copy,
+  and the final-lock hint reads "no do-over this run" when it's been taken away.
 - **Economy (Balatro-style Cap Space):** $5/game win, +$15 series, +$10 sweep, +$20 upset; interest
   on series wins ($1 per $5 held, cap $10) rewards a float. All cash rules live in ONE place
   (`payPerGameWin`/`buzzerBonus`/`interestFor`) shared by the live in-series counter and the result
