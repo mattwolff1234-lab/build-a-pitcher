@@ -3643,6 +3643,7 @@ function finishPlaythrough(career) {
     $('careerCard').style.display = 'block';
     gsap.fromTo($('careerCard'), { y: 14, opacity: 0, scale: .97 }, { y: 0, opacity: 1, scale: 1, duration: .55, ease: 'back.out(1.5)' });
     $('submitRow').style.display = 'flex';
+    autoSubmitScore();
     const shb = $('saveHofBtn'); shb.disabled = false; shb.textContent = '💾 Save to my Hall of Fame';
     gsap.fromTo($('submitRow'), { y: 8, opacity: 0 }, { y: 0, opacity: 1, duration: .4, delay: .2 });
     updateResimBtn();
@@ -3853,11 +3854,21 @@ function escapeHTML(s) {
   return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
-async function submitScore() {
+// The career card posts itself. The player is named BEFORE the sim runs, so by the time the
+// card is on screen the board already has everything it needs — the Submit button was pure
+// friction (only ~24% of finished careers ever got pressed). It comes back if the post fails.
+function autoSubmitScore() {
+  if (myEntryId) return;                                        // already posted, or this is a re-sim
+  if (!$('nameInput') || !$('nameInput').value.trim()) return;   // nothing to post under
+  submitScore({ auto: true });
+}
+async function submitScore(opts) {
+  const auto = !!(opts && opts.auto);
   $('submitBtn').disabled = true;
-  $('submitMsg').textContent = 'Submitting…';
-  Sound.click();
-  if (!nameGate()) { $('submitBtn').disabled = false; $('submitMsg').textContent = ''; return; }
+  $('submitMsg').textContent = auto ? 'Posting to the leaderboard…' : 'Submitting…';
+  if (auto) $('submitRow').style.display = 'none';   // no button flash while the POST is in flight
+  else Sound.click();
+  if (!nameGate()) { $('submitBtn').disabled = false; $('submitMsg').textContent = ''; if (auto) $('submitRow').style.display = 'flex'; return; }
   const name = $('nameInput').value.trim() || 'Anonymous';
   try {
     const res = await fetch('/api/score', {
@@ -3875,6 +3886,7 @@ async function submitScore() {
     $('submitMsg').textContent = `You're #${data.globalRank} all-time. Open the menu anytime to see the board.`;
     openLeaderboard('global', LEADERBOARD_GAME);
   } catch (e) {
+    if (auto) $('submitRow').style.display = 'flex';
     $('submitBtn').disabled = false;
     $('submitMsg').textContent = e && e.server ? ('Could not submit: ' + e.message + '. If this looks wrong, ping us on Discord.') : 'Could not reach the leaderboard - check your connection and try again.';
   }

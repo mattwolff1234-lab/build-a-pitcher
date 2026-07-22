@@ -75,6 +75,10 @@ configured in the RAMP dashboard — not in this repo.
 | `versus.html` | ✅ | — |
 | `versus-hoops.html` | ✅ | — |
 | `college.html` | ✅ | ✅ |
+| `hockey.html` | ✅ | ✅ | (added 2026-07-22 — was the last game page without a tag)
+
+Still tagless on purpose: `monster.html` (de-listed, IP posture) and `ranks.html` (unmapped units
+covered the phone layout — Louis must map units for the `/ranks` route first).
 
 **New pages/games must get the head snippet** (and the `#game-ad` slot if they have a game
 area). Copy from any existing page.

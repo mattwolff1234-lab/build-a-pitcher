@@ -44,7 +44,40 @@
   gtag('config', 'G-TVL2XEQ2Q7');
 </script>
 
-<!-- Ads intentionally absent for v1 - read ads.md before adding the Playwire contract. -->
+<!-- Playwire Ramp - PUB 1025880 / SITE 77906 -->
+<script>
+  window.ramp = window.ramp || {};
+  window.ramp.que = window.ramp.que || [];
+  window.ramp.passiveMode = true;
+  document.addEventListener('DOMContentLoaded', function () {
+    window.ramp.que.push(function () { window.ramp.spaNewPage(window.location.pathname); });
+  });
+</script>
+<script>
+  // Goat Coins '30 Days Ad-Free' entitlement — skip loading Playwire entirely while active
+  // (pl_wallet is the server wallet cached by store.js; the expiry is a server-set timestamp).
+  // Everything else in the ads contract (window.ramp setup, spacing CSS) stays put — see ads.md.
+  (function () {
+    try {
+      var w = JSON.parse(localStorage.getItem('pl_wallet') || 'null');
+      if (w && w.entitlements && w.entitlements.no_ads_until && Date.parse(w.entitlements.no_ads_until) > Date.now()) return;
+    } catch (e) {}
+    var s = document.createElement('script');
+    s.async = true; s.src = '//cdn.intergient.com/1025880/77906/ramp.js';
+    document.head.appendChild(s);
+  })();
+</script>
+<style>
+/* Ad-safe mobile spacing: keep fixed-bottom UI above the Playwire anchor ad (see ads.md) */
+@media (max-width:900px){
+  body{ padding-bottom:60px; }
+  body .toast, body .day-toast{ bottom:92px; }
+  body .xp-hud{ bottom:calc(8vh + 56px); }
+  body #challengeNotif{ bottom:120px !important; }
+  body .overlay, body .draft-overlay, body .daily-reveal, body .hotb-overlay,
+  body .dq-ov, body .col-ov, body .ach-ov, body .st-ov{ padding-bottom:72px; }
+}
+</style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -762,6 +795,7 @@
   <div id="loading" class="loading">Loading players…</div>
 
   <div id="game" style="display:none">
+    <div id="game-ad" style="min-height:100px;display:flex;align-items:center;justify-content:center;width:100%;max-width:970px;margin:6px auto 12px;"></div>
     <div id="dailyInfo" class="daily-info" style="display:none"></div>
     <div class="reel-frame panel">
       <div class="pointer"></div>
@@ -3580,6 +3614,7 @@ function finishPlaythrough(career) {
     $('careerCard').style.display = 'block';
     gsap.fromTo($('careerCard'), { y: 14, opacity: 0, scale: .97 }, { y: 0, opacity: 1, scale: 1, duration: .55, ease: 'back.out(1.5)' });
     $('submitRow').style.display = 'flex';
+    autoSubmitScore();
     const shb = $('saveHofBtn'); shb.disabled = false; shb.textContent = '💾 Save to my Hall of Fame';
     gsap.fromTo($('submitRow'), { y: 8, opacity: 0 }, { y: 0, opacity: 1, duration: .4, delay: .2 });
     updateResimBtn();
@@ -3790,11 +3825,21 @@ function escapeHTML(s) {
   return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
-async function submitScore() {
+// The career card posts itself. The player is named BEFORE the sim runs, so by the time the
+// card is on screen the board already has everything it needs — the Submit button was pure
+// friction (only ~24% of finished careers ever got pressed). It comes back if the post fails.
+function autoSubmitScore() {
+  if (myEntryId) return;                                        // already posted, or this is a re-sim
+  if (!$('nameInput') || !$('nameInput').value.trim()) return;   // nothing to post under
+  submitScore({ auto: true });
+}
+async function submitScore(opts) {
+  const auto = !!(opts && opts.auto);
   $('submitBtn').disabled = true;
-  $('submitMsg').textContent = 'Submitting…';
-  Sound.click();
-  if (!nameGate()) { $('submitBtn').disabled = false; $('submitMsg').textContent = ''; return; }
+  $('submitMsg').textContent = auto ? 'Posting to the leaderboard…' : 'Submitting…';
+  if (auto) $('submitRow').style.display = 'none';   // no button flash while the POST is in flight
+  else Sound.click();
+  if (!nameGate()) { $('submitBtn').disabled = false; $('submitMsg').textContent = ''; if (auto) $('submitRow').style.display = 'flex'; return; }
   const name = $('nameInput').value.trim() || 'Anonymous';
   try {
     const res = await fetch('/api/score', {
@@ -3812,6 +3857,7 @@ async function submitScore() {
     $('submitMsg').textContent = `You're #${data.globalRank} all-time. Open the menu anytime to see the board.`;
     openLeaderboard('global', LEADERBOARD_GAME);
   } catch (e) {
+    if (auto) $('submitRow').style.display = 'flex';
     $('submitBtn').disabled = false;
     $('submitMsg').textContent = e && e.server ? ('Could not submit: ' + e.message + '. If this looks wrong, ping us on Discord.') : 'Could not reach the leaderboard - check your connection and try again.';
   }
