@@ -270,6 +270,10 @@
   #plane { position:absolute; left:20%; top:90%; margin:-15px 0 0 -15px; font-size:26px; z-index:3;
     filter:drop-shadow(0 5px 10px rgba(0,0,0,.55)); pointer-events:none; }
   .stopCard { text-align:center; padding:14px 16px; margin-top:10px; }
+  /* 🎓 one-time coach marks — a floating hint near the thing to tap */
+  .cmark { position:fixed; z-index:26; max-width:260px; padding:10px 14px; border:1px solid var(--accent);
+    border-radius:12px; background:rgba(10,19,32,.97); font-size:.86rem; line-height:1.4;
+    pointer-events:none; box-shadow:0 8px 30px rgba(0,0,0,.5); }
   /* ▾ nudge shown only when the action card overflows the fold; sticky = in-flow, never over the ad */
   .scrollCue { position:sticky; bottom:16px; display:none; justify-content:center; pointer-events:none; z-index:6; }
   .scrollCue span { padding:5px 14px; border:1px solid var(--line); border-radius:999px;
@@ -1485,6 +1489,8 @@ function openMap() {
     const over = target.getBoundingClientRect().bottom > innerHeight + 16;
     cue.style.display = over ? 'flex' : 'none';
     if (over) addEventListener('scroll', () => { cue.style.display = 'none'; }, { once: true });
+    if (!G.done && G.stage === 0 && !G.squad)
+      coachMark('map', 'forkBtns', '🗺️ <b>Pick a road.</b> Tap it below or on the map — then BUILD &amp; FIGHT.');
   });
 }
 // tap a fork city (map node or card row) → plane flies there → the fight starts on landing
@@ -1876,16 +1882,22 @@ function showModPick(onDone) {
   const pool = (CFG.gauntlet.mods || []).slice();
   const offer = [];
   while (offer.length < 3 && pool.length) offer.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
-  $('modBox').innerHTML = offer.map(m => `
+  // first gauntlet ever: Standard Issue leads with a tag so a newcomer can't pick wrong
+  let firstMods = false; try { firstMods = !localStorage.getItem('pl_fb_modsSeen'); } catch (e) {}
+  const modBtns = offer.map(m => `
     <button class="shopItem" type="button" data-mod="${m.id}">
       <span class="si-icon">${m.icon}</span>
       <span class="si-col"><b>${m.name}</b><span>${m.desc}</span></span>
-    </button>`).join('') +
-    `<button class="shopItem" type="button" data-mod="none">
+    </button>`).join('');
+  const stdBtn = `<button class="shopItem" type="button" data-mod="none">
       <span class="si-icon">${CFG.sportEmoji}</span>
-      <span class="si-col"><b>Standard Issue</b><span>No modifier — the classic run.</span></span>
+      <span class="si-col"><b>Standard Issue${firstMods ? ' <em class="si-once">👍 GOOD FIRST PICK</em>' : ''}</b><span>No modifier — the classic run.</span></span>
     </button>`;
+  $('modBox').innerHTML = firstMods
+    ? `<p class="shopLead">Modifiers bend the rules for one whole run. New here? <b>Standard Issue</b> is the classic game — you can't pick wrong.</p>` + stdBtn + modBtns
+    : modBtns + stdBtn;
   $('modBox').querySelectorAll('[data-mod]').forEach(b => b.addEventListener('click', () => {
+    try { localStorage.setItem('pl_fb_modsSeen', '1'); } catch (e) {}
     $('modOv').style.display = 'none';
     applyMod(b.dataset.mod);
     onDone();
@@ -1972,6 +1984,7 @@ function setStopBtn(phase) {
     b.disabled = true; b.classList.add('picking'); b.textContent = '👆 PICK ONE TO LOCK';
     const left = CFG.slots.length - run.lockedCount;
     $('gameHint').innerHTML = left === 1 ? 'Lock in your <b>last slot</b>!' : `Frozen! Lock <b>one</b> and the other ${left - 1} respin`;
+    coachMark('lock', 'slotGrid', '👆 Frozen! <b>Tap ONE player to lock him.</b> The rest spin again.');
   }
 }
 function beginSpin(redo) {
@@ -1982,7 +1995,10 @@ function beginSpin(redo) {
     const b = $('stopBtn');
     b.disabled = false; b.classList.remove('picking'); b.textContent = '⏹ STOP';
     $('gameHint').innerHTML = 'Respinning. <b>STOP</b> locks it instantly, good luck.';
-  } else setStopBtn('spin');
+  } else {
+    setStopBtn('spin');
+    coachMark('stop', 'stopBtn', '🌀 Everything spins at once. <b>Hit STOP</b> when it feels right — timing is a skill.');
+  }
   cancelAnimationFrame(rafId);
   rafId = requestAnimationFrame(frame);
 }
@@ -3800,6 +3816,24 @@ function renderHome() {
     : isShopLayer(G.stage) ? `🗺️ Gauntlet: at the Traveling Shop with ${cash$(G.cash)}, fight ${fightNum(G.stage) + 1} up next`
     : `🗺️ Gauntlet: fight ${fightNum(G.stage)}/${totalFights()}, ${cash$(G.cash)} banked`;
   show('scrHome');
+}
+// 🎓 one-time coach marks — floats a hint near the thing to tap; any tap (or 8s) dismisses,
+// and each key shows exactly once per device. pointer-events:none = zero input latency added.
+function coachMark(key, targetId, html) {
+  const K = 'pl_fb_cm_' + key;
+  try { if (localStorage.getItem(K)) return; } catch (e) { return; }
+  const t = $(targetId); if (!t) return;
+  const el = document.createElement('div');
+  el.className = 'cmark';
+  el.innerHTML = html;
+  document.body.appendChild(el);
+  const r = t.getBoundingClientRect();
+  el.style.left = Math.max(10, Math.min(innerWidth - el.offsetWidth - 10, r.left + r.width / 2 - el.offsetWidth / 2)) + 'px';
+  el.style.top = (r.top > 110 ? r.top - el.offsetHeight - 12 : Math.min(innerHeight - el.offsetHeight - 130, r.bottom + 12)) + 'px';
+  if (window.gsap) gsap.from(el, { y: 6, opacity: 0, duration: .25, ease: 'power2.out' });
+  const kill = () => { try { localStorage.setItem(K, '1'); } catch (e) {} el.remove(); document.removeEventListener('pointerdown', kill); };
+  setTimeout(() => document.addEventListener('pointerdown', kill), 350);
+  setTimeout(kill, 8000);
 }
 function toast(msg) {
   const t = $('toast');
