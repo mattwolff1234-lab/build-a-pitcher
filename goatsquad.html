@@ -281,6 +281,10 @@
   #plane { position:absolute; left:20%; top:90%; margin:-15px 0 0 -15px; font-size:26px; z-index:3;
     filter:drop-shadow(0 5px 10px rgba(0,0,0,.55)); pointer-events:none; }
   .stopCard { text-align:center; padding:14px 16px; margin-top:10px; }
+  /* ♿ reduced motion: no infinite pulses/bobs (heavy on weak GPUs, distracting for some) */
+  @media (prefers-reduced-motion: reduce){
+    .mnode.cur, .slot.pickable, .scrollCue span { animation:none !important; }
+  }
   /* 🎓 one-time coach marks — a floating hint near the thing to tap */
   .cmark { position:fixed; z-index:26; max-width:260px; padding:10px 14px; border:1px solid var(--accent);
     border-radius:12px; background:rgba(10,19,32,.97); font-size:.86rem; line-height:1.4;
@@ -888,6 +892,7 @@ const SITE_URL = 'https://squad.goat-lab.app';   // the game's own subdomain (ro
 const ROUTE = '';
 
 const $ = id => document.getElementById(id);
+const PREFERS_STILL = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;   // ♿ skip cosmetic motion
 
 /* ---------- analytics (GA4 · same inline snake_case pattern as the sibling games) ---------- */
 function track(ev, params) {
@@ -1474,13 +1479,13 @@ function openMap() {
   const forkPending = !G.done && Array.isArray(layers[restIdx]) && layerTeams(restIdx).length >= 2 && (G.route[restIdx] == null);
   if (forkPending) restIdx = Math.max(0, restIdx - 1);
   const restAt = layerAnchor(restIdx);
-  if (travelFrom != null && window.gsap && travelFrom !== restIdx) {
+  if (travelFrom != null && window.gsap && travelFrom !== restIdx && !PREFERS_STILL) {
     const from = travelFrom; travelFrom = null;
     flyPlane(layerAnchor(from), restAt);
   } else if (window.gsap) {
     travelFrom = null;
     gsap.set('#plane', { left: restAt[0] + '%', top: restAt[1] + '%', scaleX: 1, scaleY: 1, rotation: 0 });
-    gsap.from('.mnode', { scale: 0, duration: .3, stagger: .02, ease: 'back.out(1.8)', clearProps: 'transform' });
+    if (!PREFERS_STILL) gsap.from('.mnode', { scale: 0, duration: .3, stagger: .02, ease: 'back.out(1.8)', clearProps: 'transform' });
   }
   // ▾ scroll cue — only when the card's action row actually sits below the fold
   requestAnimationFrame(() => {
