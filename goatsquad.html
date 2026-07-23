@@ -219,12 +219,15 @@
        get big cards back instead of everyone eating the small-screen compromise. */
     #slotGrid { gap:7px; margin-top:7px;
       height:calc(100vh - 304px); height:calc(100dvh - 304px);
-      min-height:330px; max-height:600px;
+      min-height:356px; max-height:600px;
       grid-template-rows:repeat(3,minmax(0,1fr)) auto; }
     .slot { min-height:0; height:100%; padding:4px 6px; gap:2px; border-radius:12px; justify-content:center; }
     .slot .s-label { font-size:.64rem; }
-    .s-face { width:clamp(44px, calc(18vh - 68px), 76px); height:clamp(44px, calc(18vh - 68px), 76px);
-              width:clamp(44px, calc(18dvh - 68px), 76px); height:clamp(44px, calc(18dvh - 68px), 76px); }
+    /* the face flexes into whatever height is LEFT after label/name/sub — so the name
+       can never be pushed out of the card on short screens (first line = old-browser fallback) */
+    .s-face { width:52px; height:52px;
+              width:auto; height:auto; flex:1 1 34px; min-height:34px; max-height:76px;
+              aspect-ratio:1/1; align-self:center; }
     .s-avatar { font-size:clamp(.9rem, 2.2vh, 1.3rem); font-size:clamp(.9rem, 2.2dvh, 1.3rem); }
     .s-rate { font-size:clamp(1.2rem, calc(4.4vh - 10px), 2rem); font-size:clamp(1.2rem, calc(4.4dvh - 10px), 2rem); }
     .s-name { font-size:.76rem; }
