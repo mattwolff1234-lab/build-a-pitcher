@@ -468,6 +468,19 @@
   .submit-row input:focus { border-color:var(--accent2); box-shadow:0 0 12px rgba(25,198,255,.3); }
   .submit-row button { padding:11px 22px; }
   .submit-msg { font-size:12px; color:var(--muted); margin-top:8px; min-height:16px; letter-spacing:.4px; }
+  /* Post-career rank panel: where THIS build landed on every board (+ remove yourself) */
+  .rank-panel{display:none;margin:12px auto 0;max-width:600px;background:linear-gradient(180deg,rgba(14,28,46,.85),rgba(9,18,32,.85));border:1px solid rgba(90,200,255,.25);border-radius:12px;padding:13px 15px;text-align:center}
+  .rank-panel .rp-head{font-family:Oswald,sans-serif;font-size:13px;letter-spacing:1.2px;text-transform:uppercase;color:#8fd4ff;margin-bottom:4px}
+  .rank-panel .rp-main{font-family:Oswald,sans-serif;font-size:26px;font-weight:700;color:#ffd35c;margin-bottom:8px}
+  .rank-panel .rp-main span{font-size:14px;font-weight:400;color:#bcd6ea}
+  .rank-panel .rp-stats{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:10px}
+  .rank-panel .rp-chip{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.13);border-radius:8px;padding:4px 10px;font-size:12.5px;color:#cfe6ff}
+  .rank-panel .rp-chip b{color:#fff;font-family:Oswald,sans-serif}
+  .rank-panel .rp-btns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+  .rank-panel .rp-btns button{cursor:pointer;border-radius:9px;padding:8px 14px;font-family:Inter,sans-serif;font-size:13px;font-weight:600;border:1px solid rgba(120,210,255,.4);background:rgba(40,90,140,.35);color:#dff2ff}
+  .rank-panel .rp-btns button:hover{background:rgba(60,120,180,.45)}
+  .rank-panel .rp-btns .rp-danger{border-color:rgba(255,120,120,.35);background:rgba(120,40,40,.25);color:#ffd9d9}
+  .rank-panel .rp-btns .rp-danger:hover{background:rgba(160,50,50,.35)}
 
   .lb { max-width:420px; margin:6px auto 0; }
   .lb-tabs { display:flex; gap:6px; justify-content:center; margin-bottom:10px; }
@@ -869,6 +882,7 @@
         <button id="submitBtn" class="primary">Submit to Leaderboard</button>
       </div>
       <div id="submitMsg" class="submit-msg"></div>
+      <div id="rankPanel" class="rank-panel"></div>
       <a class="discord-cta" href="https://discord.gg/bMVX2zJp49" target="_blank" rel="noopener"><span class="dc-emoji">💬</span><span class="dc-text"><b>Share this build in our Discord</b><small>Talk shop, post your builds, and challenge players to live 1v1s ↗</small></span></a>
 
       <button id="resimBtn" class="ghost-btn" style="display:none">🔁 Re-sim Career ×0</button>
@@ -3771,6 +3785,7 @@ async function loadSharedBuild(id) {
 }
 
 let myEntryId = null;
+let myEntryToken = null;
 function finish() {
   hardRevealed = true;  // hard mode: reveal all ratings on completion
   renderNodes();
@@ -3792,6 +3807,9 @@ function finish() {
   $('careerCard').style.display = 'none';
   $('submitRow').style.display = 'none';
   $('submitBtn').disabled = false;
+  $('submitBtn').style.display = '';
+  myEntryToken = null;
+  { const rp = $('rankPanel'); if (rp) { rp.style.display = 'none'; rp.innerHTML = ''; } }
   $('nameInput').value = '';
   $('submitMsg').textContent = '';
   $('done').classList.add('show');
@@ -3808,11 +3826,78 @@ function escapeHTML(s) {
   return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
+// ── Post-career rank panel ──────────────────────────────────────────
+// "Where did THIS build land?" — a compact inline summary instead of throwing the full
+// leaderboard overlay over the career card: all-time rank, today's rank, and this build's
+// rank on every stat board the game has (one myRanks call). Removable right here.
+async function showRankPanel(id, globalRank) {
+  const panel = $('rankPanel'); if (!panel) return;
+  const btns = '<div class="rp-btns"><button id="rpViewBtn">📊 Full leaderboard</button><button id="rpRemoveBtn" class="rp-danger">Remove my entry</button></div>';
+  panel.style.display = 'block';
+  panel.innerHTML = '<div class="rp-head">📊 On the leaderboard</div><div class="rp-main">#' + globalRank + ' <span>all-time</span></div>' + btns;
+  wireRankPanel();
+  gsap.fromTo(panel, { y: 8, opacity: 0 }, { y: 0, opacity: 1, duration: .4 });
+  try {
+    const r = await fetch('/api/score?action=myRanks&id=' + id);
+    const j = await r.json();
+    if (!j.ok || !panel.innerHTML) return;   // panel cleared (new build) while we fetched → drop it
+    const opts = sortOptionsFor(LEADERBOARD_GAME).filter(o => o.key !== 'ovr' && o.key !== 'ovrAsc');
+    const chips = opts.map(o => {
+      const s = j.stats && j.stats[o.key];
+      return s ? '<div class="rp-chip">' + o.label + ' <b>#' + s.rank + '</b></div>' : '';
+    }).join('');
+    const todayChip = j.today ? '<div class="rp-chip">Today <b>#' + j.today.rank + '</b> of ' + j.today.total + '</div>' : '';
+    panel.innerHTML = '<div class="rp-head">📊 Where this build landed</div>'
+      + '<div class="rp-main">#' + j.rank + ' <span>of ' + j.total + ' all-time</span></div>'
+      + '<div class="rp-stats">' + todayChip + chips + '</div>' + btns;
+    wireRankPanel();
+  } catch (e) {}
+}
+function wireRankPanel() {
+  const v = $('rpViewBtn'), rm = $('rpRemoveBtn');
+  if (v) v.onclick = () => { Sound.click(); openLeaderboard(typeof dailyResultsShown !== 'undefined' && dailyResultsShown ? 'challenge' : 'global', LEADERBOARD_GAME); };
+  if (rm) rm.onclick = () => removeMyEntry(rm);
+}
+// Two-tap confirm → the row is deleted server-side (the POST returned a one-time delete
+// token, so only the device that posted it can pull it). Removing also switches auto-posting
+// OFF on this device — taking yourself off the board is a clear "stop doing that for me";
+// the manual Submit button comes back for this and future careers.
+async function removeMyEntry(btn) {
+  if (!myEntryId || !myEntryToken) { toast('Nothing to remove'); return; }
+  if (btn.dataset.arm !== '1') {
+    btn.dataset.arm = '1'; btn.textContent = 'Tap again to confirm';
+    setTimeout(() => { btn.dataset.arm = ''; btn.textContent = 'Remove my entry'; }, 3500);
+    return;
+  }
+  btn.disabled = true; btn.textContent = 'Removing…';
+  try {
+    const r = await fetch('/api/score', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'remove', id: myEntryId, token: myEntryToken }) });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || 'failed');
+    myEntryId = null; myEntryToken = null;
+    try {
+      localStorage.removeItem('pl_lastEntry_' + LEADERBOARD_GAME);
+      localStorage.removeItem('pl_lastEntryTok_' + LEADERBOARD_GAME);
+      localStorage.setItem('pl_lbAutoOff', '1');
+    } catch (e) {}
+    $('rankPanel').innerHTML = '<div class="rp-head">Removed from the leaderboard</div>'
+      + '<div class="rp-stats"><div class="rp-chip">Careers won\'t auto-post anymore — hit Submit when you want on the board.</div></div>';
+    $('submitBtn').style.display = ''; $('submitBtn').disabled = false;
+    $('submitRow').style.display = 'flex';
+    toast('Entry removed');
+  } catch (e) {
+    btn.disabled = false; btn.textContent = 'Remove my entry';
+    toast('Could not remove — try again');
+  }
+}
+
 // The career card posts itself. The player is named BEFORE the sim runs, so by the time the
 // card is on screen the board already has everything it needs — the Submit button was pure
 // friction (only ~24% of finished careers ever got pressed). It comes back if the post fails.
 function autoSubmitScore() {
   if (myEntryId) return;                                        // already posted, or this is a re-sim
+  try { if (localStorage.getItem('pl_lbAutoOff') === '1') return; } catch (e) {}   // they removed an entry once → manual submits only
   if (!$('nameInput') || !$('nameInput').value.trim()) return;   // nothing to post under
   submitScore({ auto: true });
 }
@@ -3833,12 +3918,15 @@ async function submitScore(opts) {
     const data = await res.json();
     if (!data.ok) { const err = new Error(data.error || 'rejected'); err.server = true; throw err; }
     myEntryId = data.id;
-    try { localStorage.setItem('pl_lastEntry_' + LEADERBOARD_GAME, String(data.id)); } catch (e) {}
+    myEntryToken = data.token || null;
+    try { localStorage.setItem('pl_lastEntry_' + LEADERBOARD_GAME, String(data.id));
+      if (data.token) localStorage.setItem('pl_lastEntryTok_' + LEADERBOARD_GAME, data.token); } catch (e) {}
     draftClear();
     try { gtag('event', 'leaderboard_submit', { game: LEADERBOARD_GAME, ovr: state.finalOvr }); } catch (e) {}
-    $('submitRow').style.display = 'none';
-    $('submitMsg').textContent = `You're #${data.globalRank} all-time. Open the menu anytime to see the board.`;
-    openLeaderboard('global', LEADERBOARD_GAME);
+    $('submitRow').style.display = 'flex';   // keep the row — 💾 Save to my Hall of Fame stays (saving is always manual)
+    $('submitBtn').style.display = 'none';   // …but no double-posting
+    $('submitMsg').textContent = '';
+    showRankPanel(data.id, data.globalRank);
   } catch (e) {
     if (auto) $('submitRow').style.display = 'flex';
     $('submitBtn').disabled = false;

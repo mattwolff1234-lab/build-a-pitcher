@@ -4,6 +4,7 @@
 // One table, separated by `game` so pitching and batting have their own boards.
 
 const { neon } = require('@neondatabase/serverless');
+const crypto = require('crypto');
 // Slur/profanity gate for user-chosen names. New submissions are rejected outright;
 // rows that predate the filter are censored on the way OUT (leaderboards) or dropped
 // (action=names, which feeds franchise mode's free agents/rivals on every client).
@@ -67,6 +68,23 @@ function stripInsaneCareer(game, build) {
 // Token for admin/maintenance actions (same env + fallback as account.js's pvpMatchStats).
 const ADMIN_TOKEN = process.env.STATS_TOKEN || 'pl-balance-7f3a9c21';
 
+// Whitelisted career-stat sort keys → build.career.totals fields (shared by the board GET,
+// myRanks, and the me-pin). Trust-the-client values, same posture as ovr.
+const SORT_FIELDS = { k: 'k', war: 'war', wins: 'wins', rings: 'rings', cyYoung: 'cyYoung', hr: 'hr', hits: 'h', mvp: 'mvp', pts: 'pts', reb: 'reb', ast: 'ast', goals: 'goals', assists: 'assists', cs: 'cs', saves: 'saves', yds: 'yds', td: 'td', heisman: 'heisman', natty: 'natty', g: 'g', p: 'p', w: 'w', sweeps: 'sweeps', badges: 'badges' };
+// Which of those sorts each game's boards actually offer (mirror of the clients' SORT_OPTIONS
+// minus OVR) — bounds myRanks to the handful of count queries that matter for that game.
+const GAME_SORTS = {
+  pitcher: ['k', 'war', 'wins', 'rings', 'cyYoung'],
+  batter: ['hr', 'hits', 'war', 'rings', 'mvp'],
+  baller: ['pts', 'reb', 'ast', 'war', 'rings', 'mvp'],
+  striker: ['goals', 'assists', 'war', 'rings', 'mvp'],
+  keeper: ['cs', 'saves', 'war', 'rings', 'mvp'],
+  hockey: ['g', 'p', 'war', 'rings', 'mvp'],
+  mon: ['w', 'badges', 'war', 'rings', 'mvp'],
+  cfb: ['yds', 'td', 'wins', 'heisman', 'natty'],
+  goatsquad: ['w'], squadball: ['w'], squadfoot: ['w'],
+};
+
 let ready;
 function ensure() {
   if (!ready) {
@@ -79,6 +97,9 @@ function ensure() {
         created_at timestamptz NOT NULL DEFAULT now()
       )`;
       await sql`ALTER TABLE scores ADD COLUMN IF NOT EXISTS game text NOT NULL DEFAULT 'pitcher'`;
+      // Per-row removal secret, returned once to the submitter — proof of ownership for
+      // action=remove. Rows that predate the column stay permanent (NULL never matches).
+      await sql`ALTER TABLE scores ADD COLUMN IF NOT EXISTS del_token text`;
       await sql`CREATE INDEX IF NOT EXISTS idx_scores_game_ovr ON scores (game, ovr DESC, created_at ASC)`;
       await sql`CREATE INDEX IF NOT EXISTS idx_scores_created ON scores (created_at)`;
       // Live play counter, seeded at 210k (estimated historical plays we never tracked).
@@ -117,6 +138,44 @@ module.exports = async (req, res) => {
       if (!row) return res.status(404).json({ ok: false, error: 'Not found' });
       res.setHeader('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=604800');   // rows are immutable
       return res.status(200).json({ ok: true, entry: { ...row, id: Number(row.id), name: NameFilter.clean(row.name, 'Anonymous') } });
+    }
+
+    // GET ?action=myRanks&id=<scoreId> · every rank this ONE entry holds, in a single call:
+    // all-time OVR rank + board size, today's OVR rank (if posted today), and its rank on each
+    // career-stat sort that game's boards offer. Powers the post-career "where you landed" panel.
+    if (req.method !== 'POST' && (req.query && req.query.action) === 'myRanks') {
+      const id = parseInt(req.query && req.query.id, 10);
+      if (!id || id < 1) return res.status(400).json({ ok: false, error: 'Bad id' });
+      const [row] = await sql`SELECT id, ovr, game, build, created_at FROM scores WHERE id = ${id}`;
+      if (!row) return res.status(404).json({ ok: false, error: 'Not found' });
+      const g = row.game;
+      const [{ ahead }] = await sql`SELECT count(*)::int AS ahead FROM scores
+        WHERE game = ${g} AND (ovr > ${row.ovr} OR (ovr = ${row.ovr} AND created_at < ${row.created_at}))`;
+      const [{ total }] = await sql`SELECT count(*)::int AS total FROM scores WHERE game = ${g}`;
+      let today = null;
+      const onToday = (await sql`SELECT 1 FROM scores WHERE id = ${id} AND created_at >= date_trunc('day', now())`).length > 0;
+      if (onToday) {
+        const [{ ahead: ta }] = await sql`SELECT count(*)::int AS ahead FROM scores
+          WHERE game = ${g} AND created_at >= date_trunc('day', now())
+            AND (ovr > ${row.ovr} OR (ovr = ${row.ovr} AND created_at < ${row.created_at}))`;
+        const [{ total: tt }] = await sql`SELECT count(*)::int AS total FROM scores
+          WHERE game = ${g} AND created_at >= date_trunc('day', now())`;
+        today = { rank: Number(ta) + 1, total: Number(tt) };
+      }
+      // Same better-than counting the me-pin uses (stat desc, created_at tie-break; null stats
+      // can never rank ahead because NULL > v is false).
+      const totals = (row.build && row.build.career && row.build.career.totals) || {};
+      const stats = {};
+      for (const key of (GAME_SORTS[g] || [])) {
+        const field = SORT_FIELDS[key];
+        const v = Number(totals[field]);
+        if (!isFinite(v)) continue;
+        const [{ ahead: sa }] = await sql`SELECT count(*)::int AS ahead FROM scores
+          WHERE game = ${g} AND ((build->'career'->'totals'->>${field})::numeric > ${v}
+            OR ((build->'career'->'totals'->>${field})::numeric = ${v} AND created_at < ${row.created_at}))`;
+        stats[key] = { value: v, rank: Number(sa) + 1 };
+      }
+      return res.status(200).json({ ok: true, game: g, ovr: Number(row.ovr), rank: Number(ahead) + 1, total: Number(total), today, stats });
     }
 
     // GET ?action=ghost&game=&min=&max= · a random recent build in an OVR band, slots only (no
@@ -214,6 +273,18 @@ module.exports = async (req, res) => {
         const [{ n }] = await sql`INSERT INTO counters (key, n) VALUES ('plays', 1)
           ON CONFLICT (key) DO UPDATE SET n = counters.n + 1 RETURNING n`;
         return res.status(200).json({ ok: true, plays: Number(n) });
+      }
+
+      // Take yourself off the board. The POST that created the row returned its del_token —
+      // only the device that submitted (and stored the token) can remove it. Old rows with a
+      // NULL token are not removable (NULL never matches).
+      if (body.action === 'remove') {
+        const id = parseInt(body.id, 10);
+        const token = String(body.token || '');
+        if (!id || id < 1 || !/^[a-f0-9]{16,64}$/.test(token)) return res.status(400).json({ ok: false, error: 'Bad request' });
+        const gone = await sql`DELETE FROM scores WHERE id = ${id} AND del_token = ${token} RETURNING id`;
+        if (!gone.length) return res.status(404).json({ ok: false, error: 'Entry not found (or not yours to remove)' });
+        return res.status(200).json({ ok: true, removed: true });
       }
 
       // Admin (token-gated): strip the stored `career` from leaderboard rows whose build has a
@@ -408,13 +479,14 @@ module.exports = async (req, res) => {
       }
       const build = body.build && typeof body.build === 'object' ? JSON.stringify(stripInsaneCareer(game, body.build)) : null;
 
+      const delToken = crypto.randomBytes(16).toString('hex');
       const [row] = await sql`
-        INSERT INTO scores (name, ovr, build, game) VALUES (${name}, ${ovr}, ${build}::jsonb, ${game})
+        INSERT INTO scores (name, ovr, build, game, del_token) VALUES (${name}, ${ovr}, ${build}::jsonb, ${game}, ${delToken})
         RETURNING id, name, ovr, created_at`;
       const [{ ahead }] = await sql`
         SELECT count(*)::int AS ahead FROM scores
         WHERE game = ${game} AND (ovr > ${ovr} OR (ovr = ${ovr} AND created_at < ${row.created_at}))`;
-      return res.status(200).json({ ok: true, id: Number(row.id), globalRank: ahead + 1 });
+      return res.status(200).json({ ok: true, id: Number(row.id), globalRank: ahead + 1, token: delToken });
     }
 
     const scope = (req.query && req.query.scope) || 'global';
@@ -424,8 +496,7 @@ module.exports = async (req, res) => {
     // Optional CFB position filter (?pos=qb|rb|wr) · cfb builds store pos as 'QB'/'RB'/'WR'
     const posRaw = req.query && req.query.pos ? String(req.query.pos).toUpperCase() : null;
     const pos = game === 'cfb' && ['QB', 'RB', 'WR'].indexOf(posRaw) >= 0 ? posRaw : null;
-    // Optional sort by a career-total stat (trust-the-client, same as ovr). Whitelisted keys map to build.career.totals fields.
-    const SORT_FIELDS = { k: 'k', war: 'war', wins: 'wins', rings: 'rings', cyYoung: 'cyYoung', hr: 'hr', hits: 'h', mvp: 'mvp', pts: 'pts', reb: 'reb', ast: 'ast', goals: 'goals', assists: 'assists', cs: 'cs', saves: 'saves', yds: 'yds', td: 'td', heisman: 'heisman', natty: 'natty', g: 'g', p: 'p', w: 'w', sweeps: 'sweeps', badges: 'badges' };
+    // Optional sort by a career-total stat (SORT_FIELDS whitelist at module scope).
     const sortField = SORT_FIELDS[req.query && req.query.sort] || null;
     const asc = (req.query && req.query.dir) === 'asc';       // flip any stat sort to worst-first
     const worst = (req.query && req.query.sort) === 'ovrAsc'; // ascending OVR ("worst overall")
