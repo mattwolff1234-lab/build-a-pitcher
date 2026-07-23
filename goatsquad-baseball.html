@@ -434,6 +434,15 @@
   table.bs td { padding:6px; text-align:right; border-bottom:1px solid rgba(120,160,210,.08); }
   table.bs tr.star td { color:var(--gold); }
   table.bs tr.bench td { color:var(--dim); }
+  /* 🎽 manager's cards */
+  .pkRow { display:flex; flex-wrap:wrap; gap:7px; justify-content:center; margin:10px 0 0; }
+  .pkChip { min-height:38px; padding:5px 12px; border-radius:999px; border:1px solid var(--line);
+    background:rgba(9,15,25,.7); color:var(--muted); font:600 .78rem 'Inter',sans-serif; cursor:pointer; touch-action:manipulation; }
+  .pkChip.on { color:#4ade80; border-color:#4ade80; box-shadow:0 0 12px rgba(74,222,128,.25); }
+  .pkNone { color:var(--dim); font-size:.78rem; }
+  .pkHint { color:var(--dim); font-size:.73rem; text-align:center; margin:6px 0 0; }
+  .pkHint b { color:var(--muted); }
+
   /* 📖 guide */
   .gTabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
   .gSec { margin:0 0 6px; font:600 .72rem 'Inter',sans-serif; letter-spacing:.2em; color:var(--accent2); }
@@ -718,6 +727,7 @@
       <button class="bs-tab on" type="button" data-gt="how">How to play</button>
       <button class="bs-tab" type="button" data-gt="relics">✨ Relics</button>
       <button class="bs-tab" type="button" data-gt="mods">🃏 Modifiers</button>
+      <button class="bs-tab" type="button" data-gt="cards">🎽 Cards</button>
       <button class="bs-tab" type="button" data-gt="banners">🏆 Banners</button>
     </div>
     <div id="guideBody"></div>
@@ -850,7 +860,7 @@ const Sound = (() => {
 })();
 
 /* ---------- state + persistence (pl_sb_* keys, resets when the local date rolls) ---------- */
-let CFG = null, PLAYERS = [], POOLS = [], DAILY_REELS = null, PRIMES = {};
+let CFG = null, PLAYERS = [], POOLS = [], DAILY_REELS = null, PRIMES = {}, utilMode = false;
 let day = null, run = null, rafId = 0, ovrTimer = 0, bossTl = null;
 
 function freshDay() { return { date: todayLocal(), daily: { n: 0, beat: 0, firstBeat: null, bestOvr: 0 } }; }
@@ -955,20 +965,24 @@ function ensureLadder() {
     if (finals.has(i)) { L[i].forEach(k => used.add(k)); return; }
     ladder[i] = L[i].map(k0 => {
       const t0 = gTeam(k0);
-      const cands = pool.filter(k => !used.has(k) && Math.abs(gTeam(k).rating - t0.rating) <= 2);
+      let cands = pool.filter(k => !used.has(k) && Math.abs(gTeam(k).rating - t0.rating) <= 2);
+      if (!cands.length) cands = pool.filter(k => !used.has(k) && Math.abs(gTeam(k).rating - t0.rating) <= 4);
       const k = cands.length ? cands[Math.floor(Math.random() * cands.length)] : k0;
       used.add(k);
       return k;
     });
   });
-  const forks = fightIdx.filter(i => !finals.has(i) && L[i].length === 2);
-  G.elite = forks.length ? { layer: forks[Math.floor(Math.random() * forks.length)], side: Math.floor(Math.random() * 2) } : null;
+  const forks = fightIdx.filter(i => !finals.has(i) && L[i].length >= 2);
+  if (forks.length) {
+    const fl = forks[Math.floor(Math.random() * forks.length)];
+    G.elite = { layer: fl, side: Math.floor(Math.random() * ((ladder[fl] || L[fl]).length)) };
+  } else G.elite = null;
   G.ladder = ladder;
   saveG();
 }
 function ECO() { return (CFG.gauntlet && CFG.gauntlet.economy) || {}; }
 function cash$(n) { return (ECO().currency || '$') + n; }
-function freshG() { return { stage: 0, route: {}, tries: {}, done: false, squad: null, cash: 0, items: {}, relics: [], ot: 0, mod: null, banner: 0, ladder: null, elite: null }; }
+function freshG() { return { stage: 0, route: {}, tries: {}, done: false, squad: null, cash: 0, items: {}, relics: [], ot: 0, mod: null, banner: 0, ladder: null, elite: null, perkUsed: {}, armed: null }; }
 /* ---------- relics — run-wide passive abilities won off the spoils wheel ----------
    relicEffects() is the ONE resolver: it expands stateful relics (Dynasty's counter, a
    shattered Piggy Bank), splits double-effect relics (No Ringers = OVR + a rule), and
@@ -1040,6 +1054,70 @@ function shopSpent() {   // 🐖 the Piggy Bank shatters the first time you buy 
   toast(`${pig.icon}💥 ${pig.name} shattered!`);
 }
 
+/* ---------- 🎽 Manager's Cards — one-shot abilities that come with the guy holding the
+   clipboard. Tier is read from his OVR mod, and each tier carries its own set: a Hall of
+   Famer hands you three ways to steal a series, a retread hands you a coin flip. Each card
+   is once per RUN; hiring a better manager mid-run opens his set (minus what you've spent). */
+function managerEntry() {
+  const ci = CFG.slots.findIndex(s => s.type === 'coach');
+  return (ci >= 0 && G.squad) ? G.squad[ci] : null;
+}
+function managerTier() {
+  const c = managerEntry(), P = (CFG.gauntlet && CFG.gauntlet.managerPerks) || null;
+  if (!c || !P) return null;
+  const m = Number(c.mod) || 0;
+  const key = m >= 4 ? 'elite' : m >= 2 ? 'good' : m >= 0 ? 'basic' : 'bad';
+  return P[key] ? { key, tier: P[key], name: c.name, mod: m } : null;
+}
+function perkCards() { const t = managerTier(); return t ? (t.tier.items || []) : []; }
+function renderPerkBar() {
+  if (!G.squad || G.done || isShopLayer(G.stage)) return;
+  const t = managerTier();
+  if (!t) return;
+  const cards = (t.tier.items || []).filter(it => !(G.perkUsed || {})[it.id]);
+  const spent = (t.tier.items || []).length - cards.length;
+  const mod = t.mod > 0 ? '+' + t.mod : t.mod;
+  $('forkBtns').innerHTML += `<div class="pkRow">` + (cards.length
+    ? cards.map(it => `<button class="pkChip${G.armed === it.id ? ' on' : ''}" type="button" data-pk="${it.id}" title="${it.desc}">${it.icon} ${it.name}</button>`).join('')
+    : `<span class="pkNone">No cards left — ${lastName(t.name)} has emptied the folder.</span>`) + `</div>` +
+    `<p class="pkHint">🎽 <b>${t.tier.label}</b> · ${lastName(t.name)} (${mod})` +
+      (cards.length ? ` — tap a card to play it on this fight${spent ? `. ${spent} spent` : ''}. One use each per run.` : '') + `</p>`;
+  $('forkBtns').querySelectorAll('.pkChip').forEach(b => b.addEventListener('click', () => {
+    G.armed = (G.armed === b.dataset.pk) ? null : b.dataset.pk;
+    saveG();
+    const it = perkCards().find(x => x.id === b.dataset.pk);
+    if (G.armed && it) { Sound.q(); toast(`${it.icon} ${it.name} — ${it.desc}`); }
+    renderStopCard();
+  }));
+}
+// fires as the series is being set up, so the scouting report's exact odds already include it
+function usePerk() {
+  const id = G.armed;
+  G.armed = null;
+  if (!id || run.mode !== 'gauntlet') { saveG(); return; }
+  const it = perkCards().find(x => x.id === id);
+  if (!it || (G.perkUsed || {})[id]) { saveG(); return; }
+  G.perkUsed = G.perkUsed || {};
+  G.perkUsed[id] = 1;
+  const e = it.effect || {}, v = e.value || 0;
+  let note = `${it.icon} ${it.name}`;
+  if (e.type === 'ovr') run.ovr += v;
+  else if (e.type === 'gameEdge') run.simOpts.gameEdge = (run.simOpts.gameEdge || 0) + v;
+  else if (e.type === 'elimEdge') run.simOpts.elimEdge = (run.simOpts.elimEdge || 0) + v;
+  else if (e.type === 'firstGameEdge') run.simOpts.firstGameEdge = (run.simOpts.firstGameEdge || 0) + v;
+  else if (e.type === 'noMomentum') run.simOpts.noMomentumDrag = true;
+  else if (e.type === 'gamble') {
+    const hit = Math.random() < 0.5, down = Math.ceil(v / 2);
+    run.ovr += hit ? v : -down;
+    note += hit ? ` — it WORKED (+${v})` : ` — it backfired (−${down})`;
+  }
+  run.perkNote = note;
+  $('vsYou').textContent = run.ovr;
+  $('vsYou').style.color = ovrTierHex(run.ovr);
+  saveG();
+  track('perk_played', { perk: id, tier: (managerTier() || {}).key });
+  toast(`🎽 ${note}`);
+}
 /* ---------- 📖 the guide: how the Gauntlet works + every relic, modifier and banner.
    Everything reads from CFG/BANNERS, so a config change updates the guide for free. ---------- */
 const RARITY = { 1: ['RARE', 'rare'], 2: ['UNCOMMON', ''], 3: ['COMMON', ''] };
@@ -1054,7 +1132,7 @@ function guideHow() {
     ['🔄', 'The mulligan (your one do-over)', `After your last lock you can <b>drop one player and respin that slot</b> — ratings still hidden. Some runs take this away (the 🔒 modifier, 🏆 BANNER IV): then every lock is final the moment you make it.`],
     ['⚔️', 'Fights', `Each city is a best-of-seven series against a legendary team, rated as they were that season.`],
     ['💀', 'One life', `Lose a fight and the <b>run is over</b> — squad, cash, relics, all of it. Only 🛟 Insurance can undo a loss, once.`],
-    ['🍴', 'Forks', `Two roads means a choice. One side may be <b>⚠️ ELITE</b>: tougher and armed with a signature ability, but its spoils wheel gushes relics and pays a bounty. The other road is always the safe way through.`],
+    ['🍴', 'Forks', `<b>Every stop before the finals is a fork</b> — two roads, sometimes three. One side may be <b>⚠️ ELITE</b>: tougher and armed with a signature ability, but its spoils wheel gushes relics and pays a bounty. The other road is always the safe way through.`],
     ['🏆', 'Victory spoils', `Beat a team and spin their roster — sign one (somebody on your squad gets cut) or take a ✨ relic. Passing is always allowed.`],
     ['💰', 'Cap Space', `${cash$(ECO().gameWin || 0)} per game won, bonuses at the buzzer, plus interest on whatever you're holding when you win. <b>The counter on the scoreboard is live money</b> — you can spend it before the fight is even over.`],
     ['🏪', 'Traveling shops', `Between cities. Upgrades, insurance, extra wheels — winnings are worthless if the run dies with them in your pocket.`],
@@ -1079,6 +1157,19 @@ function guideMods() {
   return `<p class="gLead">Every fresh Gauntlet deals you three of these plus <b>Standard Issue</b> (no modifier). One pick, whole run.</p>` +
     (CFG.gauntlet.mods || []).map(m => gRow(m.icon, m.name, m.desc)).join('');
 }
+function guideCards() {
+  const P = (CFG.gauntlet && CFG.gauntlet.managerPerks) || {};
+  const mine = managerTier();
+  const order = ['elite', 'good', 'basic', 'bad'];
+  return `<p class="gLead">Your manager hands you one-shot cards — a different set for every tier, each playable <b>once per run</b>. Arm one on the map before a fight; it's spent the moment the series starts. Hire a better manager mid-run and his set opens up.</p>` +
+    order.filter(k => P[k]).map(k => {
+      const t = P[k], is = mine && mine.key === k;
+      return `<p class="gSec" style="margin-top:12px">${t.label}${t.band ? ' · ' + t.band : ''}${is ? ' — YOURS' : ''}</p>` +
+        (t.items || []).map(it => gRow(it.icon, it.name, it.desc,
+          is ? ((G.perkUsed || {})[it.id] ? 'SPENT' : 'READY') : null,
+          is && !(G.perkUsed || {})[it.id] ? 'held' : 'locked')).join('');
+    }).join('');
+}
 function guideBanners() {
   const st = bannerState();
   return `<p class="gLead">Win the Gauntlet and you don't just stop — you hang a banner and unlock the next level. Beating the table at your highest banner opens the one above it. You can always drop back down; banners are saved on this device.</p>` +
@@ -1091,7 +1182,7 @@ function guideBanners() {
 function openGuide(tab) {
   const t = tab || 'how';
   document.querySelectorAll('#guideOv .bs-tab').forEach(b => b.classList.toggle('on', b.dataset.gt === t));
-  $('guideBody').innerHTML = t === 'relics' ? guideRelics() : t === 'mods' ? guideMods() : t === 'banners' ? guideBanners() : guideHow();
+  $('guideBody').innerHTML = t === 'relics' ? guideRelics() : t === 'mods' ? guideMods() : t === 'cards' ? guideCards() : t === 'banners' ? guideBanners() : guideHow();
   $('guideOv').style.display = 'flex';
 }
 /* ---------- 💵 spendable cash — the number on the scoreboard IS the number you can spend.
@@ -1114,6 +1205,7 @@ function layerPts(i) {
   const y = 90 - (i * 82 / Math.max(1, n - 1));
   if (isShopLayer(i)) return [[50, y]];
   const teams = layerTeams(i);
+  if (teams.length >= 3) return [[18, y], [50, y], [82, y]];
   if (teams.length === 2) return [[30, y], [70, y]];
   const xs = [22, 58, 78, 42];
   return [[i === n - 1 ? 50 : xs[i % 4], y]];
@@ -1130,7 +1222,7 @@ function squadStrip() {
     const face = e.img ? `<img src="${e.img}" alt="" onerror="this.style.display='none'">` : (e.coach ? '📋' : initials(e.name));
     const val = e.coach ? ((e.mod > 0 ? '+' : '') + e.mod) : e.rating;
     const hex = e.coach ? (e.mod > 0 ? '#4ade80' : (e.mod < 0 ? '#ff6b6b' : TIER_HEX.grey)) : TIER_HEX[tierKey(e)];
-    return `<span class="rc"><span class="rcf" style="background:${e.coach ? '#22314a' : teamColor(e.team)}">${face}</span>${lastName(e.name)}${e.rookie ? ' 🎓' : ''} <b style="color:${hex}">${val}</b></span>`;
+    return `<span class="rc"><span class="rcf" style="background:${e.coach ? '#22314a' : teamColor(e.team)}">${face}</span>${lastName(e.name)}${e.rookie ? ' 🎓' : ''}${e.oop ? ' ↔' : ''} <b style="color:${hex}">${val}</b></span>`;
   }).join('') + `<span class="rc">SQUAD <b style="color:${ovrTierHex(overallOf(G.squad))}">${overallOf(G.squad)}</b></span>` +
     `<span class="rc cashChip">💰 <b>${cash$(G.cash)}</b></span>` +
     Object.keys(G.items).map(id => {
@@ -1164,7 +1256,7 @@ function renderStopCard() {
   } else {
     const teams = layerTeams(G.stage);
     const tries = G.tries[G.stage] || 0;
-    if (teams.length === 2 && (!G.route || G.route[G.stage] == null)) {
+    if (teams.length >= 2 && (!G.route || G.route[G.stage] == null)) {
       // fork — the plane waits on the previous city until you tap a road
       $('stopKick').textContent = `FIGHT ${fightNum(G.stage)} OF ${totalFights()} · FORK IN THE ROAD`;
       $('stopName').textContent = 'PICK YOUR ROAD';
@@ -1197,6 +1289,7 @@ function renderStopCard() {
       saveG(); openMap();
     }));
   }
+  renderPerkBar();
   $('mapSquad').innerHTML = squadStrip();
 }
 function showMapTip(html, x, y) {
@@ -1252,7 +1345,7 @@ function openMap() {
     const tip = () => showMapTip(node.dataset.tip, parseFloat(node.style.left), parseFloat(node.style.top));
     node.addEventListener('mouseenter', tip);
     onTap(node, () => {
-      const forkOpen = !G.done && li === G.stage && Array.isArray(gLayers()[li]) && layerTeams(li).length === 2 && (G.route[li] == null);
+      const forkOpen = !G.done && li === G.stage && Array.isArray(gLayers()[li]) && layerTeams(li).length >= 2 && (G.route[li] == null);
       if (forkOpen) chooseRoad(ti); else tip();
     });
   });
@@ -1260,7 +1353,7 @@ function openMap() {
   show('scrMap');
   // the plane waits on the PREVIOUS city while a fork is unchosen — tapping a road flies it
   let restIdx = Math.min(G.done ? layers.length - 1 : G.stage, layers.length - 1);
-  const forkPending = !G.done && Array.isArray(layers[restIdx]) && layerTeams(restIdx).length === 2 && (G.route[restIdx] == null);
+  const forkPending = !G.done && Array.isArray(layers[restIdx]) && layerTeams(restIdx).length >= 2 && (G.route[restIdx] == null);
   if (forkPending) restIdx = Math.max(0, restIdx - 1);
   const restAt = layerAnchor(restIdx);
   if (travelFrom != null && window.gsap && travelFrom !== restIdx) {
@@ -1491,13 +1584,23 @@ function coachEntry(c) {
 function slotPositions(p) {
   return CFG.adapter.primaryPositionOnly ? p.pos.slice(0, 1) : p.pos;
 }
+/* 🧤 Super Utility — an infielder can man any infield spot and an outfielder any outfield
+   spot, but nobody crosses the dirt/grass line and the pitcher is still the pitcher. Only
+   the REELS change; CFG.slots is never mutated, so every other position check is untouched. */
+const UTIL_GROUPS = [['C', '1B', '2B', '3B', 'SS'], ['LF', 'CF', 'RF']];
+function slotEligible(s) {
+  if (!utilMode || s.type !== 'player' || s.positions.length !== 1) return s.positions;
+  return UTIL_GROUPS.find(g => g.includes(s.positions[0])) || s.positions;
+}
+// is this player actually at home in this slot? (his real position, or one of his secondaries)
+function inPosition(s, e) { return s.positions.some(x => slotPositions(e).includes(x)); }
 function buildPools(filter) {
   POOLS = CFG.slots.map(s => {
     let entries;
     if (s.type === 'coach') {
       entries = CFG.coaches.map(c => ({ e: coachEntry(c), w: 1 }));
     } else {
-      entries = PLAYERS.filter(p => (!filter || filter(p)) && s.positions.some(x => slotPositions(p).includes(x))).map(p => ({ e: p, w: rarityW(p) }));
+      entries = PLAYERS.filter(p => (!filter || filter(p)) && slotEligible(s).some(x => slotPositions(p).includes(x))).map(p => ({ e: p, w: rarityW(p) }));
     }
     let total = 0;
     const cum = entries.map(x => (total += x.w));
@@ -1705,6 +1808,10 @@ function startRun(mode) {
     attempt = G.tries[G.stage];
   }
   const seedStr = mode === 'daily' ? dailySeed() : 'pl-gauntlet-' + Date.now() + '-' + Math.random();
+  // 🧤 flip Super Utility before ANY reel is drawn — the Daily always draws from vanilla
+  // pools, so its sequences stay byte-identical whatever the gauntlet is running
+  const wantUtil = (mode === 'gauntlet' && G.mod === 'utility');
+  if (wantUtil !== utilMode) { utilMode = wantUtil; buildPools(); }
   let reels;
   if (mode === 'daily') {
     // same seeded sequences for every attempt, all day, worldwide — timing is the skill
@@ -1976,6 +2083,13 @@ function overallOf(picks) {
 }
 function reveal() {
   run.phase = 'done';
+  if (run.mode === 'gauntlet' && G.mod === 'utility' && !G.squad) {   // 🧤 out of position, −2
+    CFG.slots.forEach((s, i) => {
+      const e = run.locked[i];
+      if (!e || e.coach || s.type !== 'player' || inPosition(s, e)) return;
+      run.locked[i] = { ...e, rating: e.rating - 2, oop: 1 };
+    });
+  }
   if (run.mode === 'gauntlet' && G.mod === 'benchmob' && !G.squad) {   // 💪 Bench Mob
     const si = CFG.slots.findIndex(s => s.type === 'player' && s.positions.length > 1);
     if (si >= 0 && run.locked[si]) run.locked[si] = { ...run.locked[si], rating: run.locked[si].rating + 6 };
@@ -2265,6 +2379,7 @@ function bossIntro() {
     $('vsYou').textContent = run.ovr; $('vsYou').style.color = ovrTierHex(run.ovr);
   }
   run.simOpts = buildSimOpts(b);
+  if (run.mode === 'gauntlet') usePerk();   // 🎽 the armed manager's card fires here
   $('bossAbility').textContent = b.ability ? `⚡ ${b.ability.desc}` : '';
   // the Pistons debuff hits the sim, not the display: your OVR is still your OVR
   const ovrEff = run.ovr - ((b.ability && b.ability.type === 'ovrDebuff') ? b.ability.value : 0);
@@ -2428,7 +2543,7 @@ function nextLayerLabel(i) {
   if (i >= gLayers().length) return '';
   if (isShopLayer(i)) return 'the Traveling Shop 🏪';
   const t = layerTeams(i);
-  return t.length === 2 ? 'a fork in the road' : `the ${t[0].name}`;
+  return t.length >= 2 ? 'a fork in the road' : `the ${t[0].name}`;
 }
 // 🛟 Insurance: the run doesn't end. Time rewinds to the game that killed you and the
 // series re-flips from there with fresh coin flips. One use, gone after it fires.
@@ -2696,6 +2811,7 @@ function showResult() {
     (run.mode !== 'daily' && earned ? ` · +${cash$(earned)} banked${run.interestPaid ? ` (incl. ${cash$(run.interestPaid)} interest)` : ''}` : '') +
     (run.rentalNote ? ` · ${run.rentalNote}` : '') +
     (rookieNote ? ` · ${rookieNote}` : '') +
+    (run.perkNote ? ` · 🎽 ${run.perkNote}` : '') +
     (relicNotes.length ? ` · ${relicNotes.join(' · ')}` : '');
 
   $('recap').innerHTML = CFG.slots.map((s, i) => {
@@ -2705,7 +2821,7 @@ function showResult() {
       : (e.coach ? '📋' : initials(e.name));
     const val = e.coach ? ((e.mod > 0 ? '+' : '') + e.mod) : e.rating;
     const hex = e.coach ? (e.mod > 0 ? '#4ade80' : (e.mod < 0 ? '#ff6b6b' : TIER_HEX.grey)) : TIER_HEX[tierKey(e)];
-    return `<span class="rc"><span class="rcf" style="background:${e.coach ? '#22314a' : teamColor(e.team)}">${face}</span>${lastName(e.name)} <b style="color:${hex}">${val}</b></span>`;
+    return `<span class="rc"><span class="rcf" style="background:${e.coach ? '#22314a' : teamColor(e.team)}">${face}</span>${lastName(e.name)}${e.oop ? ' ↔' : ''} <b style="color:${hex}">${val}</b></span>`;
   }).join('');
 
   $('tipsList').innerHTML = buildTips().map(t => `<div class="tip"><i>${t[0]}</i><span>${t[1]}</span></div>`).join('');

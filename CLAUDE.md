@@ -755,6 +755,28 @@ and internal CSS/fn names say `rr-`).
   loss ends the run anyway). Any future in-series purchase must use the same two helpers.
   "Mulligan" is now spelled out as "your one do-over" in the howto/guide/BANNER IV/Iron Five copy,
   and the final-lock hint reads "no do-over this run" when it's been taken away.
+- **Denser pathing + 🎽 Manager's Cards + 🧤 Super Utility (2026-07-23):**
+  - **Pathing:** EVERY non-final layer is now a fork (6 forks, two of them **3-wide**) — the finals
+    stay single fixed nodes. `layerPts` handles 3 (x = 18/50/82), all the old `length === 2` fork
+    checks are `>= 2`, and the elite's `side` is drawn from the actual node count. 5 new era teams
+    (bucks01/heat11 · royals15/mariners01 · falcons16) keep 19 base teams per sport; the map now
+    uses 16, so `ensureLadder` falls back from a ±2 to a ±4 rating band when candidates run dry
+    (still 8/8 distinct maps in testing). Fight count stays 8 on every route — leaderboard rows
+    remain comparable.
+  - **Manager's Cards** (`managerTier`/`renderPerkBar`/`usePerk`, config `gauntlet.managerPerks`):
+    the coach/manager slot now grants one-shot abilities, **a different set per tier** keyed to his
+    OVR mod — elite (+4/+5) 3 cards · good (+2/+3) 2 · basic (0/+1) 1 · bad (<0) a coin-flip gamble.
+    Armed as a chip on the map stop card (`G.armed`), spent in `bossIntro` right after
+    `buildSimOpts` so the scouting report's exact odds already include it; once per RUN each
+    (`G.perkUsed`), and hiring a better manager mid-run opens his set. Effect types: ovr /
+    gameEdge / elimEdge / firstGameEdge / noMomentum / gamble — all existing sim hooks, so
+    football's two-act prob functions pick them up unchanged. New 🎽 Cards tab in the guide.
+  - **🧤 Super Utility** (baseball-only opener): infielders fill any infield slot (C/1B/2B/3B/SS),
+    outfielders any outfield slot (LF/CF/RF) — never across, pitcher untouched, DH already open.
+    `slotEligible()` expands eligibility for `buildPools` ONLY (CFG.slots is never mutated, so the
+    DH legend rule and every other position check still work); anyone out of position takes **−2**
+    at the reveal and wears a ↔ marker. `utilMode` flips in `startRun` before any reel is drawn and
+    the Daily always rebuilds vanilla pools — verified byte-identical.
 - **Economy (Balatro-style Cap Space):** $5/game win, +$15 series, +$10 sweep, +$20 upset; interest
   on series wins ($1 per $5 held, cap $10) rewards a float. All cash rules live in ONE place
   (`payPerGameWin`/`buzzerBonus`/`interestFor`) shared by the live in-series counter and the result

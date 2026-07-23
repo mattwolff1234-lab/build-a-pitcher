@@ -657,6 +657,25 @@
     "relicChance": 0.25,
     "maxRelics": 5,
 
+    "_managerPerks_comment": "🎽 One-shot cards granted by the manager/coach on your squad, keyed by his OVR mod (elite 4+, good 2-3, basic 0-1, bad below 0). Each card is once per RUN. Effect types the engine understands: ovr / gameEdge / elimEdge / firstGameEdge / noMomentum / gamble.",
+    "managerPerks": {
+      "elite": { "label": "Hall of Fame", "band": "coach +4 or better", "items": [
+        { "id": "icewater", "icon": "🧊", "name": "Ice Water", "desc": "+8% win chance with the game on the line.", "effect": { "type": "elimEdge", "value": 0.08 } },
+        { "id": "masterplan", "icon": "🎯", "name": "Master Plan", "desc": "+5% win chance all game.", "effect": { "type": "gameEdge", "value": 0.05 } },
+        { "id": "script", "icon": "📋", "name": "Script the Opening", "desc": "+18% to be leading at halftime.", "effect": { "type": "firstGameEdge", "value": 0.18 } }
+      ] },
+      "good": { "label": "Proven Winner", "band": "coach +2 or +3", "items": [
+        { "id": "flag", "icon": "🚩", "name": "Challenge Flag", "desc": "Momentum never swings against you this fight.", "effect": { "type": "noMomentum", "value": 1 } },
+        { "id": "halftime", "icon": "📈", "name": "Halftime Adjustment", "desc": "+3% win chance all game.", "effect": { "type": "gameEdge", "value": 0.03 } }
+      ] },
+      "basic": { "label": "Journeyman", "band": "coach 0 or +1", "items": [
+        { "id": "speech", "icon": "🗣️", "name": "Team Meeting", "desc": "+2 squad overall for one fight.", "effect": { "type": "ovr", "value": 2 } }
+      ] },
+      "bad": { "label": "Retread", "band": "coach below 0", "items": [
+        { "id": "trick", "icon": "🎲", "name": "Trick Play", "desc": "Coin flip: +6 squad overall for one fight, or −3.", "effect": { "type": "gamble", "value": 6 } }
+      ] }
+    },
+
     "_mods_comment": "🃏 Run modifiers — a fresh Gauntlet offers 3 of these (plus Standard Issue). Behavior is keyed by id in the page (modReelFilter/applyMod/etc); this file is just the wording.",
     "mods": [
       { "id": "scorched",  "icon": "🚫", "name": "No Ghosts",    "desc": "Legends never appear on your reels this run. Start with +$40." },
@@ -779,37 +798,28 @@
       { "id": "poacher",   "icon": "🕵️", "name": "Advance Scout", "weight": 2, "desc": "Victory spoils also deal one player scouted off the NEXT team on your schedule.", "effect": { "type": "poacher", "value": 1 } }
     ],
     "layers": [
-      [
-        "bucs76"
-      ],
-      [
-        "patriots01",
-        "giants11"
-      ],
-      [
-        "ravens00"
-      ],
+      ["bucs76", "lions08"],
+      ["patriots01", "broncos11"],
+      ["ravens00", "panthers15", "falcons16"],
       "shop",
-      [
-        "cowboys92",
-        "broncos98"
-      ],
-      [
-        "dolphins72"
-      ],
-      [
-        "seahawks13",
-        "niners89"
-      ],
+      ["cowboys92", "broncos98"],
+      ["dolphins72", "steelers75", "seahawks13"],
+      ["niners89", "rams99"],
       "shop",
-      [
-        "patriots07"
-      ],
-      [
-        "bears85"
-      ]
+      ["patriots07"],
+      ["bears85"]
     ],
     "teams": {
+      "falcons16": { "name": "2016 Falcons", "rating": 85, "abbr": "ATL", "logoId": "atl", "blurb": "Fastest offense in football. Ask them about 28–3.", "players": [
+        { "name": "Julio Jones", "rating": 94, "pos": "WR" },
+        { "name": "Matt Ryan", "rating": 90, "pos": "QB" },
+        { "name": "Devonta Freeman", "rating": 82, "pos": "RB" },
+        { "name": "Vic Beasley", "rating": 82, "pos": "DL" },
+        { "name": "Alex Mack", "rating": 80, "pos": "DL" },
+        { "name": "Deion Jones", "rating": 78, "pos": "LB" },
+        { "name": "Grady Jarrett", "rating": 78, "pos": "DL" },
+        { "name": "Mohamed Sanu", "rating": 74, "pos": "WR" }
+      ] },
       "_rotation_comment": "↓ 2026-07-22 rotation-pool era teams — never in the config layers; ensureLadder() swaps them into band-matched early/mid slots per run. Era-rated like everything else.",
       "lions08": { "name": "2008 Lions", "rating": 74, "abbr": "DET", "logoId": "det", "blurb": "0–16. At least Megatron showed up every Sunday.", "players": [
         { "name": "Calvin Johnson", "rating": 88, "pos": "WR" },

@@ -651,13 +651,33 @@
     "relicChance": 0.25,
     "maxRelics": 5,
 
+    "_managerPerks_comment": "🎽 One-shot cards granted by the manager/coach on your squad, keyed by his OVR mod (elite 4+, good 2-3, basic 0-1, bad below 0). Each card is once per RUN. Effect types the engine understands: ovr / gameEdge / elimEdge / firstGameEdge / noMomentum / gamble.",
+    "managerPerks": {
+      "elite": { "label": "Hall of Fame", "band": "manager +4 or better", "items": [
+        { "id": "icewater", "icon": "🧊", "name": "Ice Water", "desc": "+8% win chance in elimination games of one series.", "effect": { "type": "elimEdge", "value": 0.08 } },
+        { "id": "thebook", "icon": "📖", "name": "The Book", "desc": "+5% win chance in every game of one series.", "effect": { "type": "gameEdge", "value": 0.05 } },
+        { "id": "settone", "icon": "🔥", "name": "Ace on Full Rest", "desc": "+18% win chance in Game 1 of one series.", "effect": { "type": "firstGameEdge", "value": 0.18 } }
+      ] },
+      "good": { "label": "Proven Winner", "band": "manager +2 or +3", "items": [
+        { "id": "moundvisit", "icon": "⏱️", "name": "Mound Visit", "desc": "Momentum never swings against you for one series.", "effect": { "type": "noMomentum", "value": 1 } },
+        { "id": "matchup", "icon": "📈", "name": "Bullpen Matchup", "desc": "+3% win chance in every game of one series.", "effect": { "type": "gameEdge", "value": 0.03 } }
+      ] },
+      "basic": { "label": "Journeyman", "band": "manager 0 or +1", "items": [
+        { "id": "speech", "icon": "🗣️", "name": "Clubhouse Speech", "desc": "+2 lineup overall for one series.", "effect": { "type": "ovr", "value": 2 } }
+      ] },
+      "bad": { "label": "Retread", "band": "manager below 0", "items": [
+        { "id": "sendhim", "icon": "🎲", "name": "Send Him!", "desc": "Coin flip: +6 lineup overall for one series, or −3.", "effect": { "type": "gamble", "value": 6 } }
+      ] }
+    },
+
     "_mods_comment": "🃏 Run modifiers — a fresh Gauntlet offers 3 of these (plus Standard Issue). Behavior is keyed by id in the page (modReelFilter/applyMod/etc); this file is just the wording.",
     "mods": [
       { "id": "scorched",  "icon": "🚫", "name": "No Ghosts",       "desc": "Legends never appear on your reels this run. Start with +$40." },
       { "id": "benchmob",  "icon": "💪", "name": "Bench Mob",       "desc": "Your DH gets +6 after the draft. Every boss +1." },
       { "id": "headstart", "icon": "🎁", "name": "Head Start",      "desc": "Start with a random economy relic. Shop prices +30% all run." },
       { "id": "ironfive",  "icon": "🔒", "name": "Set the Lineup",  "desc": "No do-over: you can't drop a player and respin after the draft. +$60 up front." },
-      { "id": "underdogs", "icon": "🐕", "name": "Underdogs",       "desc": "Your reels max out at 84 overall. All winnings +50%." }
+      { "id": "underdogs", "icon": "🐕", "name": "Underdogs",       "desc": "Your reels max out at 84 overall. All winnings +50%." },
+      { "id": "utility",   "icon": "🧤", "name": "Super Utility",   "desc": "Infielders fill any infield spot, outfielders any outfield spot (the pitcher still pitches). Anyone out of position plays −2." }
     ],
 
     "relics": [
@@ -773,37 +793,38 @@
       { "id": "poacher",   "icon": "🕵️", "name": "Advance Scout", "weight": 2, "desc": "Victory spoils also deal one player scouted off the NEXT team on your schedule.", "effect": { "type": "poacher", "value": 1 } }
     ],
     "layers": [
-      [
-        "mets62"
-      ],
-      [
-        "angels02",
-        "whitesox05"
-      ],
-      [
-        "reds90"
-      ],
+      ["mets62", "tigers03"],
+      ["angels02", "rays08"],
+      ["reds90", "phillies93", "royals15"],
       "shop",
-      [
-        "tigers84",
-        "cubs16"
-      ],
-      [
-        "as72"
-      ],
-      [
-        "dodgers63",
-        "as29"
-      ],
+      ["tigers84", "cubs16"],
+      ["as72", "mariners01", "mets86"],
+      ["dodgers63", "dodgers55"],
       "shop",
-      [
-        "yankees98"
-      ],
-      [
-        "yankees27"
-      ]
+      ["yankees98"],
+      ["yankees27"]
     ],
     "teams": {
+      "royals15": { "name": "2015 Royals", "rating": 85, "abbr": "KC", "logoId": 118, "blurb": "Contact, chaos and a bullpen that ended games in the 6th.", "players": [
+        { "name": "Wade Davis", "rating": 88, "pos": "P" },
+        { "name": "Lorenzo Cain", "rating": 86, "pos": "CF" },
+        { "name": "Eric Hosmer", "rating": 82, "pos": "1B" },
+        { "name": "Salvador Perez", "rating": 82, "pos": "C" },
+        { "name": "Mike Moustakas", "rating": 80, "pos": "3B" },
+        { "name": "Alex Gordon", "rating": 80, "pos": "LF" },
+        { "name": "Yordano Ventura", "rating": 78, "pos": "P" },
+        { "name": "Alcides Escobar", "rating": 74, "pos": "SS" }
+      ] },
+      "mariners01": { "name": "2001 Mariners", "rating": 91, "abbr": "SEA", "logoId": 136, "blurb": "116 wins. Still the most in a season, still no ring.", "players": [
+        { "name": "Ichiro Suzuki", "rating": 90, "pos": "RF" },
+        { "name": "Edgar Martinez", "rating": 89, "pos": "DH" },
+        { "name": "Bret Boone", "rating": 88, "pos": "2B" },
+        { "name": "John Olerud", "rating": 85, "pos": "1B" },
+        { "name": "Freddy Garcia", "rating": 83, "pos": "P" },
+        { "name": "Jamie Moyer", "rating": 82, "pos": "P" },
+        { "name": "Kazuhiro Sasaki", "rating": 80, "pos": "P" },
+        { "name": "Mike Cameron", "rating": 80, "pos": "CF" }
+      ] },
       "_rotation_comment": "↓ 2026-07-22 rotation-pool era teams — never in the config layers; ensureLadder() swaps them into band-matched early/mid slots per run. Era-rated like everything else.",
       "tigers03": { "name": "2003 Tigers", "rating": 74, "abbr": "DET", "logoId": 116, "blurb": "43–119. Hey — somebody has to be fight one.", "players": [
         { "name": "Dmitri Young", "rating": 78, "pos": "LF" },

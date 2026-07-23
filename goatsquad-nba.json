@@ -152,6 +152,25 @@
     "relicChance": 0.25,
     "maxRelics": 5,
 
+    "_managerPerks_comment": "🎽 One-shot cards granted by the manager/coach on your squad, keyed by his OVR mod (elite 4+, good 2-3, basic 0-1, bad below 0). Each card is once per RUN. Effect types the engine understands: ovr / gameEdge / elimEdge / firstGameEdge / noMomentum / gamble.",
+    "managerPerks": {
+      "elite": { "label": "Hall of Fame", "band": "coach +4 or better", "items": [
+        { "id": "icewater", "icon": "🧊", "name": "Ice Water", "desc": "+8% win chance in elimination games of one series.", "effect": { "type": "elimEdge", "value": 0.08 } },
+        { "id": "perfectplay", "icon": "📋", "name": "The Perfect Play", "desc": "+5% win chance in every game of one series.", "effect": { "type": "gameEdge", "value": 0.05 } },
+        { "id": "settone", "icon": "🔥", "name": "Set the Tone", "desc": "+18% win chance in Game 1 of one series.", "effect": { "type": "firstGameEdge", "value": 0.18 } }
+      ] },
+      "good": { "label": "Proven Winner", "band": "coach +2 or +3", "items": [
+        { "id": "timeout", "icon": "⏱️", "name": "Timeout", "desc": "Momentum never swings against you for one series.", "effect": { "type": "noMomentum", "value": 1 } },
+        { "id": "adjust", "icon": "📈", "name": "In-Game Adjustment", "desc": "+3% win chance in every game of one series.", "effect": { "type": "gameEdge", "value": 0.03 } }
+      ] },
+      "basic": { "label": "Journeyman", "band": "coach 0 or +1", "items": [
+        { "id": "speech", "icon": "🗣️", "name": "Locker Room Speech", "desc": "+2 squad overall for one series.", "effect": { "type": "ovr", "value": 2 } }
+      ] },
+      "bad": { "label": "Retread", "band": "coach below 0", "items": [
+        { "id": "hail", "icon": "🎲", "name": "Hail Mary", "desc": "Coin flip: +6 squad overall for one series, or −3.", "effect": { "type": "gamble", "value": 6 } }
+      ] }
+    },
+
     "_mods_comment": "🃏 Run modifiers — a fresh Gauntlet offers 3 of these (plus Standard Issue). Behavior is keyed by id in the page (modReelFilter/applyMod/etc); this file is just the wording.",
     "mods": [
       { "id": "scorched",  "icon": "🚫", "name": "No Ghosts",   "desc": "Legends never appear on your reels this run. Start with +$40." },
@@ -187,12 +206,12 @@
 
     "_layers_comment": "The map, bottom to top. Each layer is an array of 1 team key (straight road), 2 team keys (fork — pick your road: usually safe-and-modest vs harder-with-a-better-wheel), or the string 'shop' (the traveling shop). Beat every layer to finish.",
     "layers": [
-      ["bobcats12"],
-      ["sixers16", "knicks19"],
-      ["pistons04"],
+      ["bobcats12", "sixers14"],
+      ["sixers16", "thunder09"],
+      ["pistons04", "bucks01", "suns05"],
       "shop",
       ["mavs11", "celtics08"],
-      ["heat13"],
+      ["heat13", "heat11", "raptors19"],
       ["lakers87", "celtics86"],
       "shop",
       ["bulls96"],
@@ -200,6 +219,26 @@
     ],
 
     "teams": {
+      "bucks01": { "name": "2001 Bucks", "rating": 84, "abbr": "MIL", "logoId": 1610612749, "blurb": "The Big Three nobody remembers — one game from the Finals.", "players": [
+        { "name": "Ray Allen", "nbaId": 951, "rating": 88, "pos": "SG" },
+        { "name": "Glenn Robinson", "nbaId": 261, "rating": 84, "pos": "SF" },
+        { "name": "Sam Cassell", "nbaId": 428, "rating": 84, "pos": "PG" },
+        { "name": "Tim Thomas", "nbaId": 1500, "rating": 76, "pos": "PF" },
+        { "name": "Ervin Johnson", "rating": 70, "pos": "C" },
+        { "name": "Lindsey Hunter", "rating": 68, "pos": "PG" },
+        { "name": "Scott Williams", "rating": 65, "pos": "PF" },
+        { "name": "Darvin Ham", "rating": 62, "pos": "SF" }
+      ] },
+      "heat11": { "name": "2011 Heat", "rating": 91, "abbr": "MIA", "logoId": 1610612748, "blurb": "Not one, not two… year one of the villains.", "players": [
+        { "name": "LeBron James", "nbaId": 2544, "rating": 96, "pos": "SF" },
+        { "name": "Dwyane Wade", "nbaId": 2548, "rating": 93, "pos": "SG" },
+        { "name": "Chris Bosh", "nbaId": 2547, "rating": 86, "pos": "PF" },
+        { "name": "Mario Chalmers", "nbaId": 201596, "rating": 74, "pos": "PG" },
+        { "name": "Mike Miller", "nbaId": 2034, "rating": 73, "pos": "SG" },
+        { "name": "Udonis Haslem", "nbaId": 2617, "rating": 72, "pos": "PF" },
+        { "name": "James Jones", "nbaId": 2592, "rating": 68, "pos": "SF" },
+        { "name": "Joel Anthony", "nbaId": 201202, "rating": 65, "pos": "C" }
+      ] },
       "_rotation_comment": "↓ 2026-07-22 rotation-pool era teams — never in the config layers; ensureLadder() swaps them into band-matched early/mid slots per run. Era-rated like everything else.",
       "sixers14": { "name": "2014 Sixers", "rating": 74, "abbr": "PHI", "logoId": 1610612755, "blurb": "Trust the Process, year zero — 26 straight losses.", "players": [
         { "name": "Michael Carter-Williams", "nbaId": 203487, "rating": 74, "pos": "PG" },
