@@ -154,19 +154,38 @@
 
   /* ---------- the hub: two dials (sport+role = WHAT, mode grid = HOW) ---------- */
   .hub { width:100%; max-width:560px; --hubac:#ff7a18; }
-  .sportseg { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  .sportseg { display:flex; flex-wrap:wrap; gap:8px; }
+  .sport-chip { flex:1 1 0; min-width:96px; }
   .sport-chip { position:relative; display:flex; flex-direction:column; align-items:center; gap:3px; padding:13px 6px 11px;
     border-radius:13px; cursor:pointer; border:1px solid var(--line); background:linear-gradient(180deg,rgba(20,31,48,.6),rgba(9,15,25,.7));
     font-family:'Oswald',sans-serif; font-size:12.5px; font-weight:600; letter-spacing:1.6px; text-transform:uppercase; color:var(--muted); }
+  a.sport-chip { text-decoration:none; }
   .sport-chip i { font-style:normal; font-size:22px; line-height:1; filter:grayscale(.5); opacity:.8; }
   .sport-chip:hover { border-color:rgba(120,160,210,.4); color:var(--ink); }
   .sport-chip.on { color:var(--ink); border-color:var(--hubac); box-shadow:0 0 16px -4px var(--hubac), inset 0 0 22px -14px var(--hubac); }
   .sport-chip.on i { filter:none; opacity:1; }
   .sport-chip .sp-new { position:absolute; top:-7px; right:-4px; font-size:8.5px; font-weight:700; letter-spacing:1px; color:#04140a;
     padding:2px 7px; border-radius:10px; background:linear-gradient(90deg,#43e97b,#38f9d7); box-shadow:0 0 10px rgba(67,233,123,.5); }
-  .sport-chip.gp-chip { border-color:rgba(255,206,58,.45); color:#ffd23f; }
-  .sport-chip.gp-chip i { filter:none; opacity:1; }
-  .sport-chip.gp-chip:hover { border-color:#ffd23f; box-shadow:0 0 16px -4px rgba(255,206,58,.7); color:#ffd23f; }
+  /* 🎫 perks row — Pro + GOAT Pass live BELOW the play surface, not inside the sport grid */
+  .perks { display:flex; gap:8px; margin-top:12px; }
+  .perk-card { flex:1; display:flex; flex-direction:column; align-items:center; gap:2px; padding:11px 8px;
+    border-radius:12px; border:1px solid rgba(255,210,63,.45); cursor:pointer; text-align:center;
+    background:linear-gradient(100deg,rgba(255,210,63,.14),rgba(120,80,255,.14));
+    color:#fff; font-size:12.5px; text-decoration:none; font-family:inherit; }
+  .perk-card b { font-family:'Oswald',sans-serif; letter-spacing:.6px; }
+  .perk-card span { color:#ffd23f; font-size:11.5px; }
+  .perk-card:hover { transform:translateY(-1px); box-shadow:0 8px 22px rgba(255,210,63,.2); }
+  /* 👋 first-visit 3-step strip (shown instead of the collapsed "New here?" details) */
+  .hh-strip { display:none; }
+  body.first-visit .hh-strip { display:grid; grid-template-columns:repeat(3,1fr); gap:8px;
+    max-width:560px; margin:12px auto 0; text-align:center; }
+  .hh-strip > div { padding:10px 8px; border:1px solid var(--line); border-radius:12px;
+    background:linear-gradient(180deg,rgba(20,31,48,.6),rgba(9,15,25,.7)); }
+  .hh-strip i { font-style:normal; font-size:20px; display:block; }
+  .hh-strip b { display:block; font-family:'Oswald',sans-serif; font-size:12.5px; letter-spacing:1px;
+    text-transform:uppercase; margin-top:2px; }
+  .hh-strip span { display:block; color:var(--muted); font-size:11px; line-height:1.35; margin-top:2px; }
+  body.first-visit .how-hub { display:none; }
   .roleseg { display:flex; justify-content:center; gap:6px; margin-top:10px; min-height:34px; }
   .role-chip { padding:8px 20px; border-radius:999px; cursor:pointer; border:1px solid var(--line); background:rgba(255,255,255,.03);
     font-family:'Oswald',sans-serif; font-size:12px; font-weight:600; letter-spacing:1.4px; text-transform:uppercase; color:var(--muted); }
@@ -400,7 +419,7 @@
        text) must NOT show THROUGH the options/cards/panels — only in the gutters. Setting an opaque
        background-COLOR under each element's existing translucent gradient keeps the look identical,
        just solid, so nothing floats behind a card, banner, or the hook/badge pills. */
-    .sport-chip, .role-chip, .resume, .mtile, .pro-banner, .versus, .streak-banner, .daily-cta,
+    .sport-chip, .role-chip, .resume, .mtile, .perk-card, .versus, .streak-banner, .daily-cta,
     .hh-body, .how-hub summary, .stat-bar, .hero .kick {
       background-color:#0b1220;
     }
@@ -500,9 +519,15 @@
     <div class="kick">A Pitchergami Game</div>
     <h1>Goat<i>Lab</i></h1>
     <p>Spin the reel, draft real pros into the attribute slots, then simulate their entire career.</p>
-    <div id="statBar" class="stat-bar" style="display:none">
+    <div id="statBar" class="stat-bar">
       <span class="sb-plays" style="display:none"></span>
       <span class="sb-msg">Can you build the <b class="sb-goat">GOAT</b> (99 OVR)?</span>
+    </div>
+    <!-- first-visit only (body.first-visit): the 3-step pitch replaces the collapsed explainer -->
+    <div class="hh-strip" id="hhStrip">
+      <div><i>🛠️</i><b>Spin &amp; draft</b><span>Land real pros, bolt their ratings onto your player</span></div>
+      <div><i>📈</i><b>Sim the career</b><span>Watch the whole career play out, season by season</span></div>
+      <div><i>🏆</i><b>Beat the world</b><span>Daily challenge · same cards for everyone</span></div>
     </div>
     <details class="how-hub">
       <summary>❓ New here? How GoatLab works</summary>
@@ -518,7 +543,6 @@
   <script>
   (function(){
     var bar = document.getElementById('statBar'); if (!bar) return;
-    bar.style.display = 'inline-flex'; // show teaser immediately; fill in live stats below
     var playsEl = bar.querySelector('.sb-plays'), msg = bar.querySelector('.sb-msg');
     function load(){
       if (document.hidden) return;   // background tabs shouldn't bill edge requests
@@ -537,32 +561,19 @@
   </script>
 
   <div class="hub" id="hub">
-    <div class="sportseg" id="sportSeg"></div>
-    <div class="roleseg" id="roleSeg"></div>
-
-    <style>
-      .pro-banner{ display:flex; align-items:center; justify-content:center; gap:8px 14px; flex-wrap:wrap;
-        margin:0 0 12px; padding:10px 16px; border-radius:12px; text-decoration:none; cursor:pointer;
-        background:linear-gradient(100deg,rgba(255,210,63,.16),rgba(120,80,255,.16)); border:1px solid rgba(255,210,63,.45);
-        color:#fff; font-size:14.5px; transition:transform .15s ease, box-shadow .15s ease; }
-      .pro-banner:hover{ transform:translateY(-1px); box-shadow:0 8px 22px rgba(255,210,63,.2); }
-      .pro-banner .pb-right{ color:#ffd23f; font-family:'Oswald',sans-serif; letter-spacing:.5px; white-space:nowrap; }
-    </style>
-    <a class="pro-banner" data-store-open href="#" id="proBanner">
-      <span>⭐ <b>Go ad-free</b> with GoatLab Pro</span>
-      <span class="pb-right">$4.99/mo · $39.99/yr →</span>
-    </a>
-    <script>
-      (function () {
-        var b = document.getElementById('proBanner'); if (!b) return;
-        if (window.Capacitor) { b.style.display = 'none'; return; }   // Apple IAP — no web purchase in the app
-        try {
-          var e = (JSON.parse(localStorage.getItem('pl_wallet') || 'null') || {}).entitlements;
-          if (e && ((e.pro_until && Date.parse(e.pro_until) > Date.now()) || (e.no_ads_until && Date.parse(e.no_ads_until) > Date.now()))) b.style.display = 'none';
-        } catch (err) {}
-      })();
-    </script>
-
+    <!-- static shells: primary nav exists before ANY script runs (the JS render swaps
+         these for the stateful buttons synchronously; these also survive a GSAP/CDN failure) -->
+    <div class="sportseg" id="sportSeg">
+      <a class="sport-chip on" href="/pitching"><i>⚾</i>Baseball</a>
+      <a class="sport-chip" href="/hoops"><i>🏀</i>Hoops</a>
+      <a class="sport-chip" href="/striker"><i>⚽</i>Soccer</a>
+      <a class="sport-chip" href="/college"><i>🏈</i>College</a>
+      <a class="sport-chip" href="/hockey"><span class="sp-new">NEW</span><i>🏒</i>Hockey</a>
+    </div>
+    <div class="roleseg" id="roleSeg">
+      <button class="role-chip on" data-role="pitcher">⚾ Pitcher</button>
+      <button class="role-chip" data-role="batter">⚾ Batter</button>
+    </div>
 
 
     <a class="resume" id="resumeCard" href="/pitching#daily">
@@ -576,7 +587,35 @@
     </a>
 
     <div class="modes-label">Modes</div>
-    <div class="modes" id="modeGrid"></div>
+    <div class="modes" id="modeGrid">
+      <a class="mtile" href="/pitching#daily"><span class="mgo">→</span><i>🎯</i><b>Daily</b><span>Today's challenge · same cards for everyone</span></a>
+      <a class="mtile" href="/pitching"><span class="mgo">→</span><i>🛠️</i><b>Build</b><span>Draft a pitcher, sim the career</span></a>
+      <a class="mtile" href="/squad-baseball"><span class="mgo">→</span><i>🐐</i><b>GOAT Squad</b><span>Stop the spin, fill your lineup, survive the gauntlet</span></a>
+      <a class="mtile mtile-vs" href="/versus"><span class="mgo">→</span><i>⚔️</i><b>1v1 Live</b><span>Real players, live builds</span></a>
+      <a class="mtile" href="/franchise"><span class="mgo">→</span><i>🏟️</i><b>Franchise</b><span>Sign your builds, chase a title</span></a>
+      <a class="mtile" href="/ranks?game=pitcher"><span class="mgo">→</span><i>🏆</i><b>Ranks</b><span>Top builds, daily champions &amp; the 1v1 ladder</span></a>
+      <a class="mtile" href="/pitching#collection"><span class="mgo">→</span><i>📇</i><b>Collection</b><span>Every card you've pulled</span></a>
+      <a class="mtile" href="/pitching#hof"><span class="mgo">→</span><i>🏛️</i><b>Hall of Fame</b><span>Your saved careers</span></a>
+    </div>
+
+    <div class="perks" id="perksRow">
+      <a class="perk-card" data-store-open href="#" id="proBanner">⭐ <b>GoatLab Pro</b><span>Go ad-free · $4.99/mo</span></a>
+      <button class="perk-card" id="gpBanner" type="button">🎫 <b>GOAT Pass</b><span>Season rewards track</span></button>
+    </div>
+    <script>
+      (function () {
+        var b = document.getElementById('proBanner');
+        if (b) {
+          if (window.Capacitor) { b.style.display = 'none'; }   // Apple IAP — no web purchase in the app
+          else try {
+            var e = (JSON.parse(localStorage.getItem('pl_wallet') || 'null') || {}).entitlements;
+            if (e && ((e.pro_until && Date.parse(e.pro_until) > Date.now()) || (e.no_ads_until && Date.parse(e.no_ads_until) > Date.now()))) b.style.display = 'none';
+          } catch (err) {}
+        }
+        var gp = document.getElementById('gpBanner');
+        if (gp) gp.onclick = function () { if (window.SeasonTrack) SeasonTrack.open(); };
+      })();
+    </script>
   </div>
 
   <div class="foot">
@@ -595,10 +634,14 @@ const $ = id => document.getElementById(id);
 
 /* (Hard Mode toggle now lives in the ☰ menu on every page · injected by switcher.js.) */
 
-/* ---- entrance (kept snappy so the options land fast) ---- */
-gsap.from('.hero .kick', { y: -10, opacity: 0, duration: .35, ease: 'power2.out' });
-gsap.from('.hero h1', { y: 14, opacity: 0, duration: .4, delay: .04, ease: 'power3.out' });
-gsap.from('.hero p', { y: 10, opacity: 0, duration: .35, delay: .1, ease: 'power2.out' });
+/* ---- entrance (kept snappy so the options land fast) ----
+   Motion only, NEVER opacity-from-0 on primary content: a starved rAF (heavy load,
+   background tab) or a failed GSAP CDN must not leave the page blank. */
+if (window.gsap) {
+  gsap.from('.hero .kick', { y: -10, duration: .35, ease: 'power2.out' });
+  gsap.from('.hero h1', { y: 14, duration: .4, delay: .04, ease: 'power3.out' });
+  gsap.from('.hero p', { y: 10, duration: .35, delay: .1, ease: 'power2.out' });
+}
 
 /* ---------- the hub: two dials · sport+role (WHAT) and the mode grid (HOW) ---------- */
 (function hub() {
@@ -630,6 +673,10 @@ gsap.from('.hero p', { y: 10, opacity: 0, duration: .35, delay: .1, ease: 'power
 
   let active = 'pitcher';
   try { const g = localStorage.getItem('pl_activeGame'); if (GAME[g]) active = g; } catch (e) {}
+  // brand-new visitor: no game visited, no XP, no account — self-expires once they play anything
+  let firstVisit = false;
+  try { firstVisit = !localStorage.getItem('pl_activeGame') && !localStorage.getItem('pl_xp') && !localStorage.getItem('pl_account'); } catch (e) {}
+  if (firstVisit) document.body.classList.add('first-visit');
   const sportOf = g => SPORTS.find(s => s.id === GAME[g].sport);
   const roleFor = sport => { let r = null; try { r = localStorage.getItem('pl_role_' + sport.id); } catch (e) {} return (r && GAME[r] && GAME[r].sport === sport.id) ? r : sport.roles[0]; };
   const setActive = g => { active = g; try { localStorage.setItem('pl_activeGame', g); localStorage.setItem('pl_role_' + GAME[g].sport, g); } catch (e) {} render(true); };
@@ -652,8 +699,7 @@ gsap.from('.hero p', { y: 10, opacity: 0, duration: .35, delay: .1, ease: 'power
     $('hub').style.setProperty('--hubac', sport.accent);
     $('sportSeg').innerHTML = SPORTS.map(s =>
       `<button class="sport-chip${s.id === sport.id ? ' on' : ''}" data-sport="${s.id}">
-        ${s.isNew ? '<span class="sp-new">NEW</span>' : ''}<i>${s.icon}</i>${s.name}</button>`).join('')
-      + '<button class="sport-chip gp-chip" id="gpChip"><i>🎫</i>GOAT Pass</button>';
+        ${s.isNew ? '<span class="sp-new">NEW</span>' : ''}<i>${s.icon}</i>${s.name}</button>`).join('');
     $('roleSeg').innerHTML = sport.roles.length > 1
       ? sport.roles.map(r => `<button class="role-chip${r === active ? ' on' : ''}" data-role="${r}">${GAME[r].icon} ${GAME[r].name}</button>`).join('')
       : '';
@@ -664,7 +710,13 @@ gsap.from('.hero p', { y: 10, opacity: 0, duration: .35, delay: .1, ease: 'power
     const dg = dg0;
     const D = dg ? GAME[dg] : null;
     const rc = $('resumeCard');
-    if (!D) {
+    if (firstVisit && streakN === 0) {
+      // first visit: free-play Build is the teaching mode; the Daily stays the returning hook
+      $('rzKick').textContent = '👋 Start here';
+      $('rzLine').innerHTML = 'Spin the reel · draft real pros · sim the career';
+      $('rzGo').textContent = `Build a ${g.name}`;
+      rc.href = g.path;
+    } else if (!D) {
       $('rzKick').textContent = '🏈 NEW · College Football';
       $('rzLine').innerHTML = 'Spin real <b>College Football 27</b> stars into a QB, RB, or WR build';
       $('rzGo').textContent = 'Build a College Star';
@@ -713,7 +765,6 @@ gsap.from('.hero p', { y: 10, opacity: 0, duration: .35, delay: .1, ease: 'power
       : `<a class="mtile${t.cls || ''}" href="${t.href}"><span class="mgo">→</span><i>${t.i}</i><b>${t.b}</b><span>${t.s}</span></a>`).join('');
 
     $('sportSeg').querySelectorAll('[data-sport]').forEach(b => b.onclick = () => { const s = SPORTS.find(x => x.id === b.dataset.sport); setActive(roleFor(s)); });
-    { const gpc = $('gpChip'); if (gpc) gpc.onclick = () => { if (window.SeasonTrack) SeasonTrack.open(); }; }
     $('roleSeg').querySelectorAll('[data-role]').forEach(b => b.onclick = () => setActive(b.dataset.role));
     // ☰ menu deep links follow the ACTIVE game (daily/streak follow its rotation)
     const dgP = D ? D.path : g.path;
@@ -723,7 +774,7 @@ gsap.from('.hero p', { y: 10, opacity: 0, duration: .35, delay: .1, ease: 'power
       if (deep[h]) a.setAttribute('href', deep[h] + '#' + h);
     });
     refreshPlayCount();
-    if (animate && window.gsap) gsap.from('#resumeCard, .mtile', { y: 10, opacity: 0, duration: .3, stagger: .035, ease: 'power2.out', clearProps: 'all' });
+    if (animate && window.gsap) gsap.from('#resumeCard, .mtile', { y: 10, duration: .3, stagger: .035, ease: 'power2.out', clearProps: 'all' });
   }
 
   // social proof: how many played today's daily for the active sport (cached per game per visit,
@@ -744,9 +795,11 @@ gsap.from('.hero p', { y: 10, opacity: 0, duration: .35, delay: .1, ease: 'power
     }).catch(() => {});
   }
   render(false);
-  gsap.from('.sport-chip', { y: 14, opacity: 0, duration: .35, delay: .12, stagger: .06, ease: 'back.out(1.5)', clearProps: 'all' });
-  gsap.from('.resume', { y: 16, opacity: 0, duration: .4, delay: .22, ease: 'back.out(1.3)', clearProps: 'all' });
-  gsap.from('.mtile', { y: 14, opacity: 0, duration: .32, delay: .28, stagger: .04, ease: 'power2.out', clearProps: 'all' });
+  if (window.gsap) {
+    gsap.from('.sport-chip', { y: 14, duration: .35, delay: .12, stagger: .06, ease: 'back.out(1.5)', clearProps: 'all' });
+    gsap.from('.resume', { y: 16, duration: .4, delay: .22, ease: 'back.out(1.3)', clearProps: 'all' });
+    gsap.from('.mtile', { y: 14, duration: .32, delay: .28, stagger: .04, ease: 'power2.out', clearProps: 'all' });
+  }
 })();
 
 /* ---- drifting "careers being built" background cards ---- */

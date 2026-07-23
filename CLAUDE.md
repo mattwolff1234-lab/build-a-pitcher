@@ -305,9 +305,9 @@ append-only `coin_ledger` whose UNIQUE `ref` is the idempotency key for every mo
   `season:'current'`) resolved server-side in `coinSpend` via the shared season clock; blocked
   while Pro is active ("Included ⭐").
 - **Named the "GOAT Pass"** (was Battle Pass — blanket-renamed across track/store/catalog/terms/
-  webhook email/menus). **Homepage banner** (`#goatPassBanner` in index.html, between the Pro
-  banner and resume card): season name, days left, live SXP progress bar, gold 🪙 price CTA (or
-  "Open →" when owned) → opens the track panel. **Jerseys ride the pass**: jr_pinstripe (1800) +
+  webhook email/menus). **Homepage entry** (2026-07-24 hub rework: the old `#goatPassBanner` and
+  the gp-chip in the sport grid are gone): `#gpBanner` in the `.perks` row BELOW the mode grid
+  (next to the moved Pro card `#proBanner`) → opens the track panel; ☰ `#miTrack` unchanged. **Jerseys ride the pass**: jr_pinstripe (1800) +
   jr_gold (4000) on S1, jr_blackout (1400) + jr_chrome (4900) on S2 — type 'jersey' in COSMETICS,
   Equip button calls `Jerseys.equip()` (pl_jersey); pass unlocks write the same
   `pl_track.unlocked` the store SKUs use, so `Jerseys.owns()` works from either source (jerseys
