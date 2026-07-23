@@ -404,45 +404,59 @@
   #ovrCoach { color:var(--muted); font-size:.88rem; margin:2px 0 16px; }
 
   /* ---------- boss screen ---------- */
-  .bossHead { text-align:center; padding:18px 16px 14px; margin-top:10px; }
-  .bossHead .k { color:var(--accent); letter-spacing:.22em; font-size:.8rem; }
-  .bossHead h2 { margin:6px 0 2px; font-size:1.7rem; letter-spacing:.04em; text-transform:uppercase; }
-  .bossNameRow { display:flex; align-items:center; justify-content:center; gap:10px; }
-  .bossLogo { width:36px; height:36px; object-fit:contain; }
+  /* one-screen scoreboard: the matchup is a slim horizontal bar, skip lives inside it */
+  .bossHead { display:flex; align-items:center; gap:12px; padding:10px 12px; margin-top:8px; text-align:left; }
+  .bb-left { flex:1; min-width:0; }
+  .bossHead .k { color:var(--accent); letter-spacing:.22em; font-size:.68rem; }
+  .bossHead h2 { margin:2px 0 0; font-size:1.15rem; letter-spacing:.04em; text-transform:uppercase; }
+  .bossHead #bossSkip { flex:none; min-height:36px; padding:6px 10px; font-size:.8rem; }
+  .bossNameRow { display:flex; align-items:center; justify-content:flex-start; gap:8px; }
+  .bossLogo { width:26px; height:26px; object-fit:contain; }
   .gs-scorerow { display:flex; align-items:center; justify-content:center; gap:14px; }
   .gs-badge { width:42px; height:42px; border-radius:50%; flex:none; display:flex; align-items:center; justify-content:center;
     border:1px solid var(--line); background:rgba(9,15,25,.75); font-size:1.2rem; }
   .gs-badge img { width:32px; height:32px; object-fit:contain; }
   .gs-badge.you { border-color:rgba(25,198,255,.5); box-shadow:0 0 10px rgba(25,198,255,.15); }
-  .bossHead .blurb { color:var(--muted); font-size:.88rem; margin:0; }
-  .bossAbility { color:var(--gold); font-size:.8rem; margin:6px 0 0; min-height:0; }
-  .vsRow { display:flex; align-items:center; justify-content:center; gap:18px; margin:14px 0 4px; }
+  .bossHead .blurb { color:var(--muted); font-size:.76rem; margin:2px 0 0;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .bossAbility { color:var(--gold); font-size:.76rem; margin:2px 0 0; min-height:0;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .vsRow { display:flex; align-items:center; justify-content:center; gap:10px; margin:0; flex:none; }
   .vsRow .side { text-align:center; }
-  .vsRow .side .n { font-size:2.2rem; font-weight:700; }
+  .vsRow .side .n { font-size:1.5rem; font-weight:700; }
+  @media (max-width:620px){
+    .bossHead .blurb { display:none; }
+    .bossHead h2 { font-size:1rem; }
+  }
   .vsRow .side .l { font-size:.72rem; letter-spacing:.14em; color:var(--muted); }
   .vsRow .x { color:var(--dim); font-size:1.1rem; }
   /* per-game cinematic stage */
-  .gameStage { margin-top:10px; text-align:center; padding:16px 14px 14px; }
-  .gs-title { font-size:1.55rem; letter-spacing:.14em; }
+  .gameStage { margin-top:8px; text-align:center; padding:10px 12px; }
+  .gs-title { font-size:1.35rem; letter-spacing:.14em; }
   .gs-venue { color:var(--muted); font-size:.74rem; letter-spacing:.2em; min-height:1.1em; margin-top:2px; }
   .gs-period { color:var(--accent2); font-size:.72rem; letter-spacing:.24em; min-height:1.1em; margin-top:4px; }
-  .gs-score { font-size:3.1rem; font-weight:700; letter-spacing:.06em; margin:6px 0 4px; line-height:1.05; }
-  .gs-quarters { display:flex; gap:8px; justify-content:center; min-height:44px; flex-wrap:wrap; }
+  .gs-score { font-size:clamp(2.2rem, 9vw, 3.1rem); font-weight:700; letter-spacing:.06em; margin:4px 0 2px; line-height:1.05; }
+  .gs-quarters { display:flex; gap:8px; justify-content:center; min-height:34px; flex-wrap:wrap; }
   .gs-q { border:1px solid var(--line); border-radius:8px; padding:3px 9px 4px; font-size:.68rem; color:var(--dim); background:rgba(9,15,25,.7); letter-spacing:.08em; }
   .gs-q b { display:block; color:var(--ink); font-family:'Oswald'; font-size:.92rem; letter-spacing:.05em; }
-  .gs-star { color:var(--gold); font-size:.9rem; min-height:1.3em; margin-top:7px; }
-  .seriesPanel { margin-top:10px; padding:12px 6px 8px; }
-  #seriesScore { text-align:center; font-size:2.2rem; font-weight:700; letter-spacing:.1em; margin:2px 0 2px; }
-  #seriesTag { text-align:center; color:var(--muted); font-size:.74rem; letter-spacing:.18em; }
+  .gs-star { color:var(--gold); font-size:.9rem; min-height:1.3em; margin-top:4px; }
+  /* series panel is one grid row (tag | score | pips) + full-width log below */
+  .seriesPanel { margin-top:8px; padding:8px 10px 6px;
+    display:grid; grid-template-columns:1fr auto 1fr; align-items:center; }
+  #seriesScore { text-align:center; font-size:1.6rem; font-weight:700; letter-spacing:.1em; margin:0; }
+  #seriesTag { text-align:left; color:var(--muted); font-size:.72rem; letter-spacing:.18em; }
+  #seriesPips { justify-self:end; margin:0; }
+  #closeoutFlash, #seriesLog, #bossBanner, #rentBox { grid-column:1/-1; }
   #closeoutFlash { text-align:center; color:var(--gold); letter-spacing:.24em; font-size:.85rem; min-height:1.3em; opacity:0; }
-  #seriesLog { margin:6px 0 0; }
+  #seriesLog { margin:4px 0 0; overflow-y:auto;
+    max-height:clamp(56px, calc(100vh - 620px), 200px);
+    max-height:clamp(56px, calc(100dvh - 620px), 200px); }
   .game-row { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:7px 12px; border-bottom:1px solid var(--line); font-size:.9rem; }
   .game-row:last-child { border-bottom:none; }
   .game-row .gn { color:var(--muted); letter-spacing:.1em; font-size:.76rem; flex:none; }
   .game-row .gstar { color:var(--dim); font-size:.76rem; flex:1; text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .game-row b.win { color:var(--gold); } .game-row b.loss { color:#ff6b6b; }
-  #bossBanner { text-align:center; font-size:1.5rem; margin:12px 0 0; min-height:1.4em; letter-spacing:.06em; }
-  .bossFoot { text-align:center; margin-top:12px; }
+  #bossBanner { text-align:center; font-size:1.25rem; margin:6px 0 0; min-height:1.4em; letter-spacing:.06em; }
   /* ⚙️ settings overlay rows */
   .setRow { padding:8px 2px 4px; }
   .setLabel { font-weight:600; font-size:.95rem; margin-bottom:8px; }
@@ -687,15 +701,18 @@
   <!-- ================= BOSS ================= -->
   <section class="scr hidden" id="scrBoss">
     <div class="panel bossHead">
-      <div class="k disp" id="bossKick">DAILY BOSS · 7-GAME SERIES</div>
-      <h2 class="disp bossNameRow"><img id="bossLogoImg" class="bossLogo" alt="" style="display:none"><span id="bossName">—</span></h2>
-      <p class="blurb" id="bossBlurb"></p>
-      <p class="bossAbility" id="bossAbility"></p>
+      <div class="bb-left">
+        <div class="k disp" id="bossKick">DAILY BOSS · 7-GAME SERIES</div>
+        <h2 class="disp bossNameRow"><img id="bossLogoImg" class="bossLogo" alt="" style="display:none"><span id="bossName">—</span></h2>
+        <p class="blurb" id="bossBlurb"></p>
+        <p class="bossAbility" id="bossAbility"></p>
+      </div>
       <div class="vsRow">
         <div class="side"><div class="n disp" id="vsYou">—</div><div class="l">YOUR SQUAD</div></div>
         <div class="x disp">VS</div>
         <div class="side"><div class="n disp" id="vsBoss">—</div><div class="l">BOSS</div></div>
       </div>
+      <button class="btn ghost" id="bossSkip" style="display:none">⏩ Skip</button>
     </div>
     <div class="panel gameStage" id="gameStage">
       <div class="gs-title disp" id="gsTitle">TIP-OFF…</div>
@@ -729,9 +746,6 @@
           <div class="rentBtns" id="rentBtns"></div>
         </div>
       </div>
-    </div>
-    <div class="bossFoot">
-      <button class="btn ghost" id="bossSkip" style="display:none">⏩ Skip</button>
     </div>
   </section>
 
@@ -2524,6 +2538,7 @@ function playSeries(sr, fromIdx) {
       row.className = 'game-row';
       row.innerHTML = `<span class="gn">GM ${st.n}</span><span class="gstar">⭐ ${star.name} ${star.pts}</span><b class="${g.win ? 'win' : 'loss'} disp">${g.win ? 'W' : 'L'} ${g.us}–${g.them}</b>`;
       $('seriesLog').appendChild(row);
+      $('seriesLog').scrollTop = $('seriesLog').scrollHeight;
       gsap.fromTo(row, { x: -14, opacity: 0 }, { x: 0, opacity: 1, duration: .28, ease: 'power2.out' });
       $('seriesScore').textContent = `${st.w} – ${st.l}`;
       paintSeriesPips(st.w, st.l);
