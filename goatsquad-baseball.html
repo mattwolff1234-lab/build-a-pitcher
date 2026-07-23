@@ -23,6 +23,7 @@
 <meta name="twitter:image" content="/icon-512.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="/namefilter.js" defer></script>
+<script src="/achievements.js" defer></script>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-TVL2XEQ2Q7"></script>
 <script>
@@ -274,6 +275,15 @@
   @media (prefers-reduced-motion: reduce){
     .mnode.cur, .slot.pickable, .scrollCue span { animation:none !important; }
   }
+  /* 🌌 overtime: the world map — deep space over the home grid */
+  #scrMap.ot .mapBox { background:radial-gradient(120% 100% at 50% 0%, #0b1030 0%, #05070f 55%, #02030a 100%); }
+  #scrMap.ot .mapBox::after { content:''; position:absolute; inset:0; pointer-events:none;
+    background-image:radial-gradient(1.5px 1.5px at 20% 30%, rgba(255,255,255,.5) 50%, transparent 51%),
+      radial-gradient(1px 1px at 70% 15%, rgba(255,255,255,.4) 50%, transparent 51%),
+      radial-gradient(1.5px 1.5px at 85% 60%, rgba(255,255,255,.35) 50%, transparent 51%),
+      radial-gradient(1px 1px at 40% 75%, rgba(255,255,255,.3) 50%, transparent 51%),
+      radial-gradient(1px 1px at 55% 45%, rgba(255,255,255,.45) 50%, transparent 51%); }
+  #scrMap.ot .mnode img { border-radius:4px; }
   /* 🎓 one-time coach marks — a floating hint near the thing to tap */
   .cmark { position:fixed; z-index:26; max-width:260px; padding:10px 14px; border:1px solid var(--accent);
     border-radius:12px; background:rgba(10,19,32,.97); font-size:.86rem; line-height:1.4;
@@ -610,6 +620,7 @@
         <button class="btn primary" id="btnGauntlet" disabled>🗺️ PLAY THE GAUNTLET</button>
         <button class="btn ghost" id="btnDaily" disabled>🎯 Daily Challenge</button>
         <button class="btn ghost" id="btnBoard">🏆 Leaderboard</button>
+        <button class="btn ghost" id="btnAch" type="button">🎖️ Achievements</button>
       </div>
       <div class="homeStats" id="homeStats">Loading players…</div>
       <div class="homeStats" id="homeG"></div>
@@ -1292,14 +1303,18 @@ function spendInSeries(n) {
 /* ---------- the map: layered path (straight roads, forks, shops), plane flies you between ---------- */
 // per-layer node positions: single/shop nodes snake, fork nodes sit side by side
 function layerPts(i) {
-  const n = gLayers().length;
-  const y = 90 - (i * 82 / Math.max(1, n - 1));
+  const all = gLayers().length;
+  // 🌌 overtime is its OWN map: beaten base layers park off-canvas, the world tour gets full height
+  const otBase = (G && G.ot) ? ((CFG.gauntlet.layers || []).length) : 0;
+  if (otBase && i < otBase) return [[-20, 130]];
+  const n = all - otBase, idx = i - otBase;
+  const y = 90 - (idx * 82 / Math.max(1, n - 1));
   if (isShopLayer(i)) return [[50, y]];
   const teams = layerTeams(i);
   if (teams.length >= 3) return [[18, y], [50, y], [82, y]];
   if (teams.length === 2) return [[30, y], [70, y]];
   const xs = [22, 58, 78, 42];
-  return [[i === n - 1 ? 50 : xs[i % 4], y]];
+  return [[i === all - 1 ? 50 : xs[idx % 4], y]];
 }
 // where the plane rests for a layer: the chosen node, or hovering mid-fork until you pick
 function layerAnchor(i) {
@@ -1356,7 +1371,7 @@ function renderStopCard() {
       const fkLogoT = CFG.gauntlet.logoTemplate || '';
       $('forkBtns').innerHTML = teams.map((t, ti) => `
         <button class="btn forkBtn" type="button" data-f="${ti}">
-          ${fkLogoT && t.logoId != null ? `<img class="fk-logo" src="${fkLogoT.replace('{id}', t.logoId)}" alt="" onerror="this.remove()">` : ''}
+          ${t.logoUrl ? `<img class="fk-logo" src="${t.logoUrl}" alt="" onerror="this.remove()">` : (fkLogoT && t.logoId != null ? `<img class="fk-logo" src="${fkLogoT.replace('{id}', t.logoId)}" alt="" onerror="this.remove()">` : '')}
           <span class="fk-col"><b>${t.name}${t.elite ? ' ⚠️' : ''}</b><span>${t.blurb || ''}</span></span>
           <span class="fk-r" style="color:${ovrTierHex(t.rating)}">${t.rating}</span>
         </button>`).join('');
@@ -1394,6 +1409,22 @@ function renderStopCard() {
   renderPerkBar();
   $('mapSquad').innerHTML = squadStrip();
 }
+// 🚀 one-shot launch cinematic when overtime opens — the home league is beaten
+function otLaunch(cb) {
+  if (PREFERS_STILL || !window.gsap) return cb();
+  const ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;z-index:60;background:#02050a;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;overflow:hidden;';
+  ov.innerHTML = '<div style="font-size:64px" id="otShip">🚀</div>' +
+    '<div class="disp" style="letter-spacing:.3em;color:#54c7ff;font-size:.9rem">LEAVING THE LEAGUE</div>' +
+    '<div style="color:#8aa3c0;font-size:.8rem">The world is calling — new challengers ahead</div>';
+  for (let i = 0; i < 26; i++) { const st = document.createElement('i'); st.style.cssText = 'position:absolute;left:' + (Math.random()*100) + '%;top:' + (Math.random()*100) + '%;width:2px;height:' + (8+Math.random()*22) + 'px;background:rgba(255,255,255,' + (.15+Math.random()*.5) + ');'; ov.appendChild(st); }
+  document.body.appendChild(ov);
+  gsap.from(ov, { opacity: 0, duration: .3 });
+  gsap.fromTo('#otShip', { y: 90, rotation: -8 }, { y: -34, rotation: 0, duration: 1.7, ease: 'power2.inOut' });
+  gsap.to(ov.querySelectorAll('i'), { y: 300, duration: 1.6, ease: 'none' });
+  gsap.to(ov, { opacity: 0, duration: .4, delay: 2.1, onComplete: () => ov.remove() });
+  setTimeout(cb, 2300);
+}
 function showMapTip(html, x, y) {
   const tip = $('mapTip');
   tip.innerHTML = html;
@@ -1411,6 +1442,15 @@ function openMap() {
   $('mapKick').textContent = (G && G.ot ? '🌋 OVERTIME · ' : '') + (CFG.gauntlet.title || 'THE GAUNTLET');
   $('mapSub').textContent = CFG.gauntlet.subtitle || '';
   $('sqOvrChip').textContent = G.squad ? overallOf(G.squad) : '—';
+  if (window.Ach) try {
+    if (G.squad) {
+      Ach.unlock('rr_root');
+      if (overallOf(G.squad) >= 90) Ach.unlock('rr_squad90');
+      if (G.squad.some(e => e && e.legend)) Ach.unlock('rr_legend');
+    }
+    if (G.cash >= 200) Ach.unlock('rr_cash200');
+    if ((G.relics || []).length >= 5) Ach.unlock('rr_relics5');
+  } catch (e) {}
   $('btnSquadOv').style.display = G.squad ? '' : 'none';
   // route lines — the beaten road is one bright line, the live choice glows, and future
   // possibilities fade way back (the old full web at every layer read as tangle)
@@ -1423,7 +1463,9 @@ function openMap() {
   const seg = (a, b, stroke, w, dash) =>
     `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="${stroke}" stroke-width="${w}"${dash ? ` stroke-dasharray="${dash}"` : ''}/>`;
   let lines = '';
+  const otSkipL = (G && G.ot) ? ((CFG.gauntlet.layers || []).length) : 0;
   for (let i = 0; i < layers.length - 1; i++) {
+    if (i + 1 < otSkipL) continue;
     const next = layerPts(i + 1);
     if (G.done || i + 1 < G.stage) {
       lines += seg(visitedPt(i), visitedPt(i + 1), 'rgba(255,206,58,.45)', 1.1);
@@ -1438,7 +1480,9 @@ function openMap() {
   $('mapSvg').innerHTML = lines;
   // nodes
   let html = '';
+  const otSkip = (G && G.ot) ? ((CFG.gauntlet.layers || []).length) : 0;
   layers.forEach((l, i) => {
+    if (i < otSkip) return;
     const pts = layerPts(i);
     if (isShopLayer(i)) {
       const cls = i < G.stage ? 'beat' : (i === G.stage && !G.done ? 'cur' : 'lock');
@@ -1452,9 +1496,8 @@ function openMap() {
       else if (i === G.stage && !G.done) cls = 'cur';
       else cls = 'lock';
       const finale = i === layers.length - 1 ? ' finale' : '';
-      const logo = (logoT && s.logoId != null)
-        ? `<img src="${logoT.replace('{id}', s.logoId)}" alt="" onerror="this.remove()">`
-        : (finale ? '👑' : fightNum(i));
+      const lu = s.logoUrl || ((logoT && s.logoId != null) ? logoT.replace('{id}', s.logoId) : null);
+      const logo = lu ? `<img src="${lu}" alt="" onerror="this.remove()">` : (finale ? '👑' : fightNum(i));
       html += `<div class="mnode ${cls}${finale}${s.elite ? ' elite' : ''}" data-layer="${i}" data-ti="${ti}" data-tip="FIGHT ${fightNum(i)} · <b>${s.name}</b> (${s.rating})${s.elite ? ' · ⚠️ <b>ELITE</b> — juiced spoils' : ''}" title="${s.name} (${s.rating})" style="left:${pts[ti][0]}%; top:${pts[ti][1]}%">${logo}<small>${cls === 'beat' ? '✓' : (s.elite ? '⚠️' + s.rating : s.rating)}</small></div>`;
     });
   });
@@ -1470,6 +1513,8 @@ function openMap() {
     });
   });
   renderStopCard();
+  $('scrMap').classList.toggle('ot', !!(G && G.ot));
+  $('plane').textContent = (G && G.ot) ? '🚀' : '✈️';
   show('scrMap');
   // the plane waits on the PREVIOUS city while a fork is unchosen — tapping a road flies it
   let restIdx = Math.min(G.done ? layers.length - 1 : G.stage, layers.length - 1);
@@ -2486,7 +2531,7 @@ function bossIntro() {
   $('bossName').textContent = b.name;
   // franchise crest on the header and the scoreboard
   const logoT = (CFG.gauntlet && CFG.gauntlet.logoTemplate) || '';
-  const logoUrl = (logoT && b.logoId != null) ? logoT.replace('{id}', b.logoId) : null;
+  const logoUrl = b.logoUrl || ((logoT && b.logoId != null) ? logoT.replace('{id}', b.logoId) : null);
   $('bossLogoImg').style.display = logoUrl ? 'inline-block' : 'none';
   if (logoUrl) $('bossLogoImg').src = logoUrl;
   $('gsBossLogo').innerHTML = logoUrl ? `<img src="${logoUrl}" alt="" onerror="this.remove()">` : '🛡️';
@@ -2768,6 +2813,7 @@ function rentChaser() {
   if (spendableCash() < R.price) return;
   spendInSeries(R.price);
   track('shop_use', { item: 'rental', stage: fightNum(run.stage) });
+  if (window.Ach) try { Ach.unlock('rr_rental'); } catch (e) {}
   // every eligible player, legends included, at EVEN weight — no rarity bands here
   const onSquad = new Set(run.locked.filter(e => e && !e.coach).map(e => e.name));
   const elig = PLAYERS.filter(p => p.rating >= (R.minRating || 90) && !onSquad.has(p.name));
@@ -2824,7 +2870,7 @@ function showResult() {
   let finalStop = false, earned = 0, rookieNote = null, relicNotes = [];
   if (run.mode === 'daily') {
     const st = day.daily;
-    if (won) { st.beat++; if (st.firstBeat == null) st.firstBeat = run.attempt; }
+    if (won) { st.beat++; if (st.firstBeat == null) st.firstBeat = run.attempt; } if (won && window.Ach) try { Ach.unlock('rr_daily_boss'); } catch (e) {}
     if (run.ovr > st.bestOvr) st.bestOvr = run.ovr;
     saveDay();
   } else {
@@ -2898,6 +2944,24 @@ function showResult() {
       banner: G.banner || 0,
       diedTo: won ? null : b.name
     };
+    // 🏅 achievements (meta only; module may be absent)
+    if (window.Ach && run.mode === 'gauntlet') try {
+      const S = run.summary, games = (run.series && run.series.games) || [];
+      if (won) {
+        Ach.unlock('rr_win');
+        if (games.length >= 4 && games.every(x => x.win)) Ach.unlock('rr_sweep');
+        if (run.boss && run.boss.rating > run.ovr) Ach.unlock('rr_upset');
+        if (run.boss && run.boss.elite) Ach.unlock('rr_elite');
+      }
+      if (S.champion && won) {
+        Ach.unlock('rr_champion');
+        if (G.mod && G.mod !== 'none') Ach.unlock('rr_mod_champ');
+        if ((S.banner || 0) >= 1) Ach.unlock('rr_banner1');
+        if ((S.banner || 0) >= 3) Ach.unlock('rr_banner3');
+        if ((S.banner || 0) >= 5) Ach.unlock('rr_banner5');
+      }
+      if (S.immortal) Ach.unlock('rr_immortal');
+    } catch (e) {}
     if (won) {
       // 🏆 hang a banner: winning the base table at your current level unlocks the next
       if (run.stage >= baseLayerCount - 1 && !G.ot) {
@@ -3758,7 +3822,7 @@ $('btnGauntlet').addEventListener('click', () => { Sound.unlock(); openMap(); })
 $('btnFight').addEventListener('click', () => {
   Sound.unlock();
   if (G.done) {
-    if (hasOvertime() && !G.ot) { G.ot = 1; G.done = false; saveG(); openMap(); }  // 🌋 ENTER OVERTIME
+    if (hasOvertime() && !G.ot) { G.ot = 1; G.done = false; saveG(); otLaunch(openMap); }  // 🌋 ENTER OVERTIME
     else { G = freshG(); saveG(); openMap(); }                             // champion/immortal → run it again
   }
   else if (isShopLayer(G.stage)) {                                          // ✈️ FLY ON from the shop
@@ -3774,6 +3838,7 @@ $('btnFight').addEventListener('click', () => {
   else startRun('gauntlet');                 // first fight: build the squad
 });
 $('btnMapBack').addEventListener('click', renderHome);
+$('btnAch').addEventListener('click', () => { if (window.Ach) Ach.open(); });
 // pointerdown (not click) — the STOP moment is the whole skill, don't add click latency
 $('stopBtn').addEventListener('pointerdown', ev => { if (ev.button > 0) return; ev.preventDefault(); Sound.unlock(); stopAll(); }, { passive: false });
 $('ovrGo').addEventListener('click', goBoss);

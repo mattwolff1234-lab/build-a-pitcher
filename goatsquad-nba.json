@@ -374,20 +374,20 @@
           { "name": "Andrew Bogut", "nbaId": 101106, "rating": 79, "pos": "C" }, { "name": "Harrison Barnes", "nbaId": 203084, "rating": 78, "pos": "SF" },
           { "name": "Shaun Livingston", "nbaId": 2733, "rating": 76, "pos": "PG" }, { "name": "Festus Ezeli", "nbaId": 203105, "rating": 72, "pos": "C" },
           { "name": "Leandro Barbosa", "nbaId": 2571, "rating": 72, "pos": "SG" }] },
-      "dream92": { "name": "'92 Dream Team", "rating": 101, "abbr": "USA", "blurb": "Barcelona. Eleven Hall of Famers on one bench. The greatest roster ever assembled.",
+      "dream92": { "logoUrl": "https://flagcdn.com/w80/us.png", "name": "'92 Dream Team", "rating": 101, "abbr": "USA", "blurb": "Barcelona. Eleven Hall of Famers on one bench. The greatest roster ever assembled.",
         "players": [
           { "name": "Magic Johnson", "nbaId": 77142, "rating": 96, "pos": "PG" }, { "name": "Michael Jordan", "nbaId": 893, "rating": 99, "pos": "SG" },
           { "name": "Scottie Pippen", "nbaId": 937, "rating": 94, "pos": "SF" }, { "name": "Larry Bird", "nbaId": 1449, "rating": 92, "pos": "SF" },
           { "name": "Charles Barkley", "rating": 96, "pos": "PF" }, { "name": "Karl Malone", "rating": 94, "pos": "PF" },
           { "name": "Patrick Ewing", "rating": 93, "pos": "C" }, { "name": "David Robinson", "rating": 93, "pos": "C" }] },
-      "arg04": { "name": "2004 Argentina", "rating": 98, "abbr": "ARG", "blurb": "La Generación Dorada — the team that beat the USA in Athens and took gold.",
+      "arg04": { "logoUrl": "https://flagcdn.com/w80/ar.png", "name": "2004 Argentina", "rating": 98, "abbr": "ARG", "blurb": "La Generación Dorada — the team that beat the USA in Athens and took gold.",
         "ability": { "type": "noPlayerMomentum", "value": 1, "desc": "Fundamentals never panic. Your desperation boost is switched off." },
         "players": [
           { "name": "Manu Ginobili", "nbaId": 1938, "rating": 95, "pos": "SG" }, { "name": "Luis Scola", "rating": 90, "pos": "PF" },
           { "name": "Andres Nocioni", "rating": 85, "pos": "SF" }, { "name": "Carlos Delfino", "rating": 82, "pos": "SG" },
           { "name": "Fabricio Oberto", "rating": 81, "pos": "C" }, { "name": "Pepe Sanchez", "rating": 78, "pos": "PG" },
           { "name": "Walter Herrmann", "rating": 79, "pos": "SF" }, { "name": "Ruben Wolkowyski", "rating": 76, "pos": "C" }] },
-      "redeem08": { "name": "2008 Redeem Team", "rating": 103, "abbr": "USA", "blurb": "Kobe, LeBron, Wade. Redemption with a vengeance — gold in Beijing.",
+      "redeem08": { "logoUrl": "https://flagcdn.com/w80/us.png", "name": "2008 Redeem Team", "rating": 103, "abbr": "USA", "blurb": "Kobe, LeBron, Wade. Redemption with a vengeance — gold in Beijing.",
         "ability": { "type": "bossFirstGameEdge", "value": 0.12, "desc": "They open on a 20–0 run. Redeem Team +12% in Game 1." },
         "players": [
           { "name": "Kobe Bryant", "nbaId": 977, "rating": 99, "pos": "SG" }, { "name": "LeBron James", "nbaId": 2544, "rating": 98, "pos": "SF" },

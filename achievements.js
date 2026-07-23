@@ -62,6 +62,24 @@
     { id: 'grind3', cat: 'daily', icon: '🏆', name: 'Daily Grind III', desc: 'Complete 100 daily challenges.', col: 3, row: 18, parent: 'grind2', chal: true },
     { id: 'shiny', cat: 'daily', icon: '✨', name: 'Shiny Hunter', desc: 'Land a shiny player. (Coming soon!)', col: 1, row: 19, parent: 'daily_root', future: true },
     { id: 'completionist', cat: 'daily', icon: '🏅', name: 'Completionist', desc: 'Unlock every other achievement.', col: 1, row: 20, parent: 'daily_root', chal: true },
+    // ---- GOAT Squad (gauntlet) — unlocked from the /goatsquad pages, any sport ----
+    { id: 'rr_root', cat: 'gauntlet', icon: '🐐', name: 'Stop the Spin', desc: 'Lock in your first full GOAT Squad.', col: 0, row: 27 },
+    { id: 'rr_squad90', cat: 'gauntlet', icon: '📈', name: 'Superteam', desc: 'Reveal a 90+ overall squad.', col: 1, row: 26, parent: 'rr_root' },
+    { id: 'rr_legend', cat: 'gauntlet', icon: '🟪', name: 'Living Legend', desc: 'Lock a legend into your squad.', col: 2, row: 26, parent: 'rr_squad90' },
+    { id: 'rr_win', cat: 'gauntlet', icon: '⚔️', name: 'First Blood', desc: 'Win a gauntlet fight.', col: 1, row: 27, parent: 'rr_root' },
+    { id: 'rr_sweep', cat: 'gauntlet', icon: '🧹', name: 'The Broom', desc: 'Sweep a boss series without dropping a game.', col: 2, row: 27, parent: 'rr_win' },
+    { id: 'rr_champion', cat: 'gauntlet', icon: '👑', name: 'Run the Table', desc: 'Beat every fight on the map and hang a banner.', col: 3, row: 27, parent: 'rr_sweep', chal: true },
+    { id: 'rr_immortal', cat: 'gauntlet', icon: '🌌', name: 'Immortal', desc: 'Clear overtime — beat the myths themselves.', col: 4, row: 27, parent: 'rr_champion', chal: true },
+    { id: 'rr_upset', cat: 'gauntlet', icon: '🐶', name: 'Giant Killer', desc: 'Beat a boss rated above your squad.', col: 2, row: 28, parent: 'rr_win' },
+    { id: 'rr_elite', cat: 'gauntlet', icon: '⚠️', name: 'Danger Tourist', desc: 'Take the ELITE road and win the fight.', col: 3, row: 28, parent: 'rr_upset' },
+    { id: 'rr_mod_champ', cat: 'gauntlet', icon: '🃏', name: 'House Rules', desc: 'Win the whole gauntlet with a run modifier active.', col: 4, row: 28, parent: 'rr_champion', chal: true },
+    { id: 'rr_banner1', cat: 'gauntlet', icon: '🏆', name: 'Back for More', desc: 'Win the gauntlet at BANNER I or higher.', col: 4, row: 26, parent: 'rr_champion' },
+    { id: 'rr_banner3', cat: 'gauntlet', icon: '🏆', name: 'Three-Peat', desc: 'Win the gauntlet at BANNER III or higher.', col: 5, row: 26, parent: 'rr_banner1', chal: true },
+    { id: 'rr_banner5', cat: 'gauntlet', icon: '💎', name: 'Ascended', desc: 'Win at BANNER V — no insurance, no do-over, no mercy.', col: 6, row: 26, parent: 'rr_banner3', chal: true },
+    { id: 'rr_daily_boss', cat: 'gauntlet', icon: '🎯', name: 'Boss of the Day', desc: "Beat GOAT Squad's daily boss.", col: 1, row: 28, parent: 'rr_root' },
+    { id: 'rr_relics5', cat: 'gauntlet', icon: '✨', name: 'Relic Hunter', desc: 'Hold 5 relics at once in one run.', col: 1, row: 29, parent: 'rr_root' },
+    { id: 'rr_cash200', cat: 'gauntlet', icon: '💰', name: 'Deep Pockets', desc: 'Bank $200 cap space in a single run.', col: 2, row: 29, parent: 'rr_relics5' },
+    { id: 'rr_rental', cat: 'gauntlet', icon: '🪪', name: 'Hired Gun', desc: 'Rent a Ring Chaser for the deciding game.', col: 1, row: 30, parent: 'rr_root' },
     // ---- Fun ----
     { id: 'short_king', cat: 'fun', icon: '👑', name: 'Short King', desc: 'Use a 5\'11" or shorter pitcher for your Frame.', col: 0, row: 22 },
     { id: 'tall_tale', cat: 'fun', icon: '🦒', name: 'Tall Tale', desc: 'Use a 6\'9" or taller pitcher for your Frame.', col: 1, row: 22 },
@@ -76,6 +94,7 @@
     { id: 'career', icon: '⚾', label: 'Career' },
     { id: 'versus', icon: '⚔️', label: '1v1' },
     { id: 'daily', icon: '📅', label: 'Daily' },
+    { id: 'gauntlet', icon: '🐐', label: 'GOAT Squad' },
     { id: 'fun', icon: '😜', label: 'Fun' },
   ];
   const HEADSHOT_IDS = [669373, 808967, 547973, 676979, 554430, 695243, 694973, 605483, 693433, 650911, 621242, 668881, 592332, 669302, 543135, 601713, 678495, 669432, 662253, 693645, 686613, 694819, 657746, 608331, 671922, 670280, 656876, 656546];

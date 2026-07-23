@@ -1635,7 +1635,7 @@
           }
         ]
       },
-      "japan23": { "name": "2023 Samurai Japan", "rating": 102, "abbr": "JPN", "blurb": "Ohtani vs. Trout for the final out. Undefeated in Miami, gold around their necks.",
+      "japan23": { "logoUrl": "https://flagcdn.com/w80/jp.png", "name": "2023 Samurai Japan", "rating": 102, "abbr": "JPN", "blurb": "Ohtani vs. Trout for the final out. Undefeated in Miami, gold around their necks.",
         "ability": { "type": "bossElimEdge", "value": 0.1, "desc": "Samurai Japan doesn't lose the big one — +10% in elimination games." },
         "players": [
           { "name": "Shohei Ohtani", "rating": 104, "pos": "P", "mlbamId": 660271 },
@@ -1648,7 +1648,7 @@
           { "name": "Kensuke Kondoh", "rating": 88, "pos": "RF" },
           { "name": "Tetsuto Yamada", "rating": 86, "pos": "2B" },
           { "name": "Sosuke Genda", "rating": 84, "pos": "SS" }] },
-      "usa17": { "name": "2017 Team USA", "rating": 99, "abbr": "USA", "blurb": "The WBC title the States finally took. Stanton moonshots and Stroman zeroes.",
+      "usa17": { "logoUrl": "https://flagcdn.com/w80/us.png", "name": "2017 Team USA", "rating": 99, "abbr": "USA", "blurb": "The WBC title the States finally took. Stanton moonshots and Stroman zeroes.",
         "players": [
           { "name": "Giancarlo Stanton", "rating": 96, "pos": "RF", "mlbamId": 519317 },
           { "name": "Nolan Arenado", "rating": 95, "pos": "3B", "mlbamId": 571448 },
@@ -1660,7 +1660,7 @@
           { "name": "Jean Segura", "rating": 88, "pos": "SS" },
           { "name": "Ian Kinsler", "rating": 87, "pos": "2B" },
           { "name": "Eric Hosmer", "rating": 86, "pos": "DH" }] },
-      "dr17": { "name": "2017 Dominican Republic", "rating": 101, "abbr": "DOM", "blurb": "Plátano Power. A big-league All-Star at every spot on the diamond.",
+      "dr17": { "logoUrl": "https://flagcdn.com/w80/do.png", "name": "2017 Dominican Republic", "rating": 101, "abbr": "DOM", "blurb": "Plátano Power. A big-league All-Star at every spot on the diamond.",
         "ability": { "type": "noPlayerMomentum", "value": 1, "desc": "They've seen every rally. Your desperation boost is switched off." },
         "players": [
           { "name": "Manny Machado", "rating": 94, "pos": "3B", "mlbamId": 592518 },
