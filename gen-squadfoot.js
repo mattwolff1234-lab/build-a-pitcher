@@ -1,3 +1,9 @@
+// ⚠️ STALE as of the 2026-07-23 UX overhaul — DO NOT RUN. Football is hand-maintained
+// now: its anchors no longer match (SEO retitle + shared features landed by hand in all
+// three editions, and football diverged by design with the one-game playoff rework).
+// Running it exits 1 on the first anchor; "fixing" only the anchors would clobber
+// football's newer hand edits. Kept for the historical recipe only.
+//
 // Generates goatsquad-football.html FROM goatsquad-baseball.html by anchored string
 // replacement — the same recipe that produced the baseball page, except this transform
 // is COMMITTED (the baseball one was session-scratch; regenerating it meant archaeology).

@@ -472,8 +472,8 @@
   .speedRow b { min-width:46px; text-align:left; color:var(--accent2); font-size:.92rem; }
 
   /* ---------- result screen ---------- */
-  .resPanel { text-align:center; padding:22px 16px 20px; margin-top:10px; }
-  #resBanner { font-size:1.9rem; letter-spacing:.05em; margin:2px 0 4px; }
+  .resPanel { text-align:center; padding:14px 12px 16px; margin-top:10px; }
+  #resBanner { font-size:clamp(1.4rem, 6vw, 1.9rem); letter-spacing:.05em; margin:2px 0 4px; }
   #resLine { color:var(--ink); font-size:1.02rem; margin:0 0 2px; }
   #resSub { color:var(--muted); font-size:.86rem; margin:0 0 14px; }
   #recap { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin:6px 0 16px; }
@@ -3706,7 +3706,8 @@ function renderHome() {
   $('homeStats').textContent =
     d.n === 0 ? "You haven't run today's daily yet"
     : d.beat > 0 ? `✅ Boss beaten in ${d.firstBeat} attempt${d.firstBeat > 1 ? 's' : ''} · best squad ${d.bestOvr} OVR`
-    : `Attempt ${d.n} today · best squad ${d.bestOvr || '—'} OVR`;
+    : d.bestOvr ? `Attempt ${d.n} today · best squad ${d.bestOvr} OVR`
+    : `Attempt ${d.n} today · no finished squad yet`;
   const nL = gLayers().length;
   const lastTeam = nL ? layerTeams(nL - 1)[0] : null;
   $('homeG').textContent = !nL ? ''
