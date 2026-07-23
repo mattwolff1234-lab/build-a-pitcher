@@ -1360,10 +1360,11 @@ function renderStopCard() {
   // 🏆 Banners: champions choose their difficulty before a fresh run starts
   if (!G.done && !isShopLayer(G.stage) && G.stage === 0 && !G.squad && bannerState().max > 0) {
     const B0 = bannerState();
-    $('forkBtns').innerHTML = `<div class="bnRow">` + Array.from({ length: B0.max + 1 }, (_, n) => {
+    // afterbegin, NOT innerHTML = — champions still get their road buttons underneath
+    $('forkBtns').insertAdjacentHTML('afterbegin', `<div class="bnRow">` + Array.from({ length: B0.max + 1 }, (_, n) => {
       const b = BANNERS[n];
       return `<button class="bnChip${(G.banner || 0) === n ? ' on' : ''}" type="button" data-bn="${n}" title="${n ? b.desc : 'The classic run'}">${n ? '🏆 ' + b.n + ' · ' + b.name : CFG.sportEmoji + ' CHAMP RUN'}</button>`;
-    }).join('') + `</div><p class="bnHint">You've hung a banner — run it back harder. ${G.banner ? BANNERS[G.banner].desc : 'Pick a level.'}</p>`;
+    }).join('') + `</div><p class="bnHint">You've hung a banner — run it back harder. ${G.banner ? BANNERS[G.banner].desc : 'Pick a level.'}</p>`);
     $('forkBtns').querySelectorAll('.bnChip').forEach(b => b.addEventListener('click', () => {
       G.banner = +b.dataset.bn;
       const s0 = bannerState(); s0.last = G.banner; saveBanner(s0);
