@@ -58,6 +58,15 @@ const OVR_W = {
   mon: { Attack: 1.2, 'Sp. Attack': 1.2, Speed: 1.2, HP: 1.1, 'Sp. Defense': 1.1, Defense: 1.0, Frame: 1.0 },
 };
 
+// Gentle favorable curve on the built cfb Overall — mirrors college.html cfbCurve() exactly so the
+// anti-cheat OVR recompute stays in sync. Adds up to ~+3 in the low/mid range, tapers to 0 by the
+// elite end, never subtracts.
+function cfbCurve(raw) {
+  if (!(raw > 0)) return Math.round(raw);
+  const bonus = 3 * Math.max(0, 1 - Math.max(0, raw - 72) / 38);
+  return Math.round(raw + bonus);
+}
+
 const LEGEND_CAP = { baller: 6, batter: 7, pitcher: 7, striker: 6, keeper: 6, cfb: 6, hockey: 6, mon: 5 };   // observed legit maxima: baller 3, batter 4, pitcher 5; soccer icon odds match baller's 4%
 
 // Slot label → the data-field it reads on a player object (mirrors each page's SLOTS array;
@@ -176,7 +185,10 @@ function checkBuild(game, clientOvr, build, opts) {
     return { ok: true, ovr };   // nothing to validate (legacy/missing build) for other flows
   }
   let vsum = 0, wsum = 0, matched = 0, flagLeg = 0, nameLeg = 0;
-  const w = OVR_W[game];
+  let w = OVR_W[game];
+  // cfb Frame is a shared label at 1.0, but RB de-weights height heavily (college.html rb.weights.frame).
+  // RB is the only position carrying a 'Break Tackle' slot, so detect it and override Frame to match.
+  if (game === 'cfb' && w && slots.some(s => s && s.slot === 'Break Tackle')) w = Object.assign({}, w, { Frame: 0.3 });
   const legs = legendSet(game);
   const cards = cardIndex(game);
   const fields = FIELD[game];
@@ -201,7 +213,9 @@ function checkBuild(game, clientOvr, build, opts) {
   }
   if (Math.max(flagLeg, nameLeg) >= (LEGEND_CAP[game] || 99)) return { ok: false };   // impossible legend count
   if (w && wsum > 0 && matched === slots.length) {
-    const recomputed = Math.round(vsum / wsum);
+    const raw = vsum / wsum;
+    // cfb applies a gentle favorable curve to the built OVR (college.html cfbCurve) — mirror it here.
+    const recomputed = game === 'cfb' ? cfbCurve(raw) : Math.round(raw);
     if (recomputed > 124 || Math.abs(recomputed - ovr) > 3) return { ok: false };   // inflated / implausible OVR
   }
   // Pitcher solo OVR is value-scaled (dynamic Defense/Frame weights), so it isn't in OVR_W and the

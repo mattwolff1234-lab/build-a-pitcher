@@ -1241,7 +1241,7 @@ const POSITIONS = {
       { key: 'burst',   label: 'Burst',         part: 'Drive Knee', mask: 'cfb-rb-seg-burst.png',   ax: 55.8, ay: 64.1, lx: 88, ly: 89 },
       { key: 'speed',   label: 'Speed',         part: 'Stride Leg', mask: 'cfb-rb-seg-speed.png',   ax: 45.3, ay: 59.7, lx: 12, ly: 90 },
     ],
-    weights: { speed: 1.2, breakTk: 1.2, vision: 1.2, burst: 1.1, elusive: 1.1, power: 1.1, ballSec: 1.0, hands: 1.0, frame: 1.0 },
+    weights: { speed: 1.2, breakTk: 1.2, vision: 1.2, burst: 1.1, elusive: 1.1, power: 1.1, ballSec: 1.0, hands: 1.0, frame: 0.3 },
   },
   wr: {
     key: 'wr', label: 'Wide Receiver', short: 'WR', figure: 'cfb-wr-figure.png', aspect: '1/1',
@@ -2292,13 +2292,21 @@ function renderNodes() {
   updateOvr();
 }
 
+// Gentle favorable curve on the built Overall: adds up to ~+3 in the low/mid range,
+// tapers to 0 by the elite end, and never subtracts. Mirrored in build-check.js (cfbCurve)
+// so the anti-cheat OVR recompute stays in sync.
+function cfbCurve(raw) {
+  if (!(raw > 0)) return Math.round(raw);
+  const bonus = 3 * Math.max(0, 1 - Math.max(0, raw - 72) / 38);
+  return Math.round(raw + bonus);
+}
 function weightedOvr(keys) {
   let vsum = 0, wsum = 0;
   for (const k of keys) {
     const w = WEIGHTS[k] || 1;
     vsum += state.filled[k].value * w; wsum += w;
   }
-  return Math.round(vsum / wsum);
+  return cfbCurve(vsum / wsum);
 }
 
 let ovrShown = 0;
