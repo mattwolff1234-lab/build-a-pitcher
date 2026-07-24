@@ -37,9 +37,44 @@
   gtag('config', 'G-TVL2XEQ2Q7');
 </script>
 
-<!-- Playwire deliberately NOT on this page (2026-07-21): with no units mapped for /ranks the
-     injected anchor/placeholder covered the whole board on phones for zero revenue. To monetize
-     later: have Louis map units for /ranks FIRST, then copy the 3-piece contract from ads.md. -->
+<!-- Playwire Ramp - PUB 1025880 / SITE by hostname (see ads.md)
+     Re-added 2026-07-23: the 2026-07-21 removal was based on a DESKTOP-emulated test where
+     side rails covered the board. Playwire confirmed only bottom_rail is mapped for /ranks,
+     which the ad-safe spacing below already clears. Re-check on a real phone. -->
+<script>
+  window.ramp = window.ramp || {};
+  window.ramp.que = window.ramp.que || [];
+  window.ramp.passiveMode = true;
+  document.addEventListener('DOMContentLoaded', function () {
+    window.ramp.que.push(function () { window.ramp.spaNewPage(window.location.pathname); });
+  });
+</script>
+<script>
+  // Goat Coins '30 Days Ad-Free' entitlement — skip loading Playwire entirely while active
+  // (pl_wallet is the server wallet cached by store.js; the expiry is a server-set timestamp).
+  (function () {
+    try {
+      var w = JSON.parse(localStorage.getItem('pl_wallet') || 'null');
+      if (w && w.entitlements && w.entitlements.no_ads_until && Date.parse(w.entitlements.no_ads_until) > Date.now()) return;
+    } catch (e) {}
+    // PUB 1025880 has TWO registered sites: goat-lab.app = 77906, pitchergami.com = 78265
+    // (per Playwire, 2026-07-23). Subdomains inherit their root domain's id. Serving the
+    // wrong site's tag on a domain costs fill and CPM — see ads.md before changing.
+    var site = /(^|\.)pitchergami\.com$/i.test(location.hostname) ? '78265' : '77906';
+    var s = document.createElement('script');
+    s.async = true; s.src = '//cdn.intergient.com/1025880/' + site + '/ramp.js';
+    document.head.appendChild(s);
+  })();
+</script>
+<style>
+/* Ad-safe mobile spacing: keep fixed-bottom UI above the Playwire anchor ad (see ads.md) */
+@media (max-width:900px){
+  body{ padding-bottom:60px; }
+  body .toast, body .day-toast{ bottom:92px; }
+  body .xp-hud{ bottom:calc(8vh + 56px); }
+  body .overlay, body .draft-overlay{ padding-bottom:72px; }
+}
+</style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">

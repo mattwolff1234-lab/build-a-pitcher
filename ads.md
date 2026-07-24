@@ -5,19 +5,33 @@
 
 ## Account
 - **Provider:** Playwire (Ramp dashboard: https://ramp.playwire.com)
-- **PUB ID:** `1025880` · **SITE ID:** `77906` (registered domain: `goat-lab.app`)
-- **Contact:** Louis at Playwire (email thread, July 2026)
-- **Google approval:** MCM verification resolved; *full* Google approval still pending as of
-  2026-07-09 — revenue is expected to be weak until it lands. Louis is tracking it.
+- **PUB ID:** `1025880`
+- ⚠️ **TWO registered sites — the tag must match the domain it is served on:**
+
+  | Domain (incl. subdomains) | SITE / WEB_ID |
+  |---|---|
+  | `goat-lab.app`, `squad.goat-lab.app` | **77906** |
+  | `pitchergami.com`, `pitchinglab.pitchergami.com` | **78265** |
+
+  Playwire confirmed 2026-07-23 (Christian Klein): *"WEB_ID for pitchergami.com is 78265.
+  Any subdomain can use the same website id across the site."* Every page now picks the id
+  from `location.hostname` at load — **never hardcode one back in.** From 2026-07-09 to
+  07-23 all pages served the 77906 tag on both domains, and the pitchergami traffic (69% of
+  pageviews) earned $0.21 CPM / 68% fill vs $0.54 / 88% on goat-lab.app.
+- **Contacts:** Tiara Baldoni Smith `tbaldoni@` (AE) · Steven Derisse `sderisse@` (onboarding)
+  · **Christian Klein `cklein@` (Onboarding Solutions Engineer — the one who answers technical
+  ad questions)** · Louis Smith `lsmith@`.
+- **Google approval:** landed ~2026-07-09. CPM went $0.14 → $0.41 and PV RPM $0.58 → $3.07
+  between 07-09 and 07-21; revenue $14/day → $155/day.
 - Playwire tunes ad placements on their side per page layout. **After any major UI/UX
-  overhaul, email Louis a heads-up** so their ad-ops team can re-optimize.
+  overhaul, email them a heads-up** so their ad-ops team can re-optimize.
 
 ## The 3-piece contract (per page) — do not lose these in redesigns
 Every monetized page needs exactly this, nothing more:
 
 1. **Head snippet** (layout-independent; sits right after the GA4 `gtag` block):
    ```html
-   <!-- Playwire Ramp - PUB 1025880 / SITE 77906 -->
+   <!-- Playwire Ramp - PUB 1025880 / SITE picked by hostname (see table above) -->
    <script>
      window.ramp = window.ramp || {};
      window.ramp.que = window.ramp.que || [];
@@ -26,7 +40,20 @@ Every monetized page needs exactly this, nothing more:
        window.ramp.que.push(function () { window.ramp.spaNewPage(window.location.pathname); });
      });
    </script>
-   <script async src="//cdn.intergient.com/1025880/77906/ramp.js"></script>
+   <script>
+     // Skip Playwire entirely while the Goat Coins '30 Days Ad-Free' entitlement is active,
+     // then load the tag for the SITE ID that matches this hostname (see the table above).
+     (function () {
+       try {
+         var w = JSON.parse(localStorage.getItem('pl_wallet') || 'null');
+         if (w && w.entitlements && w.entitlements.no_ads_until && Date.parse(w.entitlements.no_ads_until) > Date.now()) return;
+       } catch (e) {}
+       var site = /(^|\.)pitchergami\.com$/i.test(location.hostname) ? '78265' : '77906';
+       var s = document.createElement('script');
+       s.async = true; s.src = '//cdn.intergient.com/1025880/' + site + '/ramp.js';
+       document.head.appendChild(s);
+     })();
+   </script>
    <style>
    /* Ad-safe mobile spacing: keep fixed-bottom UI above the Playwire anchor ad (see ads.md) */
    @media (max-width:900px){
@@ -63,7 +90,7 @@ Every monetized page needs exactly this, nothing more:
 Everything else (which ads show, where side rails/anchors go) is injected by `ramp.js` and
 configured in the RAMP dashboard — not in this repo.
 
-## Where the tag lives (9 pages)
+## Where the tag lives (18 pages)
 | Page | Head snippet | `#game-ad` slot |
 |---|---|---|
 | `index.html` (landing) | ✅ | — |
@@ -76,9 +103,9 @@ configured in the RAMP dashboard — not in this repo.
 | `versus-hoops.html` | ✅ | — |
 | `college.html` | ✅ | ✅ |
 | `hockey.html` | ✅ | ✅ | (added 2026-07-22 — was the last game page without a tag)
+| `ranks.html` | ✅ | — | (re-added 2026-07-23, see below)
 
-Still tagless on purpose: `monster.html` (de-listed, IP posture) and `ranks.html` (unmapped units
-covered the phone layout — Louis must map units for the `/ranks` route first).
+Still tagless on purpose: **`monster.html` only** (de-listed, IP posture).
 
 **New pages/games must get the head snippet** (and the `#game-ad` slot if they have a game
 area). Copy from any existing page.
@@ -87,18 +114,32 @@ area). Copy from any existing page.
   **below the game sections** (end of `.wrap`), not at the top: Ramp injects a placeholder
   wrapper even with no ad sold, and the reserved ~100px up top pushed the draft board
   under the sticky STOP button on phones. Keep it below the game if this page is redesigned.
-- `ranks.html` (`/ranks`): **deliberately NO tag** (2026-07-21) — with no units mapped for the
-  route, the injected anchor/placeholder covered the whole board on phones for zero revenue.
-  To monetize: have Louis map units for `/ranks` FIRST, then add the 3-piece contract back.
+- `ranks.html` (`/ranks`): tag **removed 2026-07-21, restored 2026-07-23**. The removal was
+  based on a DESKTOP-emulated test where side rails covered the board; Playwire confirmed only
+  `bottom_rail` is actually mapped for the route, which the ad-safe spacing already clears.
+  `switcher.js` stacks the `.gnav` bar above the anchor via `--pl-adh`, so both fit.
+  **Still worth eyeballing on a real phone.**
 
 ## ads.txt — dynamic (Playwire-hosted), zero upkeep
-- `vercel.json` has a **301 redirect**: `/ads.txt` → `https://config.playwire.com/dyn_ads/1025880/77906/ads.txt`
-- Playwire keeps that hosted file current; **never hand-edit the static `ads.txt`** in the
+- `vercel.json` has **two host-conditional 301s** (order matters, specific one first):
+  `pitchergami.com` → `dyn_ads/1025880/78265/ads.txt`, everything else → `.../77906/ads.txt`.
+- ⚠️ **ads.txt resolves against the ROOT domain, not the subdomain.** Buyers check
+  `pitchergami.com/ads.txt` for inventory on `pitchinglab.pitchergami.com` — a redirect on the
+  subdomain alone does nothing. **`pitchergami.com` is a DIFFERENT Vercel project
+  (`~/pitcher-scorigami`)**, so its `vercel.json` carries its own `/ads.txt` → 78265 redirect.
+  It 404'd from launch until 2026-07-23, meaning the majority of traffic had **no authorized
+  sellers at all** — the likeliest cause of that domain's weak fill/CPM. If pitchergami's DNS,
+  hosting, or repo ever moves, **re-check that redirect first.**
+- Playwire keeps the hosted files current; **never hand-edit the static `ads.txt`** in the
   repo (it's a dead fallback shadowed by the redirect — harmless, ignorable).
 - Extra ad partners outside Playwire go in RAMP → Ad Integration → Dynamic Ads.txt →
   "Additional Authorized Sellers" (not in this repo).
-- Verify: `curl -sI https://pitchinglab.pitchergami.com/ads.txt` → expect `301` +
-  `Location: config.playwire.com/...`. Deployed & verified 2026-07-09.
+- Verify all three (root domain matters most):
+  ```bash
+  curl -sI https://pitchergami.com/ads.txt              | grep -i location   # → .../78265/ads.txt
+  curl -sI https://pitchinglab.pitchergami.com/ads.txt  | grep -i location   # → .../78265/ads.txt
+  curl -sI https://goat-lab.app/ads.txt                 | grep -i location   # → .../77906/ads.txt
+  ```
 
 ## Status / history
 - **2026-07-09:** Dynamic ads.txt live (commit `f738725`). Ad tag applied to all 8 pages

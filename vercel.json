@@ -18,6 +18,7 @@
     }
   ],
   "redirects": [
+    { "source": "/ads.txt", "has": [{ "type": "host", "value": "(.*\\.)?pitchergami\\.com" }], "destination": "https://config.playwire.com/dyn_ads/1025880/78265/ads.txt", "statusCode": 301 },
     { "source": "/ads.txt", "destination": "https://config.playwire.com/dyn_ads/1025880/77906/ads.txt", "statusCode": 301 },
     { "source": "/", "has": [{ "type": "host", "value": "squad.goat-lab.app" }], "destination": "/goatsquad", "statusCode": 307 }
   ],

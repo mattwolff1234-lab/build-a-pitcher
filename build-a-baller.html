@@ -62,8 +62,12 @@
       var w = JSON.parse(localStorage.getItem('pl_wallet') || 'null');
       if (w && w.entitlements && w.entitlements.no_ads_until && Date.parse(w.entitlements.no_ads_until) > Date.now()) return;
     } catch (e) {}
+    // PUB 1025880 has TWO registered sites: goat-lab.app = 77906, pitchergami.com = 78265
+    // (per Playwire, 2026-07-23). Subdomains inherit their root domain's id. Serving the
+    // wrong site's tag on a domain costs fill and CPM — see ads.md before changing.
+    var site = /(^|\.)pitchergami\.com$/i.test(location.hostname) ? '78265' : '77906';
     var s = document.createElement('script');
-    s.async = true; s.src = '//cdn.intergient.com/1025880/77906/ramp.js';
+    s.async = true; s.src = '//cdn.intergient.com/1025880/' + site + '/ramp.js';
     document.head.appendChild(s);
   })();
 </script>
